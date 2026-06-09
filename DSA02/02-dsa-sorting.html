@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Sorting — Algorithms &amp; Applications</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh}
+.layout{display:flex;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear;border-radius:0 2px 2px 0}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s}
+.nav-toggle:hover{transform:scale(1.08)}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem}
+.nav-group{margin-bottom:.2rem}
+.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:0.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft)}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:var(--accent);opacity:.7;flex-shrink:0}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft)}
+.section{margin-bottom:5rem;scroll-margin-top:2rem}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem}
+p{margin-bottom:1rem}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:0.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:0.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:0.85rem}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.06em;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980}.copy-btn.copied{color:#89d185;border-color:#89d185}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink)}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+.table-wrap{overflow-x:auto;margin:1.5rem 0}
+table{width:100%;border-collapse:collapse;font-size:0.92rem}
+thead th{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--bg-soft)}
+.diagram{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;margin:1.5rem 0;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem;min-width:42px}
+.arr-cell .val{font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;background:var(--bg);border:2px solid var(--line);border-radius:6px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose)}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--blue)}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:0.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.complexity-badge .label{color:var(--ink-soft)}.complexity-badge .val{color:var(--accent);font-weight:600}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.3rem;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 4px 16px rgba(45,42,38,.07);transform:translateY(-2px)}
+.card-glyph{font-family:"Fraunces",serif;font-size:1.6rem;margin-bottom:.4rem;display:block}
+.card h4{font-family:"Fraunces",serif;font-size:1rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .35rem}
+.card p{font-size:.88rem;color:var(--ink-soft);margin:0;line-height:1.5}
+.flow{display:flex;flex-direction:column;align-items:flex-start;gap:0;margin:1.5rem 0}
+.flow-step{display:flex;align-items:flex-start;gap:1rem;padding:.8rem 1rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;width:100%;max-width:600px}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent)}
+.flow-connector{width:2px;height:22px;background:var(--line);margin-left:calc(1rem + 12px)}
+.flow-icon{font-size:1rem;flex-shrink:0;margin-top:.1rem}
+.flow-text{font-size:.9rem;color:var(--ink);line-height:1.45}
+.flow-text strong{color:var(--accent)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent)}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5}
+.lc-list{list-style:none;padding:0;margin:1rem 0}
+.lc-list li{display:flex;align-items:flex-start;gap:.75rem;padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;flex-wrap:wrap}
+.lc-list li:last-child{border-bottom:none}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;margin-top:.15rem}
+.lc-diff.easy{background:var(--green-soft);color:var(--green)}.lc-diff.medium{background:var(--accent-soft);color:var(--accent)}.lc-diff.hard{background:var(--rose-soft);color:var(--rose)}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.lc-why{color:var(--ink-soft);font-size:.82rem;width:100%;padding-left:calc(.75rem + 2.5rem);margin-top:-.2rem}
+/* Sort trace */
+.sort-trace{margin:1.5rem 0;padding:1.2rem 1.4rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+.trace-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap}
+.trace-label{font-family:"JetBrains Mono",monospace;font-size:.7rem;color:var(--ink-soft);min-width:60px}
+.trace-note{font-family:"JetBrains Mono",monospace;font-size:.7rem;color:var(--accent);margin-left:.5rem}
+@media(max-width:768px){.sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12)}.sidebar.open{transform:translateX(0)}.nav-toggle{display:flex}.main{padding:0 1.2rem 4rem}.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px)}.sidebar-overlay.open{display:block}}
+.section{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+.section.visible{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+<div class="layout">
+<nav class="sidebar" aria-label="Page navigation">
+  <div class="sidebar-logo">DSA Notes · Series 3<strong>Sorting</strong></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Concepts</div>
+    <a class="nav-link" href="#what-is-sorting"><span class="nav-num">01</span>What Is Sorting?</a>
+    <a class="nav-link" href="#why-sort"><span class="nav-num">02</span>Why Sort?</a>
+    <a class="nav-link" href="#built-in"><span class="nav-num">03</span>Built-In Sort APIs</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Problems</div>
+    <a class="nav-link" href="#elements-removal"><span class="nav-num">04</span>Elements Removal</a>
+    <a class="nav-link" href="#noble-distinct"><span class="nav-num">05</span>Noble Integers (Distinct)</a>
+    <a class="nav-link" href="#noble-repeat"><span class="nav-num">06</span>Noble Integers (Repeated)</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Algorithms</div>
+    <a class="nav-link" href="#selection-sort"><span class="nav-num">07</span>Selection Sort</a>
+    <a class="nav-link" href="#insertion-sort"><span class="nav-num">08</span>Insertion Sort</a>
+    <a class="nav-link" href="#comparison"><span class="nav-num">09</span>Algorithm Comparison</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">10</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">11</span>LeetCode Problems</a>
+  </div>
+</nav>
+<main class="main">
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 3</p>
+  <h1>Sorting<br>Algorithms &amp; Applications</h1>
+  <p class="hero-lede">Learn what sorting really means, why it matters, how to use built-in APIs, and how to implement Selection Sort and Insertion Sort from scratch — with three classic problems to cement the ideas.</p>
+  <div class="chips">
+    <span class="chip">Sorting Definition</span>
+    <span class="chip">Built-In APIs</span>
+    <span class="chip">Elements Removal</span>
+    <span class="chip">Noble Integers</span>
+    <span class="chip">Selection Sort</span>
+    <span class="chip">Insertion Sort</span>
+  </div>
+</header>
+
+<section class="section" id="what-is-sorting">
+  <div class="section-header"><span class="section-num">01</span><h2>What Is Sorting?</h2></div>
+  <p><strong>Sorting</strong> is the arrangement of data in a particular order based on some <em>parameter</em>. The most common parameter is numeric magnitude (ascending or descending), but any comparable property works.</p>
+
+  <h4>Example — Sort by magnitude</h4>
+  <div class="diagram">
+    <div style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--ink-soft);margin-bottom:.5rem">A[7] — unsorted: [19, 6, 5, 2, -1, -19]</div>
+    <div class="arr-cell highlight-green"><div class="val">-19</div><div class="idx">0</div></div>
+    <div class="arr-cell highlight-green"><div class="val">-1</div><div class="idx">1</div></div>
+    <div class="arr-cell highlight-green"><div class="val">2</div><div class="idx">2</div></div>
+    <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight-green"><div class="val">6</div><div class="idx">4</div></div>
+    <div class="arr-cell highlight-green"><div class="val">19</div><div class="idx">5</div></div>
+    <div style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--green);margin-top:.3rem">Ascending by magnitude ↑</div>
+  </div>
+
+  <h4>Example — Sort by factor count</h4>
+  <p>Given A[7] = [1, 13, 9, 6, 12], sort by <em>number of factors</em>:</p>
+  <div class="diagram">
+    <div class="arr-cell highlight"><div class="val">1</div><div class="idx">0</div></div>
+    <div class="arr-cell highlight"><div class="val">13</div><div class="idx">1</div></div>
+    <div class="arr-cell highlight"><div class="val">9</div><div class="idx">2</div></div>
+    <div class="arr-cell highlight"><div class="val">6</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight"><div class="val">12</div><div class="idx">4</div></div>
+    <div style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);margin-top:.3rem">Factor counts: 1→1f, 13→2f, 9→3f, 6→4f, 12→6f — already sorted by factor count!</div>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Insight</span>
+    The <em>parameter</em> is the comparison criterion. Different parameters yield completely different sort orders from the same dataset.
+  </div>
+</section>
+
+<section class="section" id="why-sort">
+  <div class="section-header"><span class="section-num">02</span><h2>Why Sort?</h2></div>
+  <p>Sorting is a prerequisite for many efficient algorithms. It transforms an unstructured dataset into an ordered one that admits much faster operations.</p>
+  <div class="cards-grid">
+    <div class="card"><span class="card-glyph">🔍</span><h4>Faster Search</h4><p>Binary search on a sorted array runs in O(log N) instead of O(N) linear scan. Many other lookup optimizations require sorted data.</p></div>
+    <div class="card"><span class="card-glyph">📊</span><h4>Easier Analysis</h4><p>Statistics like median, mode, and percentiles are trivial on sorted data. Range queries, duplicates detection, and frequency counts all simplify.</p></div>
+    <div class="card"><span class="card-glyph">🗂️</span><h4>Better Presentation</h4><p>Leaderboards, search results, file listings — users expect ordered output. Sorting makes data human-readable and actionable.</p></div>
+    <div class="card"><span class="card-glyph">⚡</span><h4>Enables Greedy Algorithms</h4><p>Many greedy strategies (interval scheduling, activity selection, Noble Integers) only work correctly on sorted input.</p></div>
+  </div>
+</section>
+
+<section class="section" id="built-in">
+  <div class="section-header"><span class="section-num">03</span><h2>Built-In Sort APIs</h2></div>
+  <p>In competitive programming and interviews, always use the built-in sort unless you are specifically asked to implement one. Built-in implementations are typically O(N log N) and highly optimized.</p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span>[] arr = {<span class="num">5</span>, <span class="num">2</span>, <span class="num">8</span>, <span class="num">1</span>};
+
+<span class="cmt">// Sort a primitive array (ascending)</span>
+Arrays.<span class="fn">sort</span>(arr);               <span class="cmt">// [1, 2, 5, 8]</span>
+
+<span class="cmt">// Sort only a subrange [from, to)</span>
+Arrays.<span class="fn">sort</span>(arr, <span class="num">1</span>, <span class="num">3</span>);       <span class="cmt">// sorts indices 1 and 2</span>
+
+<span class="cmt">// Sort an ArrayList</span>
+Collections.<span class="fn">sort</span>(arrayList);   <span class="cmt">// for List&lt;Integer&gt;</span>
+
+<span class="cmt">// Sort descending (requires Integer[], not int[])</span>
+Arrays.<span class="fn">sort</span>(boxedArr, Collections.reverseOrder());</pre>
+  </div>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">C++</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">#include</span> <span class="str">&lt;algorithm&gt;</span>
+<span class="ty">int</span> arr[] = {<span class="num">5</span>, <span class="num">2</span>, <span class="num">8</span>, <span class="num">1</span>};
+
+sort(arr, arr + n);                   <span class="cmt">// ascending</span>
+sort(arr, arr + n, greater&lt;<span class="ty">int</span>&gt;());  <span class="cmt">// descending</span></pre>
+  </div>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre">arr = [5, 2, 8, 1]
+
+arr.sort()               <span class="cmt"># in-place ascending</span>
+arr.sort(reverse=True)   <span class="cmt"># in-place descending</span>
+sorted_arr = sorted(arr) <span class="cmt"># returns new sorted list</span>
+
+<span class="cmt"># Sort by custom key (e.g. by absolute value)</span>
+arr.sort(key=lambda x: abs(x))</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time (all languages) · </span><span class="val">O(N log N)</span></span>
+    <span class="complexity-badge"><span class="label">Space · </span><span class="val">O(depends on algo)</span></span>
+  </div>
+  <div class="callout tip">
+    <span class="callout-tag">Implementation Notes</span>
+    Java uses <em>Dual-Pivot Quicksort</em> for primitives and <em>Timsort</em> for objects. C++ uses <em>Introsort</em> (hybrid quicksort/heapsort). Python uses <em>Timsort</em>. All are O(N log N) average-case.
+  </div>
+</section>
+
+<section class="section" id="elements-removal">
+  <div class="section-header"><span class="section-num">04</span><h2>Elements Removal — Minimum Cost</h2></div>
+  <p>Given N elements, you remove one element per step. The cost to remove an element equals the <em>current sum</em> of all elements remaining in the array (including the one you are about to remove — add the cost first, then remove). Find the minimum total cost to remove all elements.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Observation</span>
+    Each element contributes to the cost of every removal step that happens <em>before or at</em> the step it is removed. If we label elements <code>a &gt; b &gt; c &gt; d</code> (sorted descending), the total cost is <code>a·1 + b·2 + c·3 + d·4</code>. The largest element is multiplied by the smallest coefficient, so we should remove <strong>the largest element first</strong> (sort descending, then remove in order).
+  </div>
+
+  <h4>Worked Example</h4>
+  <p>arr = [3, 5, 1, -3] → sorted descending: [5, 3, 1, -3]</p>
+
+  <div class="sort-trace">
+    <div class="trace-row">
+      <span class="trace-label">Remove 5</span>
+      <div class="arr-cell highlight"><div class="val">5</div><div class="idx">0</div></div>
+      <div class="arr-cell"><div class="val">3</div><div class="idx">1</div></div>
+      <div class="arr-cell"><div class="val">1</div><div class="idx">2</div></div>
+      <div class="arr-cell neg"><div class="val">-3</div><div class="idx">3</div></div>
+      <span class="trace-note">cost = 5×1 = 5</span>
+    </div>
+    <div class="trace-row">
+      <span class="trace-label">Remove 3</span>
+      <div class="arr-cell highlight"><div class="val">3</div><div class="idx">0</div></div>
+      <div class="arr-cell"><div class="val">1</div><div class="idx">1</div></div>
+      <div class="arr-cell neg"><div class="val">-3</div><div class="idx">2</div></div>
+      <span class="trace-note">cost = 3×2 = 6</span>
+    </div>
+    <div class="trace-row">
+      <span class="trace-label">Remove 1</span>
+      <div class="arr-cell highlight"><div class="val">1</div><div class="idx">0</div></div>
+      <div class="arr-cell neg"><div class="val">-3</div><div class="idx">1</div></div>
+      <span class="trace-note">cost = 1×3 = 3</span>
+    </div>
+    <div class="trace-row">
+      <span class="trace-label">Remove -3</span>
+      <div class="arr-cell neg highlight"><div class="val">-3</div><div class="idx">0</div></div>
+      <span class="trace-note">cost = -3×4 = -12</span>
+    </div>
+    <div style="margin-top:.8rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent);font-weight:600">Total = 5 + 6 + 3 − 12 = 2</div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">minCostRemoval</span>(<span class="ty">int</span>[] arr) {
+    Arrays.<span class="fn">sort</span>(arr);              <span class="cmt">// sort ascending</span>
+    <span class="ty">int</span> n = arr.length, ans = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        ans += arr[i] * (i + <span class="num">1</span>);   <span class="cmt">// arr[i] × its 1-based position</span>
+    }
+    <span class="kw">return</span> ans;
+    <span class="cmt">// Equivalently: sort descending, multiply arr[i] × (n - i)</span>
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time · </span><span class="val">O(N log N)</span></span>
+    <span class="complexity-badge"><span class="label">Space · </span><span class="val">O(depends on sort)</span></span>
+  </div>
+</section>
+
+<section class="section" id="noble-distinct">
+  <div class="section-header"><span class="section-num">05</span><h2>Noble Integers — Distinct Data</h2></div>
+  <p>An element <code>ele</code> in <code>arr[]</code> is called <strong>noble</strong> if the count of elements in the array that are strictly smaller than <code>ele</code> equals <code>ele</code> itself. Count how many noble integers exist.</p>
+
+  <h4>Brute Force — O(N²)</h4>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">nobleIntegers</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="ty">int</span> ans = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="ty">int</span> countSmaller = <span class="num">0</span>;
+        <span class="kw">for</span> (<span class="ty">int</span> j = <span class="num">0</span>; j &lt; n; j++) {
+            <span class="kw">if</span> (arr[j] &lt; arr[i]) countSmaller++;
+        }
+        <span class="kw">if</span> (countSmaller == arr[i]) ans++;
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+
+  <h4>Optimal — Sort, then check index — O(N log N)</h4>
+  <p>After sorting in ascending order, the count of elements strictly smaller than <code>arr[i]</code> is exactly the index <code>i</code> (since all elements before it are smaller, and data is distinct). So just check if <code>arr[i] == i</code>.</p>
+
+  <div class="diagram">
+    <div style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--ink-soft);margin-bottom:.4rem">arr = [1, -5, 3, 5, -10, 4] → sorted: [-10, -5, 1, 3, 4, 5]</div>
+    <div class="arr-cell neg"><div class="val">-10</div><div class="idx">0</div></div>
+    <div class="arr-cell neg"><div class="val">-5</div><div class="idx">1</div></div>
+    <div class="arr-cell highlight"><div class="val">1</div><div class="idx">2 ✓</div></div>
+    <div class="arr-cell highlight"><div class="val">3</div><div class="idx">3 ✓</div></div>
+    <div class="arr-cell highlight"><div class="val">4</div><div class="idx">4 ✓</div></div>
+    <div class="arr-cell"><div class="val">5</div><div class="idx">5</div></div>
+    <div style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);margin-top:.3rem">arr[2]=1=index 2 ✓, arr[3]=3=index 3 ✓, arr[4]=4=index 4 ✓ → ans = 3</div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">nobleIntegersOptimal</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    Arrays.<span class="fn">sort</span>(arr);         <span class="cmt">// ascending</span>
+    <span class="ty">int</span> ans = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="kw">if</span> (arr[i] == i) ans++; <span class="cmt">// index i = count of smaller elements</span>
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time · </span><span class="val">O(N log N)</span></span>
+    <span class="complexity-badge"><span class="label">Space · </span><span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<section class="section" id="noble-repeat">
+  <div class="section-header"><span class="section-num">06</span><h2>Noble Integers — Repeated Data</h2></div>
+  <p>The same problem but elements can repeat. After sorting, duplicate values share the same "count of smaller elements" — only the <em>first occurrence</em> of each value has a valid count. We must skip duplicates using the index of the first occurrence of a new value.</p>
+
+  <h4>Key Insight with Repeats</h4>
+  <div class="diagram">
+    <div style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--ink-soft);margin-bottom:.4rem">arr = [-10, 1, 1, 2, 4, 4, 4, 8, 10] → sorted</div>
+    <div class="arr-cell neg"><div class="val">-10</div><div class="idx">0</div></div>
+    <div class="arr-cell highlight"><div class="val">1</div><div class="idx">1 ✓</div></div>
+    <div class="arr-cell"><div class="val">1</div><div class="idx">2</div></div>
+    <div class="arr-cell highlight"><div class="val">2</div><div class="idx">3 ✓</div></div>
+    <div class="arr-cell highlight"><div class="val">4</div><div class="idx">4 ✓</div></div>
+    <div class="arr-cell"><div class="val">4</div><div class="idx">5</div></div>
+    <div class="arr-cell"><div class="val">4</div><div class="idx">6</div></div>
+    <div class="arr-cell highlight"><div class="val">8</div><div class="idx">7 ✓</div></div>
+    <div class="arr-cell highlight"><div class="val">10</div><div class="idx">8 ✓</div></div>
+    <div style="width:100%;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);margin-top:.3rem">arr[1]=1=index 1 ✓, arr[3]=2 but index 3? No — wait, 2≠3. Actually ans=5 here.</div>
+  </div>
+
+  <p>The algorithm: after sorting, the <code>countSmaller</code> variable updates to the current index <code>i</code> only when we see a new (different) value. We check if <code>arr[i] == countSmaller</code>.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">nobleIntegersWithRepeats</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    Arrays.<span class="fn">sort</span>(arr);          <span class="cmt">// sort ascending</span>
+    <span class="ty">int</span> ans = <span class="num">0</span>, countSmaller = <span class="num">0</span>;
+
+    <span class="kw">if</span> (arr[<span class="num">0</span>] == <span class="num">0</span>) ans++;     <span class="cmt">// special check for first element</span>
+
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">1</span>; i &lt; n; i++) {
+        <span class="kw">if</span> (arr[i] != arr[i - <span class="num">1</span>]) {
+            countSmaller = i;     <span class="cmt">// new value — its smaller count = i</span>
+        }
+        <span class="kw">if</span> (arr[i] == countSmaller) ans++;
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time · </span><span class="val">O(N log N)</span></span>
+    <span class="complexity-badge"><span class="label">Space · </span><span class="val">O(depends on sort)</span></span>
+  </div>
+</section>
+
+<section class="section" id="selection-sort">
+  <div class="section-header"><span class="section-num">07</span><h2>Selection Sort</h2></div>
+  <p><strong>Idea:</strong> In each pass, select the minimum element from the unsorted region <code>[i, N-1]</code> and swap it into position <code>i</code>. After N-1 passes, the array is sorted.</p>
+
+  <h4>Step-by-step trace — arr = [8, 6, 4, 2, 1, 3]</h4>
+  <div class="sort-trace">
+    <div class="trace-row">
+      <span class="trace-label">i=0</span>
+      <div class="arr-cell highlight"><div class="val">1</div><div class="idx">0</div></div>
+      <div class="arr-cell"><div class="val">6</div><div class="idx">1</div></div>
+      <div class="arr-cell"><div class="val">4</div><div class="idx">2</div></div>
+      <div class="arr-cell"><div class="val">2</div><div class="idx">3</div></div>
+      <div class="arr-cell"><div class="val">8</div><div class="idx">4</div></div>
+      <div class="arr-cell"><div class="val">3</div><div class="idx">5</div></div>
+      <span class="trace-note">min=1 at idx 4 → swap with idx 0</span>
+    </div>
+    <div class="trace-row">
+      <span class="trace-label">i=1</span>
+      <div class="arr-cell highlight-green"><div class="val">1</div><div class="idx">0</div></div>
+      <div class="arr-cell highlight"><div class="val">2</div><div class="idx">1</div></div>
+      <div class="arr-cell"><div class="val">4</div><div class="idx">2</div></div>
+      <div class="arr-cell"><div class="val">6</div><div class="idx">3</div></div>
+      <div class="arr-cell"><div class="val">8</div><div class="idx">4</div></div>
+      <div class="arr-cell"><div class="val">3</div><div class="idx">5</div></div>
+      <span class="trace-note">min=2 at idx 3 → swap with idx 1</span>
+    </div>
+    <div class="trace-row">
+      <span class="trace-label">i=2</span>
+      <div class="arr-cell highlight-green"><div class="val">1</div><div class="idx">0</div></div>
+      <div class="arr-cell highlight-green"><div class="val">2</div><div class="idx">1</div></div>
+      <div class="arr-cell highlight"><div class="val">3</div><div class="idx">2</div></div>
+      <div class="arr-cell"><div class="val">6</div><div class="idx">3</div></div>
+      <div class="arr-cell"><div class="val">8</div><div class="idx">4</div></div>
+      <div class="arr-cell"><div class="val">4</div><div class="idx">5</div></div>
+      <span class="trace-note">min=3 at idx 5 → swap with idx 2</span>
+    </div>
+    <div class="trace-row">
+      <span class="trace-label">Final</span>
+      <div class="arr-cell highlight-green"><div class="val">1</div><div class="idx">0</div></div>
+      <div class="arr-cell highlight-green"><div class="val">2</div><div class="idx">1</div></div>
+      <div class="arr-cell highlight-green"><div class="val">3</div><div class="idx">2</div></div>
+      <div class="arr-cell highlight-green"><div class="val">4</div><div class="idx">3</div></div>
+      <div class="arr-cell highlight-green"><div class="val">6</div><div class="idx">4</div></div>
+      <div class="arr-cell highlight-green"><div class="val">8</div><div class="idx">5</div></div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">selectionSort</span>(<span class="ty">int</span>[] arr) {
+    <span class="ty">int</span> n = arr.length;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n - <span class="num">1</span>; i++) {
+        <span class="ty">int</span> minIdx = i;
+        <span class="kw">for</span> (<span class="ty">int</span> j = i + <span class="num">1</span>; j &lt; n; j++) {
+            <span class="kw">if</span> (arr[j] &lt; arr[minIdx]) minIdx = j;
+        }
+        <span class="cmt">// swap arr[i] and arr[minIdx]</span>
+        <span class="ty">int</span> temp = arr[i];
+        arr[i] = arr[minIdx];
+        arr[minIdx] = temp;
+    }
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time (all cases) · </span><span class="val">O(N²)</span></span>
+    <span class="complexity-badge"><span class="label">Space · </span><span class="val">O(1)</span></span>
+    <span class="complexity-badge"><span class="label">Stable? </span><span class="val">No</span></span>
+  </div>
+  <div class="callout warn">
+    <span class="callout-tag">Note</span>
+    Selection Sort always makes exactly N-1 swaps (one per pass), regardless of whether the array is already sorted. This makes it predictable but inefficient on nearly-sorted data compared to Insertion Sort.
+  </div>
+</section>
+
+<section class="section" id="insertion-sort">
+  <div class="section-header"><span class="section-num">08</span><h2>Insertion Sort</h2></div>
+  <p><strong>Idea:</strong> Think of sorting a hand of playing cards. You hold a sorted portion on the left. At each step, pick the next card from the unsorted right portion and insert it into the correct position in the sorted left portion by shifting elements right.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy — Playing Cards</span>
+    You are dealt cards one by one. Each time you receive a new card (the "key"), you scan your sorted hand from right to left, shifting cards right until you find where the new card belongs, then slot it in.
+  </div>
+
+  <h4>Step-by-step trace — arr = [5, 6, 4, 2, 1, 3]</h4>
+  <div class="sort-trace">
+    <div class="trace-row">
+      <span class="trace-label">idx=1</span>
+      <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">0</div></div>
+      <div class="arr-cell highlight"><div class="val">6</div><div class="idx">1</div></div>
+      <div class="arr-cell"><div class="val">4</div><div class="idx">2</div></div>
+      <div class="arr-cell"><div class="val">2</div><div class="idx">3</div></div>
+      <div class="arr-cell"><div class="val">1</div><div class="idx">4</div></div>
+      <div class="arr-cell"><div class="val">3</div><div class="idx">5</div></div>
+      <span class="trace-note">6&gt;5 → no shift needed</span>
+    </div>
+    <div class="trace-row">
+      <span class="trace-label">idx=2</span>
+      <div class="arr-cell highlight"><div class="val">4</div><div class="idx">0</div></div>
+      <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">1</div></div>
+      <div class="arr-cell highlight-green"><div class="val">6</div><div class="idx">2</div></div>
+      <div class="arr-cell"><div class="val">2</div><div class="idx">3</div></div>
+      <div class="arr-cell"><div class="val">1</div><div class="idx">4</div></div>
+      <div class="arr-cell"><div class="val">3</div><div class="idx">5</div></div>
+      <span class="trace-note">4 inserted before 5 and 6</span>
+    </div>
+    <div class="trace-row">
+      <span class="trace-label">idx=3</span>
+      <div class="arr-cell highlight"><div class="val">2</div><div class="idx">0</div></div>
+      <div class="arr-cell highlight-green"><div class="val">4</div><div class="idx">1</div></div>
+      <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">2</div></div>
+      <div class="arr-cell highlight-green"><div class="val">6</div><div class="idx">3</div></div>
+      <div class="arr-cell"><div class="val">1</div><div class="idx">4</div></div>
+      <div class="arr-cell"><div class="val">3</div><div class="idx">5</div></div>
+      <span class="trace-note">2 inserted at front</span>
+    </div>
+    <div class="trace-row">
+      <span class="trace-label">Final</span>
+      <div class="arr-cell highlight-green"><div class="val">1</div><div class="idx">0</div></div>
+      <div class="arr-cell highlight-green"><div class="val">2</div><div class="idx">1</div></div>
+      <div class="arr-cell highlight-green"><div class="val">3</div><div class="idx">2</div></div>
+      <div class="arr-cell highlight-green"><div class="val">4</div><div class="idx">3</div></div>
+      <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">4</div></div>
+      <div class="arr-cell highlight-green"><div class="val">6</div><div class="idx">5</div></div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">insertionSort</span>(<span class="ty">int</span>[] arr) {
+    <span class="ty">int</span> n = arr.length;
+    <span class="kw">for</span> (<span class="ty">int</span> idx = <span class="num">1</span>; idx &lt; n; idx++) {
+        <span class="kw">for</span> (<span class="ty">int</span> j = idx; j &gt; <span class="num">0</span>; j--) {
+            <span class="kw">if</span> (arr[j - <span class="num">1</span>] &gt; arr[j]) {
+                <span class="ty">int</span> temp = arr[j];
+                arr[j]     = arr[j - <span class="num">1</span>];
+                arr[j - <span class="num">1</span>] = temp;
+            } <span class="kw">else</span> {
+                <span class="kw">break</span>; <span class="cmt">// already in correct position — stop early</span>
+            }
+        }
+    }
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time (worst) · </span><span class="val">O(N²)</span></span>
+    <span class="complexity-badge"><span class="label">Time (best) · </span><span class="val">O(N)</span></span>
+    <span class="complexity-badge"><span class="label">Space · </span><span class="val">O(1)</span></span>
+    <span class="complexity-badge"><span class="label">Stable? </span><span class="val">Yes</span></span>
+  </div>
+  <div class="callout tip">
+    <span class="callout-tag">Best Case — Already Sorted</span>
+    If the array is already sorted, the inner loop's <code>break</code> fires immediately on every outer iteration. Insertion Sort runs in O(N) — exactly N-1 comparisons, zero swaps. Selection Sort still runs O(N²).
+  </div>
+</section>
+
+<section class="section" id="comparison">
+  <div class="section-header"><span class="section-num">09</span><h2>Algorithm Comparison</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Property</th><th>Selection Sort</th><th>Insertion Sort</th><th>Built-In (Timsort)</th></tr></thead>
+      <tbody>
+        <tr><td>Time — worst</td><td>O(N²)</td><td>O(N²)</td><td>O(N log N)</td></tr>
+        <tr><td>Time — best (sorted)</td><td>O(N²)</td><td><strong>O(N)</strong></td><td>O(N)</td></tr>
+        <tr><td>Space</td><td>O(1)</td><td>O(1)</td><td>O(N) or O(log N)</td></tr>
+        <tr><td>Stable</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td>Swaps</td><td>Exactly N-1</td><td>Up to N(N-1)/2</td><td>Varies</td></tr>
+        <tr><td>Best for</td><td>Min swap count matters</td><td>Nearly-sorted data</td><td>General purpose</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout key">
+    <span class="callout-tag">When to Use What</span>
+    In interviews, always prefer the built-in sort unless the problem explicitly asks you to implement a sorting algorithm. For very small arrays (&lt;20 elements), Insertion Sort is fast in practice due to low overhead. For minimum swaps, Selection Sort wins.
+  </div>
+</section>
+
+<section class="section" id="recap">
+  <div class="section-header"><span class="section-num">10</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><h4>Sorting</h4><p>Arranging data by a parameter; magnitude is the default, but any comparable criterion works.</p></div>
+    <div class="recap-card"><h4>Built-In APIs</h4><p><code>Arrays.sort()</code> in Java, <code>sort()</code> in C++, <code>.sort()</code> in Python — all O(N log N), always prefer these.</p></div>
+    <div class="recap-card"><h4>Elements Removal</h4><p>Minimum cost = sort descending, multiply each element by its 1-based removal position index.</p></div>
+    <div class="recap-card"><h4>Noble Integers (Distinct)</h4><p>Sort ascending; check <code>arr[i] == i</code>. Index equals count of smaller elements for distinct data.</p></div>
+    <div class="recap-card"><h4>Noble Integers (Repeated)</h4><p>Track first-occurrence index of each value; check if value equals that first-occurrence index.</p></div>
+    <div class="recap-card"><h4>Selection Sort</h4><p>Finds minimum in unsorted region and swaps it to the front. Always O(N²) — never benefits from nearly-sorted input.</p></div>
+    <div class="recap-card"><h4>Insertion Sort</h4><p>Inserts each element into its correct position in the sorted prefix. O(N) best case, O(N²) worst — great for nearly-sorted data.</p></div>
+    <div class="recap-card"><h4>Stability</h4><p>A stable sort preserves the relative order of equal elements. Insertion Sort is stable; Selection Sort is not.</p></div>
+  </div>
+
+  <h3>Complexity Summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Algorithm</th><th>Best</th><th>Average</th><th>Worst</th><th>Space</th></tr></thead>
+      <tbody>
+        <tr><td>Selection Sort</td><td>O(N²)</td><td>O(N²)</td><td>O(N²)</td><td>O(1)</td></tr>
+        <tr><td>Insertion Sort</td><td>O(N)</td><td>O(N²)</td><td>O(N²)</td><td>O(1)</td></tr>
+        <tr><td>Merge Sort</td><td>O(N log N)</td><td>O(N log N)</td><td>O(N log N)</td><td>O(N)</td></tr>
+        <tr><td>Quick Sort</td><td>O(N log N)</td><td>O(N log N)</td><td>O(N²)</td><td>O(log N)</td></tr>
+        <tr><td>Timsort (built-in)</td><td>O(N)</td><td>O(N log N)</td><td>O(N log N)</td><td>O(N)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section" id="leetcode">
+  <div class="section-header"><span class="section-num">11</span><h2>LeetCode Problems</h2></div>
+
+  <h3>Sorting Fundamentals</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff medium">Med</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/sort-an-array/" target="_blank" rel="noopener">#912 · Sort an Array ↗</a></div>
+      <div class="lc-why">Implement merge sort or quick sort from scratch — the definitive sorting algorithm implementation challenge.</div>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/squares-of-a-sorted-array/" target="_blank" rel="noopener">#977 · Squares of a Sorted Array ↗</a></div>
+      <div class="lc-why">Sorting squared values — great warm-up for understanding sort parameters and two-pointer on sorted arrays.</div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Med</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/sort-colors/" target="_blank" rel="noopener">#75 · Sort Colors ↗</a></div>
+      <div class="lc-why">Dutch National Flag problem — classic in-place three-way partition. Tests stable sort reasoning.</div>
+    </li>
+  </ul>
+
+  <h3>Noble Integers / Count Relationships</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff medium">Med</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/h-index/" target="_blank" rel="noopener">#274 · H-Index ↗</a></div>
+      <div class="lc-why">Directly analogous to Noble Integers: find the largest h such that h papers have at least h citations.</div>
+    </li>
+    <li>
+      <span class="lc-diff hard">Hard</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/count-of-smaller-numbers-after-self/" target="_blank" rel="noopener">#315 · Count of Smaller Numbers After Self ↗</a></div>
+      <div class="lc-why">Count smaller elements to the right of each position — advanced extension of the Noble Integers problem.</div>
+    </li>
+  </ul>
+
+  <h3>Sort-Based Greedy Problems</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/minimum-cost-to-move-chips-to-the-same-position/" target="_blank" rel="noopener">#1217 · Minimum Cost to Move Chips ↗</a></div>
+      <div class="lc-why">Cost-minimization problem solved by sorting and greedy — similar reasoning to the Elements Removal problem.</div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Med</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/task-scheduler/" target="_blank" rel="noopener">#621 · Task Scheduler ↗</a></div>
+      <div class="lc-why">Sort by frequency to schedule tasks greedily — a classic greedy problem that requires sorted input.</div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Med</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/largest-number/" target="_blank" rel="noopener">#179 · Largest Number ↗</a></div>
+      <div class="lc-why">Custom sort comparator — arrange numbers so their concatenation is largest. Tests mastery of sort parameters.</div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Med</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/merge-intervals/" target="_blank" rel="noopener">#56 · Merge Intervals ↗</a></div>
+      <div class="lc-why">Sort intervals by start time, then merge greedily — one of the most common interview problems involving sort.</div>
+    </li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Recommended Study Order</span>
+    Start with #977 and #75 for basic sorting practice. Move to #274 for the Noble Integers connection. Then tackle #56 and #621 as sort-based greedy problems. #912 and #315 are for when you want to go deeper on implementation.
+  </div>
+</section>
+
+</main>
+</div>
+<script>
+function copyCode(btn){const pre=btn.closest('.code-block').querySelector('pre');const text=pre.innerText;const finish=()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);};if(navigator.clipboard){navigator.clipboard.writeText(text).then(finish);}else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);finish();}}
+const bar=document.getElementById('progress-bar');
+function updateProgress(){const s=window.scrollY,d=document.documentElement.scrollHeight-window.innerHeight;bar.style.width=(d>0?(s/d)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});updateProgress();
+const sidebar=document.querySelector('.sidebar'),overlay=document.getElementById('nav-overlay'),navToggle=document.getElementById('nav-toggle');
+navToggle.addEventListener('click',()=>{const open=sidebar.classList.toggle('open');overlay.classList.toggle('open',open);navToggle.textContent=open?'✕':'☰';});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');navToggle.textContent='☰';});
+document.querySelectorAll('.nav-link').forEach(link=>{link.addEventListener('click',e=>{const href=link.getAttribute('href');if(!href||!href.startsWith('#'))return;e.preventDefault();const t=document.querySelector(href);if(!t)return;window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-24,behavior:'smooth'});sidebar.classList.remove('open');overlay.classList.remove('open');navToggle.textContent='☰';});});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('.section');
+function setActive(id){navLinks.forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${id}"]`);if(a){a.classList.add('active');const sb=document.querySelector('.sidebar');const lt=a.offsetTop,sbH=sb.clientHeight;if(lt<sb.scrollTop+60||lt>sb.scrollTop+sbH-60)sb.scrollTo({top:lt-sbH/2,behavior:'smooth'});}}
+const spyObserver=new IntersectionObserver((entries)=>{const visible=[];entries.forEach(e=>{if(e.isIntersecting)visible.push(e.target);});if(!visible.length)return;visible.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top);setActive(visible[0].id);},{rootMargin:'-10% 0px -55% 0px',threshold:0});
+sections.forEach(s=>spyObserver.observe(s));
+const revealObserver=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:0.06});
+sections.forEach(s=>revealObserver.observe(s));
+</script>
+</body>
+</html>

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Bit Manipulation — Binary, Bitwise Ops & Number Ranges</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh}
+.layout{display:flex;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear;border-radius:0 2px 2px 0}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s}
+.nav-toggle:hover{transform:scale(1.08)}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem}
+.nav-group{margin-bottom:.2rem}.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:0.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:var(--accent);opacity:.7;flex-shrink:0}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft)}
+.section{margin-bottom:5rem;scroll-margin-top:2rem}.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem}
+p{margin-bottom:1rem}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:0.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:0.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:0.85rem}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.06em;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980}.copy-btn.copied{color:#89d185;border-color:#89d185}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink)}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+.table-wrap{overflow-x:auto;margin:1.5rem 0}
+table{width:100%;border-collapse:collapse;font-size:0.92rem}
+thead th{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--bg-soft)}
+.diagram{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;margin:1.5rem 0;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem;min-width:42px}
+.arr-cell .val{font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;background:var(--bg);border:2px solid var(--line);border-radius:6px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--blue)}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:0.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.complexity-badge .label{color:var(--ink-soft)}.complexity-badge .val{color:var(--accent);font-weight:600}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent)}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5}
+.lc-list{list-style:none;padding:0;margin:1rem 0}
+.lc-list li{display:flex;align-items:baseline;gap:.75rem;padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;flex-wrap:wrap}
+.lc-list li:last-child{border-bottom:none}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600}
+.lc-diff.easy{background:var(--green-soft);color:var(--green)}.lc-diff.medium{background:var(--accent-soft);color:var(--accent)}.lc-diff.hard{background:var(--rose-soft);color:var(--rose)}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.lc-why{color:var(--ink-soft);font-size:.82rem;width:100%;margin-top:.1rem;padding-left:calc(.65rem + .45rem*2 + .75rem)}
+/* Bit-diagram specific */
+.bit-row{display:flex;gap:3px;margin:1rem 0;flex-wrap:wrap}
+.bit-cell{font-family:"JetBrains Mono",monospace;font-size:.82rem;font-weight:700;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:5px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+.bit-cell.b1{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.bit-cell.b0{background:var(--bg-soft);border-color:var(--line);color:var(--ink-soft)}
+.bit-cell.msb{background:var(--rose-soft);border-color:var(--rose);color:var(--rose)}
+.bit-label{font-family:"JetBrains Mono",monospace;font-size:.6rem;color:var(--ink-soft);text-align:center;width:36px}
+.bit-col{display:flex;flex-direction:column;align-items:center;gap:3px}
+.op-row{display:flex;gap:3px;margin:.25rem 0;flex-wrap:wrap}
+.op-line{height:2px;background:var(--line);width:100%;max-width:400px;margin:.3rem 0}
+.range-box{display:inline-flex;flex-direction:column;gap:.35rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:1rem 1.5rem;margin:.75rem .5rem .75rem 0;min-width:200px}
+.range-box .r-type{font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.range-box .r-val{font-family:"JetBrains Mono",monospace;font-size:.88rem;color:var(--ink);font-weight:600}
+.range-box .r-approx{font-size:.78rem;color:var(--ink-soft)}
+.truth-table td,.truth-table th{text-align:center;font-family:"JetBrains Mono",monospace;font-size:.82rem}
+@media(max-width:768px){.sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12)}.sidebar.open{transform:translateX(0)}.nav-toggle{display:flex}.main{padding:0 1.2rem 4rem}.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px)}.sidebar-overlay.open{display:block}}
+.section{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Toggle navigation">☰</button>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+
+<div class="layout">
+<nav class="sidebar">
+  <div class="sidebar-logo">DSA Notes · 04<strong>Bit Manipulation</strong></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Number Systems</div>
+    <a class="nav-link" href="#s01"><span class="nav-num">01</span>Decimal &amp; Binary</a>
+    <a class="nav-link" href="#s02"><span class="nav-num">02</span>Binary → Decimal</a>
+    <a class="nav-link" href="#s03"><span class="nav-num">03</span>Decimal → Binary</a>
+    <a class="nav-link" href="#s04"><span class="nav-num">04</span>Binary Addition</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Operators &amp; Encoding</div>
+    <a class="nav-link" href="#s05"><span class="nav-num">05</span>Bitwise Operators</a>
+    <a class="nav-link" href="#s06"><span class="nav-num">06</span>Negative Numbers</a>
+    <a class="nav-link" href="#s07"><span class="nav-num">07</span>Ranges &amp; Overflow</a>
+    <a class="nav-link" href="#s08"><span class="nav-num">08</span>Importance of Constraints</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#s09"><span class="nav-num">09</span>Quick Recap</a>
+    <a class="nav-link" href="#s10"><span class="nav-num">10</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+<div class="hero">
+  <div class="hero-eyebrow">Scaler DSA · Module 04</div>
+  <h1>Bit Manipulation</h1>
+  <p class="hero-lede">How computers speak binary — number systems, conversions, bitwise operators, 2's complement for negatives, and why data types and constraints matter.</p>
+  <div class="chips">
+    <span class="chip">Decimal System</span>
+    <span class="chip">Binary System</span>
+    <span class="chip">AND · OR · XOR · NOT</span>
+    <span class="chip">2's Complement</span>
+    <span class="chip">int vs long</span>
+    <span class="chip">Overflow Prevention</span>
+  </div>
+</div>
+
+<!-- 01 -->
+<section class="section" id="s01">
+  <div class="section-header"><span class="section-num">01</span><h2>Decimal &amp; Binary Number Systems</h2></div>
+  <h3>Decimal (Base-10)</h3>
+  <p>Each digit ranges 0–9. The positional value is a power of 10.</p>
+  <div class="diagram" style="flex-direction:column;align-items:flex-start;gap:.6rem">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem">342 = 3×10² + 4×10¹ + 2×10⁰</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem">2563 = 2×10³ + 5×10² + 6×10¹ + 3×10⁰</div>
+  </div>
+  <h3>Binary (Base-2)</h3>
+  <p>Each digit (bit) can only be <strong>0</strong> or <strong>1</strong>. Positional value is a power of 2.</p>
+  <div class="diagram" style="flex-direction:column;align-items:flex-start;gap:.6rem">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem"><span style="color:var(--accent)">(110)₂</span> = 1×2² + 1×2¹ + 0×2⁰ = <span style="color:var(--blue)">6</span></div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem"><span style="color:var(--accent)">(1011)₂</span> = 1×2³ + 0×2² + 1×2¹ + 1×2⁰ = <span style="color:var(--blue)">11</span></div>
+  </div>
+  <div class="callout key">
+    <span class="callout-tag">Key Idea</span>
+    <strong>% 2</strong> extracts the last bit; <strong>/ 2</strong> removes it. Same logic as %10 / 10 in decimal — this pattern powers both conversion algorithms.
+  </div>
+</section>
+
+<!-- 02 -->
+<section class="section" id="s02">
+  <div class="section-header"><span class="section-num">02</span><h2>Binary → Decimal Conversion</h2></div>
+  <p>Read each bit, multiply by its positional power of 2, and sum them all up.</p>
+  <h4>Example: (1101)₂ = 13</h4>
+  <div class="diagram" style="flex-direction:column;align-items:flex-start;gap:.5rem">
+    <div class="bit-row">
+      <div class="bit-col"><div class="bit-cell b1">1</div><div class="bit-label">bit 3</div></div>
+      <div class="bit-col"><div class="bit-cell b1">1</div><div class="bit-label">bit 2</div></div>
+      <div class="bit-col"><div class="bit-cell b0">0</div><div class="bit-label">bit 1</div></div>
+      <div class="bit-col"><div class="bit-cell b1">1</div><div class="bit-label">bit 0</div></div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--ink-soft)">= 1×8 + 1×4 + 0×2 + 1×1 = <span style="color:var(--accent);font-weight:700">13</span></div>
+  </div>
+  <h4>Example: (1011010)₂ = 90</h4>
+  <div class="diagram" style="flex-direction:column;align-items:flex-start;gap:.5rem">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--ink-soft)">= 1×64 + 0×32 + 1×16 + 1×8 + 0×4 + 1×2 + 0×1 = <span style="color:var(--accent);font-weight:700">90</span></div>
+  </div>
+  <h3>Code: Binary → Decimal</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">binaryToDecimal</span>(<span class="ty">int</span> N) {
+    <span class="ty">int</span> num = N;
+    <span class="ty">int</span> ans = <span class="num">0</span>, power = <span class="num">1</span>;
+    <span class="kw">while</span> (num != <span class="num">0</span>) {
+        <span class="ty">int</span> digit = num % <span class="num">10</span>;   <span class="cmt">// last digit</span>
+        num = num / <span class="num">10</span>;          <span class="cmt">// remove last digit</span>
+        ans += digit * power;
+        power *= <span class="num">2</span>;
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">T.C </span><span class="val">O(log₁₀ N)</span></div>
+    <div class="complexity-badge"><span class="label">S.C </span><span class="val">O(1)</span></div>
+  </div>
+</section>
+
+<!-- 03 -->
+<section class="section" id="s03">
+  <div class="section-header"><span class="section-num">03</span><h2>Decimal → Binary Conversion</h2></div>
+  <p>Repeatedly divide by 2 and collect remainders bottom-up — they form the binary representation.</p>
+  <h4>Example: 20 = (10100)₂</h4>
+  <div class="diagram" style="flex-direction:column;align-items:flex-start;gap:.4rem">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem">20 ÷ 2 = 10, rem <span style="color:var(--accent)">0</span></div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem">10 ÷ 2 = 5,  rem <span style="color:var(--accent)">0</span></div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem">5  ÷ 2 = 2,  rem <span style="color:var(--accent)">1</span></div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem">2  ÷ 2 = 1,  rem <span style="color:var(--accent)">0</span></div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem">1  ÷ 2 = 0,  rem <span style="color:var(--accent)">1</span> ← MSB</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;margin-top:.5rem">Read remainders bottom-up → <span style="color:var(--blue);font-weight:700">10100</span></div>
+  </div>
+  <h3>Code: Decimal → Binary</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">decToBinary</span>(<span class="ty">int</span> N) {
+    <span class="ty">int</span> num = N;
+    <span class="ty">int</span> ans = <span class="num">0</span>, power = <span class="num">1</span>;
+    <span class="kw">while</span> (num != <span class="num">0</span>) {
+        <span class="ty">int</span> rem = num % <span class="num">2</span>;
+        num = num / <span class="num">2</span>;
+        ans += rem * power;
+        power *= <span class="num">10</span>;   <span class="cmt">// shift decimal place</span>
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">T.C </span><span class="val">O(log₂ N)</span></div>
+    <div class="complexity-badge"><span class="label">S.C </span><span class="val">O(1)</span></div>
+  </div>
+</section>
+
+<!-- 04 -->
+<section class="section" id="s04">
+  <div class="section-header"><span class="section-num">04</span><h2>Binary Addition</h2></div>
+  <p>Works exactly like decimal addition, but carry happens at 2 (not 10). The rules are simple: 0+0=0, 0+1=1, 1+1=10 (write 0 carry 1), 1+1+1=11 (write 1 carry 1).</p>
+  <h4>Example: 1101 + 1001</h4>
+  <div class="diagram" style="flex-direction:column;align-items:flex-start;gap:.5rem">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.9rem">
+      &nbsp;&nbsp;1 1 0 1<br>
+      + 1 0 0 1<br>
+      <span style="border-top:2px solid var(--ink-soft);display:inline-block;width:90px"></span><br>
+      1 0 1 1 0
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--ink-soft)">carries: bit-1: 1+1=10 → write 0 carry 1; bit-3: 1+1+1=11 → write 1 carry 1</div>
+  </div>
+  <h3>Code: Add Two Binary Numbers (stored as ints)</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">addBinary</span>(<span class="ty">int</span> n1, <span class="ty">int</span> n2) {
+    <span class="ty">int</span> ans = <span class="num">0</span>, carry = <span class="num">0</span>, power = <span class="num">1</span>;
+    <span class="kw">while</span> (n1 != <span class="num">0</span> || n2 != <span class="num">0</span> || carry != <span class="num">0</span>) {
+        <span class="ty">int</span> ld1 = n1 % <span class="num">10</span>;
+        <span class="ty">int</span> ld2 = n2 % <span class="num">10</span>;
+        n1 = n1 / <span class="num">10</span>;
+        n2 = n2 / <span class="num">10</span>;
+        <span class="ty">int</span> sum = ld1 + ld2 + carry;
+        ans += (sum % <span class="num">2</span>) * power;
+        carry = sum / <span class="num">2</span>;
+        power *= <span class="num">10</span>;
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">T.C </span><span class="val">O(log max(n1,n2))</span></div>
+    <div class="complexity-badge"><span class="label">S.C </span><span class="val">O(1)</span></div>
+  </div>
+</section>
+
+<!-- 05 -->
+<section class="section" id="s05">
+  <div class="section-header"><span class="section-num">05</span><h2>Bitwise Operators</h2></div>
+  <p>The six core bitwise operators work directly on each bit. The mnemonic <strong>"same same puppy shame"</strong> summarises XOR: same bits → 0, different → 1.</p>
+  <div class="table-wrap">
+    <table class="truth-table">
+      <thead><tr><th>a</th><th>b</th><th>a &amp; b</th><th>a | b</th><th>a ^ b</th><th>~a / !a</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>0</td><td style="color:var(--blue)">0</td><td style="color:var(--blue)">0</td><td style="color:var(--blue)">0</td><td style="color:var(--green)">1</td></tr>
+        <tr><td>0</td><td>1</td><td style="color:var(--blue)">0</td><td style="color:var(--green)">1</td><td style="color:var(--green)">1</td><td style="color:var(--green)">1</td></tr>
+        <tr><td>1</td><td>0</td><td style="color:var(--blue)">0</td><td style="color:var(--green)">1</td><td style="color:var(--green)">1</td><td style="color:var(--blue)">0</td></tr>
+        <tr><td>1</td><td>1</td><td style="color:var(--green)">1</td><td style="color:var(--green)">1</td><td style="color:var(--blue)">0</td><td style="color:var(--blue)">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h4>Worked Examples</h4>
+  <div class="diagram" style="flex-direction:column;align-items:flex-start;gap:1.2rem">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;margin-bottom:.4rem"><strong>5 &amp; 6 = 4</strong></div>
+      <div class="bit-row">
+        <div class="bit-col"><div class="bit-cell b1">1</div><div class="bit-label"></div></div>
+        <div class="bit-col"><div class="bit-cell b0">0</div><div class="bit-label"></div></div>
+        <div class="bit-col"><div class="bit-cell b1">1</div><div class="bit-label"></div></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.8rem;align-self:center;margin:0 .5rem">&amp;</span>
+        <div class="bit-col"><div class="bit-cell b1">1</div><div class="bit-label"></div></div>
+        <div class="bit-col"><div class="bit-cell b1">1</div><div class="bit-label"></div></div>
+        <div class="bit-col"><div class="bit-cell b0">0</div><div class="bit-label"></div></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.8rem;align-self:center;margin:0 .5rem">=</span>
+        <div class="bit-col"><div class="bit-cell b1" style="background:var(--blue-soft);border-color:var(--blue);color:var(--blue)">1</div><div class="bit-label"></div></div>
+        <div class="bit-col"><div class="bit-cell b0">0</div><div class="bit-label"></div></div>
+        <div class="bit-col"><div class="bit-cell b0">0</div><div class="bit-label"></div></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:.82rem;align-self:center;margin-left:.5rem">= <strong>4</strong></span>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;margin-bottom:.4rem"><strong>20 | 45 = 61</strong>&nbsp;&nbsp;&nbsp;<strong>20 ^ 45 = 57</strong></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--ink-soft)">
+        20 → 0 1 0 1 0 0 &nbsp;&nbsp; 45 → 1 0 1 1 0 1<br>
+        OR:  1 1 1 1 0 1 = 61 &nbsp;&nbsp; XOR: 1 1 0 0 0 1 = 57
+      </div>
+    </div>
+  </div>
+  <div class="callout tip">
+    <span class="callout-tag">Memory Hook</span>
+    AND is "both must be 1" · OR is "at least one" · XOR is "exactly one" (same→0, diff→1) · NOT flips everything.
+  </div>
+</section>
+
+<!-- 06 -->
+<section class="section" id="s06">
+  <div class="section-header"><span class="section-num">06</span><h2>Negative Numbers &amp; 2's Complement</h2></div>
+  <p>The <strong>MSB (most significant bit)</strong> is the sign bit: <code>0</code> = positive, <code>1</code> = negative. This is the 32-bit int convention (4 bytes).</p>
+  <h3>2's Complement Algorithm</h3>
+  <p>To negate a number: <strong>toggle all bits, then add 1</strong>.</p>
+  <div class="diagram" style="flex-direction:column;align-items:flex-start;gap:.6rem">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem">
+      <span style="color:var(--ink-soft)">Step 1 — write +40 (8-bit):</span><br>
+      &nbsp;&nbsp;00101000
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem">
+      <span style="color:var(--ink-soft)">Step 2 — toggle all bits:</span><br>
+      &nbsp;&nbsp;11010111
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.85rem">
+      <span style="color:var(--ink-soft)">Step 3 — add 1:</span><br>
+      &nbsp;&nbsp;11011000 &nbsp;← this is <span style="color:var(--accent);font-weight:700">−40</span>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--ink-soft)">verify: −128 + 64 + 16 + 8 = −40 ✓</div>
+  </div>
+  <h4>8-bit Range Illustration (−128 to 127)</h4>
+  <div class="diagram" style="flex-direction:column;align-items:flex-start;gap:.3rem">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem">
+      <span style="color:var(--rose)">10000000</span> = −128 &nbsp;&nbsp; <span style="color:var(--ink-soft)">...</span> &nbsp;&nbsp;
+      <span style="color:var(--ink-soft)">11111111</span> = −1<br>
+      <span style="color:var(--green)">00000000</span> = 0 &nbsp;&nbsp;&nbsp; <span style="color:var(--ink-soft)">...</span> &nbsp;&nbsp;
+      <span style="color:var(--green)">01111111</span> = 127
+    </div>
+  </div>
+  <div class="callout analogy">
+    <span class="callout-tag">Intuition</span>
+    2's complement is clever: adding a number and its 2's complement always gives 0 (with overflow). This makes subtraction just addition, simplifying hardware enormously.
+  </div>
+</section>
+
+<!-- 07 -->
+<section class="section" id="s07">
+  <div class="section-header"><span class="section-num">07</span><h2>Ranges of Numbers</h2></div>
+  <p>Understanding the ranges of primitive types prevents silent bugs from overflow.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:.75rem;margin:1.5rem 0">
+    <div class="range-box">
+      <span class="r-type">byte (8-bit)</span>
+      <span class="r-val">[−128, 127]</span>
+      <span class="r-approx">−2⁷ to 2⁷−1</span>
+    </div>
+    <div class="range-box">
+      <span class="r-type">short (16-bit)</span>
+      <span class="r-val">[−32768, 32767]</span>
+      <span class="r-approx">−2¹⁵ to 2¹⁵−1</span>
+    </div>
+    <div class="range-box">
+      <span class="r-type">int (32-bit)</span>
+      <span class="r-val">[−2¹, 2¹−1]</span>
+      <span class="r-approx">≈ ±2 × 10⁹</span>
+    </div>
+    <div class="range-box">
+      <span class="r-type">long (64-bit)</span>
+      <span class="r-val">[−2⁶³, 2⁶³−1]</span>
+      <span class="r-approx">≈ ±9 × 10¹⁸</span>
+    </div>
+  </div>
+  <div class="callout key">
+    <span class="callout-tag">Range Formula</span>
+    For an n-bit signed integer: range is [−2^(n−1), 2^(n−1)−1]. The max positive is all 1s in the lower (n−1) bits = 2^(n−1)−1.
+  </div>
+</section>
+
+<!-- 08 -->
+<section class="section" id="s08">
+  <div class="section-header"><span class="section-num">08</span><h2>Importance of Constraints</h2></div>
+  <p>Always read the constraints first. They dictate whether to use <code>int</code> or <code>long</code>, and prevent integer overflow — a silent, devastating bug.</p>
+  <h3>The Overflow Trap</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java — Overflow Examples</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> a = <span class="num">1_000_00</span>;   <span class="cmt">// 10⁵</span>
+<span class="ty">int</span> b = <span class="num">1_000_000</span>;  <span class="cmt">// 10⁶</span>
+
+<span class="cmt">// ❌ WRONG — int × int overflows before storing</span>
+<span class="ty">int</span> c = a * b;
+
+<span class="cmt">// ❌ WRONG — overflow happens during mult, then stored in long</span>
+<span class="ty">long</span> c = a * b;
+
+<span class="cmt">// ✅ CORRECT — cast one operand to long first</span>
+<span class="ty">long</span> c = (<span class="ty">long</span>) a * b;
+<span class="ty">long</span> c = (<span class="ty">long</span>) a * (<span class="ty">long</span>) b;</pre>
+  </div>
+  <h3>Array Sum Example</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// N ≤ 10⁵, A[i] ≤ 10⁶ → max sum = 10¹¹ → needs long</span>
+<span class="ty">long</span> sum = <span class="num">0</span>;  <span class="cmt">// NOT int!</span>
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+    sum += A[i];
+}
+<span class="kw">return</span> sum;</pre>
+  </div>
+  <div class="callout warn">
+    <span class="callout-tag">Golden Rule</span>
+    Before writing any computation: estimate the maximum possible value. If it can exceed 2×10⁹, switch to <code>long</code>. If it can exceed 9×10¹⁸, you need BigInteger.
+  </div>
+</section>
+
+<!-- 09 recap -->
+<section class="section" id="s09">
+  <div class="section-header"><span class="section-num">09</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><h4>Binary Encoding</h4><p>Base-2: each bit is 0 or 1. Positional weight = 2^position. MSB (leftmost) is sign bit for signed integers.</p></div>
+    <div class="recap-card"><h4>Conversion Pattern</h4><p>Binary→Decimal: multiply bits by powers of 2. Decimal→Binary: repeatedly divide by 2, read remainders upward.</p></div>
+    <div class="recap-card"><h4>Bitwise Operators</h4><p>& (AND), | (OR), ^ (XOR), ~ (NOT), &lt;&lt; (left shift), >> (right shift). Operate on individual bits in parallel.</p></div>
+    <div class="recap-card"><h4>2's Complement</h4><p>Negate any number: flip all bits then add 1. MSB=0 → positive; MSB=1 → negative. Range: [−2^(n−1), 2^(n−1)−1].</p></div>
+    <div class="recap-card"><h4>int vs long</h4><p>int: ≈ ±2×10⁹. long: ≈ ±9×10¹⁸. Always estimate max possible value before choosing a type.</p></div>
+    <div class="recap-card"><h4>Overflow Prevention</h4><p>Cast at least one operand to long before multiplying: <code>(long)a * b</code>. Storing into long after is too late — overflow already happened.</p></div>
+  </div>
+</section>
+
+<!-- 10 LeetCode -->
+<section class="section" id="s10">
+  <div class="section-header"><span class="section-num">10</span><h2>LeetCode Problems</h2></div>
+  <h3>Number System &amp; Bit Basics</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <a class="lc-name" href="https://leetcode.com/problems/number-of-1-bits/" target="_blank" rel="noopener">#191 · Number of 1 Bits ↗</a>
+      <span class="lc-why">Count set bits using n &amp; 1 and right shift — the fundamental bitwise scan pattern.</span>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <a class="lc-name" href="https://leetcode.com/problems/power-of-two/" target="_blank" rel="noopener">#231 · Power of Two ↗</a>
+      <span class="lc-why">If n is a power of 2, exactly one bit is set: n &amp; (n−1) == 0. Classic 2's complement trick.</span>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <a class="lc-name" href="https://leetcode.com/problems/reverse-bits/" target="_blank" rel="noopener">#190 · Reverse Bits ↗</a>
+      <span class="lc-why">Extract LSB with &amp; 1, build the reversed integer by shifting — directly tests bit-level manipulation.</span>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <a class="lc-name" href="https://leetcode.com/problems/counting-bits/" target="_blank" rel="noopener">#338 · Counting Bits ↗</a>
+      <span class="lc-why">Count set bits for 0..n efficiently using DP with the half-n pattern: bits[i] = bits[i>>1] + (i&amp;1).</span>
+    </li>
+  </ul>
+  <h3>XOR Tricks</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <a class="lc-name" href="https://leetcode.com/problems/single-number/" target="_blank" rel="noopener">#136 · Single Number ↗</a>
+      <span class="lc-why">XOR all elements — pairs cancel out (a^a=0), leaving the unique number. O(N) time, O(1) space.</span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <a class="lc-name" href="https://leetcode.com/problems/single-number-ii/" target="_blank" rel="noopener">#137 · Single Number II ↗</a>
+      <span class="lc-why">Every element appears 3 times except one. Use bit counting mod 3 — extends the XOR intuition.</span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <a class="lc-name" href="https://leetcode.com/problems/sum-of-two-integers/" target="_blank" rel="noopener">#371 · Sum of Two Integers ↗</a>
+      <span class="lc-why">Add without + operator using XOR (sum) and AND+shift (carry) — directly models binary addition.</span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <a class="lc-name" href="https://leetcode.com/problems/add-binary/" target="_blank" rel="noopener">#67 · Add Binary ↗</a>
+      <span class="lc-why">String-based binary addition — implement the carry logic from the notes with string handling.</span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <a class="lc-name" href="https://leetcode.com/problems/missing-number/" target="_blank" rel="noopener">#268 · Missing Number ↗</a>
+      <span class="lc-why">XOR 0..n with array elements — the missing number is the lone survivor. Elegant O(N)/O(1) solution.</span>
+    </li>
+  </ul>
+  <div class="callout tip">
+    <span class="callout-tag">Study Order</span>
+    Start with #191 and #136 to build intuition. Then #231 for the n&(n-1) trick. Finish with #371 to see how binary addition maps directly to code.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+window.addEventListener('scroll',()=>{const s=document.documentElement;document.getElementById('progress-bar').style.width=(s.scrollTop/(s.scrollHeight-s.clientHeight)*100)+'%'});
+const toggle=document.getElementById('nav-toggle'),overlay=document.getElementById('nav-overlay'),sidebar=document.querySelector('.sidebar');
+toggle.addEventListener('click',()=>{sidebar.classList.toggle('open');overlay.classList.toggle('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+function copyCode(btn){const code=btn.closest('.code-block').querySelector('pre').innerText;try{navigator.clipboard.writeText(code)}catch(e){const t=document.createElement('textarea');t.value=code;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t)}btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('.section');
+function setActive(id){navLinks.forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${id}"]`);if(a){a.classList.add('active');const sb=document.querySelector('.sidebar'),lt=a.offsetTop,sh=sb.clientHeight;if(lt<sb.scrollTop+60||lt>sb.scrollTop+sh-60)sb.scrollTo({top:lt-sh/2,behavior:'smooth'})}}
+const spyObs=new IntersectionObserver(entries=>{const vis=entries.filter(e=>e.isIntersecting).map(e=>e.target);if(!vis.length)return;vis.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top);setActive(vis[0].id)},{rootMargin:'-10% 0px -55% 0px',threshold:0});
+sections.forEach(s=>spyObs.observe(s));
+const revObs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})},{threshold:0.06});
+sections.forEach(s=>revObs.observe(s));
+</script>
+</body>
+</html>

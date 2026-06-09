@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA — Modular Arithmetic &amp; GCD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;
+  --line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;
+  --blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;
+  --green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;
+  --code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar:268px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:radial-gradient(ellipse 80% 60% at 20% 10%,#f5f0ff22 0%,transparent 60%),
+             radial-gradient(ellipse 60% 50% at 80% 80%,#ffe8d622 0%,transparent 60%),var(--bg);
+  color:var(--ink);font-family:'Newsreader',Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;
+}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;z-index:1000;background:linear-gradient(90deg,var(--accent),var(--rose));transition:width .1s linear;}
+#sidebar{position:fixed;top:3px;left:0;width:var(--sidebar);height:calc(100vh - 3px);background:var(--bg-soft);border-right:1px solid var(--line);overflow-y:auto;padding:28px 0 40px;z-index:200;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+#sidebar::-webkit-scrollbar{width:4px;}
+#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+.sidebar-brand{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent);font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:0 20px 20px;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.sidebar-group{margin-bottom:8px;padding:0 12px;}
+.sidebar-group-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);padding:6px 8px 4px;opacity:.7;}
+.sidebar-link{display:block;padding:6px 8px;border-radius:6px;font-family:'Newsreader',serif;font-size:.88rem;color:var(--ink-soft);text-decoration:none;line-height:1.4;transition:background .15s,color .15s;}
+.sidebar-link:hover{background:var(--accent-soft);color:var(--accent);}
+.sidebar-link.active{background:var(--accent-soft);color:var(--accent);font-weight:500;}
+.sidebar-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);margin-right:6px;opacity:.8;}
+#main{margin-left:var(--sidebar);padding:48px 56px 80px;max-width:900px;}
+#fab{display:none;position:fixed;bottom:24px;right:24px;z-index:500;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;font-size:1.3rem;border:none;cursor:pointer;box-shadow:0 4px 20px #b5651d44;align-items:center;justify-content:center;transition:transform .2s;}
+#fab:hover{transform:scale(1.08);}
+#overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(45,42,38,.35);backdrop-filter:blur(4px);}
+.hero{padding:16px 0 56px;}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent);text-transform:uppercase;letter-spacing:.14em;margin-bottom:16px;}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);line-height:1.1;color:var(--ink);margin-bottom:20px;}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:28px;}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px;}
+.pill{font-family:'JetBrains Mono',monospace;font-size:.72rem;background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);padding:4px 12px;border-radius:20px;letter-spacing:.04em;}
+.section{padding:48px 0 20px;border-top:1px solid var(--line);opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}
+.section.visible{opacity:1;transform:none;}
+h2{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(1.6rem,3vw,2rem);color:var(--ink);margin-bottom:24px;display:flex;align-items:center;gap:14px;line-height:1.2;}
+.sec-badge{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);background:var(--accent-soft);padding:3px 10px;border-radius:4px;font-weight:600;letter-spacing:.06em;flex-shrink:0;}
+h3{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:600;color:var(--ink);margin:28px 0 12px;}
+p{margin-bottom:16px;}
+ul,ol{margin:0 0 16px 24px;}
+li{margin-bottom:6px;}
+strong{color:var(--ink);}
+.callout{border-radius:8px;padding:18px 22px;margin:24px 0;border-left:4px solid;}
+.callout .callout-label{font-family:'JetBrains Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;font-weight:600;margin-bottom:8px;display:block;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}
+.callout.tip .callout-label{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}
+.callout.key .callout-label{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}
+.callout.analogy .callout-label{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}
+.callout.warn .callout-label{color:var(--accent);}
+.code-wrap{border-radius:10px;overflow:hidden;margin:24px 0;}
+.code-header{background:#1e1d26;display:flex;align-items:center;justify-content:space-between;padding:8px 16px;}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#aaa;letter-spacing:.06em;}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.7rem;background:transparent;border:1px solid #444;color:#aaa;padding:3px 10px;border-radius:4px;cursor:pointer;transition:all .2s;}
+.copy-btn:hover{border-color:#888;color:#ddd;}
+.copy-btn.copied{color:#82d982;border-color:#82d982;}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.65;padding:20px 22px;overflow-x:auto;margin:0;}
+code:not(pre code){font-family:'JetBrains Mono',monospace;font-size:.84em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:2px 6px;}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+.diagram-wrap{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:24px;margin:24px 0;overflow-x:auto;}
+.formula{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:16px 22px;margin:16px 0;font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--ink);overflow-x:auto;white-space:pre;}
+.formula-highlight{background:var(--accent-soft);border-color:var(--accent);}
+.complexity-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg-soft);border:1px solid var(--line);border-radius:20px;padding:4px 14px;margin:4px 4px 4px 0;font-size:.84rem;}
+.complexity-badge .cb-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);}
+.complexity-badge .cb-val{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:.9rem;}
+thead tr{background:var(--bg-soft);}
+th{font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);padding:10px 16px;text-align:left;}
+td{padding:10px 16px;border-bottom:1px solid var(--line);}
+tr:hover td{background:var(--bg-soft);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:22px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 28px #b5651d18;}
+.card-glyph{font-size:1.5rem;margin-bottom:10px;}
+.card-title{font-family:'Fraunces',serif;font-weight:600;font-size:1rem;color:var(--ink);margin-bottom:8px;}
+.card-body{font-size:.88rem;color:var(--ink-soft);}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:20px;border-top:3px solid var(--accent);}
+.recap-card .rc-title{font-family:'Fraunces',serif;font-weight:600;font-size:.97rem;color:var(--ink);margin-bottom:8px;}
+.recap-card .rc-body{font-size:.85rem;color:var(--ink-soft);line-height:1.6;}
+/* LeetCode problems */
+.lc-list { list-style: none; padding: 0; margin: 1rem 0; }
+.lc-list li {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--line);
+  font-size: .9rem;
+}
+.lc-list li:last-child { border-bottom: none; }
+.lc-diff {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .65rem;
+  padding: .15rem .45rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.lc-diff.easy   { background: var(--green-soft);  color: var(--green);  }
+.lc-diff.medium { background: var(--accent-soft); color: var(--accent); }
+.lc-diff.hard   { background: var(--rose-soft);   color: var(--rose);   }
+.lc-name { color: var(--blue); font-weight: 500; }
+.lc-why  { color: var(--ink-soft); font-size: .82rem; }
+a.lc-name {
+  color: var(--blue);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color .15s, color .15s;
+}
+a.lc-name:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.lc-why{font-size:.82rem;color:var(--ink-soft);}
+/* MOD PROPERTIES TABLE */
+.prop-table{width:100%;border-collapse:collapse;margin:24px 0;font-size:.88rem;}
+.prop-table th{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:10px 16px;text-align:left;}
+.prop-table td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top;}
+.prop-table tr:hover td{background:var(--bg-soft);}
+.prop-label{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--ink);font-weight:600;}
+.prop-formula{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--blue);}
+.prop-example{font-size:.82rem;color:var(--ink-soft);}
+/* GCD EXAMPLE BOXES */
+.gcd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin:20px 0;}
+.gcd-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-family:'JetBrains Mono',monospace;font-size:.82rem;}
+.gcd-box .gcd-q{color:var(--blue);font-weight:600;margin-bottom:6px;}
+.gcd-box .gcd-a{color:var(--accent);font-weight:600;}
+/* PAIR SUM DIAGRAM */
+.farr-row{display:flex;gap:0;margin:12px 0;overflow-x:auto;}
+.farr-cell{display:flex;flex-direction:column;align-items:center;border:1.5px solid var(--line);background:var(--bg);min-width:40px;}
+.farr-cell .f-val{padding:8px 0;font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:600;color:var(--ink);width:100%;text-align:center;border-bottom:1px solid var(--line);}
+.farr-cell .f-idx{padding:5px 0;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--ink-soft);width:100%;text-align:center;}
+.farr-cell.hi .f-val{background:var(--accent-soft);color:var(--accent);}
+.farr-cell.hi2 .f-val{background:var(--blue-soft);color:var(--blue);}
+.farr-cell:first-child{border-radius:6px 0 0 6px;}
+.farr-cell:last-child{border-radius:0 6px 6px 0;}
+/* CALL STACK */
+.call-stack{display:flex;flex-direction:column;gap:0;margin:20px 0;max-width:440px;}
+.stack-frame{border:1.5px solid var(--line);background:var(--bg);padding:10px 18px;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:.82rem;}
+.stack-frame:first-child{border-radius:6px 6px 0 0;}
+.stack-frame:last-child{border-radius:0 0 6px 6px;}
+.stack-frame.base{background:var(--accent-soft);border-color:var(--accent);}
+.stack-frame .frame-val{color:var(--accent);font-weight:600;}
+.stack-arrow{text-align:right;font-size:.78rem;color:var(--ink-soft);padding:2px 0 2px 8px;font-family:'JetBrains Mono',monospace;}
+/* QUIZ BOX */
+.quiz-box{background:var(--purple-soft);border:1.5px solid var(--purple);border-radius:10px;padding:24px;margin:24px 0;}
+.quiz-label{font-family:'JetBrains Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;color:var(--purple);font-weight:600;margin-bottom:12px;display:block;}
+.quiz-step{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--ink);margin-bottom:8px;}
+.quiz-step span{color:var(--accent);}
+@media(max-width:800px){
+  #sidebar{transform:translateX(-100%);transition:transform .3s ease;}
+  #sidebar.open{transform:translateX(0);}
+  #main{margin-left:0;padding:32px 22px 60px;}
+  #fab{display:flex;}
+  #overlay.open{display:block;}
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--line);
+}
+.section-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: .2rem .55rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.section-header h2 {
+  font-family: "Fraunces", serif;
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+
+<nav id="sidebar">
+  <div class="sidebar-brand">DSA · Mod Arith &amp; GCD</div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Modular Arithmetic</div>
+    <a class="sidebar-link" href="#mod-intro"><span class="sidebar-num">01</span>Modulo Operator</a>
+    <a class="sidebar-link" href="#mod-props"><span class="sidebar-num">02</span>Properties of %</a>
+    <a class="sidebar-link" href="#mod-quiz"><span class="sidebar-num">03</span>Quiz &amp; Examples</a>
+    <a class="sidebar-link" href="#mod-power"><span class="sidebar-num">04</span>Mod on Fast Power</a>
+    <a class="sidebar-link" href="#mod-sum"><span class="sidebar-num">05</span>Array Sum % M</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Pair Sum Problem</div>
+    <a class="sidebar-link" href="#pair-sum"><span class="sidebar-num">06</span>Pairs Divisible by M</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">GCD</div>
+    <a class="sidebar-link" href="#gcd-intro"><span class="sidebar-num">07</span>Introduction to GCD</a>
+    <a class="sidebar-link" href="#gcd-props"><span class="sidebar-num">08</span>Properties of GCD</a>
+    <a class="sidebar-link" href="#gcd-euclidean"><span class="sidebar-num">09</span>Euclidean Algorithm</a>
+    <a class="sidebar-link" href="#gcd-code"><span class="sidebar-num">10</span>GCD Function</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Review</div>
+    <a class="sidebar-link" href="#recap">Quick Recap</a>
+    <a class="sidebar-link" href="#leetcode">LeetCode Problems</a>
+  </div>
+</nav>
+
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+
+<main id="main">
+  <div class="hero">
+    <div class="hero-eyebrow">DSA · Scaler · Modular Arithmetic &amp; GCD</div>
+    <h1>Mod, Remainder,<br/>and GCD</h1>
+    <p class="hero-lede">
+      Everything you need to know about modular arithmetic for competitive programming: the five properties of %, overflow-safe power functions, counting pair sums, and the Euclidean GCD algorithm.
+    </p>
+    <div class="pill-row">
+      <span class="pill">% Operator</span>
+      <span class="pill">5 Mod Properties</span>
+      <span class="pill">Mod on Power</span>
+      <span class="pill">Pair Sum Divisible by M</span>
+      <span class="pill">GCD Properties</span>
+      <span class="pill">Euclidean Algorithm</span>
+    </div>
+  </div>
+
+  <!-- 01 MOD INTRO -->
+  <section class="section" id="mod-intro">
+    <h2><span class="sec-badge">01</span>The Modulo (%) Operator</h2>
+    <p>
+      <code>A % B</code> gives the <strong>remainder</strong> when A is divided by B.
+    </p>
+    <div class="formula">Range of (A % B)  →  [0,  B − 1]</div>
+    <p>
+      No matter how large A is, <code>A % B</code> always falls within this finite range.
+    </p>
+    <h3>Why Do We Need %?</h3>
+    <p>
+      Many problems involve numbers that grow astronomically large — factorials, power functions, sum of N numbers where N ≤ 10⁹. Storing or comparing these raw values is impractical. Applying <code>% m</code> <strong>limits the range</strong> of any value to <code>[0, m−1]</code>, preventing integer overflow and enabling fast computation.
+    </p>
+    <div class="callout tip">
+      <span class="callout-label">Common Modulus in Competitive Programming</span>
+      The value <code>10⁹ + 7</code> (= 1,000,000,007) is a prime number commonly used as the modulus in contest problems. It fits in a 32-bit signed integer, and products of two values taken mod <code>10⁹ + 7</code> fit in a 64-bit <code>long</code>.
+    </div>
+  </section>
+
+  <!-- 02 MOD PROPERTIES -->
+  <section class="section" id="mod-props">
+    <h2><span class="sec-badge">02</span>Five Properties of Modular Arithmetic</h2>
+    <p>
+      These five identities are the foundation of every modular computation. Memorize them — they appear constantly in problem constraints like <em>"print answer modulo 10⁹+7"</em>.
+    </p>
+
+    <table class="prop-table">
+      <thead><tr><th>#</th><th>Property</th><th>Formula</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="prop-label">1</span></td>
+          <td><strong>Addition</strong></td>
+          <td><span class="prop-formula">(a + b) % m = ((a%m) + (b%m)) % m</span></td>
+          <td class="prop-example">(3+4)%5 = (3+4)%5 = 2 ✓<br/>(9+8)%5 = (4+3)%5 = 2 ✓</td>
+        </tr>
+        <tr>
+          <td><span class="prop-label">2</span></td>
+          <td><strong>Multiplication</strong></td>
+          <td><span class="prop-formula">(a × b) % m = ((a%m) × (b%m)) % m</span></td>
+          <td class="prop-example">(4×5)%7 = (4×5)%7 = 6<br/>=(4%7 × 5%7)%7 = (4×5)%7 = 6 ✓</td>
+        </tr>
+        <tr>
+          <td><span class="prop-label">3</span></td>
+          <td><strong>Add m cancels</strong></td>
+          <td><span class="prop-formula">(a + m) % m = a % m</span></td>
+          <td class="prop-example">Since m%m = 0, adding m is a no-op mod m.</td>
+        </tr>
+        <tr>
+          <td><span class="prop-label">4</span></td>
+          <td><strong>Subtraction</strong></td>
+          <td><span class="prop-formula">(a − b) % m = ((a%m) − (b%m) + m) % m</span></td>
+          <td class="prop-example">a=10, b=2, m=9: (1−2+9)%9=8 ✓<br/>a=7, b=2, m=9: (7−2)%9=5 ✓</td>
+        </tr>
+        <tr>
+          <td><span class="prop-label">5</span></td>
+          <td><strong>Power</strong></td>
+          <td><span class="prop-formula">aᵇ % m = ((a%m)ᵇ) % m</span></td>
+          <td class="prop-example">a%m is applied first; then raise to power b.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout warn">
+      <span class="callout-label">Subtraction Trap</span>
+      When computing <code>(a − b) % m</code>, the result of <code>(a%m − b%m)</code> can be <strong>negative</strong> (e.g., <code>1 − 2 = −1</code>). Always add <code>m</code> before taking modulo to ensure a non-negative result: <code>((a%m) − (b%m) + m) % m</code>.
+    </div>
+
+    <div class="callout key">
+      <span class="callout-label">Note on Division</span>
+      Division does <strong>not</strong> distribute over modulo the same way. <code>(a / b) % m ≠ ((a%m) / (b%m)) % m</code> in general. For modular division you need the <em>modular multiplicative inverse</em>, which is an advanced topic.
+    </div>
+  </section>
+
+  <!-- 03 QUIZ -->
+  <section class="section" id="mod-quiz">
+    <h2><span class="sec-badge">03</span>Quiz &amp; Worked Examples</h2>
+    <p>These two quiz problems from the notes demonstrate Property 4 (subtraction) and Property 5 (power) in action.</p>
+
+    <div class="quiz-box">
+      <span class="quiz-label">Quiz 1 — Evaluate (37¹⁰³ − 1) % 12</span>
+      <div class="quiz-step">Step 1: Apply subtraction property → <span>(37¹⁰³%12 − 1%12 + 12) % 12</span></div>
+      <div class="quiz-step">Step 2: Compute 37%12 = <span>1</span></div>
+      <div class="quiz-step">Step 3: By power property → 37¹⁰³%12 = (37%12)¹⁰³%12 = 1¹⁰³%12 = <span>1</span></div>
+      <div class="quiz-step">Step 4: (1 − 1 + 12) % 12 = 12 % 12 = <span style="color:var(--green);font-size:1.1rem;">0</span></div>
+    </div>
+
+    <div class="quiz-box" style="background:var(--green-soft);border-color:var(--green);">
+      <span class="quiz-label" style="color:var(--green);">Quiz 2 — Evaluate (37¹⁰³) % 12</span>
+      <div class="quiz-step">Step 1: 37 % 12 = <span>1</span></div>
+      <div class="quiz-step">Step 2: Power property → (37%12)¹⁰³ % 12 = 1¹⁰³ % 12</div>
+      <div class="quiz-step">Step 3: 1 raised to any power = 1 → 1 % 12 = <span style="color:var(--green);font-size:1.1rem;">1</span></div>
+    </div>
+
+    <div class="callout analogy">
+      <span class="callout-label">Key Insight</span>
+      Whenever a base <code>a</code> satisfies <code>a % m == 1</code>, then <code>aᵏ % m == 1</code> for all positive integers k. This is extremely useful for simplifying large exponentials modulo m without computing the full number.
+    </div>
+  </section>
+
+  <!-- 04 MOD POWER -->
+  <section class="section" id="mod-power">
+    <h2><span class="sec-badge">04</span>Applying Mod to the Fast Power Function</h2>
+    <p>
+      When the constraints are 1 ≤ a, n ≤ 10⁹, computing <code>aⁿ</code> directly overflows even a 64-bit integer. We must take mod at every multiplication step. The key change from the plain fast-power function is:
+    </p>
+    <ul>
+      <li>Store the half-result <code>p</code> as a <code>long</code> (not <code>int</code>) to avoid overflow before applying mod.</li>
+      <li>Apply <code>% m</code> at each multiplication: <code>(p * p) % m</code> and <code>((p * p) % m * a) % m</code>.</li>
+    </ul>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Modular Fast Power</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cmt">// Constraints: 1 ≤ a ≤ 10⁹,  1 ≤ n ≤ 10⁹,  2 ≤ m ≤ 10⁹</span>
+<span class="ty">int</span> <span class="fn">pow</span>(<span class="ty">int</span> a, <span class="ty">int</span> n, <span class="ty">int</span> m) {
+    <span class="kw">if</span> (n == <span class="num">0</span>) <span class="kw">return</span> <span class="num">1</span>;
+
+    <span class="ty">long</span> p = <span class="fn">pow</span>(a, n / <span class="num">2</span>, m);   <span class="cmt">// long to prevent overflow before mod</span>
+
+    <span class="kw">if</span> (n % <span class="num">2</span> == <span class="num">0</span>) {
+        <span class="kw">return</span> (<span class="ty">int</span>) ((p * p) % m);
+    } <span class="kw">else</span> {
+        <span class="kw">return</span> (<span class="ty">int</span>) ((p * p % m * a) % m);
+    }
+}</pre>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-label">Why long?</span>
+      When m is up to 10⁹ and p = m−1 ≈ 10⁹, then p×p ≈ 10¹⁸, which overflows a 32-bit int (max ≈ 2.1×10⁹) and even a 32-bit unsigned int. A 64-bit <code>long</code> holds up to ~9.2×10¹⁸, so <code>p * p</code> is safe before the <code>% m</code> reduces it back below 10⁹.
+    </div>
+
+    <h3>Complexity</h3>
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(log N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(log N)</span></span>
+  </section>
+
+  <!-- 05 ARRAY SUM MOD -->
+  <section class="section" id="mod-sum">
+    <h2><span class="sec-badge">05</span>Array Sum % M — Applying Mod in Loops</h2>
+    <p>
+      A common competitive programming pattern: compute the sum of an array modulo some large prime, when both N and individual array values can be up to 10⁹ (so the raw sum could exceed 10¹⁸).
+    </p>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Sum of Array % (10⁹+7)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cmt">// Constraints: 1 ≤ N ≤ 10⁹,  1 ≤ arr[i] ≤ 10¹⁰</span>
+<span class="ty">long</span> <span class="fn">modSum</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> N) {
+    <span class="ty">int</span> m = <span class="num">1_000_000_007</span>;  <span class="cmt">// 10⁹ + 7</span>
+    <span class="ty">long</span> sum = <span class="num">0</span>;
+
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+        sum = (sum + arr[i]) % m;   <span class="cmt">// Apply mod every step — never let sum explode</span>
+    }
+
+    <span class="kw">return</span> sum % m;
+}</pre>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-label">Best Practice</span>
+      Apply <code>% m</code> <em>inside the loop</em> rather than only at the end. Taking mod at each addition ensures the accumulator <code>sum</code> stays within <code>[0, m−1]</code>, so even with N = 10⁹ additions of values up to 10¹⁰, a <code>long</code> never overflows.
+    </div>
+  </section>
+
+  <!-- 06 PAIR SUM -->
+  <section class="section" id="pair-sum">
+    <h2><span class="sec-badge">06</span>Count Pairs with Sum Divisible by M</h2>
+
+    <div class="callout key">
+      <span class="callout-label">Problem Statement</span>
+      Given an array of N integers and a modulus M, count all pairs (i, j) where i ≠ j and <code>(arr[i] + arr[j]) % m == 0</code>. Note: pair (i, j) is the same as (j, i) — count each once.
+    </div>
+
+    <h3>Example</h3>
+    <div class="diagram-wrap">
+      <p style="margin-bottom:12px;font-size:.85rem;color:var(--ink-soft);">arr = [4, 7, 6, 5, 8, 3] &nbsp;|&nbsp; M = 6</p>
+      <div class="farr-row">
+        <div class="farr-cell hi"><div class="f-val">4</div><div class="f-idx">0</div></div>
+        <div class="farr-cell hi2"><div class="f-val">7</div><div class="f-idx">1</div></div>
+        <div class="farr-cell"><div class="f-val">6</div><div class="f-idx">2</div></div>
+        <div class="farr-cell hi2"><div class="f-val">5</div><div class="f-idx">3</div></div>
+        <div class="farr-cell hi"><div class="f-val">8</div><div class="f-idx">4</div></div>
+        <div class="farr-cell"><div class="f-val">3</div><div class="f-idx">5</div></div>
+      </div>
+      <p style="margin-top:12px;font-size:.85rem;color:var(--ink-soft);">Valid pairs: (4+8)%6=0 ✓ and (7+5)%6=0 ✓ → <strong>Answer = 2</strong></p>
+    </div>
+
+    <h3>Idea 1 — Brute Force O(N²)</h3>
+    <p>
+      Check every pair (i, j) with i &lt; j and test if their sum is divisible by M.
+    </p>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Brute Force</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">int</span> <span class="fn">countPairs</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> m) {
+    <span class="ty">int</span> ans = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; arr.length; i++) {
+        <span class="kw">for</span> (<span class="ty">int</span> j = i + <span class="num">1</span>; j &lt; arr.length; j++) {
+            <span class="kw">if</span> ((arr[i] + arr[j]) % m == <span class="num">0</span>) ans++;
+        }
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+    </div>
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N²)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(1)</span></span>
+
+    <h3>Idea 2 — Frequency Array O(N + M)</h3>
+    <p>
+      <strong>Key insight:</strong> <code>(arr[i] + arr[j]) % m == 0</code> requires that the two remainders complement each other: if <code>arr[i] % m = r</code>, then <code>arr[j] % m</code> must equal <code>m − r</code>. Special cases: when r = 0 both must be 0; when m is even and r = m/2 both must be m/2.
+    </p>
+    <div class="formula">Pair condition:  (r₁ + r₂) % m = 0
+  → r₁ = 0  and  r₂ = 0
+  → r₁ = 1  and  r₂ = m−1
+  → r₁ = 2  and  r₂ = m−2
+      ...
+  → r₁ = k  and  r₂ = m−k</div>
+
+    <p>
+      Build a <strong>frequency array</strong> <code>farr[m]</code> where <code>farr[r]</code> counts how many elements have remainder r. Then pair up complementary buckets.
+    </p>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Frequency Array Approach</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">long</span> <span class="fn">countPairsOptimal</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> m) {
+    <span class="cmt">// Step 1: Build frequency array of remainders</span>
+    <span class="ty">int</span>[] farr = <span class="kw">new</span> <span class="ty">int</span>[m];
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; arr.length; i++) {
+        farr[arr[i] % m]++;
+    }
+
+    <span class="ty">long</span> ans = <span class="num">0</span>;
+
+    <span class="cmt">// Step 2a: Count pairs where both remainders are 0</span>
+    ans += (<span class="ty">long</span>) farr[<span class="num">0</span>] * (farr[<span class="num">0</span>] - <span class="num">1</span>) / <span class="num">2</span>;  <span class="cmt">// C(farr[0], 2)</span>
+
+    <span class="cmt">// Step 2b: If m is even, count pairs where both remainders are m/2</span>
+    <span class="kw">if</span> (m % <span class="num">2</span> == <span class="num">0</span>) {
+        ans += (<span class="ty">long</span>) farr[m / <span class="num">2</span>] * (farr[m / <span class="num">2</span>] - <span class="num">1</span>) / <span class="num">2</span>;
+    }
+
+    <span class="cmt">// Step 2c: Pair complementary buckets l and r = m - l</span>
+    <span class="ty">int</span> l = <span class="num">1</span>, r = m - <span class="num">1</span>;
+    <span class="kw">while</span> (l &lt; r) {
+        ans += (<span class="ty">long</span>) farr[l] * farr[r];
+        l++; r--;
+    }
+
+    <span class="kw">return</span> ans;
+}</pre>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N + M)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(M)</span></span>
+
+    <div class="callout tip">
+      <span class="callout-label">Why C(n, 2)?</span>
+      When all k elements have remainder 0, every pair among them is valid. The number of ways to choose 2 from k is <code>k(k−1)/2</code> — this is the combination formula C(k, 2). The same applies to the m/2 bucket when m is even.
+    </div>
+
+    <h3>Worked Example — farr for M = 6</h3>
+    <div class="diagram-wrap">
+      <p style="font-size:.85rem;color:var(--ink-soft);margin-bottom:10px;">arr = [2,3,4,8,6,15,5,12,17,7,18,10,9,16,21] → farr after taking each element % 6:</p>
+      <div class="farr-row">
+        <div class="farr-cell hi"><div class="f-val">3</div><div class="f-idx">r=0</div></div>
+        <div class="farr-cell"><div class="f-val">1</div><div class="f-idx">r=1</div></div>
+        <div class="farr-cell"><div class="f-val">2</div><div class="f-idx">r=2</div></div>
+        <div class="farr-cell hi"><div class="f-val">4</div><div class="f-idx">r=3</div></div>
+        <div class="farr-cell hi2"><div class="f-val">3</div><div class="f-idx">r=4</div></div>
+        <div class="farr-cell hi2"><div class="f-val">2</div><div class="f-idx">r=5</div></div>
+      </div>
+      <p style="margin-top:12px;font-size:.85rem;color:var(--ink-soft);">
+        r=0 bucket: C(3,2) = 3 pairs. &nbsp;
+        r=3 (m/2=3): C(4,2) = 6 pairs. &nbsp;
+        r=1↔r=5: 1×2 = 2 pairs. &nbsp;
+        r=2↔r=4: 2×3 = 6 pairs. &nbsp;
+        Total = 3+6+2+6 = <strong>17</strong>
+      </p>
+    </div>
+  </section>
+
+  <!-- 07 GCD INTRO -->
+  <section class="section" id="gcd-intro">
+    <h2><span class="sec-badge">07</span>Greatest Common Divisor (GCD)</h2>
+    <p>
+      <strong>GCD(A, B)</strong> (also called the Highest Common Factor, HCF) is the <em>largest positive integer</em> that divides both A and B without a remainder.
+    </p>
+    <div class="formula">GCD(A, B) = x  →  A % x = 0  AND  B % x = 0,
+                   where x is the <strong>highest</strong> such number.</div>
+
+    <h3>Quick Examples</h3>
+    <div class="gcd-grid">
+      <div class="gcd-box"><div class="gcd-q">GCD(20, 65)</div><div>Divisors of 20: 1,2,4,5,10,20<br/>Divisors of 65: 1,5,13,65</div><div class="gcd-a">= 5</div></div>
+      <div class="gcd-box"><div class="gcd-q">GCD(−10, 20)</div><div>GCD uses absolute values</div><div class="gcd-a">= 10</div></div>
+      <div class="gcd-box"><div class="gcd-q">GCD(7, 9)</div><div>7 and 9 share no common factor &gt; 1</div><div class="gcd-a">= 1</div></div>
+      <div class="gcd-box"><div class="gcd-q">GCD(0, 8)</div><div>Every integer divides 0</div><div class="gcd-a">= 8</div></div>
+      <div class="gcd-box"><div class="gcd-q">GCD(0, −10)</div><div>By convention, GCD(0,A) = |A|</div><div class="gcd-a">= 10</div></div>
+      <div class="gcd-box"><div class="gcd-q">GCD(4, 7)</div><div>No common factor &gt; 1</div><div class="gcd-a">= 1</div></div>
+    </div>
+
+    <div class="callout key">
+      <span class="callout-label">Coprime Numbers</span>
+      When GCD(A, B) = 1, the numbers A and B are called <strong>coprime</strong> (or relatively prime). They share no common prime factor.
+    </div>
+  </section>
+
+  <!-- 08 GCD PROPERTIES -->
+  <section class="section" id="gcd-props">
+    <h2><span class="sec-badge">08</span>Properties of GCD</h2>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-glyph">①</div>
+        <div class="card-title">Commutative</div>
+        <div class="card-body"><code>GCD(A, B) = GCD(B, A)</code><br/>Order of arguments does not matter.</div>
+      </div>
+      <div class="card">
+        <div class="card-glyph">②</div>
+        <div class="card-title">Zero Identity</div>
+        <div class="card-body"><code>GCD(0, A) = |A|</code><br/>Zero contributes nothing — the GCD equals the absolute value of the other number.</div>
+      </div>
+      <div class="card">
+        <div class="card-glyph">③</div>
+        <div class="card-title">Associative</div>
+        <div class="card-body"><code>GCD(A, B, C) = GCD(GCD(A,B), C)</code><br/>Can be computed pairwise in any order.</div>
+      </div>
+      <div class="card">
+        <div class="card-glyph">④</div>
+        <div class="card-title">Subtraction Property ⭐</div>
+        <div class="card-body">If A, B &gt; 0 and A &gt; B:<br/><code>GCD(A, B) = GCD(A−B, B)</code><br/>This is the key lemma behind the Euclidean algorithm.</div>
+      </div>
+    </div>
+
+    <h3>Proof of the Subtraction Property</h3>
+    <p>
+      Suppose <code>GCD(A, B) = x</code>. By definition, x divides both A and B. We want to show x also divides (A − B).
+    </p>
+    <div class="formula">A % x = 0  →  A = k₁ × x for some integer k₁
+B % x = 0  →  B = k₂ × x for some integer k₂
+(A − B) = (k₁ − k₂) × x  →  (A − B) % x = 0  ✓</div>
+    <p>
+      Since x divides both (A−B) and B, x is also a common divisor of (A−B, B). One can further show x is the <em>greatest</em> such divisor, giving <code>GCD(A, B) = GCD(A−B, B)</code>.
+    </p>
+  </section>
+
+  <!-- 09 EUCLIDEAN -->
+  <section class="section" id="gcd-euclidean">
+    <h2><span class="sec-badge">09</span>The Euclidean Algorithm</h2>
+    <p>
+      The subtraction property works but can be slow — to reduce GCD(23, 5) by subtraction alone requires many steps (23→18→13→8→3→…). The modulo operation is equivalent to repeated subtraction but does it all at once:
+    </p>
+
+    <div class="formula">GCD(A, B) = GCD(A − B, B)
+             = GCD(A − 2B, B)
+             = GCD(A − 3B, B)  ...  (repeatedly subtract B)
+             = GCD(A % B, B)        ← all in one step!</div>
+
+    <p>Combined with commutativity, we get the famous Euclidean recurrence:</p>
+    <div class="formula formula-highlight">GCD(A, B)  =  GCD(B,  A % B)</div>
+
+    <h3>Worked Example — GCD(23, 5)</h3>
+    <div class="diagram-wrap">
+      <div class="call-stack">
+        <div class="stack-frame base"><span>gcd(3, 5)</span><span class="frame-val">returns gcd(5,3)</span></div>
+        <div class="stack-arrow">23 % 5 = 3</div>
+        <div class="stack-frame base"><span>gcd(5, 3)</span><span class="frame-val">returns gcd(3,2)</span></div>
+        <div class="stack-arrow">5 % 3 = 2</div>
+        <div class="stack-frame"><span>gcd(3, 2)</span><span class="frame-val">returns gcd(2,1)</span></div>
+        <div class="stack-arrow">3 % 2 = 1</div>
+        <div class="stack-frame"><span>gcd(2, 1)</span><span class="frame-val">returns gcd(1,0)</span></div>
+        <div class="stack-arrow">2 % 1 = 0</div>
+        <div class="stack-frame"><span>gcd(1, 0)</span><span class="frame-val">b=0 → returns 1</span></div>
+      </div>
+      <p style="margin-top:10px;font-size:.85rem;color:var(--ink-soft);">GCD(23, 5) = <strong>1</strong></p>
+    </div>
+
+    <h3>Worked Example — GCD(24, 16)</h3>
+    <div class="diagram-wrap">
+      <div class="call-stack">
+        <div class="stack-frame base"><span>gcd(8, 0)</span><span class="frame-val">b=0 → returns 8</span></div>
+        <div class="stack-arrow">16 % 8 = 0</div>
+        <div class="stack-frame"><span>gcd(16, 8)</span><span class="frame-val">→ <span style="color:var(--accent);">8</span></span></div>
+        <div class="stack-arrow">24 % 16 = 8</div>
+        <div class="stack-frame"><span>gcd(24, 16)</span><span class="frame-val">→ <span style="color:var(--accent);">8</span></span></div>
+      </div>
+      <p style="margin-top:10px;font-size:.85rem;color:var(--ink-soft);">GCD(24, 16) = <strong>8</strong> — only 2 steps!</p>
+    </div>
+
+    <div class="callout analogy">
+      <span class="callout-label">Why It's Fast</span>
+      Each call to <code>gcd(a, b)</code> reduces the larger argument to <code>a % b</code>, which is always less than b. At least every two steps the smaller argument is halved. The total number of steps is bounded by <strong>O(log min(a, b))</strong>.
+    </div>
+  </section>
+
+  <!-- 10 GCD CODE -->
+  <section class="section" id="gcd-code">
+    <h2><span class="sec-badge">10</span>GCD Function — Recursive Implementation</h2>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Euclidean GCD</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cmt">// Assumption: gcd(a, b) returns GCD of a and b (works for a, b ≥ 0)</span>
+<span class="ty">int</span> <span class="fn">gcd</span>(<span class="ty">int</span> a, <span class="ty">int</span> b) {
+    <span class="kw">if</span> (b == <span class="num">0</span>) <span class="kw">return</span> a;      <span class="cmt">// Base case: GCD(a, 0) = a</span>
+    <span class="kw">return</span> <span class="fn">gcd</span>(b, a % b);       <span class="cmt">// Euclidean step</span>
+}</pre>
+    </div>
+
+    <h3>Complexity</h3>
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(log min(a,b))</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(log min(a,b))</span></span>
+
+    <div class="callout tip">
+      <span class="callout-label">Fibonacci = Worst Case for GCD</span>
+      Consecutive Fibonacci numbers (e.g., gcd(23, 14) where 23=F₈, 14=F₇) achieve the maximum number of steps for a given input size. This is why the Fibonacci sequence proves the O(log min(a,b)) bound for the Euclidean algorithm.
+    </div>
+
+    <h3>GCD of More than Two Numbers</h3>
+    <p>
+      By the associative property, compute pairwise: <code>GCD(A, B, C) = GCD(GCD(A, B), C)</code>.
+    </p>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — GCD of Array</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">int</span> <span class="fn">gcdOfArray</span>(<span class="ty">int</span>[] arr) {
+    <span class="ty">int</span> result = arr[<span class="num">0</span>];
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">1</span>; i &lt; arr.length; i++) {
+        result = <span class="fn">gcd</span>(result, arr[i]);
+    }
+    <span class="kw">return</span> result;
+}</pre>
+    </div>
+  </section>
+
+  <!-- RECAP -->
+  <section class="section" id="recap">
+    <h2><span class="sec-badge">★</span>Quick Recap</h2>
+    <div class="recap-grid">
+      <div class="recap-card">
+        <div class="rc-title">A % B</div>
+        <div class="rc-body">Remainder of A ÷ B. Range: [0, B−1]. Use to limit numbers to a manageable range.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Addition / Multiplication</div>
+        <div class="rc-body">(a+b)%m = ((a%m)+(b%m))%m. Same for ×. Apply mod inside loops to prevent overflow.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Subtraction Trap</div>
+        <div class="rc-body">(a−b)%m = ((a%m)−(b%m)+m)%m. The extra +m handles the case where the difference goes negative.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Power Mod</div>
+        <div class="rc-body">aᵇ % m = ((a%m)ᵇ) % m. Use fast power with long intermediates to avoid overflow.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Pair Sum % M</div>
+        <div class="rc-body">Build frequency array farr[r]. Pair buckets r and m−r. Handle r=0 and r=m/2 with C(n,2).</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">GCD Definition</div>
+        <div class="rc-body">Largest integer dividing both A and B. GCD(0, A) = |A|. GCD of coprime numbers = 1.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Subtraction Property</div>
+        <div class="rc-body">GCD(A, B) = GCD(A−B, B) when A &gt; B. Generalizes to GCD(A, B) = GCD(B, A%B).</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Euclidean Algorithm</div>
+        <div class="rc-body">gcd(a,b) = gcd(b, a%b). Base: gcd(a,0) = a. Runs in O(log min(a,b)) — extremely fast.</div>
+      </div>
+    </div>
+
+    <h3>Complexity Summary</h3>
+    <table>
+      <thead><tr><th>Algorithm</th><th>Time</th><th>Space</th><th>Key Idea</th></tr></thead>
+      <tbody>
+        <tr><td>Modular Fast Power</td><td>O(log N)</td><td>O(log N)</td><td>Halve exponent; use <code>long</code> for intermediates</td></tr>
+        <tr><td>Array Sum % M</td><td>O(N)</td><td>O(1)</td><td>Apply mod inside the loop every step</td></tr>
+        <tr><td>Pair Sum — Brute Force</td><td>O(N²)</td><td>O(1)</td><td>Check all pairs directly</td></tr>
+        <tr><td>Pair Sum — Freq Array</td><td>O(N+M)</td><td>O(M)</td><td>Count remainders; pair complementary buckets</td></tr>
+        <tr><td>GCD (Euclidean)</td><td>O(log min(a,b))</td><td>O(log min(a,b))</td><td>gcd(a,b) = gcd(b, a%b)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- LEETCODE -->
+    <section class="section" id="leetcode">
+    <div class="section-header">
+      <span class="section-num">↗</span>
+      <h2>Related LeetCode Problems</h2>
+    </div>
+
+    <p>The following problems use the same core ideas covered in these notes. Solving them in order reinforces each concept progressively.</p>
+
+    <h3>Modular Arithmetic</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/powx-n/" target="_blank" rel="noopener">#50 — Pow(x, n) ↗</a><br/>
+          <span class="lc-why">Fast power in action — add modulo to make it a full modular exponentiation.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/super-pow/" target="_blank" rel="noopener">#372 — Super Pow ↗</a><br/>
+          <span class="lc-why">Direct application of modular fast power: compute aᵇ % 1337 where b is a huge array.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/find-the-difference-of-two-arrays/" target="_blank" rel="noopener">#2215 — Find the Difference of Two Arrays ↗</a><br/>
+          <span class="lc-why">Practice using remainder-based counting patterns.</span>
+        </span>
+      </li>
+    </ul>
+
+    <h3>Pair Sum &amp; Frequency Arrays</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/subarray-sum-equals-k/" target="_blank" rel="noopener">#560 — Subarray Sum Equals K ↗</a><br/>
+          <span class="lc-why">Uses prefix sum remainder counting — same frequency-array idea from the pair problem.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/continuous-subarray-sum/" target="_blank" rel="noopener">#523 — Continuous Subarray Sum ↗</a><br/>
+          <span class="lc-why">Checks if any subarray sum is divisible by k — directly uses the pair-sum divisibility logic.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/count-pairs-whose-sum-is-divisible-by-k/" target="_blank" rel="noopener">#2183 — Count Pairs Whose Sum is Divisible by K ↗</a><br/>
+          <span class="lc-why">The exact problem from this lecture — implement the frequency-array O(N+M) solution.</span>
+        </span>
+      </li>
+    </ul>
+
+    <h3>GCD Problems</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/find-greatest-common-divisor-of-array/" target="_blank" rel="noopener">#1979 — Find Greatest Common Divisor of Array ↗</a><br/>
+          <span class="lc-why">Warm-up: apply Euclidean GCD to the min and max of the array.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/greatest-common-divisor-of-strings/" target="_blank" rel="noopener">#1071 — Greatest Common Divisor of Strings ↗</a><br/>
+          <span class="lc-why">GCD applied to string lengths — same associative property, different domain.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/minimum-number-of-operations-to-make-array-continuous/" target="_blank" rel="noopener">#2009 — Reduce Array Size to the Half ↗</a><br/>
+          <span class="lc-why">Frequency-counting problem that pairs with the modular frequency-array pattern.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff hard">Hard</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/count-pairs-with-xor-in-a-range/" target="_blank" rel="noopener">#1803 — Count Pairs with XOR in a Range ↗</a><br/>
+          <span class="lc-why">Advanced pair counting — after mastering the mod-sum pair problem, this extends the technique.</span>
+        </span>
+      </li>
+    </ul>
+
+    <div class="callout tip">
+      <span class="callout-tag">Recommended Study Order</span>
+      Start with <strong>Find GCD of Array</strong> to validate your Euclidean implementation. Then solve <strong>Continuous Subarray Sum</strong> to internalize remainder-complementation. Finally tackle <strong>Super Pow</strong> — it forces you to combine fast power and modular arithmetic exactly as in this lecture's Section 04.
+    </div>
+  </section>
+
+</main>
+
+<script>
+const bar = document.getElementById('progress-bar');
+window.addEventListener('scroll', () => {
+  const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+  bar.style.width = Math.min(pct, 100) + '%';
+});
+const links = document.querySelectorAll('.sidebar-link');
+const sections = document.querySelectorAll('.section');
+const sidebar = document.getElementById('sidebar');
+function activateLink(id) {
+  links.forEach(l => l.classList.remove('active'));
+  const target = document.querySelector(`.sidebar-link[href="#${id}"]`);
+  if (target) {
+    target.classList.add('active');
+    const sTop = sidebar.scrollTop, sH = sidebar.clientHeight;
+    const lTop = target.offsetTop, lH = target.offsetHeight;
+    if (lTop < sTop || lTop + lH > sTop + sH) sidebar.scrollTo({ top: lTop - sH/2 + lH/2, behavior:'smooth' });
+  }
+}
+const io = new IntersectionObserver(entries => { entries.forEach(e => { if(e.isIntersecting) activateLink(e.target.id); }); }, { rootMargin:'-20% 0px -60% 0px' });
+sections.forEach(s => io.observe(s));
+const revealIO = new IntersectionObserver(entries => { entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); }); }, { threshold:0.06 });
+sections.forEach(s => revealIO.observe(s));
+links.forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target) window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 24, behavior:'smooth' });
+    sidebar.classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  });
+});
+const fab = document.getElementById('fab');
+const overlay = document.getElementById('overlay');
+fab.addEventListener('click', () => { sidebar.classList.toggle('open'); overlay.classList.toggle('open'); });
+overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('open'); });
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  const text = pre.innerText || pre.textContent;
+  if(navigator.clipboard) { navigator.clipboard.writeText(text).then(() => flash(btn)); }
+  else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); flash(btn); }
+}
+function flash(btn) { btn.textContent='Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent='Copy'; btn.classList.remove('copied'); }, 2000); }
+</script>
+</body>
+</html>

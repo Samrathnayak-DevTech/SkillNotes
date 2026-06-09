@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Searching 1 — Binary Search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;
+  --line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;
+  --blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;
+  --green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;
+  --code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear;border-radius:0 2px 2px 0;}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s;}
+.nav-toggle:hover{transform:scale(1.08);}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease;}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem;}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem;}
+.nav-group{margin-bottom:.2rem;}
+.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem;}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:0.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s;}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft);}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500;}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:var(--accent);opacity:.7;flex-shrink:0;}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px;}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem;}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem;}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem;}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);}
+.section{margin-bottom:5rem;scroll-margin-top:2rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}
+.section.visible{opacity:1;transform:none;}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line);}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0;}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2;}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem;}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem;}
+p{margin-bottom:1rem;}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid;position:relative;}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:0.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}
+.callout.tip .callout-tag{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}
+.callout.key .callout-tag{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}
+.callout.analogy .callout-tag{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}
+.callout.warn .callout-tag{color:var(--accent);}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:0.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em;}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:0.85rem;}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem;}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.06em;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s;}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980;}
+.copy-btn.copied{color:#89d185;border-color:#89d185;}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink);}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+.table-wrap{overflow-x:auto;margin:1.5rem 0;}
+table{width:100%;border-collapse:collapse;font-size:0.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line);}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--bg-soft);}
+.diagram{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;margin:1.5rem 0;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;overflow-x:auto;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem;min-width:42px;}
+.arr-cell .val{font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;background:var(--bg);border:2px solid var(--line);border-radius:6px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink);transition:background .2s;}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--blue);}
+.arr-cell .label{font-family:"JetBrains Mono",monospace;font-size:.6rem;color:var(--ink-soft);white-space:nowrap;}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0;}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:0.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg);}
+.complexity-badge .label{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:600;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0;}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.3rem;transition:box-shadow .2s,transform .2s;}
+.card:hover{box-shadow:0 4px 16px rgba(45,42,38,.07);transform:translateY(-2px);}
+.card-glyph{font-family:"Fraunces",serif;font-size:1.6rem;margin-bottom:.4rem;display:block;}
+.card h4{font-family:"Fraunces",serif;font-size:1rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .35rem;}
+.card p{font-size:.88rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.flow{display:flex;flex-direction:column;align-items:flex-start;gap:0;margin:1.5rem 0;}
+.flow-step{display:flex;align-items:flex-start;gap:1rem;padding:.8rem 1rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;width:100%;max-width:580px;position:relative;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:22px;background:var(--line);margin-left:calc(1rem + 12px);}
+.flow-icon{font-size:1rem;flex-shrink:0;margin-top:.1rem;}
+.flow-text{font-size:.9rem;color:var(--ink);line-height:1.45;}
+.flow-text strong{color:var(--accent);}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem;}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent);}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem;}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.lc-list{list-style:none;padding:0;margin:1rem 0;}
+.lc-list li{display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;flex-wrap:wrap;}
+.lc-list li:last-child{border-bottom:none;}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;margin-top:.15rem;}
+.lc-diff.easy{background:var(--green-soft);color:var(--green);}
+.lc-diff.medium{background:var(--accent-soft);color:var(--accent);}
+.lc-diff.hard{background:var(--rose-soft);color:var(--rose);}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s;}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent);}
+.lc-why{color:var(--ink-soft);font-size:.82rem;width:100%;margin-top:.1rem;}
+.lc-group-title{font-family:"Fraunces",serif;font-size:1.1rem;font-weight:600;color:var(--ink);margin:1.8rem 0 .5rem;}
+.bs-trace{width:100%;border-collapse:collapse;font-size:.85rem;margin:1.2rem 0;}
+.bs-trace th{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.55rem .8rem;border-bottom:2px solid var(--line);}
+.bs-trace td{padding:.5rem .8rem;border-bottom:1px solid var(--line);font-family:"JetBrains Mono",monospace;font-size:.8rem;}
+.bs-trace tr.match td{background:var(--green-soft);}
+.bs-trace tr.nomatch td{background:var(--rose-soft);}
+@media(max-width:768px){
+  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12);}
+  .sidebar.open{transform:translateX(0);}
+  .nav-toggle{display:flex;}
+  .main{padding:0 1.2rem 4rem;}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px);}
+  .sidebar-overlay.open{display:block;}
+}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+
+<div class="layout">
+<nav class="sidebar" aria-label="Page navigation">
+  <div class="sidebar-logo">
+    DSA Notes · Series 2
+    <strong>Searching &amp; Binary Search</strong>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Foundations</div>
+    <a class="nav-link" href="#intro"><span class="nav-num">01</span>Linear vs Binary Search</a>
+    <a class="nav-link" href="#bs-classic"><span class="nav-num">02</span>Classic Binary Search</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Problems</div>
+    <a class="nav-link" href="#first-occ"><span class="nav-num">03</span>First Occurrence</a>
+    <a class="nav-link" href="#local-minima"><span class="nav-num">04</span>Local Minima</a>
+    <a class="nav-link" href="#floor-sqrt"><span class="nav-num">05</span>Floor Square Root</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">06</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">07</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 2</p>
+  <h1>Searching &amp;<br>Binary Search</h1>
+  <p class="hero-lede">From naïve linear scans to the elegant "halving the search space" paradigm. Master the three key ingredients of binary search and apply them to classic problems.</p>
+  <div class="chips">
+    <span class="chip">Linear Search</span>
+    <span class="chip">Binary Search</span>
+    <span class="chip">First / Last Occurrence</span>
+    <span class="chip">Local Minima</span>
+    <span class="chip">Floor √N</span>
+  </div>
+</header>
+
+<!-- ─── SECTION 01 ─── -->
+<section class="section" id="intro">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>Linear vs Binary Search</h2>
+  </div>
+
+  <p>Searching is the task of locating a target element within a collection. Two mental models motivate the two algorithms: searching for a word in a newspaper (read every word — linear search) versus searching for a word in a dictionary (open to the middle, decide which half to keep — binary search).</p>
+
+  <div class="cards-grid">
+    <div class="card">
+      <span class="card-glyph">📰</span>
+      <h4>Linear Search</h4>
+      <p>Iterate every element one by one until the target is found or the end is reached. Works on any array, sorted or not.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">📖</span>
+      <h4>Binary Search</h4>
+      <p>Requires a sorted (or monotone) sequence. Every iteration eliminates <em>half</em> the remaining search space, giving O(log N) time.</p>
+    </div>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Insight</span>
+    Every binary search problem needs three things: a <strong>target</strong> to find, a <strong>search space</strong> to operate on, and a <strong>condition</strong> that lets you eliminate half the space each step.
+  </div>
+
+  <h3>Linear Search Code</h3>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(N)</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+    <span class="kw">if</span> (arr[i] == k) {
+        <span class="kw">return</span> i;   <span class="cmt">// found at index i</span>
+    }
+}
+<span class="kw">return</span> <span class="num">-1</span>;         <span class="cmt">// not found</span></pre>
+  </div>
+</section>
+
+<!-- ─── SECTION 02 ─── -->
+<section class="section" id="bs-classic">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>Classic Binary Search</h2>
+  </div>
+
+  <p>Given a <strong>sorted</strong> array, find the index of element K, or return −1 if absent.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    Think of a number-guessing game: someone thinks of a number 1–100 and tells you "higher" or "lower". You always guess the middle — that is binary search.
+  </div>
+
+  <h4>How It Works</h4>
+  <p>Maintain two pointers <code>l</code> (left) and <code>r</code> (right) bounding the current search space <code>[0, N−1]</code>. At each step, compute <code>mid = (l + r) / 2</code> and compare <code>arr[mid]</code> with the target:</p>
+
+  <div class="flow">
+    <div class="flow-step highlight">
+      <span class="flow-icon">🎯</span>
+      <div class="flow-text"><strong>arr[mid] == K</strong> — Found it! Return <code>mid</code>.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">⬅️</span>
+      <div class="flow-text"><strong>arr[mid] &gt; K</strong> — Target is in the left half. Set <code>r = mid − 1</code>.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">➡️</span>
+      <div class="flow-text"><strong>arr[mid] &lt; K</strong> — Target is in the right half. Set <code>l = mid + 1</code>.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">❌</span>
+      <div class="flow-text"><strong>l &gt; r</strong> — Search space exhausted, target not present. Return <code>−1</code>.</div>
+    </div>
+  </div>
+
+  <h3>Dry Run — K = 21 (not present)</h3>
+  <div class="diagram">
+    <div class="arr-cell"><div class="val">3</div><div class="idx">0</div></div>
+    <div class="arr-cell"><div class="val">6</div><div class="idx">1</div></div>
+    <div class="arr-cell"><div class="val">9</div><div class="idx">2</div></div>
+    <div class="arr-cell"><div class="val">12</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight"><div class="val">14</div><div class="idx">4</div><div class="label">mid</div></div>
+    <div class="arr-cell"><div class="val">19</div><div class="idx">5</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">20</div><div class="idx">6</div><div class="label">l</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">23</div><div class="idx">7</div><div class="label">r/mid</div></div>
+    <div class="arr-cell"><div class="val">25</div><div class="idx">8</div></div>
+    <div class="arr-cell"><div class="val">27</div><div class="idx">9</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <table class="bs-trace">
+      <thead><tr><th>l</th><th>r</th><th>mid</th><th>arr[mid]</th><th>Decision</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>9</td><td>4</td><td>14</td><td>14 &lt; 21 → l = 5</td></tr>
+        <tr><td>5</td><td>9</td><td>7</td><td>23</td><td>23 &gt; 21 → r = 6</td></tr>
+        <tr><td>5</td><td>6</td><td>5</td><td>19</td><td>19 &lt; 21 → l = 6</td></tr>
+        <tr><td>6</td><td>6</td><td>6</td><td>20</td><td>20 &lt; 21 → l = 7</td></tr>
+        <tr class="nomatch"><td>7</td><td>6</td><td>—</td><td>—</td><td>l &gt; r → return −1</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> l = <span class="num">0</span>, r = n - <span class="num">1</span>;
+<span class="kw">while</span> (l &lt;= r) {
+    <span class="ty">int</span> mid = (l + r) / <span class="num">2</span>;
+    <span class="kw">if</span> (arr[mid] == k) {
+        <span class="kw">return</span> mid;
+    } <span class="kw">else if</span> (arr[mid] &gt; k) {
+        r = mid - <span class="num">1</span>;
+    } <span class="kw">else</span> {
+        l = mid + <span class="num">1</span>;
+    }
+}
+<span class="kw">return</span> <span class="num">-1</span>;</pre>
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(log₂ N)</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Common Mistake</span>
+    Writing <code>mid = (l + r) / 2</code> can overflow when <code>l + r</code> exceeds <code>Integer.MAX_VALUE</code> in Java/C++. Use <code>mid = l + (r - l) / 2</code> to be safe.
+  </div>
+</section>
+
+<!-- ─── SECTION 03 ─── -->
+<section class="section" id="first-occ">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>First &amp; Last Occurrence</h2>
+  </div>
+
+  <p>Given a sorted array where K may appear multiple times, find the <em>first</em> (or last) index at which K occurs. The classic binary search stops as soon as it finds any match — here we keep looking left (or right) even after a match.</p>
+
+  <h4>Example — arr = [−5, −5, −3, 0, 0, 1, 5, 5, 5, 5, 5, 8, 10, 10, 15], K = 5</h4>
+  <div class="diagram">
+    <div class="arr-cell"><div class="val">−5</div><div class="idx">0</div></div>
+    <div class="arr-cell"><div class="val">−5</div><div class="idx">1</div></div>
+    <div class="arr-cell"><div class="val">−3</div><div class="idx">2</div></div>
+    <div class="arr-cell"><div class="val">0</div><div class="idx">3</div></div>
+    <div class="arr-cell"><div class="val">0</div><div class="idx">4</div></div>
+    <div class="arr-cell"><div class="val">1</div><div class="idx">5</div></div>
+    <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">6</div><div class="label">first</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">5</div><div class="idx">7</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">5</div><div class="idx">8</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">5</div><div class="idx">9</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">5</div><div class="idx">10</div></div>
+    <div class="arr-cell"><div class="val">8</div><div class="idx">11</div></div>
+    <div class="arr-cell"><div class="val">10</div><div class="idx">12</div></div>
+    <div class="arr-cell"><div class="val">10</div><div class="idx">13</div></div>
+    <div class="arr-cell"><div class="val">15</div><div class="idx">14</div></div>
+  </div>
+
+  <p>First occurrence = index 6; last occurrence = index 10; frequency = 10 − 6 + 1 = 5.</p>
+
+  <h3>Key Modification</h3>
+  <p>When <code>arr[mid] == K</code>, <em>record</em> <code>ans = mid</code> but keep searching in the relevant direction instead of immediately returning:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java — First Occurrence</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> l = <span class="num">0</span>, r = n - <span class="num">1</span>, ans = <span class="num">-1</span>;
+<span class="kw">while</span> (l &lt;= r) {
+    <span class="ty">int</span> mid = (l + r) / <span class="num">2</span>;
+    <span class="kw">if</span> (arr[mid] == k) {
+        ans = mid;
+        r = mid - <span class="num">1</span>;   <span class="cmt">// keep going LEFT for first occurrence</span>
+    } <span class="kw">else if</span> (arr[mid] &gt; k) {
+        r = mid - <span class="num">1</span>;
+    } <span class="kw">else</span> {
+        l = mid + <span class="num">1</span>;
+    }
+}
+<span class="kw">return</span> ans;</pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Tip</span>
+    For <strong>last occurrence</strong>, change <code>r = mid − 1</code> (when matched) to <code>l = mid + 1</code> — this keeps searching to the <em>right</em>. Frequency = last − first + 1.
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(log₂ N)</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- ─── SECTION 04 ─── -->
+<section class="section" id="local-minima">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2>Local Minima</h2>
+  </div>
+
+  <p>A <strong>local minimum</strong> is any element that is less than or equal to both of its neighbors. Given an unsorted array, find <em>any one</em> local minimum in O(log N) time.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    Imagine a mountain range profile. A valley (local minimum) always exists between any two peaks. Standing at the midpoint, if the left neighbor is smaller, a valley must exist on the left half — go there.
+  </div>
+
+  <h4>The Four Cases at arr[mid]</h4>
+  <div class="cards-grid">
+    <div class="card">
+      <span class="card-glyph">🏔</span>
+      <h4>Case 1: Valley</h4>
+      <p><code>arr[mid] ≤ arr[mid−1]</code> and <code>arr[mid] ≤ arr[mid+1]</code> → <strong>return arr[mid]</strong>.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">⬅️</span>
+      <h4>Case 2: Downslope Left</h4>
+      <p><code>arr[mid−1] ≤ arr[mid]</code> → a local min exists in the left half. Set <code>r = mid − 1</code>.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">➡️</span>
+      <h4>Case 3: Downslope Right</h4>
+      <p><code>arr[mid+1] &lt; arr[mid]</code> → a local min exists in the right half. Set <code>l = mid + 1</code>.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">↔️</span>
+      <h4>Case 4: Peak</h4>
+      <p><code>arr[mid−1] &lt; arr[mid]</code> and <code>arr[mid+1] &lt; arr[mid]</code> → go to either side (we pick right by convention).</p>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Edge Cases</span>
+    Handle the boundary elements specially: if N = 1, return arr[0]. If arr[0] ≤ arr[1], return arr[0]. If arr[N−1] ≤ arr[N−2], return arr[N−1]. Search the interior with l = 1, r = N − 2.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">if</span> (n == <span class="num">1</span>) <span class="kw">return</span> arr[<span class="num">0</span>];
+<span class="kw">else if</span> (arr[<span class="num">0</span>] &lt;= arr[<span class="num">1</span>]) <span class="kw">return</span> arr[<span class="num">0</span>];
+<span class="kw">else if</span> (arr[n-<span class="num">1</span>] &lt;= arr[n-<span class="num">2</span>]) <span class="kw">return</span> arr[n-<span class="num">1</span>];
+
+<span class="ty">int</span> l = <span class="num">1</span>, r = n - <span class="num">2</span>;
+<span class="kw">while</span> (l &lt;= r) {
+    <span class="ty">int</span> mid = (l + r) / <span class="num">2</span>;
+    <span class="kw">if</span> (arr[mid] &lt;= arr[mid-<span class="num">1</span>] &amp;&amp; arr[mid] &lt;= arr[mid+<span class="num">1</span>]) {
+        <span class="kw">return</span> arr[mid];      <span class="cmt">// local minimum found</span>
+    } <span class="kw">else if</span> (arr[mid-<span class="num">1</span>] &lt;= arr[mid]) {
+        r = mid - <span class="num">1</span>;           <span class="cmt">// left side descends</span>
+    } <span class="kw">else</span> {
+        l = mid + <span class="num">1</span>;           <span class="cmt">// right side descends</span>
+    }
+}
+<span class="kw">return</span> <span class="num">-1</span>;</pre>
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(log₂ N)</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- ─── SECTION 05 ─── -->
+<section class="section" id="floor-sqrt">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2>Floor Square Root</h2>
+  </div>
+
+  <p>Given a non-negative integer N, return ⌊√N⌋ — the largest integer whose square does not exceed N — without using any built-in square-root function.</p>
+
+  <h4>Examples</h4>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>N</th><th>⌊√N⌋</th><th>Reason</th></tr></thead>
+      <tbody>
+        <tr><td>36</td><td>6</td><td>6² = 36 ≤ 36, 7² = 49 &gt; 36</td></tr>
+        <tr><td>49</td><td>7</td><td>exact square root</td></tr>
+        <tr><td>50</td><td>7</td><td>7² = 49 ≤ 50, 8² = 64 &gt; 50</td></tr>
+        <tr><td>64</td><td>8</td><td>exact square root</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h4>Brute Force O(√N)</h4>
+  <p>Start from 1 and walk upward, recording <code>ans = i</code> whenever <code>i × i ≤ N</code>. Stop when <code>i × i &gt; N</code>.</p>
+
+  <h4>Binary Search Approach O(log N)</h4>
+  <p>The search space is <code>[1, N]</code>. The target is the largest integer <code>mid</code> such that <code>mid × mid ≤ N</code>. The condition is monotone: everything ≤ ⌊√N⌋ satisfies <code>mid² ≤ N</code>, everything above it does not.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">if</span> (n &lt;= <span class="num">1</span>) <span class="kw">return</span> n;   <span class="cmt">// edge cases: 0 and 1</span>
+
+<span class="ty">long</span> l = <span class="num">1</span>, r = n, ans = <span class="num">1</span>;
+<span class="kw">while</span> (l &lt;= r) {
+    <span class="ty">long</span> mid = (l + r) / <span class="num">2</span>;
+    <span class="kw">if</span> (mid * mid &lt;= n) {
+        ans = mid;         <span class="cmt">// valid candidate; try larger</span>
+        l = mid + <span class="num">1</span>;
+    } <span class="kw">else</span> {
+        r = mid - <span class="num">1</span>;
+    }
+}
+<span class="kw">return</span> (int) ans;</pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Overflow Warning</span>
+    Use <code>long</code> for <code>mid * mid</code> — for large N (up to 2 × 10⁹), the product can exceed <code>Integer.MAX_VALUE</code>.
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(log N)</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+
+  <h3>Dry Run — N = 50</h3>
+  <div class="table-wrap">
+    <table class="bs-trace">
+      <thead><tr><th>l</th><th>r</th><th>mid</th><th>mid²</th><th>≤ 50?</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>50</td><td>25</td><td>625</td><td>No</td><td>r = 24</td></tr>
+        <tr><td>1</td><td>24</td><td>12</td><td>144</td><td>No</td><td>r = 11</td></tr>
+        <tr class="match"><td>1</td><td>11</td><td>6</td><td>36</td><td>Yes</td><td>ans = 6, l = 7</td></tr>
+        <tr><td>7</td><td>11</td><td>9</td><td>81</td><td>No</td><td>r = 8</td></tr>
+        <tr class="match"><td>7</td><td>8</td><td>7</td><td>49</td><td>Yes</td><td>ans = 7, l = 8</td></tr>
+        <tr><td>8</td><td>8</td><td>8</td><td>64</td><td>No</td><td>r = 7</td></tr>
+        <tr class="match"><td>8</td><td>7</td><td>—</td><td>—</td><td>—</td><td>l &gt; r → return 7 ✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── SECTION 06: RECAP ─── -->
+<section class="section" id="recap">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <h2>Quick Recap</h2>
+  </div>
+
+  <div class="recap-grid">
+    <div class="recap-card">
+      <h4>Binary Search Template</h4>
+      <p>Maintain <code>l</code>, <code>r</code>; compute <code>mid = (l+r)/2</code>; update pointers based on condition until <code>l &gt; r</code>.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Three Ingredients</h4>
+      <p>Every BS problem needs: (1) a target, (2) a search space, (3) a monotone condition to halve the space.</p>
+    </div>
+    <div class="recap-card">
+      <h4>First / Last Occurrence</h4>
+      <p>Record <code>ans = mid</code> on a match but keep moving left (first) or right (last) instead of stopping.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Local Minima</h4>
+      <p>Not a sorted array problem — yet BS applies because the valley guarantee holds: if arr[mid−1] &lt; arr[mid], a valley exists on the left.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Floor √N</h4>
+      <p>Binary search on integers 1…N; keep the last <code>mid</code> with <code>mid² ≤ N</code>. Use <code>long</code> to avoid overflow.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Complexity</h4>
+      <p>All binary search variants run in O(log N) time and O(1) space — dramatically better than O(N) linear scan.</p>
+    </div>
+  </div>
+
+  <h3>Complexity Summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Problem</th><th>Time</th><th>Space</th></tr></thead>
+      <tbody>
+        <tr><td>Linear Search</td><td>O(N)</td><td>O(1)</td></tr>
+        <tr><td>Binary Search (classic)</td><td>O(log N)</td><td>O(1)</td></tr>
+        <tr><td>First / Last Occurrence</td><td>O(log N)</td><td>O(1)</td></tr>
+        <tr><td>Local Minima</td><td>O(log N)</td><td>O(1)</td></tr>
+        <tr><td>Floor √N</td><td>O(log N)</td><td>O(1)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── SECTION 07: LEETCODE ─── -->
+<section class="section" id="leetcode">
+  <div class="section-header">
+    <span class="section-num">07</span>
+    <h2>LeetCode Problems</h2>
+  </div>
+
+  <p class="lc-group-title">Classic Binary Search</p>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/binary-search/" target="_blank" rel="noopener">Binary Search ↗</a><div class="lc-why">The direct implementation of the O(log N) template on a sorted array.</div></div>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/search-insert-position/" target="_blank" rel="noopener">Search Insert Position ↗</a><div class="lc-why">Binary search with a twist — return the insertion index when the target is absent.</div></div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/find-first-and-last-position-of-element-in-sorted-array/" target="_blank" rel="noopener">Find First and Last Position of Element in Sorted Array ↗</a><div class="lc-why">Exactly the first-and-last occurrence pattern from Section 03.</div></div>
+    </li>
+  </ul>
+
+  <p class="lc-group-title">Local Minima / Peak Finding</p>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/find-peak-element/" target="_blank" rel="noopener">Find Peak Element ↗</a><div class="lc-why">Binary search on an unsorted array using the monotone descent property — exactly the local minima logic in reverse.</div></div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/peak-index-in-a-mountain-array/" target="_blank" rel="noopener">Peak Index in a Mountain Array ↗</a><div class="lc-why">Simpler variant of Find Peak Element — good warm-up.</div></div>
+    </li>
+  </ul>
+
+  <p class="lc-group-title">Math / Integer Binary Search</p>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/sqrtx/" target="_blank" rel="noopener">Sqrt(x) ↗</a><div class="lc-why">Direct application of the Floor √N pattern from Section 05.</div></div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/valid-perfect-square/" target="_blank" rel="noopener">Valid Perfect Square ↗</a><div class="lc-why">Variant — binary search to check if N is a perfect square.</div></div>
+    </li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Study Order</span>
+    Start with <strong>Binary Search</strong> (direct template), then <strong>Search Insert Position</strong> (handles absent case), then <strong>First and Last Position</strong> (two-pass pattern), then <strong>Find Peak Element</strong> (non-sorted application), and finally <strong>Sqrt(x)</strong> (search on integers). This sequence builds intuition incrementally.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+// Progress bar
+window.addEventListener('scroll',()=>{
+  const el=document.getElementById('progress-bar');
+  const h=document.documentElement;
+  const pct=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;
+  el.style.width=pct+'%';
+});
+
+// Mobile toggle
+const tog=document.getElementById('nav-toggle');
+const sb=document.querySelector('.sidebar');
+const ov=document.getElementById('nav-overlay');
+tog.addEventListener('click',()=>{sb.classList.toggle('open');ov.classList.toggle('open');});
+ov.addEventListener('click',()=>{sb.classList.remove('open');ov.classList.remove('open');});
+
+// Scroll spy
+const links=[...document.querySelectorAll('.nav-link')];
+const sections=[...document.querySelectorAll('.section')];
+const obs2=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      links.forEach(l=>l.classList.remove('active'));
+      const a=document.querySelector('.nav-link[href="#'+e.target.id+'"]');
+      if(a){a.classList.add('active');a.scrollIntoView({block:'nearest',behavior:'smooth'});}
+    }
+  });
+},{rootMargin:'-20% 0px -70% 0px'});
+sections.forEach(s=>obs2.observe(s));
+
+// Scroll reveal
+const obsR=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});
+},{threshold:0.07});
+sections.forEach(s=>obsR.observe(s));
+
+// Copy buttons
+function copyCode(btn){
+  const pre=btn.closest('.code-block').querySelector('pre');
+  const text=pre.innerText;
+  try{navigator.clipboard.writeText(text);}
+  catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);}
+  btn.textContent='Copied!';btn.classList.add('copied');
+  setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);
+}
+</script>
+</body>
+</html>

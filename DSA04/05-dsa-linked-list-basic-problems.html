@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Linked List — Basic Problems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear;border-radius:0 2px 2px 0;}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s;}
+.nav-toggle:hover{transform:scale(1.08);}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease;}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem;}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem;}
+.nav-group{margin-bottom:.2rem;}
+.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem;}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s;}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft);}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500;}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--accent);opacity:.7;flex-shrink:0;}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px;}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem;}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem;}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem;}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);}
+.section{margin-bottom:5rem;scroll-margin-top:2rem;}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line);}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0;}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2;}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem;}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem;}
+p{margin-bottom:1rem;}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid;position:relative;}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}.callout.tip .callout-tag{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}.callout.key .callout-tag{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}.callout.analogy .callout-tag{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}.callout.warn .callout-tag{color:var(--accent);}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em;}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:.85rem;}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem;}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.06em;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s;}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980;}.copy-btn.copied{color:#89d185;border-color:#89d185;}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink);}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+.table-wrap{overflow-x:auto;margin:1.5rem 0;}
+table{width:100%;border-collapse:collapse;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line);}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--bg-soft);}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0;}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg);}
+.complexity-badge .label{color:var(--ink-soft);}.complexity-badge .val{color:var(--accent);font-weight:600;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0;}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.3rem;transition:box-shadow .2s,transform .2s;}
+.card:hover{box-shadow:0 4px 16px rgba(45,42,38,.07);transform:translateY(-2px);}
+.card-glyph{font-family:"Fraunces",serif;font-size:1.6rem;margin-bottom:.4rem;display:block;}
+.card h4{font-family:"Fraunces",serif;font-size:1rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .35rem;}
+.card p{font-size:.88rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.flow{display:flex;flex-direction:column;align-items:flex-start;gap:0;margin:1.5rem 0;}
+.flow-step{display:flex;align-items:flex-start;gap:1rem;padding:.8rem 1rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;width:100%;max-width:580px;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:22px;background:var(--line);margin-left:calc(1rem + 12px);}
+.flow-icon{font-size:1rem;flex-shrink:0;margin-top:.1rem;}
+.flow-text{font-size:.9rem;color:var(--ink);line-height:1.45;}
+.flow-text strong{color:var(--accent);}
+/* Linked-list node diagram */
+.ll-diagram{display:flex;align-items:center;flex-wrap:wrap;gap:0;padding:1.4rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;margin:1.5rem 0;overflow-x:auto;}
+.ll-node{display:flex;border:2px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg);flex-shrink:0;}
+.ll-node .nn-val{padding:.45rem .7rem;font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;color:var(--ink);border-right:2px solid var(--line);min-width:36px;text-align:center;}
+.ll-node .nn-ptr{padding:.45rem .6rem;font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--blue);background:var(--blue-soft);min-width:48px;text-align:center;}
+.ll-node.highlight{border-color:var(--accent);}
+.ll-node.highlight .nn-val{color:var(--accent);}
+.ll-node.deleted{border-color:var(--rose);opacity:.55;text-decoration:line-through;}
+.ll-arrow{font-size:1.1rem;color:var(--ink-soft);margin:0 .3rem;flex-shrink:0;align-self:center;}
+.ll-label{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--accent);text-align:center;display:block;margin-top:.3rem;}
+.ll-wrapper{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+/* recap */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem;}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent);}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem;}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+/* lc */
+.lc-section{margin-top:1.5rem;}
+.lc-group-title{font-family:"JetBrains Mono",monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin:1.4rem 0 .6rem;}
+.lc-list{list-style:none;padding:0;margin:0 0 1rem;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.lc-list li{display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;}
+.lc-list li:last-child{border-bottom:none;}
+.lc-list li:hover{background:var(--bg-soft);}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;margin-top:.15rem;}
+.lc-diff.easy{background:var(--green-soft);color:var(--green);}.lc-diff.medium{background:var(--accent-soft);color:var(--accent);}.lc-diff.hard{background:var(--rose-soft);color:var(--rose);}
+.lc-info{display:flex;flex-direction:column;gap:.15rem;}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s;}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent);}
+.lc-why{color:var(--ink-soft);font-size:.82rem;}
+@media(max-width:768px){
+  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12);}
+  .sidebar.open{transform:translateX(0);}
+  .nav-toggle{display:flex;}
+  .main{padding:0 1.2rem 4rem;}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px);}
+  .sidebar-overlay.open{display:block;}
+}
+.section{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}
+.section.visible{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+
+<div class="layout">
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    DSA Notes · Session 06
+    <strong>Linked List — Basic Problems</strong>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Operations</div>
+    <a class="nav-link" href="#s1"><span class="nav-num">01</span>Search for Element</a>
+    <a class="nav-link" href="#s2"><span class="nav-num">02</span>Insert at K-th Index</a>
+    <a class="nav-link" href="#s3"><span class="nav-num">03</span>Delete First Occurrence</a>
+    <a class="nav-link" href="#s4"><span class="nav-num">04</span>Reverse a Linked List</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Advanced</div>
+    <a class="nav-link" href="#s5"><span class="nav-num">05</span>Deep Copy with Random Pointers</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Review</div>
+    <a class="nav-link" href="#s6"><span class="nav-num">06</span>Quick Recap</a>
+    <a class="nav-link" href="#s7"><span class="nav-num">07</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="hero">
+    <div class="hero-eyebrow">DSA · Session 06</div>
+    <h1>Linked List — Basic Problems</h1>
+    <p class="hero-lede">Four fundamental linked list operations every engineer must master: search, insertion at any index, deletion of a value, iterative reversal, and the elegant O(N)/O(1) deep copy with random pointers.</p>
+    <div class="chips">
+      <span class="chip">Search O(N)</span>
+      <span class="chip">Insert O(K)</span>
+      <span class="chip">Delete O(N)</span>
+      <span class="chip">Reverse O(N)</span>
+      <span class="chip">Deep Copy O(N)</span>
+    </div>
+  </div>
+
+  <!-- ══ 01: Search ══ -->
+  <section class="section" id="s1">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2>Search for Element X</h2>
+    </div>
+    <p>Unlike arrays, a linked list has <strong>no random access</strong>. We cannot jump to a mid-point. The only way to reach a node at index <em>k</em> is to follow <code>next</code> pointers one by one from the head. Consequently, every search is inherently linear.</p>
+
+    <div class="callout analogy">
+      <span class="callout-tag">Meme Moment</span>
+      When someone asks a singly linked list node for the address of its <em>previous</em> node — "Apneko kya maalum bhai?" (How would I know?). A singly linked list node only knows where to go <em>forward</em>, never backward.
+    </div>
+
+    <h3>Algorithm</h3>
+    <div class="flow">
+      <div class="flow-step"><span class="flow-icon">📌</span><span class="flow-text">Let <code>temp = head</code> — use a separate pointer; <strong>never move head itself</strong></span></div>
+      <div class="flow-connector"></div>
+      <div class="flow-step highlight"><span class="flow-icon">🔁</span><span class="flow-text"><strong>While</strong> <code>temp != null</code> → check <code>temp.val == x</code></span></div>
+      <div class="flow-connector"></div>
+      <div class="flow-step"><span class="flow-icon">✅</span><span class="flow-text">If match found → return <code>true</code></span></div>
+      <div class="flow-connector"></div>
+      <div class="flow-step"><span class="flow-icon">➡️</span><span class="flow-text">Else → advance: <code>temp = temp.next</code></span></div>
+      <div class="flow-connector"></div>
+      <div class="flow-step"><span class="flow-icon">❌</span><span class="flow-text">Loop ended without match → return <code>false</code></span></div>
+    </div>
+
+    <h3>Example — List: [23 → 14 → 27 → 9 → 8 → 3]</h3>
+    <div class="ll-diagram">
+      <div class="ll-wrapper">
+        <div class="ll-node"><div class="nn-val">23</div><div class="nn-ptr">→8K</div></div>
+        <span class="ll-label">head</span>
+      </div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">14</div><div class="nn-ptr">→10K</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">27</div><div class="nn-ptr">→15K</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">9</div><div class="nn-ptr">→18K</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">8</div><div class="nn-ptr">→30K</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node highlight"><div class="nn-val">3</div><div class="nn-ptr">NULL</div></div></div>
+    </div>
+    <p><code>search(3)</code> → <strong>true</strong> (found at tail). <code>search(33)</code> → <strong>false</strong> (traversed all nodes).</p>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">boolean</span> <span class="fn">search</span>(<span class="ty">Node</span> head, <span class="ty">int</span> x) {
+    <span class="ty">Node</span> temp = head;
+    <span class="kw">while</span> (temp != <span class="kw">null</span>) {
+        <span class="kw">if</span> (temp.val == x) <span class="kw">return</span> <span class="kw">true</span>;
+        temp = temp.next;
+    }
+    <span class="kw">return</span> <span class="kw">false</span>;
+}</pre>
+    </div>
+    <div class="complexity-row">
+      <span class="complexity-badge"><span class="label">Time — </span><span class="val">O(N)</span></span>
+      <span class="complexity-badge"><span class="label">Space — </span><span class="val">O(1)</span></span>
+    </div>
+  </section>
+
+  <!-- ══ 02: Insert ══ -->
+  <section class="section" id="s2">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2>Insertion at K-th Index</h2>
+    </div>
+    <p>Insert a new node with a given value at position K (0-indexed). The existing node at K and all subsequent nodes shift one position to the right.</p>
+
+    <h3>The Core Linking Trick</h3>
+    <p>After walking to the node at index K−1 (call it <code>temp</code>), link the new node <code>nn</code> in two careful steps — order matters:</p>
+    <div class="flow">
+      <div class="flow-step highlight"><span class="flow-icon">①</span><span class="flow-text"><strong><code>nn.next = temp.next</code></strong> — save the chain that follows</span></div>
+      <div class="flow-connector"></div>
+      <div class="flow-step highlight"><span class="flow-icon">②</span><span class="flow-text"><strong><code>temp.next = nn</code></strong> — splice new node in</span></div>
+    </div>
+    <div class="callout warn">
+      <span class="callout-tag">Common Bug</span>
+      If you do step ② first, you lose the reference to the rest of the list before step ①. Always wire up the new node's <code>next</code> pointer before changing any existing <code>next</code>.
+    </div>
+
+    <h3>Visual — insertAt(3, 60) on [10 → 6 → 4 → 8 → 9 → 14]</h3>
+    <p>Walk to index 2 (value 4), then splice 60 in before 8:</p>
+    <div class="ll-diagram">
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">10</div><div class="nn-ptr">→</div></div><span class="ll-label">0 head</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">6</div><div class="nn-ptr">→</div></div><span class="ll-label">1</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node highlight"><div class="nn-val">4</div><div class="nn-ptr">→50K</div></div><span class="ll-label">2 temp</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node highlight"><div class="nn-val">60</div><div class="nn-ptr">→20K</div></div><span class="ll-label">3 nn</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">8</div><div class="nn-ptr">→</div></div><span class="ll-label">4</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">9</div><div class="nn-ptr">→</div></div><span class="ll-label">5</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">14</div><div class="nn-ptr">NULL</div></div><span class="ll-label">6</span></div>
+    </div>
+
+    <h3>Edge Cases</h3>
+    <div class="cards-grid">
+      <div class="card">
+        <span class="card-glyph">K = 0</span>
+        <h4>Insert at Head</h4>
+        <p>Set <code>nn.next = head</code>, then <code>head = nn</code>. Return the new head. No traversal needed.</p>
+      </div>
+      <div class="card">
+        <span class="card-glyph">K = N</span>
+        <h4>Insert at Tail</h4>
+        <p>Walk to the last node (where <code>next == null</code>), then <code>temp.next = nn</code>. The new node's <code>next</code> is already <code>null</code> from construction.</p>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Java — K ≤ N</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">Node</span> <span class="fn">insertAt</span>(<span class="ty">Node</span> head, <span class="ty">int</span> k, <span class="ty">int</span> val) {
+    <span class="ty">Node</span> nn = <span class="kw">new</span> <span class="ty">Node</span>(val);
+
+    <span class="kw">if</span> (k == <span class="num">0</span>) {            <span class="cmt">// insert at head</span>
+        nn.next = head;
+        head = nn;
+        <span class="kw">return</span> head;
+    }
+
+    <span class="ty">Node</span> temp = head;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; k - <span class="num">1</span>; i++) {   <span class="cmt">// walk K-1 times</span>
+        temp = temp.next;
+    }
+    nn.next = temp.next;   <span class="cmt">// step ①</span>
+    temp.next = nn;        <span class="cmt">// step ②</span>
+    <span class="kw">return</span> head;
+}</pre>
+    </div>
+    <div class="complexity-row">
+      <span class="complexity-badge"><span class="label">Time — </span><span class="val">O(K)</span></span>
+      <span class="complexity-badge"><span class="label">Space — </span><span class="val">O(1)</span></span>
+    </div>
+  </section>
+
+  <!-- ══ 03: Delete ══ -->
+  <section class="section" id="s3">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2>Delete First Occurrence of X</h2>
+    </div>
+    <p>Remove the first node whose value equals X. If the element is not present, leave the list unchanged and return the head as-is.</p>
+
+    <h3>Core Idea — "Skip" the Target Node</h3>
+    <p>To delete the node at position <em>k</em>, walk to the node at position <em>k−1</em> and set its <code>next</code> to skip over the unwanted node:</p>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:.88rem;padding:.6rem 1rem;background:var(--bg-soft);border-radius:6px;border:1px solid var(--line);">temp.next = temp.next.next;</p>
+
+    <h3>Example 1 — delete(8) from [10 → 6 → 4 → 8 → 9]</h3>
+    <div class="ll-diagram">
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">10</div><div class="nn-ptr">→</div></div><span class="ll-label">head</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">6</div><div class="nn-ptr">→</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node highlight"><div class="nn-val">4</div><div class="nn-ptr">→25K</div></div><span class="ll-label">temp</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node deleted"><div class="nn-val">8</div><div class="nn-ptr">✗</div></div><span class="ll-label">skip</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">9</div><div class="nn-ptr">NULL</div></div></div>
+    </div>
+    <p>After deletion: <strong>[10 → 6 → 4 → 9]</strong></p>
+
+    <h3>Edge Case — Delete the Head Node</h3>
+    <p>When <code>head.val == x</code>, simply advance the head: <code>head = head.next</code>. There is no previous node to re-link.</p>
+
+    <h3>Example 2 — delete(5) from [5 → 7 → 3 → 11]</h3>
+    <p>The target is at the head. Result: <strong>[7 → 3 → 11]</strong>.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">Node</span> <span class="fn">delete</span>(<span class="ty">Node</span> head, <span class="ty">int</span> x) {
+    <span class="kw">if</span> (head == <span class="kw">null</span>) <span class="kw">return</span> head;
+
+    <span class="kw">if</span> (head.val == x) {           <span class="cmt">// delete the head itself</span>
+        head = head.next;
+        <span class="kw">return</span> head;
+    }
+
+    <span class="ty">Node</span> temp = head;
+    <span class="kw">while</span> (temp.next != <span class="kw">null</span>) {
+        <span class="kw">if</span> (temp.next.val == x) {
+            temp.next = temp.next.next;   <span class="cmt">// skip the target node</span>
+            <span class="kw">break</span>;                        <span class="cmt">// only first occurrence</span>
+        }
+        temp = temp.next;
+    }
+    <span class="kw">return</span> head;
+}</pre>
+    </div>
+    <div class="complexity-row">
+      <span class="complexity-badge"><span class="label">Time — </span><span class="val">O(N)</span></span>
+      <span class="complexity-badge"><span class="label">Space — </span><span class="val">O(1)</span></span>
+    </div>
+    <div class="callout tip">
+      <span class="callout-tag">Variant</span>
+      To delete <em>all</em> occurrences (e.g. the OnePlus manufacturing-line problem), remove the <code>break</code> statement and keep looping until <code>temp.next</code> is null. Also handle consecutive head deletions with a while loop before the main traversal.
+    </div>
+  </section>
+
+  <!-- ══ 04: Reverse ══ -->
+  <section class="section" id="s4">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2>Reverse a Linked List</h2>
+    </div>
+    <p>Reverse the direction of every <code>next</code> pointer so that what was the tail becomes the new head. This is the quintessential linked list problem and must be done <strong>in-place in O(1) extra space</strong>.</p>
+
+    <h3>Before and After</h3>
+    <div class="ll-diagram">
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">23</div><div class="nn-ptr">→</div></div><span class="ll-label">head</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">14</div><div class="nn-ptr">→</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">27</div><div class="nn-ptr">→</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">9</div><div class="nn-ptr">→</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">8</div><div class="nn-ptr">NULL</div></div></div>
+    </div>
+    <p style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--accent);margin:.5rem 0;">↓ after reverse</p>
+    <div class="ll-diagram">
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">8</div><div class="nn-ptr">→</div></div><span class="ll-label">new head</span></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">9</div><div class="nn-ptr">→</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">27</div><div class="nn-ptr">→</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">14</div><div class="nn-ptr">→</div></div></div>
+      <span class="ll-arrow">→</span>
+      <div class="ll-wrapper"><div class="ll-node"><div class="nn-val">23</div><div class="nn-ptr">NULL</div></div></div>
+    </div>
+
+    <h3>Three-Pointer Technique</h3>
+    <p>Use three pointers: <code>prev</code> (starts at <code>null</code>), <code>curr</code> (starts at <code>head</code>), and a temporary <code>currKanext</code> to save the next node before overwriting <code>curr.next</code>.</p>
+    <div class="flow">
+      <div class="flow-step"><span class="flow-icon">💾</span><span class="flow-text">Save: <code>currKanext = curr.next</code> — preserve the forward chain</span></div>
+      <div class="flow-connector"></div>
+      <div class="flow-step highlight"><span class="flow-icon">🔄</span><span class="flow-text"><strong>Reverse:</strong> <code>curr.next = prev</code> — flip the pointer</span></div>
+      <div class="flow-connector"></div>
+      <div class="flow-step"><span class="flow-icon">➡️</span><span class="flow-text">Advance: <code>prev = curr; curr = currKanext</code></span></div>
+      <div class="flow-connector"></div>
+      <div class="flow-step"><span class="flow-icon">🔁</span><span class="flow-text">Repeat while <code>curr != null</code></span></div>
+      <div class="flow-connector"></div>
+      <div class="flow-step highlight"><span class="flow-icon">🏁</span><span class="flow-text"><strong><code>head = prev</code></strong> — <code>prev</code> is now pointing at the original last node (new head)</span></div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Java — Iterative Reverse</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">Node</span> <span class="fn">reverse</span>(<span class="ty">Node</span> head) {
+    <span class="ty">Node</span> prev = <span class="kw">null</span>;
+    <span class="ty">Node</span> curr = head;
+    <span class="kw">while</span> (curr != <span class="kw">null</span>) {
+        <span class="ty">Node</span> currKanext = curr.next;  <span class="cmt">// save next</span>
+        curr.next = prev;              <span class="cmt">// flip pointer</span>
+        prev = curr;                   <span class="cmt">// advance prev</span>
+        curr = currKanext;             <span class="cmt">// advance curr</span>
+    }
+    head = prev;
+    <span class="kw">return</span> head;
+}</pre>
+    </div>
+    <div class="complexity-row">
+      <span class="complexity-badge"><span class="label">Time — </span><span class="val">O(N)</span></span>
+      <span class="complexity-badge"><span class="label">Space — </span><span class="val">O(1)</span></span>
+    </div>
+  </section>
+
+  <!-- ══ 05: Deep Copy ══ -->
+  <section class="section" id="s5">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2>Copy List with Random Pointers</h2>
+    </div>
+    <p>Each node has a <code>val</code>, a <code>next</code> pointer, and a <code>random</code> pointer that can point to <strong>any node in the list</strong> (or <code>null</code>). Create a completely independent deep copy of this list in <strong>O(N) time and O(1) extra space</strong>.</p>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Java — Node Structure</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">class</span> <span class="ty">Node</span> {
+    <span class="ty">int</span> val;
+    <span class="ty">Node</span> next;
+    <span class="ty">Node</span> random;
+}</pre>
+    </div>
+
+    <h3>Challenge</h3>
+    <p>When we clone node A and its <code>random</code> pointer points to node C, how do we wire clone-A's <code>random</code> to clone-C without a hash-map? The trick is to interleave clones <em>right after</em> their originals in the same list temporarily.</p>
+
+    <h3>Three-Phase Algorithm</h3>
+    <div class="cards-grid">
+      <div class="card">
+        <span class="card-glyph">①</span>
+        <h4>Interleave Clone Nodes</h4>
+        <p>For each original node <code>temp</code>, create a clone <code>cn</code> and insert it right after <code>temp</code>: <code>cn.next = temp.next; temp.next = cn;</code> Then advance by <code>temp = temp.next.next</code>.</p>
+      </div>
+      <div class="card">
+        <span class="card-glyph">②</span>
+        <h4>Set Random Pointers</h4>
+        <p>Now every clone sits right next to its original. For each original <code>temp</code>, the clone is <code>temp.next</code>. Wire the clone's random: <code>temp.next.random = temp.random.next;</code></p>
+      </div>
+      <div class="card">
+        <span class="card-glyph">③</span>
+        <h4>Separate the Two Lists</h4>
+        <p>Disentangle the interleaved list back into two independent lists by restoring the original <code>next</code> pointers and building the clone list's <code>next</code> chain. Return the clone head.</p>
+      </div>
+    </div>
+
+    <div class="callout key">
+      <span class="callout-tag">Key Insight</span>
+      After interleaving, <code>temp.random.next</code> is exactly the clone of <code>temp.random</code>, because every original node X now has its clone at <code>X.next</code>. This lets us set random pointers without any hash map.
+    </div>
+
+    <div class="code-block">
+      <div class="code-header"><span class="code-lang">Java — Phase ① &amp; ② shown</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">Node</span> <span class="fn">copyRandomList</span>(<span class="ty">Node</span> head) {
+    <span class="kw">if</span> (head == <span class="kw">null</span>) <span class="kw">return</span> <span class="kw">null</span>;
+
+    <span class="cmt">// Phase ①: interleave clone nodes</span>
+    <span class="ty">Node</span> temp = head;
+    <span class="kw">while</span> (temp != <span class="kw">null</span>) {
+        <span class="ty">Node</span> cn = <span class="kw">new</span> <span class="ty">Node</span>(temp.val);
+        cn.next = temp.next;
+        temp.next = cn;
+        temp = temp.next.next;
+    }
+
+    <span class="cmt">// Phase ②: set random pointers of clones</span>
+    temp = head;
+    <span class="kw">while</span> (temp != <span class="kw">null</span>) {
+        <span class="kw">if</span> (temp.random != <span class="kw">null</span>)
+            temp.next.random = temp.random.next;
+        temp = temp.next.next;
+    }
+
+    <span class="cmt">// Phase ③: separate both linked lists</span>
+    temp = head;
+    <span class="ty">Node</span> cloneHead = head.next;
+    <span class="ty">Node</span> clone = cloneHead;
+    <span class="kw">while</span> (temp != <span class="kw">null</span>) {
+        temp.next = temp.next.next;
+        <span class="kw">if</span> (clone.next != <span class="kw">null</span>)
+            clone.next = clone.next.next;
+        temp = temp.next;
+        clone = clone.next;
+    }
+    <span class="kw">return</span> cloneHead;
+}</pre>
+    </div>
+    <div class="complexity-row">
+      <span class="complexity-badge"><span class="label">Time — </span><span class="val">O(N)</span></span>
+      <span class="complexity-badge"><span class="label">Space — </span><span class="val">O(1)</span></span>
+      <span class="complexity-badge"><span class="label">Passes — </span><span class="val">3 × O(N)</span></span>
+    </div>
+    <div class="callout tip">
+      <span class="callout-tag">Simpler Alternative</span>
+      A HashMap&lt;Node, Node&gt; solution maps original → clone in one pass, then sets all pointers in a second pass. That achieves O(N) time and O(N) extra space — acceptable when the O(1) space version seems tricky in an interview.
+    </div>
+  </section>
+
+  <!-- ══ 06: Recap ══ -->
+  <section class="section" id="s6">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2>Quick Recap</h2>
+    </div>
+    <div class="recap-grid">
+      <div class="recap-card">
+        <h4>Search</h4>
+        <p>Linear traversal with a temp pointer; O(N) — no random access in a linked list.</p>
+      </div>
+      <div class="recap-card">
+        <h4>Insert at K</h4>
+        <p>Walk K−1 steps; link new node's <code>next</code> first, then redirect predecessor's <code>next</code>. K=0 is a special head case.</p>
+      </div>
+      <div class="recap-card">
+        <h4>Delete First Occurrence</h4>
+        <p>Handle head deletion separately; for others, track the predecessor and skip the target node with <code>temp.next = temp.next.next</code>.</p>
+      </div>
+      <div class="recap-card">
+        <h4>Reverse</h4>
+        <p>Three pointers: <code>prev=null, curr=head</code>. Save next, flip pointer, advance both. When <code>curr</code> is null, <code>prev</code> is the new head.</p>
+      </div>
+      <div class="recap-card">
+        <h4>Deep Copy (Random Pointers)</h4>
+        <p>Interleave clones, set random pointers via neighbor trick, then separate lists — all O(N) time, O(1) space.</p>
+      </div>
+      <div class="recap-card">
+        <h4>Golden Rule</h4>
+        <p>Never move the <code>head</code> pointer during traversal. Always use a separate <code>temp</code> pointer.</p>
+      </div>
+    </div>
+
+    <h3>Complexity Summary</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Operation</th><th>Time</th><th>Space</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Search</td><td>O(N)</td><td>O(1)</td><td>No shortcut — must scan</td></tr>
+          <tr><td>Insert at head</td><td>O(1)</td><td>O(1)</td><td>K = 0 edge case</td></tr>
+          <tr><td>Insert at K</td><td>O(K)</td><td>O(1)</td><td>Walk K−1 steps</td></tr>
+          <tr><td>Delete first occurrence</td><td>O(N)</td><td>O(1)</td><td>May hit tail before finding target</td></tr>
+          <tr><td>Reverse</td><td>O(N)</td><td>O(1)</td><td>In-place, iterative</td></tr>
+          <tr><td>Deep copy with random pointers</td><td>O(N)</td><td>O(1)</td><td>3 passes; O(N) space with HashMap</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══ 07: LeetCode ══ -->
+  <section class="section" id="s7">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <h2>LeetCode Problems</h2>
+    </div>
+    <div class="lc-section">
+
+      <div class="lc-group-title">Search &amp; Basic Traversal</div>
+      <ul class="lc-list">
+        <li>
+          <span class="lc-diff easy">Easy</span>
+          <div class="lc-info">
+            <a class="lc-name" href="https://leetcode.com/problems/linked-list-cycle/" target="_blank" rel="noopener">Linked List Cycle ↗</a>
+            <span class="lc-why">Traversal with a fast and slow pointer — extension of the basic search pattern.</span>
+          </div>
+        </li>
+        <li>
+          <span class="lc-diff easy">Easy</span>
+          <div class="lc-info">
+            <a class="lc-name" href="https://leetcode.com/problems/remove-linked-list-elements/" target="_blank" rel="noopener">Remove Linked List Elements ↗</a>
+            <span class="lc-why">Delete all occurrences of a value — generalisation of the single-deletion problem.</span>
+          </div>
+        </li>
+        <li>
+          <span class="lc-diff easy">Easy</span>
+          <div class="lc-info">
+            <a class="lc-name" href="https://leetcode.com/problems/middle-of-the-linked-list/" target="_blank" rel="noopener">Middle of the Linked List ↗</a>
+            <span class="lc-why">Slow/fast pointer technique; reinforces careful traversal without moving head.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="lc-group-title">Insertion &amp; Deletion</div>
+      <ul class="lc-list">
+        <li>
+          <span class="lc-diff easy">Easy</span>
+          <div class="lc-info">
+            <a class="lc-name" href="https://leetcode.com/problems/delete-node-in-a-linked-list/" target="_blank" rel="noopener">Delete Node in a Linked List ↗</a>
+            <span class="lc-why">Tricky variant — you only have access to the node to delete, not the head.</span>
+          </div>
+        </li>
+        <li>
+          <span class="lc-diff medium">Medium</span>
+          <div class="lc-info">
+            <a class="lc-name" href="https://leetcode.com/problems/remove-nth-node-from-end-of-list/" target="_blank" rel="noopener">Remove Nth Node From End of List ↗</a>
+            <span class="lc-why">Two-pointer gap technique for deletion without knowing the list length.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="lc-group-title">Reversal</div>
+      <ul class="lc-list">
+        <li>
+          <span class="lc-diff easy">Easy</span>
+          <div class="lc-info">
+            <a class="lc-name" href="https://leetcode.com/problems/reverse-linked-list/" target="_blank" rel="noopener">Reverse Linked List ↗</a>
+            <span class="lc-why">The exact iterative three-pointer algorithm from this session.</span>
+          </div>
+        </li>
+        <li>
+          <span class="lc-diff medium">Medium</span>
+          <div class="lc-info">
+            <a class="lc-name" href="https://leetcode.com/problems/reverse-linked-list-ii/" target="_blank" rel="noopener">Reverse Linked List II ↗</a>
+            <span class="lc-why">Reverse a sub-segment [left, right] — builds on the same technique with boundary handling.</span>
+          </div>
+        </li>
+        <li>
+          <span class="lc-diff easy">Easy</span>
+          <div class="lc-info">
+            <a class="lc-name" href="https://leetcode.com/problems/palindrome-linked-list/" target="_blank" rel="noopener">Palindrome Linked List ↗</a>
+            <span class="lc-why">Combines find-middle + reverse-second-half — a beautiful application of both techniques.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="lc-group-title">Deep Copy</div>
+      <ul class="lc-list">
+        <li>
+          <span class="lc-diff medium">Medium</span>
+          <div class="lc-info">
+            <a class="lc-name" href="https://leetcode.com/problems/copy-list-with-random-pointer/" target="_blank" rel="noopener">Copy List with Random Pointer ↗</a>
+            <span class="lc-why">Exact problem from this session — practice both the O(N) space HashMap and the O(1) interleaving solutions.</span>
+          </div>
+        </li>
+      </ul>
+
+      <div class="callout tip">
+        <span class="callout-tag">Recommended Study Order</span>
+        Start with <em>Reverse Linked List</em> (LC 206) — it is the most-asked linked list problem and the three-pointer technique unlocks dozens of harder problems. Then work through <em>Remove Linked List Elements</em> to solidify deletion, <em>Middle of the Linked List</em> for traversal intuition, and finally <em>Copy List with Random Pointer</em> for the elegant interleaving trick.
+      </div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<script>
+window.addEventListener('scroll',()=>{
+  const h=document.documentElement;
+  document.getElementById('progress-bar').style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';
+});
+const sections=document.querySelectorAll('.section');
+const links=document.querySelectorAll('.nav-link');
+const sidebar=document.getElementById('sidebar');
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const id=e.target.id;
+      links.forEach(a=>{
+        a.classList.toggle('active',a.getAttribute('href')==='#'+id);
+        if(a.classList.contains('active'))sidebar.scrollTo({top:a.offsetTop-sidebar.clientHeight/2,behavior:'smooth'});
+      });
+    }
+  });
+},{rootMargin:'-30% 0px -60% 0px'});
+sections.forEach(s=>observer.observe(s));
+const revealObs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});
+},{threshold:0.08});
+sections.forEach(s=>revealObs.observe(s));
+const toggle=document.getElementById('nav-toggle');
+const overlay=document.getElementById('nav-overlay');
+toggle.addEventListener('click',()=>{sidebar.classList.toggle('open');overlay.classList.toggle('open');});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');});
+document.querySelectorAll('.nav-link').forEach(a=>{
+  a.addEventListener('click',e=>{
+    e.preventDefault();
+    const t=document.querySelector(a.getAttribute('href'));
+    if(t)window.scrollTo({top:t.offsetTop-24,behavior:'smooth'});
+    sidebar.classList.remove('open');overlay.classList.remove('open');
+  });
+});
+function copyCode(btn){
+  const code=btn.closest('.code-block').querySelector('pre').innerText;
+  if(navigator.clipboard){navigator.clipboard.writeText(code).then(()=>showCopied(btn));}
+  else{const ta=document.createElement('textarea');ta.value=code;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showCopied(btn);}
+}
+function showCopied(btn){btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);}
+</script>
+</body>
+</html>

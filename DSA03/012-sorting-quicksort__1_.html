@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA — Sorting 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;
+  --line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;
+  --blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;
+  --green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;
+  --code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar:268px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:radial-gradient(ellipse 80% 60% at 20% 10%,#f5f0ff22 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 80%,#ffe8d622 0%,transparent 60%),var(--bg);color:var(--ink);font-family:'Newsreader',Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;z-index:1000;background:linear-gradient(90deg,var(--accent),var(--rose));transition:width .1s linear;}
+#sidebar{position:fixed;top:3px;left:0;width:var(--sidebar);height:calc(100vh - 3px);background:var(--bg-soft);border-right:1px solid var(--line);overflow-y:auto;padding:28px 0 40px;z-index:200;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+#sidebar::-webkit-scrollbar{width:4px;}
+#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+.sidebar-brand{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent);font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:0 20px 20px;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.sidebar-group{margin-bottom:8px;padding:0 12px;}
+.sidebar-group-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);padding:6px 8px 4px;opacity:.7;}
+.sidebar-link{display:block;padding:6px 8px;border-radius:6px;font-family:'Newsreader',serif;font-size:.88rem;color:var(--ink-soft);text-decoration:none;line-height:1.4;transition:background .15s,color .15s;}
+.sidebar-link:hover{background:var(--accent-soft);color:var(--accent);}
+.sidebar-link.active{background:var(--accent-soft);color:var(--accent);font-weight:500;}
+.sidebar-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);margin-right:6px;opacity:.8;}
+#main{margin-left:var(--sidebar);padding:48px 56px 80px;max-width:900px;}
+#fab{display:none;position:fixed;bottom:24px;right:24px;z-index:500;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;font-size:1.3rem;border:none;cursor:pointer;box-shadow:0 4px 20px #b5651d44;align-items:center;justify-content:center;transition:transform .2s;}
+#fab:hover{transform:scale(1.08);}
+#overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(45,42,38,.35);backdrop-filter:blur(4px);}
+.hero{padding:16px 0 56px;}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent);text-transform:uppercase;letter-spacing:.14em;margin-bottom:16px;}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);line-height:1.1;color:var(--ink);margin-bottom:20px;}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:28px;}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px;}
+.pill{font-family:'JetBrains Mono',monospace;font-size:.72rem;background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);padding:4px 12px;border-radius:20px;letter-spacing:.04em;}
+.section{padding:48px 0 20px;border-top:1px solid var(--line);opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}
+.section.visible{opacity:1;transform:none;}
+h2{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(1.6rem,3vw,2rem);color:var(--ink);margin-bottom:24px;display:flex;align-items:center;gap:14px;line-height:1.2;}
+.sec-badge{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);background:var(--accent-soft);padding:3px 10px;border-radius:4px;font-weight:600;letter-spacing:.06em;flex-shrink:0;}
+h3{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:600;color:var(--ink);margin:28px 0 12px;}
+p{margin-bottom:16px;}
+ul,ol{margin:0 0 16px 24px;}
+li{margin-bottom:6px;}
+strong{color:var(--ink);}
+.callout{border-radius:8px;padding:18px 22px;margin:24px 0;border-left:4px solid;}
+.callout .callout-label{font-family:'JetBrains Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;font-weight:600;margin-bottom:8px;display:block;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}
+.callout.tip .callout-label{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}
+.callout.key .callout-label{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}
+.callout.analogy .callout-label{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}
+.callout.warn .callout-label{color:var(--accent);}
+.code-wrap{border-radius:10px;overflow:hidden;margin:24px 0;}
+.code-header{background:#1e1d26;display:flex;align-items:center;justify-content:space-between;padding:8px 16px;}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#aaa;letter-spacing:.06em;}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.7rem;background:transparent;border:1px solid #444;color:#aaa;padding:3px 10px;border-radius:4px;cursor:pointer;transition:all .2s;}
+.copy-btn:hover{border-color:#888;color:#ddd;}
+.copy-btn.copied{color:#82d982;border-color:#82d982;}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.65;padding:20px 22px;overflow-x:auto;margin:0;}
+code:not(pre code){font-family:'JetBrains Mono',monospace;font-size:.84em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:2px 6px;}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+.diagram-wrap{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:24px;margin:24px 0;overflow-x:auto;}
+.complexity-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg-soft);border:1px solid var(--line);border-radius:20px;padding:4px 14px;margin:4px 4px 4px 0;font-size:.84rem;}
+.complexity-badge .cb-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);}
+.complexity-badge .cb-val{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:.9rem;}
+thead tr{background:var(--bg-soft);}
+th{font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);padding:10px 16px;text-align:left;}
+td{padding:10px 16px;border-bottom:1px solid var(--line);}
+tr:hover td{background:var(--bg-soft);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin:24px 0;}
+.card{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:22px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 28px #b5651d18;}
+.card-glyph{font-size:1.5rem;margin-bottom:10px;}
+.card-title{font-family:'Fraunces',serif;font-weight:600;font-size:1rem;color:var(--ink);margin-bottom:8px;}
+.card-body{font-size:.88rem;color:var(--ink-soft);}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:20px;border-top:3px solid var(--accent);}
+.recap-card .rc-title{font-family:'Fraunces',serif;font-weight:600;font-size:.97rem;color:var(--ink);margin-bottom:8px;}
+.recap-card .rc-body{font-size:.85rem;color:var(--ink-soft);line-height:1.6;}
+/* LeetCode problems */
+.lc-list { list-style: none; padding: 0; margin: 1rem 0; }
+.lc-list li {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--line);
+  font-size: .9rem;
+}
+.lc-list li:last-child { border-bottom: none; }
+.lc-diff {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .65rem;
+  padding: .15rem .45rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.lc-diff.easy   { background: var(--green-soft);  color: var(--green);  }
+.lc-diff.medium { background: var(--accent-soft); color: var(--accent); }
+.lc-diff.hard   { background: var(--rose-soft);   color: var(--rose);   }
+.lc-name { color: var(--blue); font-weight: 500; }
+.lc-why  { color: var(--ink-soft); font-size: .82rem; }
+a.lc-name {
+  color: var(--blue);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color .15s, color .15s;
+}
+a.lc-name:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.lc-why{font-size:.82rem;color:var(--ink-soft);}
+.lc-num{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--ink-soft);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 7px;margin-right:7px;opacity:.8;}
+/* ARR CELLS */
+.arr-wrap{overflow-x:auto;margin:12px 0;}
+.arr-row{display:flex;gap:0;align-items:flex-end;}
+.ac{display:flex;flex-direction:column;align-items:center;min-width:40px;}
+.ac .v{height:40px;width:40px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--line);background:var(--bg);font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:600;color:var(--ink);}
+.ac:first-child .v{border-radius:6px 0 0 6px;}
+.ac:last-child .v{border-radius:0 6px 6px 0;}
+.ac .ix{padding:4px 0;font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--ink-soft);text-align:center;width:40px;}
+.ac .pt{padding:0 0 2px;font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--accent);text-align:center;width:40px;height:14px;}
+.ac.hi .v{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.ac.hi2 .v{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.ac.hi3 .v{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+.ac.neg .v{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);}
+/* FLOW */
+.flow{margin:24px 0;}
+.flow-step{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:14px 18px;margin-bottom:0;font-size:.93rem;}
+.flow-step.hi{background:var(--accent-soft);border-color:var(--accent);}
+.flow-step .fs-label{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:4px;}
+.flow-connector{width:2px;height:18px;background:var(--line);margin:0 auto;}
+/* TREE */
+.tree-wrap{margin:24px 0;}
+.tree-level{display:flex;justify-content:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+.tree-node{background:var(--bg-soft);border:1.5px solid var(--line);border-radius:6px;padding:5px 13px;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink);text-align:center;}
+.tree-node.root{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.tree-node.sorted{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.tree-node.bad{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);}
+.tree-arrow{text-align:center;color:var(--ink-soft);font-size:.85rem;margin:2px 0 6px;}
+/* TWO-COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0;}
+.col-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:16px 18px;}
+.col-box .cb-title{font-family:'JetBrains Mono',monospace;font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:10px;}
+.col-box ul{margin:0 0 0 18px;font-size:.9rem;color:var(--ink-soft);}
+.col-box ul li{margin-bottom:5px;}
+@media(max-width:800px){
+  #sidebar{transform:translateX(-100%);transition:transform .3s ease;}
+  #sidebar.open{transform:translateX(0);}
+  #main{margin-left:0;padding:32px 22px 60px;}
+  #fab{display:flex;}
+  #overlay.open{display:block;}
+  .two-col{grid-template-columns:1fr;}
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--line);
+}
+.section-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: .2rem .55rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.section-header h2 {
+  font-family: "Fraunces", serif;
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+
+<nav id="sidebar">
+  <div class="sidebar-brand">DSA · Sorting 2</div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Pivot Partition</div>
+    <a class="sidebar-link" href="#pivot-problem"><span class="sidebar-num">01</span>The Problem</a>
+    <a class="sidebar-link" href="#pivot-code"><span class="sidebar-num">02</span>Algorithm &amp; Code</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Quick Sort</div>
+    <a class="sidebar-link" href="#quicksort"><span class="sidebar-num">03</span>Algorithm &amp; Code</a>
+    <a class="sidebar-link" href="#complexity"><span class="sidebar-num">04</span>Complexity Analysis</a>
+    <a class="sidebar-link" href="#randomized"><span class="sidebar-num">05</span>Randomized Quick Sort</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Comparators</div>
+    <a class="sidebar-link" href="#comparator"><span class="sidebar-num">06</span>Comparator Basics</a>
+    <a class="sidebar-link" href="#sort-factors"><span class="sidebar-num">07</span>Sort by Factor Count</a>
+    <a class="sidebar-link" href="#largest-num"><span class="sidebar-num">08</span>Largest Number</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Review</div>
+    <a class="sidebar-link" href="#recap">Quick Recap</a>
+    <a class="sidebar-link" href="#leetcode">LeetCode Problems</a>
+  </div>
+</nav>
+
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+
+<main id="main">
+  <div class="hero">
+    <div class="hero-eyebrow">DSA · Scaler · Sorting — Session 2</div>
+    <h1>Quick Sort &amp;<br/>Comparators</h1>
+    <p class="hero-lede">
+      Master the pivot-partition technique, understand Quick Sort's elegant recursion and its best/worst-case behavior, then learn to write custom comparators for complex sorting problems.
+    </p>
+    <div class="pill-row">
+      <span class="pill">Pivot Partition</span>
+      <span class="pill">Quick Sort</span>
+      <span class="pill">Best / Worst Case</span>
+      <span class="pill">Randomized QS</span>
+      <span class="pill">Comparators</span>
+      <span class="pill">Sort by Factors</span>
+      <span class="pill">Largest Number</span>
+    </div>
+  </div>
+
+  <!-- 01 PIVOT PROBLEM -->
+  <section class="section" id="pivot-problem">
+    <h2><span class="sec-badge">01</span>Pivot Partition — The Problem</h2>
+
+    <div class="callout key">
+      <span class="callout-label">Problem</span>
+      Given an integer array, treat the <strong>first element as the pivot</strong>. Rearrange the array in-place so that every element ≤ pivot ends up on the left, and every element &gt; pivot ends up on the right.<br/><br/>
+      Constraints: 1 ≤ N ≤ 10<sup>5</sup>
+    </div>
+
+    <h3>Worked Example — pivot = 54</h3>
+    <p>Starting array: <code>[54, 26, 93, 17, 77, 31, 44, 55, 20]</code>. The pivot is 54 (index 0).</p>
+
+    <div class="diagram-wrap">
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);margin-bottom:8px;">Input — orange = pivot, green = ≤ pivot, rose = &gt; pivot</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="ac hi"><div class="v">54</div><div class="ix">0</div></div>
+        <div class="ac hi2"><div class="v">26</div><div class="ix">1</div></div>
+        <div class="ac neg"><div class="v">93</div><div class="ix">2</div></div>
+        <div class="ac hi2"><div class="v">17</div><div class="ix">3</div></div>
+        <div class="ac neg"><div class="v">77</div><div class="ix">4</div></div>
+        <div class="ac hi2"><div class="v">31</div><div class="ix">5</div></div>
+        <div class="ac hi2"><div class="v">44</div><div class="ix">6</div></div>
+        <div class="ac neg"><div class="v">55</div><div class="ix">7</div></div>
+        <div class="ac hi2"><div class="v">20</div><div class="ix">8</div></div>
+      </div></div>
+      <p style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);margin-bottom:8px;">After partition — pivot 54 lands at its correct sorted position (index 5)</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="ac hi2"><div class="v">20</div><div class="ix">0</div></div>
+        <div class="ac hi2"><div class="v">26</div><div class="ix">1</div></div>
+        <div class="ac hi2"><div class="v">44</div><div class="ix">2</div></div>
+        <div class="ac hi2"><div class="v">17</div><div class="ix">3</div></div>
+        <div class="ac hi2"><div class="v">31</div><div class="ix">4</div></div>
+        <div class="ac hi"><div class="v">54</div><div class="ix">5</div></div>
+        <div class="ac neg"><div class="v">77</div><div class="ix">6</div></div>
+        <div class="ac neg"><div class="v">93</div><div class="ix">7</div></div>
+        <div class="ac neg"><div class="v">55</div><div class="ix">8</div></div>
+      </div></div>
+    </div>
+
+    <div class="callout analogy">
+      <span class="callout-label">Analogy</span>
+      Think of the pivot as the height bar at an amusement park. People shorter than or equal to it form one line; everyone taller forms another. After partition, the pivot sits at its <em>exact final sorted position</em> — no future operation will ever move it.
+    </div>
+
+    <h3>Quiz — pivot = 10</h3>
+    <p>Array: <code>[10, 13, 7, 8, 25, 20, 23, 8]</code>. Two pointers start at <code>l = 1</code> and <code>r = 7</code>.</p>
+
+    <div class="diagram-wrap">
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);margin-bottom:8px;">Initial state — l points at 13 (&gt; pivot), r points at 8 (≤ pivot) → swap them</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="ac hi"><div class="v">10</div><div class="ix">0</div></div>
+        <div class="ac neg"><div class="v">13</div><div class="ix">1</div><div class="pt">ℓ</div></div>
+        <div class="ac hi2"><div class="v">7</div><div class="ix">2</div></div>
+        <div class="ac hi2"><div class="v">8</div><div class="ix">3</div></div>
+        <div class="ac neg"><div class="v">25</div><div class="ix">4</div></div>
+        <div class="ac neg"><div class="v">20</div><div class="ix">5</div></div>
+        <div class="ac neg"><div class="v">23</div><div class="ix">6</div></div>
+        <div class="ac hi2"><div class="v">8</div><div class="ix">7</div><div class="pt">r</div></div>
+      </div></div>
+      <p style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);margin-bottom:8px;">After all swaps and placing pivot — pivot 10 at index 3</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="ac hi2"><div class="v">8</div><div class="ix">0</div></div>
+        <div class="ac hi2"><div class="v">7</div><div class="ix">1</div></div>
+        <div class="ac hi2"><div class="v">8</div><div class="ix">2</div></div>
+        <div class="ac hi"><div class="v">10</div><div class="ix">3</div></div>
+        <div class="ac neg"><div class="v">25</div><div class="ix">4</div></div>
+        <div class="ac neg"><div class="v">20</div><div class="ix">5</div></div>
+        <div class="ac neg"><div class="v">23</div><div class="ix">6</div></div>
+        <div class="ac neg"><div class="v">13</div><div class="ix">7</div></div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- 02 PARTITION CODE -->
+  <section class="section" id="pivot-code">
+    <h2><span class="sec-badge">02</span>Partition — Algorithm &amp; Code</h2>
+
+    <p>The two-pointer partition uses a left pointer <code>l</code> (starts at index 1, just after the pivot) and a right pointer <code>r</code> (starts at the last index). They march toward each other, swapping only when both point at misplaced elements.</p>
+
+    <div class="flow">
+      <div class="flow-step hi">
+        <span class="fs-label">Step 1 — Pick pivot</span>
+        Set <code>pivot = arr[0]</code>, then <code>l = 1</code>, <code>r = arr.length - 1</code>.
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-step">
+        <span class="fs-label">Step 2 — Advance l</span>
+        While <code>arr[l] ≤ pivot</code>, increment <code>l</code>. This element is already on the correct side.
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-step">
+        <span class="fs-label">Step 3 — Retreat r</span>
+        While <code>arr[r] &gt; pivot</code>, decrement <code>r</code>. This element is already on the correct side.
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-step">
+        <span class="fs-label">Step 4 — Swap</span>
+        If <code>l ≤ r</code>, swap <code>arr[l]</code> with <code>arr[r]</code>, then do <code>l++, r--</code>. Repeat from Step 2.
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-step hi">
+        <span class="fs-label">Step 5 — Place pivot</span>
+        When <code>l &gt; r</code>, swap <code>arr[0]</code> with <code>arr[r]</code>. The pivot is now at its correct sorted position.
+      </div>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Partition (standalone)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">int</span> <span class="fn">partition</span>(<span class="ty">int</span>[] arr) {
+    <span class="ty">int</span> pivot = arr[<span class="num">0</span>];
+    <span class="ty">int</span> l = <span class="num">1</span>, r = arr.length - <span class="num">1</span>;
+
+    <span class="kw">while</span> (l &lt;= r) {
+        <span class="kw">if</span> (arr[l] &lt;= pivot) {
+            l++;                          <span class="cmt">// arr[l] is on the correct side</span>
+        } <span class="kw">else if</span> (arr[r] &gt; pivot) {
+            r--;                          <span class="cmt">// arr[r] is on the correct side</span>
+        } <span class="kw">else</span> {
+            <span class="cmt">// arr[l] > pivot AND arr[r] <= pivot → swap</span>
+            <span class="ty">int</span> tmp = arr[l];
+            arr[l] = arr[r];
+            arr[r] = tmp;
+            l++; r--;
+        }
+    }
+    <span class="cmt">// Place pivot at its correct position</span>
+    <span class="ty">int</span> tmp = arr[<span class="num">0</span>]; arr[<span class="num">0</span>] = arr[r]; arr[r] = tmp;
+    <span class="kw">return</span> r;  <span class="cmt">// pivot's final index</span>
+}</pre>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(1)</span></span>
+
+    <div class="callout warn">
+      <span class="callout-label">Key Observation</span>
+      After one call to <code>partition</code>, the pivot element is permanently in its correct sorted position. Every element to its left is ≤ pivot; every element to its right is &gt; pivot.
+    </div>
+  </section>
+
+  <!-- 03 QUICKSORT -->
+  <section class="section" id="quicksort">
+    <h2><span class="sec-badge">03</span>Quick Sort — Algorithm &amp; Code</h2>
+
+    <p>Quick Sort applies partition recursively. After one partition call, the pivot is fixed. We then independently sort the sub-array to its left (<code>lo</code> to <code>pi - 1</code>) and the sub-array to its right (<code>pi + 1</code> to <code>hi</code>).</p>
+
+    <h3>Recursion Tree — first call</h3>
+    <p>Starting array: <code>[54, 26, 93, 17, 77, 31, 44, 55, 20]</code>. After partitioning on pivot 54, it lands at index 5.</p>
+
+    <div class="diagram-wrap">
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);margin-bottom:12px;">After partition(arr, 0, 8) — pivot 54 fixed at index 5. Recurse on [0..4] and [6..8].</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="ac hi2"><div class="v">31</div><div class="ix">0</div></div>
+        <div class="ac hi2"><div class="v">26</div><div class="ix">1</div></div>
+        <div class="ac hi2"><div class="v">20</div><div class="ix">2</div></div>
+        <div class="ac hi2"><div class="v">17</div><div class="ix">3</div></div>
+        <div class="ac hi2"><div class="v">44</div><div class="ix">4</div></div>
+        <div class="ac hi"><div class="v">54</div><div class="ix">5</div></div>
+        <div class="ac neg"><div class="v">77</div><div class="ix">6</div></div>
+        <div class="ac neg"><div class="v">55</div><div class="ix">7</div></div>
+        <div class="ac neg"><div class="v">93</div><div class="ix">8</div></div>
+      </div></div>
+    </div>
+
+    <div class="callout key">
+      <span class="callout-label">Key Insight</span>
+      <code>partition()</code> is the engine; Quick Sort is just the driver. Each call permanently fixes one element. The algorithm terminates when every sub-array has length 0 or 1 (base case).
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Quick Sort (full implementation)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">void</span> <span class="fn">quickSort</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> lo, <span class="ty">int</span> hi) {
+    <span class="kw">if</span> (lo &gt;= hi) <span class="kw">return</span>;             <span class="cmt">// Base case: 0 or 1 element</span>
+
+    <span class="ty">int</span> pi = <span class="fn">partition</span>(arr, lo, hi);   <span class="cmt">// Pivot's final index</span>
+    <span class="fn">quickSort</span>(arr, lo, pi - <span class="num">1</span>);        <span class="cmt">// Sort left sub-array</span>
+    <span class="fn">quickSort</span>(arr, pi + <span class="num">1</span>, hi);        <span class="cmt">// Sort right sub-array</span>
+}
+
+<span class="ty">int</span> <span class="fn">partition</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> lo, <span class="ty">int</span> hi) {
+    <span class="ty">int</span> pivot = arr[lo];
+    <span class="ty">int</span> l = lo + <span class="num">1</span>, r = hi;
+
+    <span class="kw">while</span> (l &lt;= r) {
+        <span class="kw">if</span> (arr[l] &lt;= pivot)       { l++; }
+        <span class="kw">else if</span> (arr[r] &gt; pivot)   { r--; }
+        <span class="kw">else</span> {
+            <span class="ty">int</span> tmp = arr[l]; arr[l] = arr[r]; arr[r] = tmp;
+            l++; r--;
+        }
+    }
+    <span class="ty">int</span> tmp = arr[lo]; arr[lo] = arr[r]; arr[r] = tmp;
+    <span class="kw">return</span> r;
+}</pre>
+    </div>
+  </section>
+
+  <!-- 04 COMPLEXITY -->
+  <section class="section" id="complexity">
+    <h2><span class="sec-badge">04</span>Complexity Analysis</h2>
+
+    <p>Quick Sort's performance depends entirely on how balanced the partitions are — and that depends on the pivot choice.</p>
+
+    <h3>Best Case — Balanced Partitions</h3>
+    <p>When every pivot lands at the exact midpoint, the recursion tree is a perfect binary tree. Each level processes O(N) work over O(log N) levels.</p>
+
+    <div class="tree-wrap">
+      <div class="tree-level"><div class="tree-node root">N</div></div>
+      <div class="tree-arrow">↙ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↘</div>
+      <div class="tree-level">
+        <div class="tree-node">N/2</div>
+        <div class="tree-node">N/2</div>
+      </div>
+      <div class="tree-arrow">↙↘ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↙↘</div>
+      <div class="tree-level">
+        <div class="tree-node">N/4</div><div class="tree-node">N/4</div>
+        <div class="tree-node">N/4</div><div class="tree-node">N/4</div>
+      </div>
+      <div class="tree-arrow" style="margin-bottom:4px;">⋮ &nbsp; log₂N levels total &nbsp; ⋮</div>
+      <div class="tree-level">
+        <div class="tree-node sorted">1</div><div class="tree-node sorted">1</div>
+        <div class="tree-node sorted">1</div><div class="tree-node sorted">1</div>
+      </div>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N log N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space (call stack)</span><span class="cb-val">O(log N)</span></span>
+
+    <h3>Worst Case — Degenerate Partitions</h3>
+    <p>When the input is already sorted and we always pick the first element as pivot, every partition produces one sub-array of size 0 and one of size N−1. Example input: <code>[2, 8, 9, 10, 20, 30]</code>.</p>
+
+    <div class="tree-wrap">
+      <div class="tree-level"><div class="tree-node bad">N</div></div>
+      <div class="tree-arrow">↙ ↘ (size 0 left, size N−1 right)</div>
+      <div class="tree-level" style="justify-content:flex-start;padding-left:80px;"><div class="tree-node bad">N−1</div></div>
+      <div class="tree-arrow" style="text-align:left;padding-left:95px;">↙ ↘ (size 0 left, size N−2 right)</div>
+      <div class="tree-level" style="justify-content:flex-start;padding-left:160px;"><div class="tree-node bad">N−2</div></div>
+      <div class="tree-arrow" style="margin-bottom:4px;">⋮ &nbsp; N levels total &nbsp; ⋮</div>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N²)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space (call stack)</span><span class="cb-val">O(N)</span></span>
+
+    <div class="callout warn">
+      <span class="callout-label">Watch Out</span>
+      The worst case is surprisingly common — sorted or nearly-sorted arrays trigger it directly when using a first-element pivot. This is why production implementations like Java's <code>Arrays.sort</code> use Dual-Pivot Quick Sort with careful pivot selection and fall back to insertion sort for small sub-arrays.
+    </div>
+
+    <table>
+      <thead><tr><th>Case</th><th>Condition</th><th>Time</th><th>Space</th></tr></thead>
+      <tbody>
+        <tr><td>Best</td><td>Pivot always at midpoint</td><td><code>O(N log N)</code></td><td><code>O(log N)</code></td></tr>
+        <tr><td>Average</td><td>Random input</td><td><code>O(N log N)</code></td><td><code>O(log N)</code></td></tr>
+        <tr><td>Worst</td><td>Sorted input + first-element pivot</td><td><code>O(N²)</code></td><td><code>O(N)</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 05 RANDOMIZED -->
+  <section class="section" id="randomized">
+    <h2><span class="sec-badge">05</span>Randomized Quick Sort</h2>
+
+    <p>The fix for the worst case is elegantly simple: instead of always picking <code>arr[lo]</code> as pivot, pick a <strong>random element</strong> from the sub-array and swap it to position <code>lo</code> before calling partition.</p>
+
+    <h3>Why Does Randomization Help?</h3>
+    <p>For the worst case to occur at <em>every</em> level of recursion, the random pivot must be the minimum element each time. The probability of that:</p>
+
+    <div class="diagram-wrap">
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;margin-bottom:10px;">P(picking min from N elements each time)</p>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--ink);line-height:2;">
+        &nbsp; = 1/N &nbsp;×&nbsp; 1/(N−1) &nbsp;×&nbsp; 1/(N−2) &nbsp;×&nbsp; … &nbsp;×&nbsp; 1/1<br/>
+        &nbsp; = <strong style="color:var(--accent);">1 / N!</strong>
+      </p>
+      <p style="font-size:.85rem;color:var(--ink-soft);margin-top:4px;margin-bottom:0;">This is astronomically small — effectively impossible for any real input.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Randomized Quick Sort</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">Random</span> rand = <span class="kw">new</span> <span class="ty">Random</span>();
+
+<span class="kw">void</span> <span class="fn">randomizedQuickSort</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> lo, <span class="ty">int</span> hi) {
+    <span class="kw">if</span> (lo &gt;= hi) <span class="kw">return</span>;
+
+    <span class="cmt">// Pick a random index, swap it to lo so partition uses it as pivot</span>
+    <span class="ty">int</span> pivotIdx = lo + rand.<span class="fn">nextInt</span>(hi - lo + <span class="num">1</span>);
+    <span class="ty">int</span> tmp = arr[lo]; arr[lo] = arr[pivotIdx]; arr[pivotIdx] = tmp;
+
+    <span class="ty">int</span> pi = <span class="fn">partition</span>(arr, lo, hi);
+    <span class="fn">randomizedQuickSort</span>(arr, lo, pi - <span class="num">1</span>);
+    <span class="fn">randomizedQuickSort</span>(arr, pi + <span class="num">1</span>, hi);
+}</pre>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Expected Time</span><span class="cb-val">O(N log N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Expected Space</span><span class="cb-val">O(log N)</span></span>
+
+    <div class="callout tip">
+      <span class="callout-label">Tip</span>
+      In competitive programming and interviews, always prefer randomized Quick Sort or rely on <code>Collections.sort()</code> / <code>Arrays.sort()</code>. The key insight to understand is <em>why</em> randomization helps — it makes worst-case inputs extremely improbable by breaking the adversary's ability to construct them.
+    </div>
+  </section>
+
+  <!-- 06 COMPARATOR -->
+  <section class="section" id="comparator">
+    <h2><span class="sec-badge">06</span>Comparators</h2>
+
+    <p>A <strong>comparator</strong> is a function supplied to a sorting algorithm to define a custom ordering. Instead of sorting by natural order (1, 2, 3…), you can sort by string length, factor count, or any arbitrary criterion.</p>
+
+    <h3>The Return-Value Contract</h3>
+    <p>A comparator receives two values <code>a</code> and <code>b</code> and must return an integer:</p>
+
+    <table>
+      <thead><tr><th>Return Value</th><th>Meaning</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td><code>negative (−ve)</code></td><td><code>a</code> should come <em>before</em> <code>b</code></td><td><code>a</code> moves left</td></tr>
+        <tr><td><code>0</code></td><td>Both are equivalent</td><td>Order unchanged</td></tr>
+        <tr><td><code>positive (+ve)</code></td><td><code>b</code> should come <em>before</em> <code>a</code></td><td><code>b</code> moves left</td></tr>
+      </tbody>
+    </table>
+
+    <div class="two-col">
+      <div class="col-box">
+        <div class="cb-title">Java / Python / JS / C#</div>
+        <ul>
+          <li>Return <strong>−ve</strong> → first arg comes first</li>
+          <li>Return <strong>0</strong> → equal, no swap</li>
+          <li>Return <strong>+ve</strong> → second arg comes first</li>
+          <li>Ascending shortcut: <code>return a - b;</code></li>
+          <li>Descending shortcut: <code>return b - a;</code></li>
+        </ul>
+      </div>
+      <div class="col-box">
+        <div class="cb-title">C++</div>
+        <ul>
+          <li>Return <code>true</code> → first arg comes <em>before</em> second</li>
+          <li>Return <code>false</code> → second comes first (or equal)</li>
+          <li>Must define a <em>strict weak ordering</em></li>
+          <li>Never return <code>true</code> for equal elements — undefined behavior</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Basic ascending comparator</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">int</span> <span class="fn">compare</span>(<span class="ty">int</span> val1, <span class="ty">int</span> val2) {
+    <span class="kw">return</span> val1 - val2;  <span class="cmt">// negative → val1 first (ascending order)</span>
+}
+
+<span class="cmt">// C++ equivalent</span>
+<span class="kw">bool</span> <span class="fn">compare</span>(<span class="ty">int</span> val1, <span class="ty">int</span> val2) {
+    <span class="kw">return</span> val1 &lt; val2;  <span class="cmt">// true → val1 comes before val2</span>
+}</pre>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-label">Overflow Warning</span>
+      The subtraction trick (<code>return a - b</code>) can overflow for large integers (e.g., <code>a = Integer.MAX_VALUE, b = -1</code>). Use explicit comparisons (<code>if (a &lt; b) return -1; else if (a &gt; b) return 1; else return 0;</code>) when values may approach ±2×10<sup>9</sup>.
+    </div>
+  </section>
+
+  <!-- 07 SORT BY FACTORS -->
+  <section class="section" id="sort-factors">
+    <h2><span class="sec-badge">07</span>Problem: Sort by Factor Count</h2>
+
+    <div class="callout key">
+      <span class="callout-label">Problem</span>
+      Given arr[N], sort the elements in <strong>ascending order of factor count</strong>. Break ties by sorting on the element's value (ascending).<br/><br/>
+      Constraints: 1 ≤ N ≤ 10<sup>5</sup>, 1 ≤ A[i] ≤ 10<sup>4</sup>
+    </div>
+
+    <h3>Example 1</h3>
+
+    <div class="diagram-wrap">
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);margin-bottom:8px;">arr = [9, 3, 10, 6, 4]</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="ac"><div class="v">9</div><div class="ix">0</div></div>
+        <div class="ac"><div class="v">3</div><div class="ix">1</div></div>
+        <div class="ac"><div class="v">10</div><div class="ix">2</div></div>
+        <div class="ac"><div class="v">6</div><div class="ix">3</div></div>
+        <div class="ac"><div class="v">4</div><div class="ix">4</div></div>
+      </div></div>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);margin:10px 0 6px;">Factor counts: 9→3, 3→2, 10→4, 6→4, 4→3</p>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);margin-bottom:8px;">Sort on factors → tie-break by value:</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="ac hi2"><div class="v">3</div><div class="ix">2 fac</div></div>
+        <div class="ac hi2"><div class="v">4</div><div class="ix">3 fac</div></div>
+        <div class="ac hi2"><div class="v">9</div><div class="ix">3 fac</div></div>
+        <div class="ac hi"><div class="v">6</div><div class="ix">4 fac</div></div>
+        <div class="ac hi"><div class="v">10</div><div class="ix">4 fac</div></div>
+      </div></div>
+      <p style="margin-top:8px;font-size:.82rem;color:var(--ink-soft);">4 and 9 both have 3 factors → tie-broken by value (4 &lt; 9). Same for 6 and 10.</p>
+    </div>
+
+    <h3>Example 2</h3>
+
+    <div class="diagram-wrap">
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);margin-bottom:8px;">arr = [10, 4, 5, 13, 1] → factors: 4, 3, 2, 2, 1</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="ac hi2"><div class="v">1</div><div class="ix">1 fac</div></div>
+        <div class="ac hi2"><div class="v">5</div><div class="ix">2 fac</div></div>
+        <div class="ac hi2"><div class="v">13</div><div class="ix">2 fac</div></div>
+        <div class="ac hi"><div class="v">4</div><div class="ix">3 fac</div></div>
+        <div class="ac hi"><div class="v">10</div><div class="ix">4 fac</div></div>
+      </div></div>
+      <p style="margin-top:8px;font-size:.82rem;color:var(--ink-soft);">Output: [1, 5, 13, 4, 10]</p>
+    </div>
+
+    <h3>Counting Factors Efficiently</h3>
+    <p>Iterate <code>i</code> from 1 to √n. For each <code>i</code> that divides <code>n</code>, add 2 (both <code>i</code> and <code>n/i</code>). If <code>i × i = n</code>, add only 1 (perfect square).</p>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Count Factors + Sort with Comparator</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">int</span> <span class="fn">countFactors</span>(<span class="ty">int</span> n) {
+    <span class="ty">int</span> count = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">1</span>; i * i &lt;= n; i++) {
+        <span class="kw">if</span> (n % i == <span class="num">0</span>)
+            count += (i * i == n) ? <span class="num">1</span> : <span class="num">2</span>;
+    }
+    <span class="kw">return</span> count;
+}
+
+Arrays.<span class="fn">sort</span>(arr, <span class="kw">new</span> <span class="ty">Comparator</span>&lt;<span class="ty">Integer</span>&gt;() {
+    <span class="kw">public</span> <span class="ty">int</span> <span class="fn">compare</span>(<span class="ty">Integer</span> a, <span class="ty">Integer</span> b) {
+        <span class="ty">int</span> fa = <span class="fn">countFactors</span>(a);
+        <span class="ty">int</span> fb = <span class="fn">countFactors</span>(b);
+        <span class="kw">if</span> (fa &lt; fb) <span class="kw">return</span> -<span class="num">1</span>;      <span class="cmt">// fewer factors → a first</span>
+        <span class="kw">else if</span> (fa &gt; fb) <span class="kw">return</span> <span class="num">1</span>;  <span class="cmt">// fewer factors → b first</span>
+        <span class="kw">else return</span> a - b;            <span class="cmt">// tie-break by value</span>
+    }
+});
+
+<span class="cmt">// Java 8 lambda equivalent</span>
+Arrays.<span class="fn">sort</span>(arr, (a, b) -&gt; {
+    <span class="ty">int</span> diff = <span class="fn">countFactors</span>(a) - <span class="fn">countFactors</span>(b);
+    <span class="kw">return</span> diff != <span class="num">0</span> ? diff : a - b;
+});</pre>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N log N · √A<sub>max</sub>)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(log N)</span></span>
+
+    <div class="callout tip">
+      <span class="callout-label">Optimization</span>
+      Since A[i] ≤ 10<sup>4</sup>, precompute all factor counts for 1…10<sup>4</sup> with a sieve in O(A<sub>max</sub> log A<sub>max</sub>). Then each comparator call is O(1), reducing total time to O(N log N + A<sub>max</sub> log A<sub>max</sub>).
+    </div>
+  </section>
+
+  <!-- 08 LARGEST NUMBER -->
+  <section class="section" id="largest-num">
+    <h2><span class="sec-badge">08</span>Problem: Largest Number</h2>
+
+    <div class="callout key">
+      <span class="callout-label">Problem</span>
+      Given a list of non-negative integers, arrange them so they form the <strong>largest possible number</strong>. Return the result as a string (since it may overflow any integer type).
+    </div>
+
+    <h3>Examples</h3>
+
+    <div class="diagram-wrap">
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;margin-bottom:10px;">nums = [10, 2] &nbsp;→&nbsp; <strong style="color:var(--green);">"210"</strong></p>
+      <p style="font-size:.85rem;color:var(--ink-soft);margin-bottom:0;">"2" + "10" = "210" &gt; "10" + "2" = "102" &nbsp;→&nbsp; 2 should come first.</p>
+    </div>
+
+    <div class="diagram-wrap">
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;margin-bottom:10px;">nums = [3, 30, 34, 5, 9] &nbsp;→&nbsp; <strong style="color:var(--green);">"9534330"</strong></p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="ac hi2"><div class="v">9</div><div class="ix">1st</div></div>
+        <div class="ac hi2"><div class="v">5</div><div class="ix">2nd</div></div>
+        <div class="ac hi"><div class="v">34</div><div class="ix">3rd</div></div>
+        <div class="ac hi"><div class="v">3</div><div class="ix">4th</div></div>
+        <div class="ac hi"><div class="v">30</div><div class="ix">5th</div></div>
+      </div></div>
+    </div>
+
+    <h3>The Key Insight</h3>
+    <p>You can't sort by numeric value. For any two numbers <code>a</code> and <code>b</code>, compare the concatenation <code>"ab"</code> vs <code>"ba"</code>. Place <code>a</code> before <code>b</code> if <code>"ab" &gt; "ba"</code>.</p>
+
+    <div class="callout analogy">
+      <span class="callout-label">Analogy</span>
+      Imagine laying numbered tiles end-to-end. The question for each pair: which tile on the left makes the bigger two-tile number? The comparator answers that question for every pair, and the sort engine guarantees global consistency.
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Largest Number comparator</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre>Arrays.<span class="fn">sort</span>(arr, <span class="kw">new</span> <span class="ty">Comparator</span>&lt;<span class="ty">Integer</span>&gt;() {
+    <span class="kw">public</span> <span class="ty">int</span> <span class="fn">compare</span>(<span class="ty">Integer</span> a, <span class="ty">Integer</span> b) {
+        <span class="ty">String</span> ab = a + <span class="str">""</span> + b;   <span class="cmt">// e.g. a=9, b=10 → "910"</span>
+        <span class="ty">String</span> ba = b + <span class="str">""</span> + a;   <span class="cmt">// e.g.          → "109"</span>
+        <span class="ty">int</span> i = <span class="num">0</span>, j = <span class="num">0</span>;
+        <span class="kw">while</span> (i &lt; ab.length() &amp;&amp; j &lt; ba.length()) {
+            <span class="kw">if</span> (ab.charAt(i) &lt; ba.charAt(j)) <span class="kw">return</span>  <span class="num">1</span>; <span class="cmt">// ba is larger → b first</span>
+            <span class="kw">if</span> (ab.charAt(i) &gt; ba.charAt(j)) <span class="kw">return</span> -<span class="num">1</span>; <span class="cmt">// ab is larger → a first</span>
+            i++; j++;
+        }
+        <span class="kw">return</span> <span class="num">0</span>;
+    }
+});
+
+<span class="cmt">// Cleaner Java 8+ version</span>
+Arrays.<span class="fn">sort</span>(arr, (a, b) -&gt; (b + <span class="str">""</span> + a).<span class="fn">compareTo</span>(a + <span class="str">""</span> + b));</pre>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Full solution including edge case (all zeros)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">public</span> <span class="ty">String</span> <span class="fn">largestNumber</span>(<span class="ty">int</span>[] nums) {
+    <span class="ty">Integer</span>[] arr = <span class="ty">Arrays</span>.<span class="fn">stream</span>(nums).<span class="fn">boxed</span>().<span class="fn">toArray</span>(<span class="ty">Integer</span>[]::new);
+    Arrays.<span class="fn">sort</span>(arr, (a, b) -&gt; (b + <span class="str">""</span> + a).<span class="fn">compareTo</span>(a + <span class="str">""</span> + b));
+    <span class="kw">if</span> (arr[<span class="num">0</span>] == <span class="num">0</span>) <span class="kw">return</span> <span class="str">"0"</span>;   <span class="cmt">// All elements are 0</span>
+    <span class="ty">StringBuilder</span> sb = <span class="kw">new</span> <span class="ty">StringBuilder</span>();
+    <span class="kw">for</span> (<span class="ty">int</span> n : arr) sb.<span class="fn">append</span>(n);
+    <span class="kw">return</span> sb.<span class="fn">toString</span>();
+}</pre>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N log N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(log N)</span></span>
+
+    <div class="callout tip">
+      <span class="callout-label">Edge Cases to Test</span>
+      All zeros → <code>"0"</code>. Single element. Numbers with repeated digits in different orders: <code>[34, 3]</code> → "343", not "334".
+    </div>
+  </section>
+
+  <!-- RECAP -->
+  <section class="section" id="recap">
+    <h2><span class="sec-badge">↺</span>Quick Recap</h2>
+
+    <div class="recap-grid">
+      <div class="recap-card">
+        <div class="rc-title">Pivot Partition</div>
+        <div class="rc-body">Two-pointer technique that rearranges an array around a pivot in O(N) time, O(1) space. The pivot lands at its exact final sorted index.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Quick Sort</div>
+        <div class="rc-body">Recursively apply partition on left and right sub-arrays. Each call permanently places one element, giving average O(N log N) performance.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Best Case</div>
+        <div class="rc-body">Pivot always at midpoint → balanced binary tree → O(N log N) time, O(log N) call-stack space.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Worst Case</div>
+        <div class="rc-body">Sorted input + first-element pivot → degenerate linear tree → O(N²) time, O(N) call-stack space.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Randomized Quick Sort</div>
+        <div class="rc-body">Randomly select pivot to reduce worst-case probability to 1/N!, giving expected O(N log N) across all inputs.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Comparator Contract</div>
+        <div class="rc-body">Return −ve to put first arg first, +ve to put second arg first, 0 for equal. Enables sorting by any custom criterion.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Sort by Factors</div>
+        <div class="rc-body">Count factors in O(√n) per element; comparator uses factor-count as primary key and value as tie-breaker. Total: O(N log N · √A<sub>max</sub>).</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Largest Number</div>
+        <div class="rc-body">Compare concatenations "ab" vs "ba" for any pair. Sort descending by this rule, then join all elements as a string.</div>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>Algorithm / Problem</th><th>Time</th><th>Space</th></tr></thead>
+      <tbody>
+        <tr><td>Partition</td><td><code>O(N)</code></td><td><code>O(1)</code></td></tr>
+        <tr><td>Quick Sort (best / avg)</td><td><code>O(N log N)</code></td><td><code>O(log N)</code></td></tr>
+        <tr><td>Quick Sort (worst)</td><td><code>O(N²)</code></td><td><code>O(N)</code></td></tr>
+        <tr><td>Randomized Quick Sort</td><td><code>O(N log N)</code> expected</td><td><code>O(log N)</code> expected</td></tr>
+        <tr><td>Sort by Factor Count</td><td><code>O(N log N · √A<sub>max</sub>)</code></td><td><code>O(log N)</code></td></tr>
+        <tr><td>Largest Number</td><td><code>O(N log N)</code></td><td><code>O(log N)</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- LEETCODE -->
+    <section class="section" id="leetcode">
+    <div class="section-header">
+      <span class="section-num">↗</span>
+      <h2>Related LeetCode Problems</h2>
+    </div>
+
+    <p>The following problems use the same core ideas covered in these notes. Solving them in order reinforces each concept progressively.</p>
+
+    <h3>Partition &amp; Quick Sort</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/sort-an-array/" target="_blank" rel="noopener">#912 — Sort an Array ↗</a><br/>
+          <span class="lc-why">Classic Quick Sort / Merge Sort implementation; directly tests in-place partitioning.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/kth-largest-element-in-an-array/" target="_blank" rel="noopener">#215 — Kth Largest Element in an Array ↗</a><br/>
+          <span class="lc-why">Quick Select — partition without recursing on both halves; average O(N) using the exact same partition logic.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/sort-colors/" target="_blank" rel="noopener">#75 — Sort Colors ↗</a><br/>
+          <span class="lc-why">Dutch National Flag — a three-way partition that extends the two-pointer idea from Sections 01–02.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/wiggle-sort-ii/" target="_blank" rel="noopener">#324 — Wiggle Sort II ↗</a><br/>
+          <span class="lc-why">Requires finding the median via Quick Select, then a three-way partition — advanced use of pivot partition.</span>
+        </span>
+      </li>
+    </ul>
+
+    <h3>Custom Comparators</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/largest-number/" target="_blank" rel="noopener">#179 — Largest Number ↗</a><br/>
+          <span class="lc-why">Exactly the problem from Section 08 — string-concatenation comparator to form the maximal number.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/sort-array-by-parity/" target="_blank" rel="noopener">#905 — Sort Array by Parity ↗</a><br/>
+          <span class="lc-why">Simple comparator warm-up — place even numbers before odd numbers.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/reorder-data-in-log-files/" target="_blank" rel="noopener">#937 — Reorder Data in Log Files ↗</a><br/>
+          <span class="lc-why">Multi-key comparator: letter logs sorted lexicographically, digit logs remain in original order.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/sort-characters-by-frequency/" target="_blank" rel="noopener">#451 — Sort Characters By Frequency ↗</a><br/>
+          <span class="lc-why">Sort by frequency count — parallels the "sort by factor count" problem structure from Section 07.</span>
+        </span>
+      </li>
+    </ul>
+
+    <h3>Factor-Count / Number Property Sorting</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/sort-integers-by-the-number-of-1-bits/" target="_blank" rel="noopener">#1356 — Sort Integers by The Number of 1 Bits ↗</a><br/>
+          <span class="lc-why">Direct parallel to Section 07 — count a property per element and sort with value as tie-breaker.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/relative-sort-array/" target="_blank" rel="noopener">#1122 — Relative Sort Array ↗</a><br/>
+          <span class="lc-why">Custom ordering based on a reference array — comparator encodes rank from a separate lookup table.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff hard">Hard</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/count-of-smaller-numbers-after-self/" target="_blank" rel="noopener">#315 — Count of Smaller Numbers After Self ↗</a><br/>
+          <span class="lc-why">Sort-based inversion counting — demonstrates how Quick Select / partition enables harder algorithms.</span>
+        </span>
+      </li>
+    </ul>
+
+    <div class="callout tip">
+      <span class="callout-tag">Recommended Study Order</span>
+      Start with <strong>Sort Colors</strong> to cement the partition intuition. Then tackle <strong>Kth Largest Element</strong> for Quick Select (O(N) average). Move to <strong>Largest Number</strong> to understand comparator design. Finally, do <strong>Sort Integers by 1 Bits</strong> and <strong>Sort Characters By Frequency</strong> to practice the factor-count pattern from Section 07. That's a focused five-problem sequence covering the full scope of these notes.
+    </div>
+  </section>
+
+</main>
+
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{const p=window.scrollY/(document.body.scrollHeight-window.innerHeight)*100;bar.style.width=Math.min(p,100)+'%';});
+const links=document.querySelectorAll('.sidebar-link'),sections=document.querySelectorAll('.section'),sidebar=document.getElementById('sidebar');
+function activateLink(id){links.forEach(l=>l.classList.remove('active'));const t=document.querySelector(`.sidebar-link[href="#${id}"]`);if(t){t.classList.add('active');const sT=sidebar.scrollTop,sH=sidebar.clientHeight,lT=t.offsetTop,lH=t.offsetHeight;if(lT<sT||lT+lH>sT+sH)sidebar.scrollTo({top:lT-sH/2+lH/2,behavior:'smooth'});}}
+const io=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)activateLink(x.target.id);}),{rootMargin:'-20% 0px -60% 0px'});sections.forEach(s=>io.observe(s));
+const rIO=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible');}),{threshold:0.06});sections.forEach(s=>rIO.observe(s));
+links.forEach(l=>l.addEventListener('click',e=>{e.preventDefault();const t=document.querySelector(l.getAttribute('href'));if(t)window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-24,behavior:'smooth'});sidebar.classList.remove('open');document.getElementById('overlay').classList.remove('open');}));
+document.getElementById('fab').addEventListener('click',()=>{sidebar.classList.toggle('open');document.getElementById('overlay').classList.toggle('open');});
+document.getElementById('overlay').addEventListener('click',()=>{sidebar.classList.remove('open');document.getElementById('overlay').classList.remove('open');});
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>flash(btn));else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);flash(btn);}}
+function flash(btn){btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);}
+</script>
+</body>
+</html>

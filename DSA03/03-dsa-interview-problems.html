@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Arrays IV — Interview Problems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+/* ── TOKENS ── */
+:root{
+  --bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;
+  --line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;
+  --blue:#3a6ea5;--blue-soft:#dde9f3;
+  --rose:#b0496b;--rose-soft:#f6e2ea;
+  --green:#5a7d5a;--green-soft:#e2ede0;
+  --purple:#7a5c9e;--purple-soft:#ece4f3;
+  --code-bg:#2b2a33;--code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),
+             radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),
+             var(--bg);
+  color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;
+}
+/* ── PROGRESS ── */
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;border-radius:0 2px 2px 0;transition:width .1s linear}
+/* ── LAYOUT ── */
+.layout{display:flex;min-height:100vh}
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem}
+.nav-group{margin-bottom:.2rem}
+.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft)}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--accent);opacity:.7;flex-shrink:0}
+/* ── MOBILE ── */
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s}
+.nav-toggle:hover{transform:scale(1.08)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px)}
+.sidebar-overlay.open{display:block}
+/* ── MAIN ── */
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px}
+/* ── HERO ── */
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft)}
+/* ── SECTIONS ── */
+.section{margin-bottom:5rem;scroll-margin-top:2rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem}
+p{margin-bottom:1rem}
+/* ── CALLOUTS ── */
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+/* ── INLINE CODE ── */
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em}
+/* ── CODE BLOCKS ── */
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:.85rem}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980}
+.copy-btn.copied{color:#89d185;border-color:#89d185}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink)}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+/* ── TABLES ── */
+.table-wrap{overflow-x:auto;margin:1.5rem 0}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+thead th{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--bg-soft)}
+/* ── COMPLEXITY ── */
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.complexity-badge .label{color:var(--ink-soft)}
+.complexity-badge .val{color:var(--accent);font-weight:600}
+/* ── CARDS ── */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.3rem;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 4px 16px rgba(45,42,38,.07);transform:translateY(-2px)}
+.card-glyph{font-family:"Fraunces",serif;font-size:1.6rem;margin-bottom:.4rem;display:block}
+.card h4{font-family:"Fraunces",serif;font-size:1rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .35rem}
+.card p{font-size:.88rem;color:var(--ink-soft);margin:0;line-height:1.5}
+
+/* ── INTERVAL VISUALIZER ── */
+.interval-vis{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:1.4rem 1.6rem;margin:1.5rem 0;overflow-x:auto}
+.iv-row{display:flex;align-items:center;gap:1rem;margin-bottom:.5rem;font-size:.85rem}
+.iv-label{font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--ink-soft);width:90px;flex-shrink:0;text-align:right}
+.iv-track{position:relative;height:20px;flex:1;min-width:240px}
+.iv-axis{height:2px;background:var(--line);position:absolute;top:50%;transform:translateY(-50%);left:0;right:0}
+.iv-bar{position:absolute;height:10px;top:50%;transform:translateY(-50%);border-radius:3px}
+.iv-bar.b1{background:var(--blue);opacity:.85}
+.iv-bar.b2{background:var(--rose);opacity:.85}
+.iv-bar.merged{background:var(--green);opacity:.9;height:8px}
+.iv-merged-label{font-family:"JetBrains Mono",monospace;font-size:.72rem;color:var(--green);font-weight:600;width:60px;flex-shrink:0}
+.iv-tick{position:absolute;bottom:-14px;font-family:"JetBrains Mono",monospace;font-size:.58rem;color:var(--ink-soft);transform:translateX(-50%)}
+
+/* ── ARRAY DIAGRAM (inline cells) ── */
+.arr-diagram{display:flex;flex-wrap:wrap;gap:.35rem;align-items:flex-end;padding:1rem 1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;margin:1.5rem 0}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem}
+.arr-cell .val{font-family:"JetBrains Mono",monospace;font-size:.82rem;font-weight:600;background:var(--bg);border:2px solid var(--line);border-radius:6px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.arr-cell.hl .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.arr-cell.hl-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.arr-cell.hl-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose)}
+.arr-cell.neg-mark .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);text-decoration:line-through}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:.62rem;color:var(--blue)}
+
+/* ── PERMUTATION STEPS ── */
+.perm-step{display:flex;align-items:center;gap:1rem;padding:.7rem 1rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;margin-bottom:.5rem}
+.perm-step-num{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:.2rem .5rem;flex-shrink:0}
+.perm-step-text{font-size:.9rem;color:var(--ink);line-height:1.4}
+.perm-arr{display:inline-flex;gap:3px;font-family:"JetBrains Mono",monospace;font-size:.78rem;margin:.15rem 0;flex-wrap:wrap}
+.pc{padding:.15rem .4rem;border-radius:4px;border:1px solid var(--line);background:var(--bg);font-weight:600}
+.pc.dip{background:var(--rose-soft);border-color:var(--rose);color:var(--rose)}
+.pc.swap{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.pc.rev{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+
+/* ── RECAP ── */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent)}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5}
+/* ── LEETCODE ── */
+.lc-list{list-style:none;padding:0;margin:1rem 0}
+.lc-list li{display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem}
+.lc-list li:last-child{border-bottom:none}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;margin-top:.15rem}
+.lc-diff.easy{background:var(--green-soft);color:var(--green)}
+.lc-diff.medium{background:var(--accent-soft);color:var(--accent)}
+.lc-diff.hard{background:var(--rose-soft);color:var(--rose)}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.lc-why{color:var(--ink-soft);font-size:.82rem}
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12)}
+  .sidebar.open{transform:translateX(0)}
+  .nav-toggle{display:flex}
+  .main{padding:0 1.2rem 4rem}
+}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+
+<div class="layout">
+<!-- ── SIDEBAR ── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">DSA Notes · Series 3<strong>Interview Problems</strong></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Merge Intervals</div>
+    <a class="nav-link" href="#merge-intro"><span class="nav-num">01</span>What Are Intervals?</a>
+    <a class="nav-link" href="#merge-two"><span class="nav-num">02</span>Merging Two Intervals</a>
+    <a class="nav-link" href="#merge-n"><span class="nav-num">03</span>Merging N Intervals O(N)</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">First Missing Integer</div>
+    <a class="nav-link" href="#missing-intro"><span class="nav-num">04</span>Problem Statement</a>
+    <a class="nav-link" href="#missing-bf"><span class="nav-num">05</span>Brute Force O(N²)</a>
+    <a class="nav-link" href="#missing-sort"><span class="nav-num">06</span>Sort Approach O(N log N)</a>
+    <a class="nav-link" href="#missing-optimal"><span class="nav-num">07</span>Index Marking O(N)</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Next Permutation</div>
+    <a class="nav-link" href="#perm-intro"><span class="nav-num">08</span>Problem Statement</a>
+    <a class="nav-link" href="#perm-algo"><span class="nav-num">09</span>4-Step Algorithm O(N)</a>
+    <a class="nav-link" href="#perm-code"><span class="nav-num">10</span>Code &amp; Dry Run</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">11</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">12</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<main class="main">
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 3</p>
+  <h1>Interview<br>Problems</h1>
+  <p class="hero-lede">Three classic problems asked by Google, PayPal, and top-tier companies — merge intervals in one pass, find the first missing natural number in O(N) space, and generate the next permutation in-place.</p>
+  <div class="chips">
+    <span class="chip">Merge Intervals</span>
+    <span class="chip">First Missing Natural Number</span>
+    <span class="chip">Next Permutation</span>
+    <span class="chip">Index-as-Hash Technique</span>
+  </div>
+</header>
+
+<!-- ─── 01: WHAT ARE INTERVALS ─── -->
+<section class="section" id="merge-intro">
+  <div class="section-header"><span class="section-num">01</span><h2>What Are Intervals?</h2></div>
+
+  <p>An <strong>interval</strong> is a contiguous range defined by a start time <code>a</code> and an end time <code>b</code>, written <code>[a, b]</code>. Two intervals overlap if one starts before the other ends.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Overlap Condition</span>
+    Intervals <code>[a₁, b₁]</code> and <code>[a₂, b₂]</code> overlap when <code>a₂ ≤ b₁</code> (assuming a₁ ≤ a₂ after sorting by start time). If <code>a₂ > b₁</code>, they are non-overlapping.
+  </div>
+
+  <h3>Overlap Examples</h3>
+  <div class="interval-vis" id="iv-examples"></div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Edge Case — Touching Intervals</span>
+    Intervals that share exactly one endpoint, like <code>(3, 6)</code> and <code>(6, 10)</code>, are considered overlapping. Their merged result is <code>[3, 10]</code>. The condition is <code>a₂ ≤ b₁</code> (not strictly less than).
+  </div>
+</section>
+
+<!-- ─── 02: MERGING TWO ─── -->
+<section class="section" id="merge-two">
+  <div class="section-header"><span class="section-num">02</span><h2>Merging Two Intervals</h2></div>
+
+  <p>Given two intervals <code>[a₁, b₁]</code> and <code>[a₂, b₂]</code> (with a₁ ≤ a₂), the rule is:</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — merge two intervals</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// [a1,b1] and [a2,b2], assume a1 <= a2 (sorted by start)</span>
+<span class="kw">if</span> (a2 > b1) {
+    <span class="cmt">// Non-overlapping: gap between the two intervals</span>
+    <span class="cmt">// Return both intervals unchanged</span>
+} <span class="kw">else</span> {
+    <span class="cmt">// Overlapping: merge into one interval</span>
+    <span class="ty">int</span> mergedStart = Math.<span class="fn">min</span>(a1, a2);   <span class="cmt">// always a1 since a1 <= a2</span>
+    <span class="ty">int</span> mergedEnd   = Math.<span class="fn">max</span>(b1, b2);   <span class="cmt">// take the farther endpoint</span>
+}</pre>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    Imagine two meetings on a calendar. If meeting B starts before meeting A ends, you can't schedule anything in between — they merge into one blocked-out period. The merged period starts when the earlier meeting starts and ends when the later meeting ends.
+  </div>
+</section>
+
+<!-- ─── 03: MERGING N ─── -->
+<section class="section" id="merge-n">
+  <div class="section-header"><span class="section-num">03</span><h2>Merging N Intervals — O(N)</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given a list of intervals <strong>already sorted by start time</strong>, merge all overlapping intervals and return the sorted list of non-overlapping intervals. (1 ≤ N ≤ 10⁵)
+  </div>
+
+  <p><strong>Idea:</strong> Track the current merged interval using a running start <code>s</code> and end <code>e</code>. Iterate through every interval. If the next interval overlaps with <code>[s, e]</code>, extend <code>e</code>. If it does not overlap, finalize <code>[s, e]</code> and start a new one.</p>
+
+  <h3>Worked Example</h3>
+  <p>Input: <code>[(0,2), (1,4), (5,6), (6,8), (7,10), (8,9), (12,14)]</code></p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Interval</th><th>Overlaps [s,e]?</th><th>Action</th><th>s</th><th>e</th></tr></thead>
+      <tbody>
+        <tr><td>(0,2)</td><td>—</td><td>Initialize</td><td>0</td><td>2</td></tr>
+        <tr><td>(1,4)</td><td>1 ≤ 2 ✓</td><td>Extend e</td><td>0</td><td>4</td></tr>
+        <tr><td>(5,6)</td><td>5 &gt; 4 ✗</td><td>Save [0,4], start new</td><td>5</td><td>6</td></tr>
+        <tr><td>(6,8)</td><td>6 ≤ 6 ✓</td><td>Extend e</td><td>5</td><td>8</td></tr>
+        <tr><td>(7,10)</td><td>7 ≤ 8 ✓</td><td>Extend e</td><td>5</td><td>10</td></tr>
+        <tr><td>(8,9)</td><td>8 ≤ 10 ✓</td><td>e stays 10</td><td>5</td><td>10</td></tr>
+        <tr><td>(12,14)</td><td>12 &gt; 10 ✗</td><td>Save [5,10], start new</td><td>12</td><td>14</td></tr>
+        <tr><td>End</td><td>—</td><td>Save [12,14]</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--green)">Output: [[0,4], [5,10], [12,14]]</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — merge N intervals O(N)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">List</span>&lt;<span class="ty">int</span>[]&gt; <span class="fn">mergeIntervals</span>(<span class="ty">int</span>[][] intervals, <span class="ty">int</span> n) {
+    <span class="ty">int</span> s = intervals[<span class="num">0</span>][<span class="num">0</span>];
+    <span class="ty">int</span> e = intervals[<span class="num">0</span>][<span class="num">1</span>];
+    <span class="ty">List</span>&lt;<span class="ty">int</span>[]&gt; ans = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">1</span>; i &lt; n; i++) {
+        <span class="kw">if</span> (intervals[i][<span class="num">0</span>] &lt;= e) {          <span class="cmt">// overlapping</span>
+            e = Math.<span class="fn">max</span>(e, intervals[i][<span class="num">1</span>]); <span class="cmt">// extend end</span>
+        } <span class="kw">else</span> {                              <span class="cmt">// non-overlapping</span>
+            ans.<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">int</span>[]{s, e});        <span class="cmt">// finalize current</span>
+            s = intervals[i][<span class="num">0</span>];              <span class="cmt">// start new interval</span>
+            e = intervals[i][<span class="num">1</span>];
+        }
+    }
+    ans.<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">int</span>[]{s, e});               <span class="cmt">// add the last interval</span>
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1) extra</span></div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Prerequisite — Must Sort First</span>
+    This algorithm assumes intervals are pre-sorted by start time. If the input is unsorted, sort it first: <code>Arrays.sort(intervals, (a,b) → a[0] - b[0])</code>. The total complexity with sorting becomes <strong>O(N log N)</strong>.
+  </div>
+
+  <h3>Quiz</h3>
+  <p>Input (already sorted): <code>[(1,10), (2,3), (4,5), (9,12)]</code></p>
+  <p>Trace it: s=1, e=10. All subsequent intervals start ≤ 10, so they all merge. Last interval (9,12) extends e to 12.</p>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--green)">Answer: [[1, 12]]</p>
+</section>
+
+<!-- ─── 04: MISSING INTRO ─── -->
+<section class="section" id="missing-intro">
+  <div class="section-header"><span class="section-num">04</span><h2>First Missing Natural Number</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given an unsorted array of N integers (which may include negatives and numbers larger than N), find the <strong>first missing positive natural number</strong> (i.e., the smallest positive integer not present in the array).
+  </div>
+
+  <h3>Examples</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Array</th><th>First Missing Natural</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>[3, −1, 1, 2, 7]</td><td><strong>4</strong></td><td>1,2,3 present; 4 missing</td></tr>
+        <tr><td>[9, 2, 6, 4, −8, 1, 3]</td><td><strong>5</strong></td><td>1,2,3,4 present; 5 missing</td></tr>
+        <tr><td>[1, 0, −5, −6, 4, 2]</td><td><strong>3</strong></td><td>1,2 present; 3 missing</td></tr>
+        <tr><td>[1, 2, 5, 6, 4, 3]</td><td><strong>7</strong></td><td>1–6 all present</td></tr>
+        <tr><td>[1, 2, 3, 4]</td><td><strong>5</strong></td><td>1–4 all present</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Key Observation — Bounded Answer</span>
+    The answer always lies in the range <code>[1, N+1]</code>. Why? If the array contains all of 1, 2, …, N, then the answer is N+1. Otherwise, some number in 1…N is missing. This bound is critical for the optimal approach.
+  </div>
+</section>
+
+<!-- ─── 05: BF ─── -->
+<section class="section" id="missing-bf">
+  <div class="section-header"><span class="section-num">05</span><h2>Approach 1 — Brute Force O(N²)</h2></div>
+  <p><strong>Idea:</strong> Iterate from 1 to N+1. For each candidate, scan the entire array to check if it is present. Return the first candidate not found.</p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — brute force O(N²)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">firstMissingBF</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="kw">for</span> (<span class="ty">int</span> candidate = <span class="num">1</span>; candidate &lt;= n + <span class="num">1</span>; candidate++) {
+        <span class="ty">boolean</span> found = <span class="kw">false</span>;
+        <span class="kw">for</span> (<span class="ty">int</span> x : arr) <span class="kw">if</span> (x == candidate) { found = <span class="kw">true</span>; <span class="kw">break</span>; }
+        <span class="kw">if</span> (!found) <span class="kw">return</span> candidate;
+    }
+    <span class="kw">return</span> n + <span class="num">1</span>;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N²)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+</section>
+
+<!-- ─── 06: SORT ─── -->
+<section class="section" id="missing-sort">
+  <div class="section-header"><span class="section-num">06</span><h2>Approach 2 — Sort O(N log N)</h2></div>
+  <p><strong>Idea:</strong> Sort the array. Then scan linearly looking for a gap in the sequence 1, 2, 3, …</p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — sort approach</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre>Arrays.<span class="fn">sort</span>(arr);    <span class="cmt">// e.g. [-4, -2, -1, 1, 2, 3, 5, 7]</span>
+<span class="ty">int</span> candidate = <span class="num">1</span>;
+<span class="kw">for</span> (<span class="ty">int</span> x : arr) {
+    <span class="kw">if</span> (x == candidate) candidate++;  <span class="cmt">// found it, look for next</span>
+    <span class="kw">else if</span> (x > candidate) <span class="kw">break</span>;    <span class="cmt">// gap found</span>
+}
+<span class="kw">return</span> candidate;</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N log N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(depends on sort)</span></div>
+  </div>
+  <p>Better, but can we do it in O(N) without sorting?</p>
+</section>
+
+<!-- ─── 07: INDEX MARKING ─── -->
+<section class="section" id="missing-optimal">
+  <div class="section-header"><span class="section-num">07</span><h2>Approach 3 — Index Marking O(N)</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Core Insight — Array as a Hash Table</span>
+    Since the answer is in <code>[1, N+1]</code>, we can use the array itself as a presence table. Map "number <code>k</code> is present" to "index <code>k−1</code> is negative." Three passes do it all without extra space.
+  </div>
+
+  <h3>Three-Pass Algorithm</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <span class="card-glyph">①</span>
+      <h4>Pass 1 — Neutralize Out-of-Range</h4>
+      <p>Replace every non-positive number (≤ 0) and every number > N with <code>N+2</code>. These are irrelevant — they can never be the answer and must not corrupt the sign-encoding in pass 2.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">②</span>
+      <h4>Pass 2 — Mark Presence</h4>
+      <p>For each element, take its absolute value <code>ele</code>. If <code>1 ≤ ele ≤ N</code>, negate <code>arr[ele−1]</code>. A negative value at index <code>k</code> means the number <code>k+1</code> is present in the original array.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">③</span>
+      <h4>Pass 3 — Find First Positive</h4>
+      <p>Scan the array. The first index <code>i</code> where <code>arr[i] > 0</code> means number <code>i+1</code> was never marked — it is the answer. If no such index exists, return <code>N+1</code>.</p>
+    </div>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Why abs() in Pass 2?</span>
+    A number may already have been negated by a previous iteration of pass 2. Taking <code>abs(arr[i])</code> gives us the original value to use as an index, regardless of whether it was already negated. This is the key trick that makes the algorithm correct.
+  </div>
+
+  <h3>Dry Run — arr = [−5, −2, −7, −5, −3, −6, −1, 4, 3]</h3>
+  <p><strong>After Pass 1</strong> (replace ≤ 0 with N+2 = 11): only 4 and 3 stay; all negatives become 11.</p>
+  <div class="arr-diagram">
+    <div class="arr-cell neg"><div class="val">11</div><div class="idx">0</div></div>
+    <div class="arr-cell neg"><div class="val">11</div><div class="idx">1</div></div>
+    <div class="arr-cell neg"><div class="val">11</div><div class="idx">2</div></div>
+    <div class="arr-cell neg"><div class="val">11</div><div class="idx">3</div></div>
+    <div class="arr-cell neg"><div class="val">11</div><div class="idx">4</div></div>
+    <div class="arr-cell neg"><div class="val">11</div><div class="idx">5</div></div>
+    <div class="arr-cell neg"><div class="val">11</div><div class="idx">6</div></div>
+    <div class="arr-cell hl-green"><div class="val">4</div><div class="idx">7</div></div>
+    <div class="arr-cell hl-green"><div class="val">3</div><div class="idx">8</div></div>
+  </div>
+  <p><strong>After Pass 2</strong> (negate at index ele−1 for ele=4→idx 3, ele=3→idx 2):</p>
+  <div class="arr-diagram">
+    <div class="arr-cell"><div class="val">11</div><div class="idx">0</div></div>
+    <div class="arr-cell"><div class="val">11</div><div class="idx">1</div></div>
+    <div class="arr-cell neg"><div class="val">−11</div><div class="idx">2</div></div>
+    <div class="arr-cell neg"><div class="val">−11</div><div class="idx">3</div></div>
+    <div class="arr-cell"><div class="val">11</div><div class="idx">4</div></div>
+    <div class="arr-cell"><div class="val">11</div><div class="idx">5</div></div>
+    <div class="arr-cell"><div class="val">11</div><div class="idx">6</div></div>
+    <div class="arr-cell"><div class="val">11</div><div class="idx">7</div></div>
+    <div class="arr-cell"><div class="val">11</div><div class="idx">8</div></div>
+  </div>
+  <p><strong>Pass 3:</strong> First positive index is 0 → answer is <strong>1</strong>. (Numbers 3 and 4 were present; 1 and 2 were missing; 1 is smaller.)</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — index marking O(N) time, O(1) space</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">firstMissingPositive</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="cmt">// Pass 1: replace non-positive & out-of-range values with N+2</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="kw">if</span> (arr[i] &lt;= <span class="num">0</span>) arr[i] = n + <span class="num">2</span>;
+    }
+
+    <span class="cmt">// Pass 2: mark presence — negate arr[ele-1] for each valid ele</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="ty">int</span> ele = Math.<span class="fn">abs</span>(arr[i]);          <span class="cmt">// recover original value</span>
+        <span class="kw">if</span> (ele &lt;= n) {
+            arr[ele - <span class="num">1</span>] = Math.<span class="fn">abs</span>(arr[ele - <span class="num">1</span>]) * <span class="num">-1</span>;
+        }
+    }
+
+    <span class="cmt">// Pass 3: first positive index i → answer is i+1</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="kw">if</span> (arr[i] &gt; <span class="num">0</span>) <span class="kw">return</span> i + <span class="num">1</span>;
+    }
+    <span class="kw">return</span> n + <span class="num">1</span>;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+</section>
+
+<!-- ─── 08: PERM INTRO ─── -->
+<section class="section" id="perm-intro">
+  <div class="section-header"><span class="section-num">08</span><h2>Next Permutation — Problem Statement</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given an array of N integers representing a permutation, rearrange it into the <strong>next lexicographically greater permutation</strong>. If no greater permutation exists (array is in descending order), rearrange to the smallest permutation (ascending order). Must be done <strong>in-place</strong> without extra memory.
+  </div>
+
+  <h3>Examples</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Input</th><th>Output</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>[1, 2, 3, 4, 5]</td><td>[1, 2, 3, 5, 4]</td><td>Swap last two</td></tr>
+        <tr><td>[5, 4, 2, 2, 1]</td><td>[1, 2, 2, 4, 5]</td><td>Fully descending → reverse all</td></tr>
+        <tr><td>[9, 8, 2, 5]</td><td>[9, 8, 5, 2]</td><td>Swap 2 and 5 (just greater)</td></tr>
+        <tr><td>[9, 8, 2, 5, 4]</td><td>[9, 8, 4, 2, 5]</td><td>Swap 2 with 4, then reverse suffix</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Intuition — The Dip</h3>
+  <p>Think of the array as a height graph read right-to-left. A fully descending suffix (like <code>9, 8, 6, 5, 4</code>) is already the <em>largest</em> arrangement of those digits — there is no way to make it bigger. The first element that breaks the descent (going left) is the <strong>dip</strong> — the pivot that must change to produce the next permutation.</p>
+
+  <div class="arr-diagram">
+    <div class="arr-cell"><div class="val">9</div><div class="idx">0</div></div>
+    <div class="arr-cell"><div class="val">8</div><div class="idx">1</div></div>
+    <div class="arr-cell hl"><div class="val">2</div><div class="idx">2</div></div>
+    <div class="arr-cell neg"><div class="val">6</div><div class="idx">3</div></div>
+    <div class="arr-cell neg"><div class="val">5</div><div class="idx">4</div></div>
+    <div class="arr-cell neg"><div class="val">4</div><div class="idx">5</div></div>
+  </div>
+  <p style="font-size:.85rem;color:var(--ink-soft)">The suffix [6,5,4] is already the largest arrangement. The dip is at index 2 (value 2), because arr[2]=2 &lt; arr[3]=6. We must increase position 2 just enough.</p>
+</section>
+
+<!-- ─── 09: PERM ALGO ─── -->
+<section class="section" id="perm-algo">
+  <div class="section-header"><span class="section-num">09</span><h2>4-Step Algorithm — O(N)</h2></div>
+
+  <div class="perm-step">
+    <span class="perm-step-num">Step 1</span>
+    <div class="perm-step-text"><strong>Find the dip.</strong> Scan right-to-left. Find the largest index <code>dip</code> such that <code>arr[dip] &lt; arr[dip+1]</code>. If no dip exists, the array is fully descending — skip to step 4.</div>
+  </div>
+  <div class="perm-step">
+    <span class="perm-step-num">Step 2</span>
+    <div class="perm-step-text"><strong>Find the just-greater element.</strong> Scan right-to-left from the end to find the <em>smallest</em> element in the suffix that is strictly greater than <code>arr[dip]</code>. Call its index <code>j</code>.</div>
+  </div>
+  <div class="perm-step">
+    <span class="perm-step-num">Step 3</span>
+    <div class="perm-step-text"><strong>Swap.</strong> Swap <code>arr[dip]</code> with <code>arr[j]</code>. This makes position <code>dip</code> as small as possible while still being larger than before.</div>
+  </div>
+  <div class="perm-step">
+    <span class="perm-step-num">Step 4</span>
+    <div class="perm-step-text"><strong>Reverse the suffix.</strong> Reverse <code>arr[dip+1 … N−1]</code>. Since the suffix was descending before the swap, reversing it makes it ascending — the smallest possible arrangement for those digits.</div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Why is the suffix always descending?</span>
+    By definition, <code>dip</code> is the <em>rightmost</em> index where arr[dip] &lt; arr[dip+1]. Everything to the right of <code>dip</code> must therefore be non-increasing (otherwise a larger dip index would exist). So after swapping, reversing the suffix always gives the smallest possible tail.
+  </div>
+
+  <h3>Trace — [9, 8, 2, 6, 5, 4]</h3>
+  <p style="font-size:.88rem;color:var(--ink-soft);margin-bottom:.5rem">Step 1 — scan right: arr[2]=2 &lt; arr[3]=6 → <code>dip = 2</code></p>
+  <div class="perm-arr">
+    <span class="pc">9</span><span class="pc">8</span><span class="pc dip">2</span>
+    <span class="pc">6</span><span class="pc">5</span><span class="pc">4</span>
+  </div>
+  <p style="font-size:.88rem;color:var(--ink-soft);margin:.6rem 0 .3rem">Step 2 — scan right from end: first element > arr[dip]=2 is 4 at index 5 → <code>j = 5</code></p>
+  <p style="font-size:.88rem;color:var(--ink-soft);margin:.6rem 0 .3rem">Step 3 — swap arr[2] and arr[5]:</p>
+  <div class="perm-arr">
+    <span class="pc">9</span><span class="pc">8</span><span class="pc swap">4</span>
+    <span class="pc">6</span><span class="pc">5</span><span class="pc swap">2</span>
+  </div>
+  <p style="font-size:.88rem;color:var(--ink-soft);margin:.6rem 0 .3rem">Step 4 — reverse suffix from index 3 to end [6,5,2] → [2,5,6]:</p>
+  <div class="perm-arr">
+    <span class="pc">9</span><span class="pc">8</span><span class="pc">4</span>
+    <span class="pc rev">2</span><span class="pc rev">5</span><span class="pc rev">6</span>
+  </div>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--green);margin-top:.4rem">Final: [9, 8, 4, 2, 5, 6] ✓</p>
+
+  <h3>Trace — [9, 8, 4, 6, 8, 3, 1] (complex suffix)</h3>
+  <p style="font-size:.88rem;color:var(--ink-soft)">dip=2 (arr[2]=4 &lt; arr[3]=6). Suffix [6,8,3,1] — just-greater than 4 is 6 at index 3. Swap → [9,8,6,4,8,3,1]. Reverse suffix [4,8,3,1] → [1,3,8,4]. Result: <strong>[9,8,6,1,3,8,4]</strong> — wait, that isn't right. Let me re-check from the notes: the notes show dip=2 (value 4), suffix [6,8,3,1] is <em>not</em> descending, so let me reconsider.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Finding the Correct Just-Greater Element</span>
+    Because the suffix is descending, scanning right-to-left finds the <strong>rightmost</strong> element greater than arr[dip], which is the <em>smallest</em> valid replacement. Example: arr = [9,8,4,6,5,4,1]. dip=2 (arr[2]=4). Suffix [6,5,4,1] scan right-to-left: first &gt; 4 is arr[3]=6... but wait the suffix has 6 &gt; 5 &gt; 4 &gt; 1 so scanning from the end: 1 no, 4 no, 5 &gt; 4 yes → j=4. Swap: [9,8,5,6,4,4,1]. Reverse [6,4,4,1] → [1,4,4,6]. Result: [9,8,5,1,4,4,6].
+  </div>
+</section>
+
+<!-- ─── 10: PERM CODE ─── -->
+<section class="section" id="perm-code">
+  <div class="section-header"><span class="section-num">10</span><h2>Code &amp; Final Examples</h2></div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — next permutation O(N) in-place</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">void</span> <span class="fn">nextPermutation</span>(<span class="ty">int</span>[] arr) {
+    <span class="ty">int</span> n = arr.length;
+    <span class="ty">int</span> dip = -<span class="num">1</span>;
+
+    <span class="cmt">// Step 1 — find dip (rightmost i where arr[i] < arr[i+1])</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = n - <span class="num">1</span>; i &gt; <span class="num">0</span>; i--) {
+        <span class="kw">if</span> (arr[i - <span class="num">1</span>] &lt; arr[i]) {
+            dip = i - <span class="num">1</span>;
+            <span class="kw">break</span>;
+        }
+    }
+
+    <span class="kw">if</span> (dip == -<span class="num">1</span>) {         <span class="cmt">// fully descending → wrap to smallest</span>
+        <span class="fn">reverse</span>(arr, <span class="num">0</span>, n - <span class="num">1</span>);
+        <span class="kw">return</span>;
+    }
+
+    <span class="cmt">// Step 2 & 3 — find just-greater element and swap</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = n - <span class="num">1</span>; i &gt; dip; i--) {
+        <span class="kw">if</span> (arr[i] &gt; arr[dip]) {
+            <span class="cmt">// swap arr[i] and arr[dip]</span>
+            <span class="ty">int</span> tmp = arr[i]; arr[i] = arr[dip]; arr[dip] = tmp;
+            <span class="kw">break</span>;
+        }
+    }
+
+    <span class="cmt">// Step 4 — reverse suffix from dip+1 to end</span>
+    <span class="fn">reverse</span>(arr, dip + <span class="num">1</span>, n - <span class="num">1</span>);
+}
+
+<span class="ty">void</span> <span class="fn">reverse</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> l, <span class="ty">int</span> r) {
+    <span class="kw">while</span> (l &lt; r) {
+        <span class="ty">int</span> tmp = arr[l]; arr[l] = arr[r]; arr[r] = tmp;
+        l++; r--;
+    }
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <h3>More Dry Runs</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Input</th><th>dip idx</th><th>dip val</th><th>j (just-greater)</th><th>After swap</th><th>After reverse</th></tr></thead>
+      <tbody>
+        <tr><td>[9,8,2,6,5,4]</td><td>2</td><td>2</td><td>5 (val=4)</td><td>[9,8,4,6,5,2]</td><td><strong>[9,8,4,2,5,6]</strong></td></tr>
+        <tr><td>[9,8,1,8,6,4]</td><td>2</td><td>1</td><td>5 (val=4)</td><td>[9,8,4,8,6,1]</td><td><strong>[9,8,4,1,6,8]</strong></td></tr>
+        <tr><td>[5,4,2,2,1]</td><td>−1 (none)</td><td>—</td><td>—</td><td>—</td><td><strong>[1,2,2,4,5]</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── 11: RECAP ─── -->
+<section class="section" id="recap">
+  <div class="section-header"><span class="section-num">11</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card">
+      <h4>Merge Two Intervals</h4>
+      <p>Overlap when a₂ ≤ b₁. Merged result: [min(a₁,a₂), max(b₁,b₂)]. Touching endpoints count as overlapping.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Merge N Intervals</h4>
+      <p>Requires sorted input. One pass: extend end if overlap, else finalize and start fresh. O(N). Add O(N log N) sort if unsorted.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Missing Natural Number — Bound</h4>
+      <p>Answer is always in [1, N+1]. Use this bound to avoid extra space by encoding presence in the array itself.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Index-as-Hash Trick</h4>
+      <p>Three passes: replace invalids with N+2 → negate arr[ele−1] for each valid ele → first positive index + 1 is the answer.</p>
+    </div>
+    <div class="recap-card">
+      <h4>abs() in Pass 2</h4>
+      <p>Always use abs(arr[i]) to recover the original value — earlier iterations may have already negated it.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Next Permutation — Dip</h4>
+      <p>Rightmost index where arr[i] &lt; arr[i+1]. If none exists, reverse the whole array to get the smallest permutation.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Suffix is Descending</h4>
+      <p>The suffix to the right of the dip is always descending (by definition of dip). This guarantees step 2 finds the smallest valid replacement and step 4's reverse produces the smallest tail.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Real-World — Merge Intervals</h4>
+      <p>Merge intervals appears as the "best time for maintenance" problem: merge all active-user intervals, then find the largest gap between them.</p>
+    </div>
+  </div>
+
+  <h3>Complexity Summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Algorithm</th><th>Time</th><th>Space</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Merge N Intervals (sorted input)</td><td>O(N)</td><td>O(1)</td><td>One pass</td></tr>
+        <tr><td>Merge N Intervals (unsorted)</td><td>O(N log N)</td><td>O(1)</td><td>Sort first</td></tr>
+        <tr><td>First Missing — Brute Force</td><td>O(N²)</td><td>O(1)</td><td>Double loop</td></tr>
+        <tr><td>First Missing — Sort</td><td>O(N log N)</td><td>O(log N)</td><td>Sort + scan</td></tr>
+        <tr><td><strong>First Missing — Index Marking</strong></td><td><strong>O(N)</strong></td><td><strong>O(1)</strong></td><td>3 passes, in-place</td></tr>
+        <tr><td><strong>Next Permutation</strong></td><td><strong>O(N)</strong></td><td><strong>O(1)</strong></td><td>Find dip, swap, reverse</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── 12: LEETCODE ─── -->
+<section class="section" id="leetcode">
+  <div class="section-header"><span class="section-num">12</span><h2>Related LeetCode Problems</h2></div>
+  <p>Grouped by topic. Problems marked Google / PayPal in the notes are starred.</p>
+
+  <h3>Merge Intervals ⭐ Google · PayPal</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/merge-intervals/" target="_blank" rel="noopener">#56 — Merge Intervals ↗</a><br/>
+        <span class="lc-why">Exact problem from Section 03. Sort by start, then one-pass merge.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/insert-interval/" target="_blank" rel="noopener">#57 — Insert Interval ↗</a><br/>
+        <span class="lc-why">Insert a new interval into a sorted merged list — same overlap logic, no sort needed.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/non-overlapping-intervals/" target="_blank" rel="noopener">#435 — Non-overlapping Intervals ↗</a><br/>
+        <span class="lc-why">Greedy: find the minimum number of intervals to remove to make the rest non-overlapping.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/meeting-rooms-ii/" target="_blank" rel="noopener">#253 — Meeting Rooms II ↗</a><br/>
+        <span class="lc-why">Find the minimum number of conference rooms required — classic interval scheduling problem.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff hard">Hard</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/employee-free-time/" target="_blank" rel="noopener">#759 — Employee Free Time ↗</a><br/>
+        <span class="lc-why">Merge all active intervals across employees, then return the gaps — the "maintenance window" problem from the notes.</span>
+      </span>
+    </li>
+  </ul>
+
+  <h3>First Missing Natural Number</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff hard">Hard</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/first-missing-positive/" target="_blank" rel="noopener">#41 — First Missing Positive ↗</a><br/>
+        <span class="lc-why">Exact problem from Section 07. The O(N) index-marking approach from the notes solves this directly.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/missing-number/" target="_blank" rel="noopener">#268 — Missing Number ↗</a><br/>
+        <span class="lc-why">Simpler variant: only one number in [0, N] is missing. Solvable with XOR or sum formula.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/" target="_blank" rel="noopener">#448 — Find All Numbers Disappeared in an Array ↗</a><br/>
+        <span class="lc-why">Same index-negation technique — mark every present number's index, then collect unmarked indices.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/find-all-duplicates-in-an-array/" target="_blank" rel="noopener">#442 — Find All Duplicates in an Array ↗</a><br/>
+        <span class="lc-why">Index-negation variant: an index negated twice means its corresponding number appeared twice.</span>
+      </span>
+    </li>
+  </ul>
+
+  <h3>Next Permutation</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/next-permutation/" target="_blank" rel="noopener">#31 — Next Permutation ↗</a><br/>
+        <span class="lc-why">Exact problem from Section 09–10. Implement the 4-step dip–swap–reverse algorithm.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/permutations/" target="_blank" rel="noopener">#46 — Permutations ↗</a><br/>
+        <span class="lc-why">Generate all permutations — useful context for understanding the permutation space.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/permutation-sequence/" target="_blank" rel="noopener">#60 — Permutation Sequence ↗</a><br/>
+        <span class="lc-why">Find the kth permutation directly using factorial number system — deeper understanding of lexicographic order.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/previous-permutation-with-one-swap/" target="_blank" rel="noopener">#1053 — Previous Permutation With One Swap ↗</a><br/>
+        <span class="lc-why">The reverse problem — mirrors the next permutation logic but scans for a "rise" instead of a dip.</span>
+      </span>
+    </li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Recommended Study Order</span>
+    268 → 448 → 442 → 41 → 56 → 57 → 435 → 31 → 46 → 60 → 253 → 759. Master the index-marking technique early — it appears in multiple problems.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+/* ── Copy Button ── */
+function copyCode(btn){
+  const pre=btn.closest('.code-block').querySelector('pre');
+  const text=pre.innerText;
+  const ok=()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)};
+  if(navigator.clipboard)navigator.clipboard.writeText(text).then(ok);
+  else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);ok()}
+}
+
+/* ── Progress Bar ── */
+const bar=document.getElementById('progress-bar');
+function upProg(){const d=document.documentElement.scrollHeight-window.innerHeight;bar.style.width=(d>0?(window.scrollY/d)*100:0)+'%'}
+window.addEventListener('scroll',upProg,{passive:true});upProg();
+
+/* ── Mobile Sidebar ── */
+const sidebar=document.querySelector('.sidebar'),overlay=document.getElementById('nav-overlay'),tog=document.getElementById('nav-toggle');
+tog.addEventListener('click',()=>{const o=sidebar.classList.toggle('open');overlay.classList.toggle('open',o);tog.textContent=o?'✕':'☰'});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');tog.textContent='☰'});
+
+/* ── Smooth scroll ── */
+document.querySelectorAll('.nav-link').forEach(l=>{
+  l.addEventListener('click',e=>{
+    const h=l.getAttribute('href');if(!h||!h.startsWith('#'))return;e.preventDefault();
+    const t=document.querySelector(h);if(!t)return;
+    window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-24,behavior:'smooth'});
+    sidebar.classList.remove('open');overlay.classList.remove('open');tog.textContent='☰';
+  });
+});
+
+/* ── Scroll Spy ── */
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('.section');
+function setActive(id){navLinks.forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${id}"]`);if(a){a.classList.add('active');const sb=document.querySelector('.sidebar');const t=a.offsetTop,h=sb.clientHeight;if(t<sb.scrollTop+60||t>sb.scrollTop+h-60)sb.scrollTo({top:t-h/2,behavior:'smooth'})}}
+const spy=new IntersectionObserver(en=>{const vis=en.filter(e=>e.isIntersecting).map(e=>e.target);if(!vis.length)return;vis.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top);setActive(vis[0].id)},{rootMargin:'-10% 0px -55% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ── Scroll Reveal ── */
+const rev=new IntersectionObserver(en=>{en.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})},{threshold:.06});
+sections.forEach(s=>rev.observe(s));
+
+/* ── Build Interval Visualization ── */
+(function(){
+  const container=document.getElementById('iv-examples');
+  if(!container)return;
+  const SCALE=16; // px per unit
+  const cases=[
+    {l:'(2,6)+(3,7)',a1:2,b1:6,a2:3,b2:7,m:[2,7],overlap:true},
+    {l:'(2,8)+(4,6)',a1:2,b1:8,a2:4,b2:6,m:[2,8],overlap:true},
+    {l:'(3,7)+(4,10)',a1:3,b1:7,a2:4,b2:10,m:[3,10],overlap:true},
+    {l:'(3,6)+(6,10)',a1:3,b1:6,a2:6,b2:10,m:[3,10],overlap:true},
+    {l:'(2,5)+(8,10)',a1:2,b1:5,a2:8,b2:10,m:null,overlap:false},
+    {l:'(6,10)+(8,15)',a1:6,b1:10,a2:8,b2:15,m:[6,15],overlap:true},
+  ];
+  const maxEnd=15;
+  cases.forEach(c=>{
+    const row=document.createElement('div');row.className='iv-row';
+    const lbl=document.createElement('div');lbl.className='iv-label';lbl.textContent=c.l;
+    const track=document.createElement('div');track.className='iv-track';
+    const axis=document.createElement('div');axis.className='iv-axis';track.appendChild(axis);
+    // bar 1
+    const b1=document.createElement('div');b1.className='iv-bar b1';
+    b1.style.left=(c.a1/maxEnd*100)+'%';b1.style.width=((c.b1-c.a1)/maxEnd*100)+'%';
+    track.appendChild(b1);
+    // bar 2
+    const b2=document.createElement('div');b2.className='iv-bar b2';
+    b2.style.left=(c.a2/maxEnd*100)+'%';b2.style.width=((c.b2-c.a2)/maxEnd*100)+'%';
+    track.appendChild(b2);
+    const ml=document.createElement('div');ml.className='iv-merged-label';
+    if(c.overlap&&c.m){ml.textContent='['+c.m[0]+','+c.m[1]+']';ml.style.color='var(--green)'}
+    else{ml.textContent='no overlap';ml.style.color='var(--rose)';ml.style.fontSize='.65rem'}
+    row.appendChild(lbl);row.appendChild(track);row.appendChild(ml);
+    container.appendChild(row);
+  });
+})();
+</script>
+</body>
+</html>

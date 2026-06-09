@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · 03 — Introduction to Arrays</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+/* ─────────────────────────────────────────────
+   DESIGN TOKENS
+───────────────────────────────────────────── */
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+/* ─────────────────────────────────────────────
+   RESET & BASE
+───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: radial-gradient(ellipse 120% 80% at 15% 20%, #f5ede8 0%, transparent 60%),
+              radial-gradient(ellipse 80% 60% at 90% 80%, #e8e4f2 0%, transparent 55%),
+              var(--bg);
+  color: var(--ink);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  min-height: 100vh;
+}
+
+/* ─────────────────────────────────────────────
+   LAYOUT
+───────────────────────────────────────────── */
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ─── READING PROGRESS BAR ─── */
+#progress-bar {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000;
+  transition: width .1s linear;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ─── MOBILE TOGGLE ─── */
+.nav-toggle {
+  display: none;
+  position: fixed;
+  bottom: 1.4rem;
+  right: 1.4rem;
+  z-index: 500;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem;
+  box-shadow: 0 4px 16px rgba(181,101,29,.35);
+  align-items: center;
+  justify-content: center;
+  transition: transform .2s;
+}
+.nav-toggle:hover { transform: scale(1.08); }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--bg-soft);
+  border-right: 1px solid var(--line);
+  padding: 2rem 0 4rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+  transition: transform .3s ease;
+}
+.sidebar-logo {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 0 1.4rem 1.4rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1.2rem;
+}
+.sidebar-logo strong {
+  display: block;
+  font-family: "Fraunces", serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--ink);
+  margin-top: .25rem;
+}
+.nav-group { margin-bottom: .2rem; }
+.nav-group-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: .7rem 1.4rem .25rem;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .42rem 1.4rem;
+  font-family: "Newsreader", serif;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: color .15s, background .15s, border-color .15s;
+}
+.nav-link:hover { color: var(--ink); background: var(--accent-soft); }
+.nav-link.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 500;
+}
+.nav-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  color: var(--accent);
+  opacity: .7;
+  flex-shrink: 0;
+}
+
+/* ─── MAIN ─── */
+.main {
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--sidebar-w);
+  padding: 0 3rem 6rem;
+  max-width: 860px;
+}
+
+/* ─────────────────────────────────────────────
+   HERO
+───────────────────────────────────────────── */
+.hero {
+  padding: 5rem 0 3.5rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4rem;
+}
+.hero-eyebrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+.hero h1 {
+  font-family: "Fraunces", serif;
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--ink);
+  margin-bottom: 1rem;
+}
+.hero-lede {
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+  max-width: 560px;
+  margin-bottom: 1.8rem;
+}
+.chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.chip {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: .04em;
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink-soft);
+}
+
+/* ─────────────────────────────────────────────
+   SECTIONS
+───────────────────────────────────────────── */
+.section { margin-bottom: 5rem; scroll-margin-top: 2rem; }
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--line);
+}
+.section-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: .2rem .55rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.section-header h2 {
+  font-family: "Fraunces", serif;
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+}
+h3 {
+  font-family: "Fraunces", serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 2rem 0 .6rem;
+}
+h4 {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .8rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 1.6rem 0 .5rem;
+}
+p { margin-bottom: 1rem; }
+
+/* ─────────────────────────────────────────────
+   CALLOUT BOXES
+───────────────────────────────────────────── */
+.callout {
+  border-radius: 8px;
+  padding: 1.1rem 1.3rem;
+  margin: 1.5rem 0;
+  border-left: 4px solid;
+  position: relative;
+}
+.callout-tag {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  display: block;
+  margin-bottom: .4rem;
+}
+.callout.tip   { background: var(--green-soft);  border-color: var(--green);  }
+.callout.tip   .callout-tag { color: var(--green); }
+.callout.key   { background: var(--blue-soft);   border-color: var(--blue);   }
+.callout.key   .callout-tag { color: var(--blue); }
+.callout.analogy { background: var(--rose-soft); border-color: var(--rose);   }
+.callout.analogy .callout-tag { color: var(--rose); }
+.callout.warn  { background: var(--accent-soft); border-color: var(--accent); }
+.callout.warn  .callout-tag { color: var(--accent); }
+
+/* ─────────────────────────────────────────────
+   INLINE CODE
+───────────────────────────────────────────── */
+:not(pre) > code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82em;
+  color: var(--accent);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: .1em .38em;
+}
+
+/* ─────────────────────────────────────────────
+   CODE BLOCKS
+───────────────────────────────────────────── */
+.code-block {
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  background: var(--code-bg);
+  font-size: 0.85rem;
+}
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1e1d26;
+  padding: .55rem 1rem;
+}
+.code-lang {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #9896a0;
+}
+.copy-btn {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: .06em;
+  color: #9896a0;
+  background: transparent;
+  border: 1px solid #3f3d4a;
+  border-radius: 4px;
+  padding: .2rem .55rem;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.copy-btn:hover { color: var(--code-ink); border-color: #6c6980; }
+.copy-btn.copied { color: #89d185; border-color: #89d185; }
+pre {
+  padding: 1.2rem 1.3rem;
+  overflow-x: auto;
+  font-family: "JetBrains Mono", monospace;
+  line-height: 1.65;
+  color: var(--code-ink);
+}
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ─────────────────────────────────────────────
+   TABLES
+───────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+thead th {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--bg-soft);
+  padding: .65rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--line);
+}
+tbody td { padding: .6rem 1rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--bg-soft); }
+
+/* ─────────────────────────────────────────────
+   DIAGRAMS / ARRAY CELLS
+───────────────────────────────────────────── */
+.diagram {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: flex-end;
+  margin: 1.5rem 0;
+  padding: 1.2rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.arr-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .2rem;
+  min-width: 42px;
+}
+.arr-cell .val {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .85rem;
+  font-weight: 600;
+  background: var(--bg);
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  transition: background .2s;
+}
+.arr-cell.highlight .val { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.arr-cell.highlight-blue .val { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+.arr-cell.highlight-green .val { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+.arr-cell.neg .val { background: var(--rose-soft); border-color: var(--rose); color: var(--rose); }
+.arr-cell .idx {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .65rem;
+  color: var(--blue);
+}
+
+/* Complexity badge */
+.complexity-row { display: flex; gap: .7rem; flex-wrap: wrap; margin: 1rem 0; }
+.complexity-badge {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  padding: .3rem .7rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+.complexity-badge .label { color: var(--ink-soft); }
+.complexity-badge .val   { color: var(--accent); font-weight: 600; }
+
+/* ─────────────────────────────────────────────
+   CARDS GRID
+───────────────────────────────────────────── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.2rem 1.3rem;
+  transition: box-shadow .2s, transform .2s;
+}
+.card:hover { box-shadow: 0 4px 16px rgba(45,42,38,.07); transform: translateY(-2px); }
+.card-glyph { font-family: "Fraunces", serif; font-size: 1.6rem; margin-bottom: .4rem; display: block; }
+.card h4 {
+  font-family: "Fraunces", serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  margin: 0 0 .35rem;
+}
+.card p { font-size: .88rem; color: var(--ink-soft); margin: 0; line-height: 1.5; }
+
+/* ─────────────────────────────────────────────
+   FLOWCHART
+───────────────────────────────────────────── */
+.flow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  margin: 1.5rem 0;
+}
+.flow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: .8rem 1rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 540px;
+  position: relative;
+}
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 2px;
+  height: 22px;
+  background: var(--line);
+  margin-left: calc(1rem + 12px);
+}
+.flow-icon { font-size: 1rem; flex-shrink: 0; margin-top: .1rem; }
+.flow-text { font-size: .9rem; color: var(--ink); line-height: 1.45; }
+.flow-text strong { color: var(--accent); }
+
+/* ─────────────────────────────────────────────
+   QUICK RECAP SECTION
+───────────────────────────────────────────── */
+.recap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.recap-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem;
+  border-top: 3px solid var(--accent);
+}
+.recap-card h4 {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: .95rem;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  margin: 0 0 .4rem;
+}
+.recap-card p { font-size: .84rem; color: var(--ink-soft); margin: 0; line-height: 1.5; }
+
+/* LeetCode problems */
+.lc-list { list-style: none; padding: 0; margin: 1rem 0; }
+.lc-list li {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--line);
+  font-size: .9rem;
+}
+.lc-list li:last-child { border-bottom: none; }
+.lc-diff {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .65rem;
+  padding: .15rem .45rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.lc-diff.easy   { background: var(--green-soft);  color: var(--green);  }
+.lc-diff.medium { background: var(--accent-soft); color: var(--accent); }
+.lc-diff.hard   { background: var(--rose-soft);   color: var(--rose);   }
+.lc-name { color: var(--blue); font-weight: 500; }
+.lc-why  { color: var(--ink-soft); font-size: .82rem; }
+a.lc-name {
+  color: var(--blue);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color .15s, color .15s;
+}
+a.lc-name:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 100vh;
+    z-index: 400;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 24px rgba(45,42,38,.12);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .nav-toggle   { display: flex; }
+  .main { padding: 0 1.2rem 4rem; }
+  .sidebar-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(45,42,38,.25);
+    z-index: 300;
+    backdrop-filter: blur(2px);
+  }
+  .sidebar-overlay.open { display: block; }
+}
+
+/* Scroll-reveal: fade in sections */
+.section { opacity: 0; transform: translateY(16px); transition: opacity .5s ease, transform .5s ease; }
+.section.visible { opacity: 1; transform: none; }
+
+/* ─── Page-specific extras ─── */
+.arr-cell .idx { color: var(--blue); }
+.arr-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .72rem;
+  color: var(--ink-soft);
+  margin-right: .6rem;
+  flex-shrink: 0;
+  align-self: center;
+}
+.diagram-caption {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .72rem;
+  color: var(--ink-soft);
+  margin-top: .5rem;
+  text-align: center;
+}
+.rotate-steps { display: flex; flex-direction: column; gap: .6rem; margin: 1.2rem 0; }
+.rotate-step {
+  display: flex;
+  align-items: center;
+  gap: .7rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: .8rem;
+}
+.rotate-step-num {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 50%;
+  width: 22px; height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .7rem;
+  flex-shrink: 0;
+}
+.quiz-box {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.2rem 1.4rem;
+  margin: 1rem 0;
+}
+.quiz-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .65rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--purple);
+  margin-bottom: .5rem;
+  display: block;
+}
+.lc-list li { align-items: flex-start; }
+.lc-diff { margin-top: .15rem; }
+.lc-why { display: block; margin-top: .1rem; }
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+
+<div class="layout">
+<nav class="sidebar" aria-label="Page navigation">
+  <div class="sidebar-logo">
+    DSA · Session 03
+    <strong>Introduction to Arrays</strong>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Constraints &amp; Approach</div>
+    <a class="nav-link" href="#constraints"><span class="nav-num">01</span> Importance of Constraints</a>
+    <a class="nav-link" href="#approach"><span class="nav-num">02</span> How to Approach a Problem</a>
+    <a class="nav-link" href="#space"><span class="nav-num">03</span> Space Complexity</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Arrays</div>
+    <a class="nav-link" href="#arrays-intro"><span class="nav-num">04</span> Introduction to Arrays</a>
+    <a class="nav-link" href="#reverse"><span class="nav-num">05</span> Reverse an Array</a>
+    <a class="nav-link" href="#rotate"><span class="nav-num">06</span> Rotate an Array</a>
+    <a class="nav-link" href="#dynamic"><span class="nav-num">07</span> Dynamic Arrays</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Recap</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">08</span> Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">09</span> LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+
+<header class="hero">
+  <div class="hero-eyebrow">DSA · Session 03</div>
+  <h1>Introduction to<br/>Arrays</h1>
+  <p class="hero-lede">From reading constraints intelligently to reversing, rotating, and dynamically sizing arrays — the building blocks of every data structure interview.</p>
+  <div class="chips">
+    <span class="chip">Constraints</span>
+    <span class="chip">Space Complexity</span>
+    <span class="chip">Array Basics</span>
+    <span class="chip">Reverse</span>
+    <span class="chip">Rotate</span>
+    <span class="chip">Dynamic Arrays</span>
+  </div>
+</header>
+
+<!-- SECTION 01: CONSTRAINTS -->
+<section class="section" id="constraints">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>Importance of Constraints</h2>
+  </div>
+
+  <p>Before writing a single line of code, always read the constraints on N. The constraint directly tells you the maximum acceptable Big-O complexity, given that a server runs roughly 10<sup>7</sup>–10<sup>8</sup> iterations per second.</p>
+
+  <h3>If 1 ≤ N ≤ 10<sup>5</sup>, which complexities pass?</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Complexity</th><th>Iterations</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>O(N³)</td><td>(10⁵)³ = 10¹⁵</td><td style="color:var(--rose);font-weight:600;">✗ TLE</td></tr>
+        <tr><td>O(N² log N)</td><td>(10¹⁰) · log 10⁵</td><td style="color:var(--rose);font-weight:600;">✗ TLE</td></tr>
+        <tr><td>O(N²)</td><td>(10⁵)² = 10¹⁰</td><td style="color:var(--rose);font-weight:600;">✗ TLE</td></tr>
+        <tr><td>O(N log N)</td><td>10⁵ · log 10⁵ ≈ 1.7×10⁶</td><td style="color:var(--green);font-weight:600;">✓ Passes</td></tr>
+        <tr><td>O(N)</td><td>10⁵</td><td style="color:var(--green);font-weight:600;">✓ Passes</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>If 1 ≤ N ≤ 10<sup>6</sup>, which complexities pass?</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Complexity</th><th>Iterations</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>O(N³)</td><td>10¹⁸</td><td style="color:var(--rose);font-weight:600;">✗ TLE</td></tr>
+        <tr><td>O(N²)</td><td>10¹²</td><td style="color:var(--rose);font-weight:600;">✗ TLE</td></tr>
+        <tr><td>O(N log N)</td><td>≈ 2×10⁷</td><td style="color:var(--accent);font-weight:600;">⚠ Maybe</td></tr>
+        <tr><td>O(N)</td><td>10⁶</td><td style="color:var(--green);font-weight:600;">✓ Passes</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Small N — more aggressive complexities allowed</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <span class="card-glyph">🔢</span>
+      <h4>1 ≤ N ≤ 100</h4>
+      <p>O(N³) passes — 10⁶ iterations. Even O(2<sup>N</sup>) might be feasible for very small N.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">✦</span>
+      <h4>1 ≤ N ≤ 20</h4>
+      <p>O(2<sup>N</sup>) passes — 2<sup>20</sup> ≈ 10⁶. Exponential algorithms are acceptable.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">∞</span>
+      <h4>1 ≤ N ≤ 10¹²</h4>
+      <p>Need O(√N), O(log N), or O(1). Linear is too slow (10¹² iterations).</p>
+    </div>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Golden Rule</span>
+    <strong>Constraint → Complexity → Algorithm</strong>. Always determine the required Big-O <em>before</em> brainstorming the algorithm. This prevents wasted effort on approaches that are guaranteed to TLE.
+  </div>
+</section>
+
+<!-- SECTION 02: APPROACH -->
+<section class="section" id="approach">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>How to Approach a Problem</h2>
+  </div>
+
+  <p>A systematic 9-step framework prevents TLE and bugs before you write a line of code.</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="flow-icon">📖</span>
+      <div class="flow-text"><strong>Step 1:</strong> Read the question and constraints carefully.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">💡</span>
+      <div class="flow-text"><strong>Step 2:</strong> Formulate an idea or logic.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">✅</span>
+      <div class="flow-text"><strong>Step 3:</strong> Verify the correctness of the logic by tracing through a few examples by hand.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">📝</span>
+      <div class="flow-text"><strong>Step 4:</strong> Mentally develop pseudocode or a rough idea of loops.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">⏱</span>
+      <div class="flow-text"><strong>Step 5:</strong> Determine the time complexity based on the pseudocode.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="flow-icon">🔍</span>
+      <div class="flow-text"><strong>Step 6:</strong> Assess whether the time complexity is feasible given the constraint. <strong>In the worst case, you can have at most 10<sup>7</sup>–10<sup>8</sup> iterations.</strong></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">🔁</span>
+      <div class="flow-text"><strong>Step 7:</strong> If the complexity is too high, re-evaluate the idea. Otherwise, proceed.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">💻</span>
+      <div class="flow-text"><strong>Step 8:</strong> Code the solution.</div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Pro Tip</span>
+    Step 3 ("verify with examples") is the most skipped step and the biggest source of bugs in interviews. Always test your logic manually before touching the keyboard.
+  </div>
+</section>
+
+<!-- SECTION 03: SPACE COMPLEXITY -->
+<section class="section" id="space">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>Space Complexity</h2>
+  </div>
+
+  <p><strong>Space complexity</strong> is the maximum memory (worst case) used at any point during the algorithm's execution. Like time complexity, we express it using Big-O notation. Note: memory used by the input itself is typically called <em>input space</em> and is usually not counted in the algorithm's space complexity — we count only the <em>auxiliary space</em> (extra memory the algorithm allocates).</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Memory Sizes</span>
+    <code>int</code> → 4 bytes &nbsp;&nbsp;|&nbsp;&nbsp; <code>long</code> → 8 bytes &nbsp;&nbsp;|&nbsp;&nbsp; <code>int[N]</code> → 4·N bytes &nbsp;&nbsp;|&nbsp;&nbsp; <code>long[N][N]</code> → 8·N² bytes
+  </div>
+
+  <h3>Example 1 — O(1) space</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">fun</span>(<span class="ty">int</span> N) {
+    <span class="ty">int</span>  x = N;        <span class="cmt">// 4 bytes</span>
+    <span class="ty">int</span>  y = <span class="num">2</span> * x;    <span class="cmt">// 4 bytes</span>
+    <span class="ty">long</span> z = x + y;   <span class="cmt">// 8 bytes</span>
+}
+<span class="cmt">// Total = 16 bytes → constant → S.C = O(1)</span></pre>
+  </div>
+
+  <h3>Example 2 — O(N) space</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">func</span>(<span class="ty">int</span> N) {
+    <span class="ty">int</span>[] a   = <span class="kw">new</span> <span class="ty">int</span>[<span class="num">10</span>];   <span class="cmt">// 40 bytes (constant)</span>
+    <span class="ty">int</span>   x   = <span class="num">0</span>;              <span class="cmt">// 4 bytes</span>
+    <span class="ty">int</span>   y   = <span class="num">0</span>;              <span class="cmt">// 4 bytes</span>
+    <span class="ty">long</span>  z   = <span class="num">0</span>;              <span class="cmt">// 8 bytes</span>
+    <span class="ty">int</span>[] arr = <span class="kw">new</span> <span class="ty">int</span>[N];    <span class="cmt">// 4·N bytes  ← dominates</span>
+}
+<span class="cmt">// Total = 4N + 56 → S.C = O(N)</span></pre>
+  </div>
+
+  <h3>Example 3 — O(N²) space</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">fun</span>(<span class="ty">int</span> N) {
+    <span class="ty">int</span>    x   = N;                 <span class="cmt">// 4 bytes</span>
+    <span class="ty">int</span>    y   = x * x;             <span class="cmt">// 4 bytes</span>
+    <span class="ty">long</span>   z   = y + y;             <span class="cmt">// 8 bytes</span>
+    <span class="ty">int</span>[]  arr = <span class="kw">new</span> <span class="ty">int</span>[N];       <span class="cmt">// 4·N bytes</span>
+    <span class="ty">long</span>[][] b = <span class="kw">new</span> <span class="ty">long</span>[N][N];  <span class="cmt">// 8·N² bytes  ← dominates</span>
+}
+<span class="cmt">// Total ≈ 8N² + 4N + 16 → S.C = O(N²)</span></pre>
+  </div>
+
+  <h3>Example 4 — Input space is NOT counted</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">maxArr</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> N) {
+    <span class="cmt">// arr[] is input space — given, not created by us</span>
+    <span class="ty">int</span> ans = arr[<span class="num">0</span>];   <span class="cmt">// 4 bytes extra</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+        ans = Math.<span class="fn">max</span>(ans, arr[i]);
+    }
+    <span class="kw">return</span> ans;
+}
+<span class="cmt">// T.C = O(N)   S.C = O(1)  ← only 1 extra variable</span></pre>
+  </div>
+</section>
+
+<!-- SECTION 04: ARRAYS INTRO -->
+<section class="section" id="arrays-intro">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2>Introduction to Arrays</h2>
+  </div>
+
+  <p>An <strong>array</strong> is a collection of elements of the <em>same data type</em>, stored in <strong>contiguous memory</strong>. Because memory is contiguous, accessing any element by index is instantaneous — O(1).</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Memory Layout</span>
+    If an <code>int[]</code> array starts at address 1000, then element at index i is at address <code>1000 + i × 4</code>. This formula is why random access is O(1) — no searching needed.
+  </div>
+
+  <h3>Declaring an Array</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java / c++ / python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Java</span>
+<span class="ty">int</span>[] arr = <span class="kw">new</span> <span class="ty">int</span>[<span class="num">10</span>];   <span class="cmt">// size 10, zero-initialized</span>
+
+<span class="cmt">// C++</span>
+<span class="ty">int</span> arr[<span class="num">10</span>];               <span class="cmt">// size 10 (values uninitialized)</span>
+
+<span class="cmt">// Python (list)</span>
+arr = [<span class="num">0</span>] * <span class="num">10</span>            <span class="cmt"># size 10, all zeros</span></pre>
+  </div>
+
+  <h3>Accessing Elements</h3>
+  <p>Use zero-based indexing: <code>arr[0]</code> is the first element, <code>arr[N-1]</code> is the last.</p>
+
+  <div class="diagram">
+    <span class="arr-label">arr →</span>
+    <div class="arr-cell highlight-blue"><div class="val">10</div><div class="idx">0</div></div>
+    <div class="arr-cell"><div class="val">15</div><div class="idx">1</div></div>
+    <div class="arr-cell"><div class="val">2</div><div class="idx">2</div></div>
+    <div class="arr-cell"><div class="val">8</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight"><div class="val">6</div><div class="idx">4</div></div>
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Access arr[i] </span><span class="val">O(1)</span></span>
+    <span class="complexity-badge"><span class="label">Print all N elements </span><span class="val">O(N)</span></span>
+  </div>
+
+  <h3>Print All Elements</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">printArr</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> N) {
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+        System.out.<span class="fn">print</span>(arr[i] + <span class="str">" "</span>);
+    }
+}
+<span class="cmt">// T.C = O(N)   S.C = O(1)</span></pre>
+  </div>
+</section>
+
+<!-- SECTION 05: REVERSE -->
+<section class="section" id="reverse">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2>Reverse an Array</h2>
+  </div>
+
+  <p>The classic two-pointer technique: place one pointer at the left end and one at the right end, swap the elements they point to, then advance both pointers inward. Stop when they meet (or cross).</p>
+
+  <h3>Visual</h3>
+  <div style="display:flex;flex-direction:column;gap:.7rem;">
+    <div>
+      <div class="diagram-caption" style="text-align:left;margin-bottom:.3rem;font-size:.72rem;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);">Before:</div>
+      <div class="diagram">
+        <div class="arr-cell highlight"><div class="val">3</div><div class="idx">0</div></div>
+        <div class="arr-cell"><div class="val">7</div><div class="idx">1</div></div>
+        <div class="arr-cell"><div class="val">9</div><div class="idx">2</div></div>
+        <div class="arr-cell"><div class="val">5</div><div class="idx">3</div></div>
+        <div class="arr-cell"><div class="val">7</div><div class="idx">4</div></div>
+        <div class="arr-cell neg"><div class="val">8</div><div class="idx">5</div></div>
+      </div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--ink-soft);padding-left:1rem;">↓ &nbsp;Reverse(arr)</div>
+    <div>
+      <div class="diagram-caption" style="text-align:left;margin-bottom:.3rem;font-size:.72rem;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);">After:</div>
+      <div class="diagram">
+        <div class="arr-cell highlight-green"><div class="val">8</div><div class="idx">0</div></div>
+        <div class="arr-cell highlight-green"><div class="val">7</div><div class="idx">1</div></div>
+        <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">2</div></div>
+        <div class="arr-cell highlight-green"><div class="val">9</div><div class="idx">3</div></div>
+        <div class="arr-cell highlight-green"><div class="val">7</div><div class="idx">4</div></div>
+        <div class="arr-cell highlight-green"><div class="val">3</div><div class="idx">5</div></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Code</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java · O(N) time · O(1) space</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">reverse</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> N) {
+    <span class="ty">int</span> l = <span class="num">0</span>, r = N - <span class="num">1</span>;
+    <span class="kw">while</span> (l &lt; r) {
+        <span class="cmt">// swap arr[l] and arr[r]</span>
+        <span class="ty">int</span> temp = arr[l];
+        arr[l]   = arr[r];
+        arr[r]   = temp;
+        l++;
+        r--;
+    }
+    <span class="cmt">// Iterations = N/2  →  T.C = O(N)   S.C = O(1)</span>
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(N)</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+    <span class="complexity-badge"><span class="label">Swaps </span><span class="val">N/2</span></span>
+  </div>
+
+  <h3>Reverse a Sub-Array</h3>
+  <p>The same function generalises: pass explicit left and right indices to reverse only a portion of the array.</p>
+
+  <div class="diagram">
+    <div class="arr-cell"><div class="val">10</div><div class="idx">0</div></div>
+    <div class="arr-cell highlight"><div class="val">16</div><div class="idx">1</div></div>
+    <div class="arr-cell highlight"><div class="val">19</div><div class="idx">2</div></div>
+    <div class="arr-cell highlight"><div class="val">7</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight"><div class="val">5</div><div class="idx">4</div></div>
+    <div class="arr-cell highlight"><div class="val">3</div><div class="idx">5</div></div>
+    <div class="arr-cell"><div class="val">2</div><div class="idx">6</div></div>
+    <div class="arr-cell"><div class="val">8</div><div class="idx">7</div></div>
+  </div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--ink-soft);margin:-.5rem 0 .7rem;">↑ &nbsp;reverse(arr, 1, 5) — reverses indices 1 through 5 (highlighted)</div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java · parameterised</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">reverse</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> l, <span class="ty">int</span> r) {
+    <span class="kw">while</span> (l &lt; r) {
+        <span class="ty">int</span> temp = arr[l];
+        arr[l]   = arr[r];
+        arr[r]   = temp;
+        l++; r--;
+    }
+    <span class="cmt">// T.C = O(r-l+1)   S.C = O(1)</span>
+}</pre>
+  </div>
+</section>
+
+<!-- SECTION 06: ROTATE -->
+<section class="section" id="rotate">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <h2>Rotate an Array by K — O(N×K) vs O(N)</h2>
+  </div>
+
+  <p>Right-rotating an array by K means moving the last K elements to the front. For example, rotating [9, 6, 2, 8, 3, 5, 4, 1] by K=5 gives [8, 3, 5, 4, 1, 9, 6, 2].</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Edge Case</span>
+    If K ≥ N, rotating by K is the same as rotating by K % N (since rotating N times returns to the original). Always normalise: <code>K = K % N</code>.
+  </div>
+
+  <h3>Approach 1 — Brute Force: O(N×K)</h3>
+  <p>Repeat K times: save the last element, shift all others right by one, place the saved element at index 0.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java · O(N×K)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">rotateBrute</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> N, <span class="ty">int</span> K) {
+    K = K % N;   <span class="cmt">// normalise</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; K; i++) {
+        <span class="ty">int</span> temp = arr[N - <span class="num">1</span>];        <span class="cmt">// save last element</span>
+        <span class="kw">for</span> (<span class="ty">int</span> j = N - <span class="num">2</span>; j &gt;= <span class="num">0</span>; j--) {
+            arr[j + <span class="num">1</span>] = arr[j];       <span class="cmt">// shift right</span>
+        }
+        arr[<span class="num">0</span>] = temp;                <span class="cmt">// insert at front</span>
+    }
+    <span class="cmt">// T.C = O(N×K)   S.C = O(1)</span>
+}</pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Problem</span>
+    With N ≤ 10⁵ and K ≤ 10⁵, the brute force reaches N×K = 10¹⁰ iterations — a guaranteed TLE.
+  </div>
+
+  <h3>Approach 2 — Optimal: Three Reverses O(N)</h3>
+  <p>A beautiful observation: right-rotating by K is equivalent to three reversal operations.</p>
+
+  <div class="rotate-steps">
+    <div class="rotate-step">
+      <span class="rotate-step-num">0</span>
+      <span>Normalise: <code>K = K % N</code></span>
+    </div>
+    <div class="rotate-step">
+      <span class="rotate-step-num">1</span>
+      <span>Reverse the entire array: <code>reverse(arr, 0, N-1)</code></span>
+    </div>
+    <div class="rotate-step">
+      <span class="rotate-step-num">2</span>
+      <span>Reverse the first K elements: <code>reverse(arr, 0, K-1)</code></span>
+    </div>
+    <div class="rotate-step">
+      <span class="rotate-step-num">3</span>
+      <span>Reverse the remaining N-K elements: <code>reverse(arr, K, N-1)</code></span>
+    </div>
+  </div>
+
+  <h3>Worked Example — arr = [9, 6, 2, 8, 3, 5, 4, 1], K = 5</h3>
+
+  <div style="display:flex;flex-direction:column;gap:.8rem;margin:1rem 0;">
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);margin-bottom:.3rem;">Step 0 — Original (K=5, N=8)</div>
+      <div class="diagram">
+        <div class="arr-cell"><div class="val">9</div><div class="idx">0</div></div>
+        <div class="arr-cell"><div class="val">6</div><div class="idx">1</div></div>
+        <div class="arr-cell"><div class="val">2</div><div class="idx">2</div></div>
+        <div class="arr-cell highlight"><div class="val">8</div><div class="idx">3</div></div>
+        <div class="arr-cell highlight"><div class="val">3</div><div class="idx">4</div></div>
+        <div class="arr-cell highlight"><div class="val">5</div><div class="idx">5</div></div>
+        <div class="arr-cell highlight"><div class="val">4</div><div class="idx">6</div></div>
+        <div class="arr-cell highlight"><div class="val">1</div><div class="idx">7</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);margin-bottom:.3rem;">Step 1 — reverse(arr, 0, 7)</div>
+      <div class="diagram">
+        <div class="arr-cell highlight"><div class="val">1</div><div class="idx">0</div></div>
+        <div class="arr-cell highlight"><div class="val">4</div><div class="idx">1</div></div>
+        <div class="arr-cell highlight"><div class="val">5</div><div class="idx">2</div></div>
+        <div class="arr-cell highlight"><div class="val">3</div><div class="idx">3</div></div>
+        <div class="arr-cell highlight"><div class="val">8</div><div class="idx">4</div></div>
+        <div class="arr-cell"><div class="val">2</div><div class="idx">5</div></div>
+        <div class="arr-cell"><div class="val">6</div><div class="idx">6</div></div>
+        <div class="arr-cell"><div class="val">9</div><div class="idx">7</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);margin-bottom:.3rem;">Step 2 — reverse(arr, 0, 4) — first K elements</div>
+      <div class="diagram">
+        <div class="arr-cell highlight-green"><div class="val">8</div><div class="idx">0</div></div>
+        <div class="arr-cell highlight-green"><div class="val">3</div><div class="idx">1</div></div>
+        <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">2</div></div>
+        <div class="arr-cell highlight-green"><div class="val">4</div><div class="idx">3</div></div>
+        <div class="arr-cell highlight-green"><div class="val">1</div><div class="idx">4</div></div>
+        <div class="arr-cell"><div class="val">2</div><div class="idx">5</div></div>
+        <div class="arr-cell"><div class="val">6</div><div class="idx">6</div></div>
+        <div class="arr-cell"><div class="val">9</div><div class="idx">7</div></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);margin-bottom:.3rem;">Step 3 — reverse(arr, 5, 7) — remaining N-K elements</div>
+      <div class="diagram">
+        <div class="arr-cell highlight-green"><div class="val">8</div><div class="idx">0</div></div>
+        <div class="arr-cell highlight-green"><div class="val">3</div><div class="idx">1</div></div>
+        <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">2</div></div>
+        <div class="arr-cell highlight-green"><div class="val">4</div><div class="idx">3</div></div>
+        <div class="arr-cell highlight-green"><div class="val">1</div><div class="idx">4</div></div>
+        <div class="arr-cell highlight-blue"><div class="val">9</div><div class="idx">5</div></div>
+        <div class="arr-cell highlight-blue"><div class="val">6</div><div class="idx">6</div></div>
+        <div class="arr-cell highlight-blue"><div class="val">2</div><div class="idx">7</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java · O(N) optimal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">rotate</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> N, <span class="ty">int</span> K) {
+    K = K % N;                <span class="cmt">// handle K >= N</span>
+    <span class="fn">reverse</span>(arr, <span class="num">0</span>, N - <span class="num">1</span>);   <span class="cmt">// step 1: reverse all</span>
+    <span class="fn">reverse</span>(arr, <span class="num">0</span>, K - <span class="num">1</span>);   <span class="cmt">// step 2: reverse first K</span>
+    <span class="fn">reverse</span>(arr, K, N - <span class="num">1</span>);   <span class="cmt">// step 3: reverse rest</span>
+    <span class="cmt">// T.C = O(N)   S.C = O(1)</span>
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Brute Time </span><span class="val">O(N×K)</span></span>
+    <span class="complexity-badge"><span class="label">Optimal Time </span><span class="val">O(N)</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- SECTION 07: DYNAMIC ARRAYS -->
+<section class="section" id="dynamic">
+  <div class="section-header">
+    <span class="section-num">07</span>
+    <h2>Dynamic Arrays</h2>
+  </div>
+
+  <h3>Drawback of Static Arrays</h3>
+  <p>Static arrays have a fixed size that must be declared before use. If you don't know the size upfront, or if the array needs to grow, static arrays are inflexible and wasteful.</p>
+
+  <div class="cards-grid">
+    <div class="card">
+      <span class="card-glyph">🔒</span>
+      <h4>Fixed Size</h4>
+      <p>You must declare the size in advance. Allocating too much wastes memory; too little causes overflow.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">💥</span>
+      <h4>No Auto-Resize</h4>
+      <p>Adding more elements than the declared size causes out-of-bounds errors at runtime.</p>
+    </div>
+  </div>
+
+  <h3>Dynamic Arrays — Automatic Resizing</h3>
+  <p>Dynamic arrays (called <code>ArrayList</code> in Java, <code>vector</code> in C++, and <code>list</code> in Python) automatically resize when they run out of capacity. Internally, when full, a new array of double the size is allocated and all elements are copied over.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">How Resizing Works</span>
+    Imagine a hotel that doubles its rooms every time it fills up. Individual check-ins (appends) are O(1) most of the time. Occasionally the hotel rebuilds — that's the copy step, O(N). On average, each append costs O(1) amortized.
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Operation</th><th>Method (Java)</th><th>Time Complexity</th></tr></thead>
+      <tbody>
+        <tr><td>Access element at index i</td><td><code>al.get(i)</code></td><td><strong>O(1)</strong></td></tr>
+        <tr><td>Append element at end</td><td><code>al.add(x)</code></td><td><strong>O(1) amortized</strong></td></tr>
+        <tr><td>Clear all elements</td><td><code>al.clear()</code></td><td>O(N)</td></tr>
+        <tr><td>Get size</td><td><code>al.size()</code></td><td>O(1)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Java — ArrayList</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre>ArrayList&lt;<span class="ty">Integer</span>&gt; al = <span class="kw">new</span> ArrayList&lt;&gt;(); <span class="cmt">// create</span>
+al.<span class="fn">add</span>(<span class="num">50</span>);                                  <span class="cmt">// append 50 at end</span>
+al.<span class="fn">clear</span>();                                  <span class="cmt">// al = {}</span>
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; al.<span class="fn">size</span>(); i++) {
+    System.out.<span class="fn">print</span>(al.<span class="fn">get</span>(i) + <span class="str">" "</span>);
+}</pre>
+  </div>
+
+  <h3>C++ — vector</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">c++</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre>vector&lt;<span class="ty">int</span>&gt; a;            <span class="cmt">// create empty vector</span>
+a.<span class="fn">push_back</span>(<span class="num">60</span>);          <span class="cmt">// append 60 at end</span>
+a.<span class="fn">clear</span>();                <span class="cmt">// a = {}</span>
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; a.<span class="fn">size</span>(); i++) {
+    cout &lt;&lt; a[i];
+}</pre>
+  </div>
+
+  <h3>Python — list</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">python</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre>thislist = []                       <span class="cmt"># create</span>
+thislist.<span class="fn">append</span>(<span class="str">"orange"</span>)         <span class="cmt"># append at end</span>
+thislist.<span class="fn">clear</span>()                   <span class="cmt"># thislist = []</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(thislist)):
+    <span class="fn">print</span>(thislist[i])</pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">What's Next</span>
+    In upcoming sessions we'll explore techniques that build on arrays: prefix sums, carry-forward, contribution technique, and sliding windows.
+  </div>
+</section>
+
+<!-- SECTION 08: RECAP -->
+<section class="section" id="recap">
+  <div class="section-header">
+    <span class="section-num">08</span>
+    <h2>Quick Recap</h2>
+  </div>
+
+  <div class="recap-grid">
+    <div class="recap-card">
+      <h4>Read Constraints First</h4>
+      <p>Constraint on N tells you the required Big-O before you think about algorithms.</p>
+    </div>
+    <div class="recap-card">
+      <h4>9-Step Problem Approach</h4>
+      <p>Read → Ideate → Verify → Pseudocode → Complexity → Feasibility check → Rethink/Code.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Space Complexity</h4>
+      <p>Worst-case memory at any point. Input space is usually excluded; only auxiliary space counts.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Array Access</h4>
+      <p>Random access is O(1) due to contiguous memory. Address of arr[i] = base + i × element_size.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Reverse — Two Pointers</h4>
+      <p>l=0, r=N-1; swap and converge. O(N) time, O(1) space, N/2 swaps.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Rotate — Three Reverses</h4>
+      <p>Normalise K, then: reverse all → reverse [0,K-1] → reverse [K,N-1]. O(N) time, O(1) space.</p>
+    </div>
+    <div class="recap-card">
+      <h4>K % N Normalisation</h4>
+      <p>Rotating N times = no change. K = K % N handles all cases including K ≥ N.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Dynamic Arrays</h4>
+      <p>ArrayList / vector / list auto-resize. Append is O(1) amortized; access is O(1).</p>
+    </div>
+  </div>
+
+  <h3>Complexity Summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Operation</th><th>Time</th><th>Space</th></tr></thead>
+      <tbody>
+        <tr><td>Access arr[i]</td><td>O(1)</td><td>—</td></tr>
+        <tr><td>Print all N elements</td><td>O(N)</td><td>O(1)</td></tr>
+        <tr><td>Reverse array</td><td>O(N)</td><td>O(1)</td></tr>
+        <tr><td>Rotate (brute force)</td><td>O(N×K)</td><td>O(1)</td></tr>
+        <tr><td>Rotate (3-reverse)</td><td>O(N)</td><td>O(1)</td></tr>
+        <tr><td>Dynamic array append</td><td>O(1) amortized</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SECTION 09: LEETCODE -->
+<section class="section" id="leetcode">
+  <div class="section-header">
+    <span class="section-num">09</span>
+    <h2>Related LeetCode Problems</h2>
+  </div>
+
+  <h3>Array Reversal &amp; Two Pointers</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/reverse-string/" target="_blank" rel="noopener">#344 — Reverse String ↗</a>
+        <span class="lc-why">Two-pointer in-place reversal — exact same pattern as reverse(arr, l, r) from the notes.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/reverse-vowels-of-a-string/" target="_blank" rel="noopener">#345 — Reverse Vowels of a String ↗</a>
+        <span class="lc-why">Two-pointer with a conditional check — builds on the parameterised reverse technique.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/valid-palindrome/" target="_blank" rel="noopener">#125 — Valid Palindrome ↗</a>
+        <span class="lc-why">Two-pointer converging from both ends — same movement as reverse without swapping.</span>
+      </span>
+    </li>
+  </ul>
+
+  <h3>Array Rotation</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/rotate-array/" target="_blank" rel="noopener">#189 — Rotate Array ↗</a>
+        <span class="lc-why">The exact problem from the notes — implement both brute O(N×K) and 3-reverse O(N) solutions.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/rotate-image/" target="_blank" rel="noopener">#48 — Rotate Image ↗</a>
+        <span class="lc-why">2D rotation using transpose + reverse — extends the 1D reverse idea to matrices.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/" target="_blank" rel="noopener">#153 — Find Minimum in Rotated Sorted Array ↗</a>
+        <span class="lc-why">Understand what a rotated array looks like, then binary search — builds on rotation concepts.</span>
+      </span>
+    </li>
+  </ul>
+
+  <h3>Dynamic Arrays &amp; Array Manipulation</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/running-sum-of-1d-array/" target="_blank" rel="noopener">#1480 — Running Sum of 1D Array ↗</a>
+        <span class="lc-why">Build a result array iteratively — fundamental dynamic array usage pattern.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/move-zeroes/" target="_blank" rel="noopener">#283 — Move Zeroes ↗</a>
+        <span class="lc-why">In-place array rearrangement using two pointers — O(N) time, O(1) space like the reverse.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/max-consecutive-ones/" target="_blank" rel="noopener">#485 — Max Consecutive Ones ↗</a>
+        <span class="lc-why">Single linear scan — straightforward application of iterating over an array.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/design-dynamic-array/" target="_blank" rel="noopener">#2868 — Minimum Cost to Make Array Equalindromic ↗</a>
+        <span class="lc-why">Array transformation problem requiring understanding of indexing and in-place operations.</span>
+      </span>
+    </li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Recommended Study Order</span>
+    #344 (Reverse String) → #125 (Palindrome) → #283 (Move Zeroes) → #485 (Max Consecutive) → #189 (Rotate Array) → #1480 (Running Sum) → #48 (Rotate Image) → #153 (Rotated Sorted Array). Master the two-pointer pattern first, then array transformations.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  const text = pre.innerText;
+  const finish = () => { btn.textContent = 'Copied!'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000); };
+  if (navigator.clipboard) { navigator.clipboard.writeText(text).then(finish); }
+  else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); finish(); }
+}
+const bar = document.getElementById('progress-bar');
+window.addEventListener('scroll', () => { const d = document.documentElement.scrollHeight - window.innerHeight; bar.style.width = (d > 0 ? (window.scrollY / d) * 100 : 0) + '%'; }, { passive: true });
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', e => {
+    const href = link.getAttribute('href');
+    if (!href || !href.startsWith('#')) return;
+    e.preventDefault();
+    const target = document.querySelector(href);
+    if (!target) return;
+    window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 24, behavior: 'smooth' });
+    sidebar.classList.remove('open'); overlay.classList.remove('open'); navToggle.textContent = '☰';
+  });
+});
+const sidebar = document.querySelector('.sidebar');
+const overlay = document.getElementById('nav-overlay');
+const navToggle = document.getElementById('nav-toggle');
+navToggle.addEventListener('click', () => { const open = sidebar.classList.toggle('open'); overlay.classList.toggle('open', open); navToggle.textContent = open ? '✕' : '☰'; });
+overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('open'); navToggle.textContent = '☰'; });
+const navLinks = document.querySelectorAll('.nav-link');
+const sections = document.querySelectorAll('.section');
+function setActive(id) {
+  navLinks.forEach(l => l.classList.remove('active'));
+  const a = document.querySelector(`.nav-link[href="#${id}"]`);
+  if (a) { a.classList.add('active'); const sb = document.querySelector('.sidebar'); const lt = a.offsetTop; const sbH = sb.clientHeight; if (lt < sb.scrollTop + 60 || lt > sb.scrollTop + sbH - 60) sb.scrollTo({ top: lt - sbH / 2, behavior: 'smooth' }); }
+}
+const spyObs = new IntersectionObserver(entries => { const vis = entries.filter(e => e.isIntersecting).map(e => e.target); if (!vis.length) return; vis.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top); setActive(vis[0].id); }, { rootMargin: '-10% 0px -55% 0px', threshold: 0 });
+sections.forEach(s => spyObs.observe(s));
+const revObs = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.06 });
+sections.forEach(s => revObs.observe(s));
+</script>
+</body>
+</html>

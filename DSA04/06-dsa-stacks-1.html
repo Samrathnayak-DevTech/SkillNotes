@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Stacks 1 — Introduction, Implementation & Applications</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3; --sidebar-w:268px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear;border-radius:0 2px 2px 0;}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s;}
+.nav-toggle:hover{transform:scale(1.08);}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease;}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem;}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem;}
+.nav-group{margin-bottom:.2rem;}
+.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem;}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:0.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s;}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft);}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500;}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:var(--accent);opacity:.7;flex-shrink:0;}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px;}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem;}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem;}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem;}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);}
+.section{margin-bottom:5rem;scroll-margin-top:2rem;}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line);}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0;}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2;}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem;}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem;}
+p{margin-bottom:1rem;}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid;position:relative;}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:0.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}
+.callout.tip .callout-tag{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}
+.callout.key .callout-tag{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}
+.callout.analogy .callout-tag{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}
+.callout.warn .callout-tag{color:var(--accent);}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:0.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em;}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:0.85rem;}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem;}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.06em;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s;}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980;}
+.copy-btn.copied{color:#89d185;border-color:#89d185;}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink);}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;} .ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+.table-wrap{overflow-x:auto;margin:1.5rem 0;}
+table{width:100%;border-collapse:collapse;font-size:0.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line);}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--bg-soft);}
+.diagram{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;margin:1.5rem 0;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;overflow-x:auto;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem;min-width:42px;}
+.arr-cell .val{font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;background:var(--bg);border:2px solid var(--line);border-radius:6px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--blue);}
+.arr-cell .label{font-family:"JetBrains Mono",monospace;font-size:.6rem;color:var(--ink-soft);white-space:nowrap;}
+.stack-viz{display:flex;flex-direction:column;align-items:center;gap:0;margin:1.5rem auto;max-width:200px;}
+.stack-cell{width:160px;padding:.55rem;border:2px solid var(--line);background:var(--bg);font-family:"JetBrains Mono",monospace;font-size:.85rem;text-align:center;color:var(--ink);transition:background .2s;}
+.stack-cell:first-child{border-radius:6px 6px 0 0;}
+.stack-cell.top{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600;}
+.stack-cell.bottom{border-radius:0 0 6px 6px;border-bottom-width:3px;}
+.stack-label{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--ink-soft);margin-top:.4rem;}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0;}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:0.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg);}
+.complexity-badge .label{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:600;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin:1.5rem 0;}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.3rem;transition:box-shadow .2s,transform .2s;}
+.card:hover{box-shadow:0 4px 16px rgba(45,42,38,.07);transform:translateY(-2px);}
+.card-glyph{font-size:1.6rem;margin-bottom:.4rem;display:block;}
+.card h4{font-family:"Fraunces",serif;font-size:1rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .35rem;}
+.card p{font-size:.88rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.flow{display:flex;flex-direction:column;align-items:flex-start;gap:0;margin:1.5rem 0;}
+.flow-step{display:flex;align-items:flex-start;gap:1rem;padding:.8rem 1rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;width:100%;max-width:540px;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:22px;background:var(--line);margin-left:calc(1rem + 12px);}
+.flow-icon{font-size:1rem;flex-shrink:0;margin-top:.1rem;}
+.flow-text{font-size:.9rem;color:var(--ink);line-height:1.45;}
+.flow-text strong{color:var(--accent);}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem;}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent);}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem;}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.lc-list{list-style:none;padding:0;margin:1rem 0;}
+.lc-list li{display:flex;align-items:center;gap:.75rem;padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;}
+.lc-list li:last-child{border-bottom:none;}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;}
+.lc-diff.easy{background:var(--green-soft);color:var(--green);}
+.lc-diff.medium{background:var(--accent-soft);color:var(--accent);}
+.lc-diff.hard{background:var(--rose-soft);color:var(--rose);}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s;}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent);}
+.lc-why{color:var(--ink-soft);font-size:.82rem;}
+@media(max-width:768px){.sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12);}.sidebar.open{transform:translateX(0);}.nav-toggle{display:flex;}.main{padding:0 1.2rem 4rem;}.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px);}.sidebar-overlay.open{display:block;}}
+.section{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}
+.section.visible{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+
+<div class="layout">
+<nav class="sidebar" aria-label="Page navigation">
+  <div class="sidebar-logo">DSA Notes · Module 6<strong>Stacks 1</strong></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Foundations</div>
+    <a class="nav-link" href="#intro"><span class="nav-num">01</span>What is a Stack?</a>
+    <a class="nav-link" href="#operations"><span class="nav-num">02</span>Operations</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Implementations</div>
+    <a class="nav-link" href="#array-impl"><span class="nav-num">03</span>Array Implementation</a>
+    <a class="nav-link" href="#ll-impl"><span class="nav-num">04</span>Linked List Impl</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Problems</div>
+    <a class="nav-link" href="#valid-parens"><span class="nav-num">05</span>Valid Parentheses</a>
+    <a class="nav-link" href="#postfix"><span class="nav-num">06</span>Postfix Evaluation</a>
+    <a class="nav-link" href="#nsl"><span class="nav-num">07</span>Nearest Smaller on Left</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">08</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">09</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 6</p>
+  <h1>Stacks 1</h1>
+  <p class="hero-lede">From real-world intuition to array & linked-list implementations, valid parentheses, postfix expression evaluation, and the classic nearest-smaller-element pattern.</p>
+  <div class="chips">
+    <span class="chip">LIFO</span><span class="chip">Array Impl</span><span class="chip">LL Impl</span>
+    <span class="chip">Valid Parentheses</span><span class="chip">Postfix Eval</span><span class="chip">NSL — O(N)</span>
+  </div>
+</header>
+
+<!-- 01 INTRO -->
+<section class="section" id="intro">
+  <div class="section-header"><span class="section-num">01</span><h2>What is a Stack?</h2></div>
+  <p>A <strong>stack</strong> is a linear data structure where <em>Last In, First Out</em> (LIFO) discipline is maintained — the most-recently-added element is always the first one removed.</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="card-glyph">🍽️</span><h4>Stack of Plates</h4><p>You always pick up the topmost plate, and you place new plates on top. You never interact with the bottom.</p></div>
+    <div class="card"><span class="card-glyph">🪑</span><h4>Stack of Chairs</h4><p>Chairs are stacked and unstacked from the same end — the top.</p></div>
+    <div class="card"><span class="card-glyph">⚙️</span><h4>Call Stack</h4><p>When fib(5) calls fib(4) calls fib(3) … each frame is pushed; when the deepest call returns, frames pop off in reverse order.</p></div>
+    <div class="card"><span class="card-glyph">🌐</span><h4>Browser History</h4><p>Each visited page is pushed. Clicking "Back" pops the current page to reveal the previous one.</p></div>
+    <div class="card"><span class="card-glyph">↩️</span><h4>Undo / Redo</h4><p>Every edit is pushed onto an undo stack. "Undo" pops from undo and pushes to redo — two co-operating stacks.</p></div>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Property</span>
+    LIFO — <strong>Last In, First Out</strong>. Only the top element is accessible at any given time.
+    All five core operations run in <strong>O(1)</strong> time.
+  </div>
+</section>
+
+<!-- 02 OPERATIONS -->
+<section class="section" id="operations">
+  <div class="section-header"><span class="section-num">02</span><h2>Operations in a Stack</h2></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Operation</th><th>Description</th><th>Time</th></tr></thead>
+      <tbody>
+        <tr><td><code>push(x)</code></td><td>Insert element <code>x</code> at the top of the stack</td><td>O(1)</td></tr>
+        <tr><td><code>pop()</code></td><td>Remove and return the topmost element</td><td>O(1)</td></tr>
+        <tr><td><code>peek() / top()</code></td><td>Access (but do not remove) the topmost element</td><td>O(1)</td></tr>
+        <tr><td><code>isEmpty()</code></td><td>Return <code>true</code> if stack contains no elements</td><td>O(1)</td></tr>
+        <tr><td><code>size()</code></td><td>Return the number of elements currently in the stack</td><td>O(1)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Visual trace — push(5), push(7), push(−3), push(11), pop(), pop()</h3>
+  <div class="diagram" style="justify-content:flex-start;gap:2rem;flex-wrap:wrap;align-items:flex-start;">
+    <div>
+      <div class="stack-viz">
+        <div class="stack-cell top">7</div>
+        <div class="stack-cell">5</div>
+        <div class="stack-cell bottom" style="border-bottom-width:4px;"></div>
+      </div>
+      <div class="stack-label" style="text-align:center">after push(5),push(7)</div>
+    </div>
+    <div>
+      <div class="stack-viz">
+        <div class="stack-cell top">11 ← tos</div>
+        <div class="stack-cell">−3</div>
+        <div class="stack-cell">7</div>
+        <div class="stack-cell bottom">5</div>
+      </div>
+      <div class="stack-label" style="text-align:center">after push(−3),push(11)</div>
+    </div>
+    <div>
+      <div class="stack-viz">
+        <div class="stack-cell top">7 ← tos</div>
+        <div class="stack-cell bottom">5</div>
+      </div>
+      <div class="stack-label" style="text-align:center">after pop(), pop()</div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 ARRAY IMPL -->
+<section class="section" id="array-impl">
+  <div class="section-header"><span class="section-num">03</span><h2>Array Implementation</h2></div>
+  <p>Maintain a fixed-size array <code>arr[]</code> and an integer <code>tos</code> (top-of-stack index, initially <code>−1</code>).</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Idea</span>
+    <code>tos = −1</code> → stack is empty.<br>
+    <code>push(x)</code>: increment <code>tos</code>, set <code>arr[tos] = x</code>.<br>
+    <code>pop()</code>: save <code>arr[tos]</code>, decrement <code>tos</code>, return saved value.<br>
+    <code>peek()</code>: return <code>arr[tos]</code> without changing <code>tos</code>.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Stack</span> {
+    <span class="ty">int</span>[] arr = <span class="kw">new</span> <span class="ty">int</span>[<span class="num">1000</span>];
+    <span class="ty">int</span> tos = <span class="num">-1</span>;
+
+    <span class="ty">void</span> <span class="fn">push</span>(<span class="ty">int</span> x) {
+        <span class="kw">if</span> (tos == arr.length - <span class="num">1</span>) { System.out.<span class="fn">println</span>(<span class="str">"Stack Overflow"</span>); <span class="kw">return</span>; }
+        arr[++tos] = x;
+    }
+
+    <span class="ty">int</span> <span class="fn">top</span>() {
+        <span class="kw">if</span> (tos == <span class="num">-1</span>) { System.out.<span class="fn">println</span>(<span class="str">"Stack Underflow"</span>); <span class="kw">return</span> <span class="num">-1</span>; }
+        <span class="kw">return</span> arr[tos];
+    }
+
+    <span class="ty">int</span> <span class="fn">pop</span>() {
+        <span class="kw">if</span> (tos == <span class="num">-1</span>) { System.out.<span class="fn">println</span>(<span class="str">"Stack Underflow"</span>); <span class="kw">return</span> <span class="num">-1</span>; }
+        <span class="ty">int</span> rv = arr[tos--];
+        <span class="kw">return</span> rv;
+    }
+
+    <span class="ty">boolean</span> <span class="fn">isEmpty</span>() { <span class="kw">return</span> tos == <span class="num">-1</span>; }
+
+    <span class="ty">int</span> <span class="fn">size</span>()     { <span class="kw">return</span> tos + <span class="num">1</span>; }
+}
+<span class="cmt">// T.C → O(1) for all operations   S.C → O(N) for the array</span></pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">All operations: </span><span class="val">O(1)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+</section>
+
+<!-- 04 LL IMPL -->
+<section class="section" id="ll-impl">
+  <div class="section-header"><span class="section-num">04</span><h2>Linked List Implementation</h2></div>
+  <p>Four possible combinations of add/remove at head or tail. Only two work efficiently (O(1) for both push & pop):</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Strategy</th><th>Push</th><th>Pop</th><th>Works?</th></tr></thead>
+      <tbody>
+        <tr><td>A</td><td>Add at head</td><td>Remove from head</td><td>✅ O(1) both</td></tr>
+        <tr><td>B</td><td>Add at tail</td><td>Remove from tail</td><td>❌ O(N) for remove-tail in singly-LL</td></tr>
+        <tr><td>C</td><td>Add at head</td><td>Remove from tail</td><td>❌ O(N) for remove-tail</td></tr>
+        <tr><td>D</td><td>Add at tail</td><td>Remove from head</td><td>❌ mismatches LIFO (this is a queue)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Correct Strategy — A</span>
+    Use a singly-linked list with a <code>head</code> pointer. <strong>Push</strong> = <code>addFirst()</code>.
+    <strong>Pop</strong> = <code>removeFirst()</code>. Both are O(1).
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Node</span> {
+    <span class="ty">int</span> val;
+    <span class="ty">Node</span> next;
+    <span class="ty">Node</span>(<span class="ty">int</span> v) { val = v; }
+}
+
+<span class="kw">class</span> <span class="ty">LLStack</span> {
+    <span class="ty">Node</span> head = <span class="kw">null</span>;
+    <span class="ty">int</span> sz = <span class="num">0</span>;
+
+    <span class="ty">void</span> <span class="fn">push</span>(<span class="ty">int</span> x) {
+        <span class="ty">Node</span> nn = <span class="kw">new</span> <span class="ty">Node</span>(x);
+        nn.next = head;
+        head = nn;
+        sz++;
+    }
+
+    <span class="ty">int</span> <span class="fn">pop</span>() {
+        <span class="kw">if</span> (head == <span class="kw">null</span>) <span class="kw">return</span> <span class="num">-1</span>;
+        <span class="ty">int</span> rv = head.val;
+        head = head.next;
+        sz--;
+        <span class="kw">return</span> rv;
+    }
+
+    <span class="ty">int</span>  <span class="fn">peek</span>()    { <span class="kw">return</span> head == <span class="kw">null</span> ? <span class="num">-1</span> : head.val; }
+    <span class="ty">boolean</span> <span class="fn">isEmpty</span>() { <span class="kw">return</span> sz == <span class="num">0</span>; }
+    <span class="ty">int</span>  <span class="fn">size</span>()    { <span class="kw">return</span> sz; }
+}
+<span class="cmt">// T.C → O(1) all ops    S.C → O(N)</span></pre>
+  </div>
+</section>
+
+<!-- 05 VALID PARENS -->
+<section class="section" id="valid-parens">
+  <div class="section-header"><span class="section-num">05</span><h2>Valid Parentheses</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given a string containing only <code>(</code>, <code>)</code>, <code>{</code>, <code>}</code>, <code>[</code>, <code>]</code>, determine whether the sequence is <strong>valid</strong> (every opening bracket is closed by the same type of bracket in the correct order).
+  </div>
+
+  <h3>Examples</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>String</th><th>Valid?</th><th>Reason</th></tr></thead>
+      <tbody>
+        <tr><td><code>()[{}()]</code></td><td>✅ Yes</td><td>All matched in order</td></tr>
+        <tr><td><code>()[]</code></td><td>✅ Yes</td><td>Sequential matching</td></tr>
+        <tr><td><code>({)}</code></td><td>❌ No</td><td>Mismatch — top is <code>(</code> but closing <code>)</code> expected</td></tr>
+        <tr><td><code>({})]</code></td><td>❌ No</td><td>Extra closing bracket after valid sequence</td></tr>
+        <tr><td><code>[(){}</code></td><td>❌ No</td><td>Unclosed <code>[</code> at end — stack not empty</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Algorithm</h3>
+  <div class="flow">
+    <div class="flow-step"><span class="flow-icon">🔄</span><div class="flow-text"><strong>For each character:</strong> if it is an opening bracket, push it.</div></div>
+    <div class="flow-connector"></div>
+    <div class="flow-step"><span class="flow-icon">🔍</span><div class="flow-text"><strong>Closing bracket encountered:</strong> if stack is empty → return false (more closing than opening). Otherwise check: does <code>stack.peek()</code> match? If yes, pop. If no → return false (mismatch).</div></div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight"><span class="flow-icon">✅</span><div class="flow-text"><strong>After full scan:</strong> return <code>stack.isEmpty()</code>. A non-empty stack means unclosed brackets remain.</div></div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">boolean</span> <span class="fn">isValid</span>(<span class="ty">String</span> str) {
+    <span class="ty">Stack</span>&lt;<span class="ty">Character</span>&gt; st = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();
+
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; str.length(); i++) {
+        <span class="ty">char</span> ch = str.<span class="fn">charAt</span>(i);
+
+        <span class="kw">if</span> (ch == <span class="str">'('</span> || ch == <span class="str">'{'</span> || ch == <span class="str">'['</span>) {
+            st.<span class="fn">push</span>(ch);
+        } <span class="kw">else</span> {
+            <span class="kw">if</span> (st.<span class="fn">isEmpty</span>()) <span class="kw">return</span> <span class="kw">false</span>; <span class="cmt">// more closing brackets</span>
+
+            <span class="kw">if</span>      (ch == <span class="str">')'</span> &amp;&amp; st.<span class="fn">peek</span>() != <span class="str">'('</span>) <span class="kw">return</span> <span class="kw">false</span>;
+            <span class="kw">else if</span> (ch == <span class="str">'}'</span> &amp;&amp; st.<span class="fn">peek</span>() != <span class="str">'{'</span>) <span class="kw">return</span> <span class="kw">false</span>;
+            <span class="kw">else if</span> (ch == <span class="str">']'</span> &amp;&amp; st.<span class="fn">peek</span>() != <span class="str">'['</span>) <span class="kw">return</span> <span class="kw">false</span>;
+            <span class="kw">else</span> st.<span class="fn">pop</span>();
+        }
+    }
+    <span class="kw">return</span> st.<span class="fn">isEmpty</span>(); <span class="cmt">// false if unclosed brackets remain</span>
+}
+<span class="cmt">// T.C → O(N)    S.C → O(N)</span></pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+</section>
+
+<!-- 06 POSTFIX EVAL -->
+<section class="section" id="postfix">
+  <div class="section-header"><span class="section-num">06</span><h2>Postfix Expression Evaluation</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given a valid postfix (Reverse Polish Notation) expression as an array of strings, evaluate it and return the integer result.
+  </div>
+
+  <h3>Infix vs Postfix</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Infix</th><th>Postfix (RPN)</th></tr></thead>
+      <tbody>
+        <tr><td><code>2 + 3</code></td><td><code>2 3 +</code></td></tr>
+        <tr><td><code>2 + (5 * 3)</code></td><td><code>2 5 3 * +</code></td></tr>
+        <tr><td><code>5 * 2 − 3</code></td><td><code>5 2 * 3 −</code> = 7</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Algorithm</h3>
+  <p>For each token in the expression: if it is a number, push it. If it is an operator, pop the top two operands (<code>op2</code> first, then <code>op1</code>), compute <code>op1 ⊕ op2</code>, and push the result. The single remaining stack element is the answer.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Order Matters</span>
+    Pop <code>op2</code> first, then <code>op1</code>. For non-commutative operators (−, /): result = <code>op1 operator op2</code>.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">evalRPN</span>(<span class="ty">String</span>[] tokens) {
+    <span class="ty">Stack</span>&lt;<span class="ty">Integer</span>&gt; st = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();
+
+    <span class="kw">for</span> (<span class="ty">String</span> token : tokens) {
+        <span class="kw">if</span> (<span class="fn">isOperand</span>(token)) {
+            st.<span class="fn">push</span>(<span class="ty">Integer</span>.<span class="fn">parseInt</span>(token));
+        } <span class="kw">else</span> {
+            <span class="ty">int</span> op2 = st.<span class="fn">pop</span>();
+            <span class="ty">int</span> op1 = st.<span class="fn">pop</span>();
+            st.<span class="fn">push</span>(<span class="fn">compute</span>(op1, op2, token));
+        }
+    }
+    <span class="kw">return</span> st.<span class="fn">pop</span>();
+}
+
+<span class="ty">int</span> <span class="fn">compute</span>(<span class="ty">int</span> op1, <span class="ty">int</span> op2, <span class="ty">String</span> op) {
+    <span class="kw">if</span>      (op.<span class="fn">equals</span>(<span class="str">"+"</span>)) <span class="kw">return</span> op1 + op2;
+    <span class="kw">else if</span> (op.<span class="fn">equals</span>(<span class="str">"-"</span>)) <span class="kw">return</span> op1 - op2;
+    <span class="kw">else if</span> (op.<span class="fn">equals</span>(<span class="str">"*"</span>)) <span class="kw">return</span> op1 * op2;
+    <span class="kw">else</span>                      <span class="kw">return</span> op1 / op2;
+}
+<span class="cmt">// T.C → O(N)    S.C → O(N)</span></pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+</section>
+
+<!-- 07 NSL -->
+<section class="section" id="nsl">
+  <div class="section-header"><span class="section-num">07</span><h2>Nearest Smaller Element on Left (NSL)</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given an integer array <code>A[]</code>, for every index <code>i</code> find the index <code>j</code> such that <code>A[j] &lt; A[i]</code>, <code>j &lt; i</code>, and <code>j</code> is <strong>maximum</strong> (closest to <code>i</code> on the left). Return <code>−1</code> if no such element exists.
+  </div>
+
+  <h3>Examples</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>arr[]</th><th>nsl[]</th></tr></thead>
+      <tbody>
+        <tr><td><code>[8, 2, 4, 9, 7, 5, 3, 10]</code></td><td><code>[−1, −1, 1, 2, 2, 2, 1, 6]</code></td></tr>
+        <tr><td><code>[4, 6, 10, 11, 7, 8, 3, 5]</code></td><td><code>[−1, 0, 1, 2, 1, 4, −1, 6]</code></div></td></tr>
+        <tr><td><code>[4, 5, 2, 10, 8, 2]</code></td><td><code>[−1, 0, −1, 2, 2, −1]</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Brute Force — O(N²)</h3>
+  <p>For each <code>i</code>, iterate leftward until finding an element smaller than <code>arr[i]</code>.</p>
+
+  <h3>Optimised — O(N) using Stack</h3>
+  <p>Maintain a monotone stack of <em>indices</em>. For each element, pop all indices whose values are <strong>≥ arr[i]</strong> (they can never be the "nearest smaller" for future elements either). The peek of the remaining stack is the answer for index <code>i</code>. Then push <code>i</code>.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span>[] <span class="fn">nearestSmallerLeft</span>(<span class="ty">int</span>[] arr) {
+    <span class="ty">int</span> n = arr.length;
+    <span class="ty">int</span>[] nsl = <span class="kw">new</span> <span class="ty">int</span>[n];
+    <span class="ty">Stack</span>&lt;<span class="ty">Integer</span>&gt; st = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();
+
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="cmt">// pop all elements >= arr[i]</span>
+        <span class="kw">while</span> (st.<span class="fn">size</span>() &gt; <span class="num">0</span> &amp;&amp; arr[st.<span class="fn">peek</span>()] &gt;= arr[i]) {
+            st.<span class="fn">pop</span>();
+        }
+        <span class="cmt">// update answer</span>
+        nsl[i] = st.<span class="fn">isEmpty</span>() ? <span class="num">-1</span> : st.<span class="fn">peek</span>();
+        <span class="cmt">// push current index</span>
+        st.<span class="fn">push</span>(i);
+    }
+    <span class="kw">return</span> nsl;
+}
+<span class="cmt">// T.C → O(N)  (each element pushed and popped at most once)
+// S.C → O(N)</span></pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Why O(N)?</span>
+    Even though there is a <code>while</code> loop inside the <code>for</code>, each index is pushed onto the stack at most once and popped at most once. Total push + pop operations = 2N → O(N) overall.
+  </div>
+</section>
+
+<!-- 08 RECAP -->
+<section class="section" id="recap">
+  <div class="section-header"><span class="section-num">08</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><h4>LIFO</h4><p>Last In First Out — the defining property of a stack. Only the top is accessible.</p></div>
+    <div class="recap-card"><h4>All O(1) ops</h4><p>push, pop, peek, isEmpty, size are all constant-time.</p></div>
+    <div class="recap-card"><h4>Array vs LL</h4><p>Array: fixed capacity, O(1). LL (push/pop at head): dynamic, O(1).</p></div>
+    <div class="recap-card"><h4>Valid Parentheses</h4><p>Push opening brackets; on closing, check & pop. O(N) time & space.</p></div>
+    <div class="recap-card"><h4>Postfix Eval</h4><p>Operands → push. Operators → pop two, compute, push result.</p></div>
+    <div class="recap-card"><h4>NSL — Monotone Stack</h4><p>Pop all ≥ current, peek for answer, push current. O(N).</p></div>
+  </div>
+</section>
+
+<!-- 09 LEETCODE -->
+<section class="section" id="leetcode">
+  <div class="section-header"><span class="section-num">09</span><h2>LeetCode Problems</h2></div>
+
+  <h3>Valid Parentheses</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff easy">Easy</span><span><a class="lc-name" href="https://leetcode.com/problems/valid-parentheses/" target="_blank" rel="noopener">#20 — Valid Parentheses ↗</a><br/><span class="lc-why">Direct application of the stack-based bracket matching from Section 05.</span></span></li>
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/minimum-remove-to-make-valid-parentheses/" target="_blank" rel="noopener">#1249 — Minimum Remove to Make Valid Parentheses ↗</a><br/><span class="lc-why">Extension: track indices of unmatched brackets and remove them.</span></span></li>
+  </ul>
+
+  <h3>Postfix / Expression Evaluation</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/evaluate-reverse-polish-notation/" target="_blank" rel="noopener">#150 — Evaluate Reverse Polish Notation ↗</a><br/><span class="lc-why">Exact problem from Section 06.</span></span></li>
+    <li><span class="lc-diff hard">Hard</span><span><a class="lc-name" href="https://leetcode.com/problems/basic-calculator/" target="_blank" rel="noopener">#224 — Basic Calculator ↗</a><br/><span class="lc-why">Infix expression with +, −, and parentheses — stack handles precedence and nesting.</span></span></li>
+  </ul>
+
+  <h3>Nearest Smaller / Greater (Monotone Stack)</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/next-greater-element-i/" target="_blank" rel="noopener">#496 — Next Greater Element I ↗</a><br/><span class="lc-why">Classic monotone-stack: find the next greater element to the right.</span></span></li>
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/daily-temperatures/" target="_blank" rel="noopener">#739 — Daily Temperatures ↗</a><br/><span class="lc-why">NSR variant: find days until a warmer temperature — same monotone pattern.</span></span></li>
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/next-greater-element-ii/" target="_blank" rel="noopener">#503 — Next Greater Element II (Circular Array) ↗</a><br/><span class="lc-why">NGR on a circular array — traverse twice using modulo.</span></span></li>
+  </ul>
+
+  <h3>Stack Implementation</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff easy">Easy</span><span><a class="lc-name" href="https://leetcode.com/problems/implement-stack-using-queues/" target="_blank" rel="noopener">#225 — Implement Stack using Queues ↗</a><br/><span class="lc-why">Reverse of the queue-using-stacks problem — tests understanding of both structures.</span></span></li>
+    <li><span class="lc-diff easy">Easy</span><span><a class="lc-name" href="https://leetcode.com/problems/min-stack/" target="_blank" rel="noopener">#155 — Min Stack ↗</a><br/><span class="lc-why">Augment a stack to also support O(1) getMin — use an auxiliary stack tracking minimums.</span></span></li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Study Order</span>
+    20 → 150 → 496 → 739 → 155 → 1249 → 503 → 224
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+function copyCode(btn){const pre=btn.closest('.code-block').querySelector('pre');const text=pre.innerText;const finish=()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);};if(navigator.clipboard){navigator.clipboard.writeText(text).then(finish);}else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);finish();}}
+const bar=document.getElementById('progress-bar');function updateProgress(){const s=window.scrollY;const d=document.documentElement.scrollHeight-window.innerHeight;bar.style.width=(d>0?(s/d)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});updateProgress();
+document.querySelectorAll('.nav-link').forEach(link=>{link.addEventListener('click',e=>{const href=link.getAttribute('href');if(!href||!href.startsWith('#'))return;e.preventDefault();const target=document.querySelector(href);if(!target)return;window.scrollTo({top:target.getBoundingClientRect().top+window.scrollY-24,behavior:'smooth'});sidebar.classList.remove('open');overlay.classList.remove('open');navToggle.textContent='☰';});});
+const sidebar=document.querySelector('.sidebar');const overlay=document.getElementById('nav-overlay');const navToggle=document.getElementById('nav-toggle');
+navToggle.addEventListener('click',()=>{const open=sidebar.classList.toggle('open');overlay.classList.toggle('open',open);navToggle.textContent=open?'✕':'☰';});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');navToggle.textContent='☰';});
+const navLinks=document.querySelectorAll('.nav-link');const sections=document.querySelectorAll('.section');
+function setActive(id){navLinks.forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${id}"]`);if(a){a.classList.add('active');const sb=document.querySelector('.sidebar');const lt=a.offsetTop;if(lt<sb.scrollTop+60||lt>sb.scrollTop+sb.clientHeight-60)sb.scrollTo({top:lt-sb.clientHeight/2,behavior:'smooth'});}}
+const spyObs=new IntersectionObserver(entries=>{const vis=entries.filter(e=>e.isIntersecting).map(e=>e.target);if(!vis.length)return;vis.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top);setActive(vis[0].id);},{rootMargin:'-10% 0px -55% 0px',threshold:0});
+sections.forEach(s=>spyObs.observe(s));
+const revObs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:0.06});
+sections.forEach(s=>revObs.observe(s));
+</script>
+</body>
+</html>

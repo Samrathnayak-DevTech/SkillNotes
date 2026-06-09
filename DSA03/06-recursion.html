@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA — Recursion 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;
+  --line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;
+  --blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;
+  --green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;
+  --code-bg:#2b2a33;--code-ink:#e8e6e3;
+  --sidebar:268px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:radial-gradient(ellipse 80% 60% at 20% 10%,#f5f0ff22 0%,transparent 60%),
+             radial-gradient(ellipse 60% 50% at 80% 80%,#ffe8d622 0%,transparent 60%),
+             var(--bg);
+  color:var(--ink);font-family:'Newsreader',Georgia,serif;font-size:18px;
+  line-height:1.75;min-height:100vh;
+}
+
+/* ── PROGRESS BAR ── */
+#progress-bar{
+  position:fixed;top:0;left:0;height:3px;width:0%;z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));
+  transition:width .1s linear;
+}
+
+/* ── LAYOUT ── */
+#sidebar{
+  position:fixed;top:3px;left:0;width:var(--sidebar);height:calc(100vh - 3px);
+  background:var(--bg-soft);border-right:1px solid var(--line);
+  overflow-y:auto;padding:28px 0 40px;z-index:200;
+  scrollbar-width:thin;scrollbar-color:var(--line) transparent;
+}
+#sidebar::-webkit-scrollbar{width:4px;}
+#sidebar::-webkit-scrollbar-track{background:transparent;}
+#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+.sidebar-brand{
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;
+  color:var(--accent);font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;padding:0 20px 20px;
+  border-bottom:1px solid var(--line);margin-bottom:16px;
+}
+.sidebar-group{margin-bottom:8px;padding:0 12px;}
+.sidebar-group-label{
+  font-family:'JetBrains Mono',monospace;font-size:.62rem;
+  text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);
+  padding:6px 8px 4px;opacity:.7;
+}
+.sidebar-link{
+  display:block;padding:6px 8px;border-radius:6px;
+  font-family:'Newsreader',serif;font-size:.88rem;
+  color:var(--ink-soft);text-decoration:none;line-height:1.4;
+  transition:background .15s,color .15s;
+}
+.sidebar-link:hover{background:var(--accent-soft);color:var(--accent);}
+.sidebar-link.active{
+  background:var(--accent-soft);color:var(--accent);font-weight:500;
+}
+.sidebar-num{
+  font-family:'JetBrains Mono',monospace;font-size:.7rem;
+  color:var(--accent);margin-right:6px;opacity:.8;
+}
+
+#main{margin-left:var(--sidebar);padding:48px 56px 80px;max-width:900px;}
+
+/* ── FAB (mobile) ── */
+#fab{
+  display:none;position:fixed;bottom:24px;right:24px;z-index:500;
+  width:52px;height:52px;border-radius:50%;background:var(--accent);
+  color:#fff;font-size:1.3rem;border:none;cursor:pointer;
+  box-shadow:0 4px 20px #b5651d44;align-items:center;justify-content:center;
+  transition:transform .2s;
+}
+#fab:hover{transform:scale(1.08);}
+#overlay{
+  display:none;position:fixed;inset:0;z-index:300;
+  background:rgba(45,42,38,.35);backdrop-filter:blur(4px);
+}
+
+/* ── HERO ── */
+.hero{padding:16px 0 56px;}
+.hero-eyebrow{
+  font-family:'JetBrains Mono',monospace;font-size:.8rem;
+  color:var(--accent);text-transform:uppercase;letter-spacing:.14em;
+  margin-bottom:16px;
+}
+.hero h1{
+  font-family:'Fraunces',Georgia,serif;font-weight:600;
+  font-size:clamp(2.4rem,5vw,3.6rem);line-height:1.1;
+  color:var(--ink);margin-bottom:20px;
+}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:28px;}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px;}
+.pill{
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;
+  background:var(--bg-soft);border:1px solid var(--line);
+  color:var(--ink-soft);padding:4px 12px;border-radius:20px;
+  letter-spacing:.04em;
+}
+
+/* ── SECTIONS ── */
+.section{
+  padding:48px 0 20px;border-top:1px solid var(--line);
+  opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;
+}
+.section.visible{opacity:1;transform:none;}
+
+h2{
+  font-family:'Fraunces',Georgia,serif;font-weight:600;
+  font-size:clamp(1.6rem,3vw,2rem);color:var(--ink);
+  margin-bottom:24px;display:flex;align-items:center;gap:14px;line-height:1.2;
+}
+.sec-badge{
+  font-family:'JetBrains Mono',monospace;font-size:.75rem;
+  color:var(--accent);background:var(--accent-soft);
+  padding:3px 10px;border-radius:4px;font-weight:600;
+  letter-spacing:.06em;flex-shrink:0;
+}
+h3{
+  font-family:'Fraunces',serif;font-size:1.2rem;font-weight:600;
+  color:var(--ink);margin:28px 0 12px;
+}
+p{margin-bottom:16px;}
+ul,ol{margin:0 0 16px 24px;}
+li{margin-bottom:6px;}
+strong{color:var(--ink);}
+
+/* ── CALLOUTS ── */
+.callout{
+  border-radius:8px;padding:18px 22px;margin:24px 0;
+  border-left:4px solid;
+}
+.callout .callout-label{
+  font-family:'JetBrains Mono',monospace;font-size:.68rem;
+  text-transform:uppercase;letter-spacing:.12em;font-weight:600;
+  margin-bottom:8px;display:block;
+}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}
+.callout.tip .callout-label{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}
+.callout.key .callout-label{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}
+.callout.analogy .callout-label{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}
+.callout.warn .callout-label{color:var(--accent);}
+
+/* ── CODE BLOCKS ── */
+.code-wrap{border-radius:10px;overflow:hidden;margin:24px 0;}
+.code-header{
+  background:#1e1d26;display:flex;align-items:center;
+  justify-content:space-between;padding:8px 16px;
+}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#aaa;letter-spacing:.06em;}
+.copy-btn{
+  font-family:'JetBrains Mono',monospace;font-size:.7rem;
+  background:transparent;border:1px solid #444;color:#aaa;
+  padding:3px 10px;border-radius:4px;cursor:pointer;transition:all .2s;
+}
+.copy-btn:hover{border-color:#888;color:#ddd;}
+.copy-btn.copied{color:#82d982;border-color:#82d982;}
+pre{
+  background:var(--code-bg);color:var(--code-ink);
+  font-family:'JetBrains Mono',monospace;font-size:.85rem;
+  line-height:1.65;padding:20px 22px;overflow-x:auto;margin:0;
+}
+code:not(pre code){
+  font-family:'JetBrains Mono',monospace;font-size:.84em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;
+  padding:2px 6px;
+}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+
+/* ── ARRAY / DIAGRAM CELLS ── */
+.diagram-wrap{
+  background:var(--bg-soft);border:1px solid var(--line);
+  border-radius:10px;padding:24px;margin:24px 0;
+  overflow-x:auto;
+}
+.arr-row{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.arr-cell .val{
+  width:44px;height:44px;display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--line);border-radius:6px;background:var(--bg);
+  font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:600;
+  color:var(--ink);
+}
+.arr-cell .idx{
+  font-family:'JetBrains Mono',monospace;font-size:.68rem;
+  color:var(--ink-soft);
+}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);}
+
+/* ── FLOW CHART ── */
+.flow{display:flex;flex-direction:column;align-items:flex-start;gap:0;margin:24px 0;}
+.flow-step{
+  background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  padding:14px 20px;min-width:260px;max-width:420px;
+  font-size:.93rem;
+}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{
+  width:2px;height:24px;background:var(--line);margin-left:30px;
+}
+
+/* ── CALL STACK DIAGRAM ── */
+.call-stack{
+  display:flex;flex-direction:column;gap:0;margin:24px 0;max-width:420px;
+}
+.stack-frame{
+  border:1.5px solid var(--line);background:var(--bg);
+  padding:10px 18px;display:flex;justify-content:space-between;align-items:center;
+  font-family:'JetBrains Mono',monospace;font-size:.82rem;
+}
+.stack-frame:first-child{border-radius:6px 6px 0 0;}
+.stack-frame:last-child{border-radius:0 0 6px 6px;}
+.stack-frame.base{background:var(--accent-soft);border-color:var(--accent);}
+.stack-frame .frame-label{color:var(--ink-soft);}
+.stack-frame .frame-val{color:var(--accent);font-weight:600;}
+.stack-arrow{
+  text-align:right;font-size:.78rem;color:var(--ink-soft);
+  padding:2px 0 2px 8px;font-family:'JetBrains Mono',monospace;
+}
+
+/* ── COMPLEXITY BADGE ── */
+.complexity-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--bg-soft);border:1px solid var(--line);
+  border-radius:20px;padding:4px 14px;margin:4px 4px 4px 0;
+  font-size:.84rem;
+}
+.complexity-badge .cb-label{
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;
+  color:var(--ink-soft);
+}
+.complexity-badge .cb-val{
+  font-family:'JetBrains Mono',monospace;font-weight:600;
+  color:var(--accent);
+}
+
+/* ── TABLES ── */
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:.9rem;}
+thead tr{background:var(--bg-soft);}
+th{
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--accent);padding:10px 16px;text-align:left;
+}
+td{padding:10px 16px;border-bottom:1px solid var(--line);}
+tr:hover td{background:var(--bg-soft);}
+
+/* ── CARDS GRID ── */
+.cards-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:16px;margin:24px 0;
+}
+.card{
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;
+  padding:22px;transition:transform .2s,box-shadow .2s;
+}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 28px #b5651d18;}
+.card-glyph{font-size:1.5rem;margin-bottom:10px;}
+.card-title{
+  font-family:'Fraunces',serif;font-weight:600;font-size:1rem;
+  color:var(--ink);margin-bottom:8px;
+}
+.card-body{font-size:.88rem;color:var(--ink-soft);}
+
+/* ── RECAP GRID ── */
+.recap-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:16px;margin:24px 0;
+}
+.recap-card{
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;
+  padding:20px;border-top:3px solid var(--accent);
+}
+.recap-card .rc-title{
+  font-family:'Fraunces',serif;font-weight:600;font-size:.97rem;
+  color:var(--ink);margin-bottom:8px;
+}
+.recap-card .rc-body{font-size:.85rem;color:var(--ink-soft);line-height:1.6;}
+
+/* ── LEETCODE ── */
+/* LeetCode problems */
+.lc-list { list-style: none; padding: 0; margin: 1rem 0; }
+.lc-list li {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--line);
+  font-size: .9rem;
+}
+.lc-list li:last-child { border-bottom: none; }
+.lc-diff {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .65rem;
+  padding: .15rem .45rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.lc-diff.easy   { background: var(--green-soft);  color: var(--green);  }
+.lc-diff.medium { background: var(--accent-soft); color: var(--accent); }
+.lc-diff.hard   { background: var(--rose-soft);   color: var(--rose);   }
+.lc-name { color: var(--blue); font-weight: 500; }
+.lc-why  { color: var(--ink-soft); font-size: .82rem; }
+a.lc-name {
+  color: var(--blue);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color .15s, color .15s;
+}
+a.lc-name:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.lc-why{font-size:.82rem;color:var(--ink-soft);}
+
+/* ── MATH FORMULA ── */
+.formula{
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;
+  padding:16px 22px;margin:16px 0;font-family:'JetBrains Mono',monospace;
+  font-size:.9rem;color:var(--ink);overflow-x:auto;
+}
+
+/* ── FIB TREE ── */
+.fib-tree{
+  background:var(--bg-soft);border:1px solid var(--line);
+  border-radius:10px;padding:24px;margin:24px 0;overflow-x:auto;
+  font-family:'JetBrains Mono',monospace;font-size:.78rem;
+}
+.fib-level{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:8px;}
+.fib-node{
+  background:var(--bg);border:1.5px solid var(--line);border-radius:6px;
+  padding:4px 10px;color:var(--blue);font-weight:600;
+}
+.fib-node.base{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.fib-level-label{
+  font-size:.65rem;color:var(--rose);font-weight:600;
+  font-family:'JetBrains Mono',monospace;letter-spacing:.06em;
+  text-align:center;margin-bottom:4px;
+}
+
+/* ── OBSERVATION BOX ── */
+.obs-diagram{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0;
+}
+.obs-box{
+  border:1.5px solid var(--line);border-radius:8px;padding:16px 18px;
+  background:var(--bg-soft);
+}
+.obs-box .obs-tag{
+  font-family:'JetBrains Mono',monospace;font-size:.68rem;text-transform:uppercase;
+  letter-spacing:.1em;font-weight:600;margin-bottom:8px;display:block;
+}
+.obs-box.before .obs-tag{color:var(--blue);}
+.obs-box.after .obs-tag{color:var(--rose);}
+.obs-box p{font-size:.88rem;margin:0;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:800px){
+  #sidebar{transform:translateX(-100%);transition:transform .3s ease;}
+  #sidebar.open{transform:translateX(0);}
+  #main{margin-left:0;padding:32px 22px 60px;}
+  #fab{display:flex;}
+  #overlay.open{display:block;}
+  .obs-diagram{grid-template-columns:1fr;}
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--line);
+}
+.section-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: .2rem .55rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.section-header h2 {
+  font-family: "Fraunces", serif;
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+
+<div id="progress-bar"></div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-brand">DSA · Recursion 1</div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Foundations</div>
+    <a class="sidebar-link" href="#intro"><span class="sidebar-num">01</span>Introduction to Recursion</a>
+    <a class="sidebar-link" href="#call-tracing"><span class="sidebar-num">02</span>Function Call Tracing</a>
+    <a class="sidebar-link" href="#sum-n"><span class="sidebar-num">03</span>Sum of First N Numbers</a>
+    <a class="sidebar-link" href="#steps"><span class="sidebar-num">04</span>Steps for Recursive Code</a>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Classic Problems</div>
+    <a class="sidebar-link" href="#factorial"><span class="sidebar-num">05</span>Factorial of N</a>
+    <a class="sidebar-link" href="#print-inc"><span class="sidebar-num">06</span>Print 1 → N (Increasing)</a>
+    <a class="sidebar-link" href="#print-dec"><span class="sidebar-num">07</span>Print N → 1 (Decreasing)</a>
+    <a class="sidebar-link" href="#observation"><span class="sidebar-num">08</span>Key Observation</a>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Complexity & Fibonacci</div>
+    <a class="sidebar-link" href="#complexity"><span class="sidebar-num">09</span>Time & Space Complexity</a>
+    <a class="sidebar-link" href="#fibonacci"><span class="sidebar-num">10</span>Nth Fibonacci Number</a>
+  </div>
+
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Review</div>
+    <a class="sidebar-link" href="#recap">Quick Recap</a>
+    <a class="sidebar-link" href="#leetcode">LeetCode Problems</a>
+  </div>
+</nav>
+
+<!-- MOBILE FAB -->
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+
+<!-- MAIN CONTENT -->
+<main id="main">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">DSA · Scaler · Recursion — Session 1</div>
+    <h1>Recursion<br/>from Scratch</h1>
+    <p class="hero-lede">
+      A complete walkthrough of recursive thinking: from definition and call-stack tracing through factorial, ordered printing, Fibonacci, and complexity analysis.
+    </p>
+    <div class="pill-row">
+      <span class="pill">Intro to Recursion</span>
+      <span class="pill">Call Tracing</span>
+      <span class="pill">Factorial</span>
+      <span class="pill">Print Inc / Dec</span>
+      <span class="pill">Time &amp; Space Complexity</span>
+      <span class="pill">Fibonacci</span>
+    </div>
+  </div>
+
+  <!-- 01 INTRODUCTION -->
+  <section class="section" id="intro">
+    <h2><span class="sec-badge">01</span>Introduction to Recursion</h2>
+
+    <h3>What is Recursion?</h3>
+    <p>
+      Recursion is a programming technique where <strong>a function calls itself</strong> to solve a problem by reducing it to a smaller instance of the same problem — called a <strong>sub-problem</strong>.
+    </p>
+
+    <div class="callout key">
+      <span class="callout-label">Definition</span>
+      Recursion = solving a problem by breaking it into <em>smaller instances of the same problem</em>, until you reach a case small enough to solve directly (the <strong>base case</strong>).
+    </div>
+
+    <h3>Why Learn Recursion?</h3>
+    <p>Recursion is not just one technique — it is the <em>foundation</em> of many major algorithmic domains:</p>
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-glyph">🔙</div>
+        <div class="card-title">Backtracking</div>
+        <div class="card-body">Explore all possibilities and undo bad choices — think N-Queens, Sudoku solver, permutations.</div>
+      </div>
+      <div class="card">
+        <div class="card-glyph">🌳</div>
+        <div class="card-title">Trees &amp; Graphs</div>
+        <div class="card-body">Tree traversals (inorder, preorder, postorder), DFS on graphs — all naturally recursive.</div>
+      </div>
+      <div class="card">
+        <div class="card-glyph">⚡</div>
+        <div class="card-title">Dynamic Programming</div>
+        <div class="card-body">DP = recursion + memoization. Every DP problem starts as a recursive formulation.</div>
+      </div>
+      <div class="card">
+        <div class="card-glyph">🔀</div>
+        <div class="card-title">Sorting Algorithms</div>
+        <div class="card-body">Merge Sort and Quick Sort are divide-and-conquer algorithms implemented recursively.</div>
+      </div>
+    </div>
+
+    <div class="callout analogy">
+      <span class="callout-label">Analogy</span>
+      <strong>Russian nesting dolls (Matryoshka):</strong> To see the smallest doll, you open the outer one, then the next, and so on — each step is the same action on a smaller version. The base case is the innermost doll, which cannot be opened further.
+    </div>
+  </section>
+
+  <!-- 02 FUNCTION CALL TRACING -->
+  <section class="section" id="call-tracing">
+    <h2><span class="sec-badge">02</span>Function Call Tracing</h2>
+
+    <p>
+      Before diving into recursive calls, it helps to understand how the <strong>call stack</strong> works for ordinary (non-recursive) nested function calls. Each function call creates a new <em>stack frame</em> holding its local variables. The frame is destroyed when the function returns.
+    </p>
+
+    <h3>Example: Nested Calls</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">C++</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">int</span> <span class="fn">add</span>(<span class="ty">int</span> x, <span class="ty">int</span> y) { <span class="kw">return</span> x + y; }
+<span class="ty">int</span> <span class="fn">mul</span>(<span class="ty">int</span> x, <span class="ty">int</span> y) { <span class="kw">return</span> x * y; }
+<span class="ty">int</span> <span class="fn">sub</span>(<span class="ty">int</span> x, <span class="ty">int</span> y) { <span class="kw">return</span> x - y; }
+
+<span class="ty">void</span> <span class="fn">main</span>() {
+    <span class="ty">int</span> x = <span class="num">10</span>, y = <span class="num">20</span>;
+    <span class="cmt">// Evaluated inside-out:</span>
+    <span class="cmt">// add(10, 20) = 30</span>
+    <span class="cmt">// mul(30, 30) = 900</span>
+    <span class="cmt">// sub(900, 75) = 825</span>
+    <span class="fn">print</span>(<span class="fn">sub</span>(<span class="fn">mul</span>(<span class="fn">add</span>(x, y), <span class="num">30</span>), <span class="num">75</span>));
+    <span class="cmt">// Output: 825</span>
+}</pre>
+    </div>
+
+    <h3>How the Stack Looks</h3>
+    <p>When <code>print(sub(mul(add(x,y), 30), 75))</code> executes, the call stack builds up from the innermost call outward:</p>
+
+    <div class="diagram-wrap">
+      <div class="call-stack">
+        <div class="stack-frame base">
+          <span>print</span>
+          <span class="frame-val">x = 825</span>
+        </div>
+        <div class="stack-frame">
+          <span>sub</span>
+          <span class="frame-label">x=900, y=75 → <span class="frame-val">825</span></span>
+        </div>
+        <div class="stack-frame">
+          <span>mul</span>
+          <span class="frame-label">x=30, y=30 → <span class="frame-val">900</span></span>
+        </div>
+        <div class="stack-frame">
+          <span>add</span>
+          <span class="frame-label">x=10, y=20 → <span class="frame-val">30</span></span>
+        </div>
+        <div class="stack-frame">
+          <span>main</span>
+          <span class="frame-label">x=10, y=20</span>
+        </div>
+      </div>
+      <p style="margin-top:12px;font-size:.85rem;color:var(--ink-soft);">
+        ↑ Each frame is pushed onto the stack when called, and popped when it returns.
+      </p>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-label">Key Rule</span>
+      Nested expressions are always evaluated <strong>inside-out</strong>. The innermost function call returns first, and its result is passed to the next level up.
+    </div>
+  </section>
+
+  <!-- 03 SUM OF FIRST N NUMBERS -->
+  <section class="section" id="sum-n">
+    <h2><span class="sec-badge">03</span>Sum of First N Natural Numbers</h2>
+
+    <p>
+      This is the canonical first example to understand recursive thinking. The goal: compute <code>sum(N) = 1 + 2 + 3 + … + N</code> without a loop.
+    </p>
+
+    <h3>Identifying the Sub-problem</h3>
+    <p>Notice that:</p>
+    <div class="formula">sum(N) = 1 + 2 + 3 + … + (N−2) + (N−1) + N
+         = sum(N−1)  +  N</div>
+    <p>
+      <code>sum(N−1)</code> is a <em>smaller instance of the same problem</em> — that is the sub-problem. We keep reducing until we reach <code>sum(0) = 0</code>, which is trivially known.
+    </p>
+
+    <h3>Recursive Code</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">C++</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cmt">// Assumption: sum(N) calculates and returns the sum of first N natural numbers.</span>
+<span class="ty">int</span> <span class="fn">sum</span>(<span class="ty">int</span> N) {
+    <span class="kw">if</span> (N == <span class="num">0</span>) <span class="kw">return</span> <span class="num">0</span>;    <span class="cmt">// Base case</span>
+    <span class="kw">return</span> <span class="fn">sum</span>(N - <span class="num">1</span>) + N;    <span class="cmt">// Main logic: sub-problem + current contribution</span>
+}</pre>
+    </div>
+
+    <h3>Dry Run — Tracing sum(5)</h3>
+    <div class="diagram-wrap">
+      <div class="call-stack">
+        <div class="stack-frame base"><span>sum(0)</span><span class="frame-val">returns 0</span></div>
+        <div class="stack-arrow">→ 0 + 1 = 1</div>
+        <div class="stack-frame"><span>sum(1)</span><span class="frame-label">sum(0) + 1 → <span class="frame-val">1</span></span></div>
+        <div class="stack-arrow">→ 1 + 2 = 3</div>
+        <div class="stack-frame"><span>sum(2)</span><span class="frame-label">sum(1) + 2 → <span class="frame-val">3</span></span></div>
+        <div class="stack-arrow">→ 3 + 3 = 6</div>
+        <div class="stack-frame"><span>sum(3)</span><span class="frame-label">sum(2) + 3 → <span class="frame-val">6</span></span></div>
+        <div class="stack-arrow">→ 6 + 4 = 10</div>
+        <div class="stack-frame"><span>sum(4)</span><span class="frame-label">sum(3) + 4 → <span class="frame-val">10</span></span></div>
+        <div class="stack-arrow">→ 10 + 5 = 15</div>
+        <div class="stack-frame"><span>sum(5)</span><span class="frame-label">sum(4) + 5 → <span class="frame-val">15</span></span></div>
+      </div>
+    </div>
+    <p>Final answer: <code>sum(5) = 15</code> ✓</p>
+  </section>
+
+  <!-- 04 STEPS -->
+  <section class="section" id="steps">
+    <h2><span class="sec-badge">04</span>Steps for Writing Recursive Code</h2>
+
+    <p>Every recursive solution follows a three-step mental framework:</p>
+
+    <div class="flow">
+      <div class="flow-step highlight">
+        <strong>Step 1 — Assumption</strong><br/>
+        Decide exactly what your function will <em>do</em> (and return) for the given problem. Write it as a comment. Do not think about how just yet.
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-step">
+        <strong>Step 2 — Main Logic</strong><br/>
+        Break the problem into a smaller sub-problem of the <em>same type</em> and combine the result. Trust your assumption — pretend the recursive call works correctly.
+      </div>
+      <div class="flow-connector"></div>
+      <div class="flow-step">
+        <strong>Step 3 — Base Case</strong><br/>
+        Identify the smallest input(s) for which the answer is trivially known. Return directly without making any recursive call.
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-label">Common Mistake</span>
+      Forgetting or writing an incorrect base case leads to <strong>infinite recursion</strong> and a <em>stack overflow</em> error. Always define a base case that is actually reachable.
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-label">Tip — Leap of Faith</span>
+      When writing Step 2, do <strong>not</strong> try to mentally trace the entire recursive chain. Trust that <code>sum(N−1)</code> is correctly computed — that is the "leap of faith" that makes recursion manageable.
+    </div>
+  </section>
+
+  <!-- 05 FACTORIAL -->
+  <section class="section" id="factorial">
+    <h2><span class="sec-badge">05</span>Factorial of N</h2>
+
+    <h3>What is a Factorial?</h3>
+    <p>
+      The factorial of a non-negative integer N, written <code>N!</code>, is the product of all positive integers from 1 up to N.
+    </p>
+    <div class="formula">N! = 1 × 2 × 3 × … × (N−2) × (N−1) × N
+   = (N−1)! × N</div>
+
+    <p>Special case: <code>0! = 1</code> (by convention, and confirmed mathematically).</p>
+    <p>Example: <code>5! = 1 × 2 × 3 × 4 × 5 = 120</code></p>
+
+    <h3>Recursive Formulation</h3>
+    <div class="formula">factorial(N) = factorial(N−1) × N
+factorial(0) = 1   ← base case</div>
+
+    <h3>Code</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">C++</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cmt">// Assumption: factorial(N) returns the value of N!</span>
+<span class="ty">int</span> <span class="fn">factorial</span>(<span class="ty">int</span> N) {
+    <span class="kw">if</span> (N == <span class="num">0</span>) <span class="kw">return</span> <span class="num">1</span>;         <span class="cmt">// Base case: 0! = 1</span>
+    <span class="kw">return</span> <span class="fn">factorial</span>(N - <span class="num">1</span>) * N;  <span class="cmt">// Main logic</span>
+}</pre>
+    </div>
+
+    <h3>Dry Run — factorial(4)</h3>
+    <div class="diagram-wrap">
+      <div class="call-stack">
+        <div class="stack-frame base"><span>factorial(0)</span><span class="frame-val">returns 1</span></div>
+        <div class="stack-arrow">→ 1 × 1 = 1</div>
+        <div class="stack-frame"><span>factorial(1)</span><span class="frame-label">factorial(0) × 1 → <span class="frame-val">1</span></span></div>
+        <div class="stack-arrow">→ 1 × 2 = 2</div>
+        <div class="stack-frame"><span>factorial(2)</span><span class="frame-label">factorial(1) × 2 → <span class="frame-val">2</span></span></div>
+        <div class="stack-arrow">→ 2 × 3 = 6</div>
+        <div class="stack-frame"><span>factorial(3)</span><span class="frame-label">factorial(2) × 3 → <span class="frame-val">6</span></span></div>
+        <div class="stack-arrow">→ 6 × 4 = 24</div>
+        <div class="stack-frame"><span>factorial(4)</span><span class="frame-label">factorial(3) × 4 → <span class="frame-val">24</span></span></div>
+      </div>
+    </div>
+    <p>Result: <code>4! = 24</code> ✓</p>
+
+    <h3>Complexity</h3>
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(N)</span></span>
+    <p style="margin-top:12px;">
+      There are <em>N + 1</em> function calls (from N down to 0), each doing O(1) work. The call stack holds at most N + 1 frames simultaneously, giving O(N) space.
+    </p>
+  </section>
+
+  <!-- 06 PRINT INCREASING -->
+  <section class="section" id="print-inc">
+    <h2><span class="sec-badge">06</span>Print 1 → N in Increasing Order</h2>
+
+    <p>
+      Print all integers from 1 to N in ascending order using recursion — no loops.
+    </p>
+
+    <h3>Key Insight</h3>
+    <p>
+      To print <code>1, 2, …, N</code>, first print <code>1, 2, …, N−1</code> (sub-problem), then print <code>N</code>. The print of N happens <em>after</em> the recursive call returns — this is called executing in the <strong>unwinding phase</strong>.
+    </p>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">C++</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cmt">// Assumption: pI(N) prints 1, 2, ..., N in order.</span>
+<span class="ty">void</span> <span class="fn">pI</span>(<span class="ty">int</span> N) {
+    <span class="kw">if</span> (N == <span class="num">0</span>) <span class="kw">return</span>;   <span class="cmt">// Base case: nothing to print</span>
+    <span class="fn">pI</span>(N - <span class="num">1</span>);           <span class="cmt">// ① Recurse first (go deeper)</span>
+    <span class="fn">print</span>(N);            <span class="cmt">// ② Print on the way back up</span>
+}</pre>
+    </div>
+
+    <div class="obs-diagram">
+      <div class="obs-box before">
+        <span class="obs-tag">Before recursive call ①</span>
+        <p>Lines here execute while <em>going down</em> the recursion (before the call).</p>
+      </div>
+      <div class="obs-box after">
+        <span class="obs-tag">After recursive call ②</span>
+        <p>Lines here execute while <em>coming back up</em> — during the unwinding phase.</p>
+      </div>
+    </div>
+
+    <p>
+      Because <code>print(N)</code> is placed <em>after</em> the recursive call, numbers print from smallest to largest as the stack unwinds.
+    </p>
+    <p>For <code>pI(5)</code>: output is <code>1, 2, 3, 4, 5</code></p>
+
+    <h3>Complexity</h3>
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(N)</span></span>
+  </section>
+
+  <!-- 07 PRINT DECREASING -->
+  <section class="section" id="print-dec">
+    <h2><span class="sec-badge">07</span>Print N → 1 in Decreasing Order</h2>
+
+    <p>
+      Now print from N down to 1. A real-world analogy from the notes: a <strong>Whirlpool washing machine timer</strong> that counts down from the set time to 0 — each minute displayed in decreasing order.
+    </p>
+
+    <div class="callout analogy">
+      <span class="callout-label">Problem — Whirlpool Timer</span>
+      A user sets a timer for A minutes. Display each minute counting down: A, A−1, A−2, …, 1. Implement with recursion.
+    </div>
+
+    <h3>Key Insight</h3>
+    <p>
+      To print N, N−1, …, 1: print <code>N</code> <em>first</em> (before the recursive call), then recurse for N−1.
+    </p>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">C++</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cmt">// Assumption: pD(N) prints N, N-1, ..., 1 in order.</span>
+<span class="ty">void</span> <span class="fn">pD</span>(<span class="ty">int</span> N) {
+    <span class="kw">if</span> (N == <span class="num">0</span>) <span class="kw">return</span>;   <span class="cmt">// Base case</span>
+    <span class="fn">print</span>(N);            <span class="cmt">// ① Print BEFORE recursing (going down phase)</span>
+    <span class="fn">pD</span>(N - <span class="num">1</span>);           <span class="cmt">// ② Recurse</span>
+}</pre>
+    </div>
+
+    <p>For <code>pD(4)</code>: output is <code>4, 3, 2, 1</code></p>
+
+    <h3>Comparison: Inc vs Dec</h3>
+    <table>
+      <thead><tr><th>Variant</th><th>Print position</th><th>Output for N=4</th></tr></thead>
+      <tbody>
+        <tr><td>Increasing (<code>pI</code>)</td><td>After recursive call</td><td>1, 2, 3, 4</td></tr>
+        <tr><td>Decreasing (<code>pD</code>)</td><td>Before recursive call</td><td>4, 3, 2, 1</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Complexity</h3>
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(N)</span></span>
+  </section>
+
+  <!-- 08 OBSERVATION -->
+  <section class="section" id="observation">
+    <h2><span class="sec-badge">08</span>Key Observation — Before &amp; After the Recursive Call</h2>
+
+    <p>
+      This is one of the most important mental models in recursion. Inside any recursive function, the code is split by the recursive call into two zones:
+    </p>
+
+    <div class="diagram-wrap">
+      <div style="border:1.5px solid var(--blue);border-radius:8px;padding:14px 20px;margin-bottom:8px;background:var(--blue-soft);">
+        <strong>Zone A — Before the recursive call</strong>
+        <p style="margin:8px 0 0;font-size:.9rem;">These lines run while going <em>down</em> the recursion tree (from larger N toward the base case). Each new frame executes them immediately before calling itself again.</p>
+      </div>
+      <div style="text-align:center;padding:8px 0;font-family:'JetBrains Mono',monospace;color:var(--accent);">
+        ↓ recursive call ↓
+      </div>
+      <div style="border:1.5px solid var(--rose);border-radius:8px;padding:14px 20px;background:var(--rose-soft);">
+        <strong>Zone B — After the recursive call</strong>
+        <p style="margin:8px 0 0;font-size:.9rem;">These lines run while coming <em>back up</em> (unwinding). The deepest frame's Zone B runs first, followed by each parent frame on the way back.</p>
+      </div>
+    </div>
+
+    <div class="callout key">
+      <span class="callout-label">Why This Matters</span>
+      Swapping a <code>print</code> statement from before to after the recursive call completely reverses the output order — no other change needed. This principle is heavily used in tree traversals (preorder vs postorder) and backtracking.
+    </div>
+  </section>
+
+  <!-- 09 COMPLEXITY -->
+  <section class="section" id="complexity">
+    <h2><span class="sec-badge">09</span>Time &amp; Space Complexity</h2>
+
+    <h3>General Formulas</h3>
+    <div class="formula">Time Complexity  = O(number of function calls × work per call)
+Space Complexity = O(maximum recursion depth × space per frame)</div>
+
+    <h3>Time Complexity Explained</h3>
+    <p>
+      For a function like <code>factorial(N)</code>, there are exactly <em>N + 1</em> calls (N, N−1, …, 1, 0). Each call does a constant amount of work (one comparison, one multiplication, one return). Therefore:
+    </p>
+    <span class="complexity-badge"><span class="cb-label">factorial — Time</span><span class="cb-val">O(N)</span></span>
+
+    <h3>Space Complexity Explained</h3>
+    <p>
+      The space complexity of a recursive algorithm equals the <strong>maximum depth of the call stack</strong> at any single point in time, multiplied by the space used per frame.
+    </p>
+
+    <div class="callout key">
+      <span class="callout-label">Important</span>
+      We do <em>not</em> add up all frames ever created. At any moment, only the frames on the current path from root to the active call are live on the stack. Once a call returns, its frame is <strong>popped</strong> and that memory is freed.
+    </div>
+
+    <p>For <code>factorial(N)</code>, the maximum stack depth is N + 1:</p>
+    <span class="complexity-badge"><span class="cb-label">factorial — Space</span><span class="cb-val">O(N)</span></span>
+
+    <h3>Summary Table</h3>
+    <table>
+      <thead><tr><th>Function</th><th>Time Complexity</th><th>Space Complexity</th><th>Reason</th></tr></thead>
+      <tbody>
+        <tr><td><code>factorial(N)</code></td><td>O(N)</td><td>O(N)</td><td>N+1 calls, depth N+1</td></tr>
+        <tr><td><code>pI(N)</code> / <code>pD(N)</code></td><td>O(N)</td><td>O(N)</td><td>N+1 calls, depth N+1</td></tr>
+        <tr><td><code>sum(N)</code></td><td>O(N)</td><td>O(N)</td><td>N+1 calls, depth N+1</td></tr>
+        <tr><td><code>fib(N)</code></td><td>O(2ᴺ)</td><td>O(N)</td><td>Binary tree of calls; max depth N</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 10 FIBONACCI -->
+  <section class="section" id="fibonacci">
+    <h2><span class="sec-badge">10</span>Nth Fibonacci Number</h2>
+
+    <p>
+      The Fibonacci sequence is defined as: <code>0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, …</code>
+    </p>
+
+    <div class="diagram-wrap">
+      <div class="arr-row">
+        <div class="arr-cell"><div class="val">0</div><div class="idx">N=0</div></div>
+        <div class="arr-cell"><div class="val">1</div><div class="idx">N=1</div></div>
+        <div class="arr-cell highlight"><div class="val">1</div><div class="idx">N=2</div></div>
+        <div class="arr-cell highlight"><div class="val">2</div><div class="idx">N=3</div></div>
+        <div class="arr-cell highlight"><div class="val">3</div><div class="idx">N=4</div></div>
+        <div class="arr-cell highlight"><div class="val">5</div><div class="idx">N=5</div></div>
+        <div class="arr-cell"><div class="val">8</div><div class="idx">N=6</div></div>
+        <div class="arr-cell"><div class="val">13</div><div class="idx">N=7</div></div>
+        <div class="arr-cell"><div class="val">21</div><div class="idx">N=8</div></div>
+        <div class="arr-cell"><div class="val">34</div><div class="idx">N=9</div></div>
+        <div class="arr-cell"><div class="val">55</div><div class="idx">N=10</div></div>
+      </div>
+    </div>
+
+    <h3>Recursive Formulation</h3>
+    <div class="formula">fib(0) = 0
+fib(1) = 1
+fib(N) = fib(N−1) + fib(N−2)   for N ≥ 2</div>
+
+    <h3>Code</h3>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">C++</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="cmt">// Assumption: fib(N) returns the Nth Fibonacci number.</span>
+<span class="ty">int</span> <span class="fn">fib</span>(<span class="ty">int</span> N) {
+    <span class="kw">if</span> (N &lt;= <span class="num">1</span>) <span class="kw">return</span> N;              <span class="cmt">// Base cases: fib(0)=0, fib(1)=1</span>
+    <span class="kw">return</span> <span class="fn">fib</span>(N - <span class="num">1</span>) + <span class="fn">fib</span>(N - <span class="num">2</span>);   <span class="cmt">// Two recursive sub-problems</span>
+}</pre>
+    </div>
+
+    <h3>Recursion Tree — fib(4)</h3>
+    <div class="fib-tree" id="fib-tree-container">
+      <!-- rendered by JS below -->
+    </div>
+
+    <h3>Time Complexity of Fibonacci</h3>
+    <p>
+      Unlike factorial (one call per level), Fibonacci makes <em>two</em> recursive calls per invocation, forming a binary tree of calls. The number of calls at each level doubles:
+    </p>
+    <div class="diagram-wrap">
+      <table>
+        <thead><tr><th>Level</th><th>Calls</th></tr></thead>
+        <tbody>
+          <tr><td>L0</td><td>1</td></tr>
+          <tr><td>L1</td><td>2</td></tr>
+          <tr><td>L2</td><td>4</td></tr>
+          <tr><td>L3</td><td>8</td></tr>
+          <tr><td>…</td><td>…</td></tr>
+          <tr><td>LN</td><td>2ᴺ</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:8px;font-size:.88rem;color:var(--ink-soft);">
+        Total calls ≈ 1 + 2 + 4 + … + 2ᴺ = 2ᴺ⁺¹ − 1 ≈ <strong>2ᴺ</strong>
+      </p>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">fib — Time</span><span class="cb-val">O(2ᴺ)</span></span>
+
+    <div class="callout warn">
+      <span class="callout-label">Warning</span>
+      O(2ᴺ) is exponential and becomes extremely slow very quickly (e.g., fib(50) would require trillions of calls). The fix is <strong>memoization</strong> (caching results), which reduces it to O(N). This is introduced in the Dynamic Programming module.
+    </div>
+
+    <h3>Space Complexity of Fibonacci</h3>
+    <p>
+      Despite the exponential number of total calls, the <em>maximum stack depth at any instant</em> is only N. The algorithm always explores one branch fully to the base case before starting the other branch. At no point are more than N frames on the stack simultaneously.
+    </p>
+
+    <span class="complexity-badge"><span class="cb-label">fib — Space</span><span class="cb-val">O(N)</span></span>
+
+    <div class="callout key">
+      <span class="callout-label">Insight — Branch-by-Branch Execution</span>
+      When <code>fib(N)</code> calls <code>fib(N−1)</code>, it fully resolves the entire left subtree before starting the right branch <code>fib(N−2)</code>. At any moment, only one root-to-leaf path is active on the call stack.
+    </div>
+  </section>
+
+  <!-- QUICK RECAP -->
+  <section class="section" id="recap">
+    <h2><span class="sec-badge">★</span>Quick Recap</h2>
+
+    <div class="recap-grid">
+      <div class="recap-card">
+        <div class="rc-title">Recursion</div>
+        <div class="rc-body">A function that calls itself with a smaller input to solve sub-problems, stopping at a base case.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Three Steps</div>
+        <div class="rc-body">Assumption → Main Logic (sub-problem) → Base Case. Always write in this order.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Base Case</div>
+        <div class="rc-body">The trivially-known input where recursion stops. Without it you get a stack overflow.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Call Stack</div>
+        <div class="rc-body">Each call pushes a frame; returning pops it. Space complexity = maximum stack depth.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Before vs After</div>
+        <div class="rc-body">Code before the recursive call runs going down; code after runs while unwinding back up.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Factorial</div>
+        <div class="rc-body">N! = factorial(N−1) × N. Base: 0! = 1. Time O(N), Space O(N).</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Print Inc / Dec</div>
+        <div class="rc-body">Put print <em>after</em> recursive call for ascending; <em>before</em> for descending. Both O(N) time &amp; space.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Fibonacci (Naive)</div>
+        <div class="rc-body">fib(N) = fib(N−1) + fib(N−2). Two recursive branches → Time O(2ᴺ), Space O(N).</div>
+      </div>
+    </div>
+
+    <h3>Complexity Summary</h3>
+    <table>
+      <thead><tr><th>Algorithm</th><th>Recurrence</th><th>Time</th><th>Space</th></tr></thead>
+      <tbody>
+        <tr><td>Sum(N)</td><td>T(N) = T(N−1) + O(1)</td><td>O(N)</td><td>O(N)</td></tr>
+        <tr><td>Factorial(N)</td><td>T(N) = T(N−1) + O(1)</td><td>O(N)</td><td>O(N)</td></tr>
+        <tr><td>Print Inc/Dec(N)</td><td>T(N) = T(N−1) + O(1)</td><td>O(N)</td><td>O(N)</td></tr>
+        <tr><td>Fibonacci(N) — naive</td><td>T(N) = T(N−1) + T(N−2) + O(1)</td><td>O(2ᴺ)</td><td>O(N)</td></tr>
+        <tr><td>Fibonacci(N) — memoized</td><td>T(N) = O(N) subproblems</td><td>O(N)</td><td>O(N)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- LEETCODE -->
+    <section class="section" id="leetcode">
+    <div class="section-header">
+      <span class="section-num">↗</span>
+      <h2>Related LeetCode Problems</h2>
+    </div>
+
+    <p>The following problems use the same core ideas covered in these notes. Solving them in order reinforces each concept progressively.</p>
+
+    <h3>Factorial &amp; Basic Recursion</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/fibonacci-number/" target="_blank" rel="noopener">#509 — Fibonacci Number ↗</a><br/>
+          <span class="lc-why">Direct application of the fib recurrence from this lecture.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/climbing-stairs/" target="_blank" rel="noopener">#70 — Climbing Stairs ↗</a><br/>
+          <span class="lc-why">The recurrence T(N) = T(N−1) + T(N−2) is identical to Fibonacci.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/power-of-two/" target="_blank" rel="noopener">#231 — Power of Two ↗</a><br/>
+          <span class="lc-why">Practice recursive base-case thinking: is N/2 a power of two?</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/reverse-string/" target="_blank" rel="noopener">#344 — Reverse String ↗</a><br/>
+          <span class="lc-why">Classic use of before/after placement around the recursive call.</span>
+        </span>
+      </li>
+    </ul>
+
+    <h3>Print / Order Problems</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/print-in-order/" target="_blank" rel="noopener">#1114 — Print in Order ↗</a><br/>
+          <span class="lc-why">Reinforces execution ordering — which operation runs first?</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/permutations/" target="_blank" rel="noopener">#46 — Permutations ↗</a><br/>
+          <span class="lc-why">First backtracking problem that naturally grows from understanding recursive print order.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/sum-of-digits-of-string-after-convert/" target="_blank" rel="noopener">#1945 — Sum of Digits After Convert ↗</a><br/>
+          <span class="lc-why">Repeated application of a function to a shrinking problem — matches the sum(N) pattern.</span>
+        </span>
+      </li>
+    </ul>
+
+    <h3>Fibonacci Variants &amp; Complexity</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/n-th-tribonacci-number/" target="_blank" rel="noopener">#1137 — N-th Tribonacci Number ↗</a><br/>
+          <span class="lc-why">Extends Fibonacci to 3 recursive calls — visualizing the call tree is excellent practice.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/house-robber/" target="_blank" rel="noopener">#198 — House Robber ↗</a><br/>
+          <span class="lc-why">The Fibonacci-like recurrence here is a gateway to DP — start with the naive recursive solution.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff hard">Hard</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/regular-expression-matching/" target="_blank" rel="noopener">#10 — Regular Expression Matching ↗</a><br/>
+          <span class="lc-why">Advanced recursion with two sub-problems — understanding the exponential tree is essential before optimizing.</span>
+        </span>
+      </li>
+    </ul>
+
+    <div class="callout tip">
+      <span class="callout-tag">Recommended Study Order</span>
+      Start with <strong>Fibonacci Number</strong> and <strong>Climbing Stairs</strong> (direct applications). Then tackle <strong>Reverse String</strong> and <strong>Permutations</strong> to internalize the before/after pattern. Finally attempt <strong>House Robber</strong> — first with pure recursion, then optimize with memoization once you reach the DP module.
+    </div>
+  </section>
+
+
+</main>
+
+<script>
+// ── PROGRESS BAR ──
+const bar = document.getElementById('progress-bar');
+window.addEventListener('scroll', () => {
+  const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100;
+  bar.style.width = Math.min(pct, 100) + '%';
+});
+
+// ── SCROLL SPY ──
+const links = document.querySelectorAll('.sidebar-link');
+const sections = document.querySelectorAll('.section');
+const sidebar = document.getElementById('sidebar');
+
+function activateLink(id) {
+  links.forEach(l => l.classList.remove('active'));
+  const target = document.querySelector(`.sidebar-link[href="#${id}"]`);
+  if (target) {
+    target.classList.add('active');
+    const sTop = sidebar.scrollTop;
+    const sH = sidebar.clientHeight;
+    const lTop = target.offsetTop;
+    const lH = target.offsetHeight;
+    if (lTop < sTop || lTop + lH > sTop + sH) {
+      sidebar.scrollTo({ top: lTop - sH / 2 + lH / 2, behavior: 'smooth' });
+    }
+  }
+}
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) activateLink(e.target.id); });
+}, { rootMargin: '-20% 0px -60% 0px' });
+sections.forEach(s => io.observe(s));
+
+// ── SCROLL REVEAL ──
+const revealIO = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.06 });
+sections.forEach(s => revealIO.observe(s));
+
+// ── SMOOTH SCROLL ──
+links.forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) {
+      const top = target.getBoundingClientRect().top + window.scrollY - 24;
+      window.scrollTo({ top, behavior: 'smooth' });
+    }
+    // close mobile sidebar
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  });
+});
+
+// ── MOBILE FAB ──
+const fab = document.getElementById('fab');
+const overlay = document.getElementById('overlay');
+fab.addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+});
+overlay.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+});
+
+// ── COPY BUTTON ──
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  const text = pre.innerText || pre.textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => flash(btn));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); flash(btn);
+  }
+}
+function flash(btn) {
+  btn.textContent = 'Copied!'; btn.classList.add('copied');
+  setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+}
+
+// ── FIB TREE ──
+(function buildFibTree() {
+  const container = document.getElementById('fib-tree-container');
+  if (!container) return;
+
+  // fib(4) tree
+  const levels = [
+    { label: 'L0', nodes: [{ text: 'fib(4)', base: false }] },
+    { label: 'L1', nodes: [{ text: 'fib(3)', base: false }, { text: 'fib(2)', base: false }] },
+    { label: 'L2', nodes: [{ text: 'fib(2)', base: false }, { text: 'fib(1)', base: true }, { text: 'fib(1)', base: true }, { text: 'fib(0)', base: true }] },
+    { label: 'L3', nodes: [{ text: 'fib(1)', base: true }, { text: 'fib(0)', base: true }] },
+  ];
+
+  const title = document.createElement('div');
+  title.style.cssText = 'font-weight:600;color:var(--ink);margin-bottom:16px;font-family:Fraunces,serif;';
+  title.textContent = 'Recursion Tree for fib(4)';
+  container.appendChild(title);
+
+  levels.forEach(lv => {
+    const labelEl = document.createElement('div');
+    labelEl.className = 'fib-level-label';
+    labelEl.textContent = lv.label;
+    container.appendChild(labelEl);
+
+    const row = document.createElement('div');
+    row.className = 'fib-level';
+    lv.nodes.forEach(n => {
+      const nd = document.createElement('span');
+      nd.className = 'fib-node' + (n.base ? ' base' : '');
+      nd.textContent = n.text;
+      row.appendChild(nd);
+    });
+    container.appendChild(row);
+  });
+
+  const note = document.createElement('p');
+  note.style.cssText = 'margin-top:16px;font-size:.82rem;color:var(--ink-soft);';
+  note.textContent = 'Highlighted nodes (orange) are base cases that return immediately. Every other node makes two recursive calls.';
+  container.appendChild(note);
+})();
+</script>
+</body>
+</html>

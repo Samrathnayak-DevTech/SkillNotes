@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Binary Search on Answer — Painter's Partition &amp; Aggressive Cows</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear;border-radius:0 2px 2px 0;}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s;}
+.nav-toggle:hover{transform:scale(1.08);}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease;}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem;}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem;}
+.nav-group{margin-bottom:.2rem;}
+.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem;}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:0.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s;}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft);}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500;}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:var(--accent);opacity:.7;flex-shrink:0;}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px;}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem;}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem;}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem;}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);}
+.section{margin-bottom:5rem;scroll-margin-top:2rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}
+.section.visible{opacity:1;transform:none;}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line);}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0;}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2;}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem;}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem;}
+p{margin-bottom:1rem;}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid;}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:0.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}
+.callout.tip .callout-tag{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}
+.callout.key .callout-tag{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}
+.callout.analogy .callout-tag{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}
+.callout.warn .callout-tag{color:var(--accent);}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:0.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em;}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:0.85rem;}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem;}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.06em;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s;}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980;}
+.copy-btn.copied{color:#89d185;border-color:#89d185;}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink);}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+.table-wrap{overflow-x:auto;margin:1.5rem 0;}
+table{width:100%;border-collapse:collapse;font-size:0.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line);}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--bg-soft);}
+.diagram{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;margin:1.5rem 0;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;overflow-x:auto;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem;min-width:42px;}
+.arr-cell .val{font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;background:var(--bg);border:2px solid var(--line);border-radius:6px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--ink);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--blue);}
+.arr-cell .label{font-family:"JetBrains Mono",monospace;font-size:.6rem;color:var(--ink-soft);white-space:nowrap;}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0;}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:0.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg);}
+.complexity-badge .label{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:600;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem;}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent);}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem;}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.lc-list{list-style:none;padding:0;margin:1rem 0;}
+.lc-list li{display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;}
+.lc-list li:last-child{border-bottom:none;}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;margin-top:.15rem;}
+.lc-diff.easy{background:var(--green-soft);color:var(--green);}
+.lc-diff.medium{background:var(--accent-soft);color:var(--accent);}
+.lc-diff.hard{background:var(--rose-soft);color:var(--rose);}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s;}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent);}
+.lc-why{color:var(--ink-soft);font-size:.82rem;width:100%;margin-top:.1rem;display:block;}
+.lc-group-title{font-family:"Fraunces",serif;font-size:1.1rem;font-weight:600;color:var(--ink);margin:1.8rem 0 .5rem;}
+.board-vis{display:flex;gap:.4rem;margin:1.2rem 0;align-items:flex-end;}
+.board-bar{width:44px;background:var(--accent-soft);border:2px solid var(--accent);border-radius:4px 4px 0 0;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:.75rem;font-weight:600;color:var(--accent);}
+.board-painter{display:flex;gap:.4rem;align-items:flex-end;padding:.5rem;border-radius:8px;border:2px dashed var(--line);}
+.board-painter.p1{background:rgba(181,101,29,.07);}
+.board-painter.p2{background:rgba(58,110,165,.07);}
+.stall-vis{display:flex;gap:.3rem;flex-wrap:wrap;margin:1rem 0;}
+.stall{width:36px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:.75rem;font-weight:600;border:2px solid var(--line);background:var(--bg);}
+.stall.cow{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+@media(max-width:768px){
+  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12);}
+  .sidebar.open{transform:translateX(0);}
+  .nav-toggle{display:flex;}
+  .main{padding:0 1.2rem 4rem;}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px);}
+  .sidebar-overlay.open{display:block;}
+}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+
+<div class="layout">
+<nav class="sidebar" aria-label="Page navigation">
+  <div class="sidebar-logo">
+    DSA Notes · Series 4
+    <strong>Binary Search on Answer</strong>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">The Pattern</div>
+    <a class="nav-link" href="#pattern"><span class="nav-num">01</span>BS on Answer Pattern</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Problems</div>
+    <a class="nav-link" href="#painters"><span class="nav-num">02</span>Painter's Partition</a>
+    <a class="nav-link" href="#cows"><span class="nav-num">03</span>Aggressive Cows</a>
+    <a class="nav-link" href="#connection"><span class="nav-num">04</span>Common Observation</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">05</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">06</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 4</p>
+  <h1>Binary Search<br>on the Answer</h1>
+  <p class="hero-lede">When the answer space is monotone — feasible on one side, infeasible on the other — you can binary search the answer itself. Two canonical problems: minimizing maximum load and maximizing minimum distance.</p>
+  <div class="chips">
+    <span class="chip">Painter's Partition</span>
+    <span class="chip">Aggressive Cows</span>
+    <span class="chip">Feasibility Check</span>
+    <span class="chip">Monotone Answer Space</span>
+  </div>
+</header>
+
+<!-- ─── SECTION 01 ─── -->
+<section class="section" id="pattern">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>The "Binary Search on Answer" Pattern</h2>
+  </div>
+
+  <p>Many optimization problems ask for the <em>minimum</em> or <em>maximum</em> of some value subject to constraints. If the answer space is continuous and the feasibility function is monotone (once it becomes feasible, it stays feasible), binary search works on the answer itself rather than the array index.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">The Three Ingredients</span>
+    <strong>(1) Target</strong> — the optimal answer (minimum time, maximum distance, etc.). <strong>(2) Search Space</strong> — the range of possible answers (often <code>[max element, sum of all elements]</code> or <code>[1, max − min]</code>). <strong>(3) Feasibility Condition</strong> — a function that checks: "is it possible to achieve answer ≤ mid (or ≥ mid)?"
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    You're buying a laptop and your budget ranges from ₹30 000 to ₹200 000. You want the best possible within budget. Instead of checking every price, you guess the midpoint, see if it buys what you need, and adjust — that is binary search on the answer.
+  </div>
+</section>
+
+<!-- ─── SECTION 02 ─── -->
+<section class="section" id="painters">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>Painter's Partition Problem</h2>
+  </div>
+
+  <p>Given N boards with lengths <code>arr[0..N−1]</code> and P painters, find the <strong>minimum time</strong> to paint all boards, where each painter takes 1 unit of time per unit of board length, a board can only be painted by one painter, and each painter can only paint a contiguous segment of boards.</p>
+
+  <h4>Example — arr = [5, 3, 6, 1, 9], P = 2</h4>
+  <p>All possible ways to split between 2 painters and their costs:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Painter 1</th><th>Painter 2</th><th>Max (time taken)</th></tr></thead>
+      <tbody>
+        <tr><td>[5]</td><td>[3, 6, 1, 9]</td><td>max(5, 19) = 19</td></tr>
+        <tr><td>[5, 3]</td><td>[6, 1, 9]</td><td>max(8, 16) = 16</td></tr>
+        <tr class="highlight"><td>[5, 3, 6]</td><td>[1, 9]</td><td>max(14, 10) = 14 ✓ minimum</td></tr>
+        <tr><td>[5, 3, 6, 1]</td><td>[9]</td><td>max(15, 9) = 15</td></tr>
+        <tr><td>[5, 3, 6, 1, 9]</td><td>[]</td><td>max(24, 0) = 24</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Binary Search Approach</h3>
+  <p>The search space is <code>[max(arr), sum(arr)]</code>: the minimum possible time is the largest single board (if one painter per board), and the maximum is the total length (if one painter does all). For each candidate time <code>mid</code>, check if P painters can finish all boards within that time.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Monotone Property</span>
+    If P painters can finish within time T, they can also finish within time T+1. So the feasibility function is monotone-increasing. Binary search for the smallest T where it is feasible — go left when feasible, right when not.
+  </div>
+
+  <h4>isPossible Helper</h4>
+  <p>Simulate greedily: assign boards to the current painter until adding the next board would exceed the time limit T — at that point, start a new painter. Count total painters needed; return true if ≤ P.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java — isPossible</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">boolean</span> <span class="fn">isPossible</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> p, <span class="ty">int</span> T) {
+    <span class="ty">int</span> timeLeft = T, painters = <span class="num">1</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; arr.length; i++) {
+        <span class="kw">if</span> (arr[i] &lt;= timeLeft) {
+            timeLeft -= arr[i];          <span class="cmt">// current painter takes this board</span>
+        } <span class="kw">else</span> {
+            painters++;                  <span class="cmt">// need a new painter</span>
+            timeLeft = T - arr[i];
+        }
+    }
+    <span class="kw">return</span> painters &lt;= p;
+}   <span class="cmt">// T.C → O(N), S.C → O(1)</span></pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java — Main Binary Search</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> max = arr[<span class="num">0</span>], sum = arr[<span class="num">0</span>];
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">1</span>; i &lt; n; i++) {
+    max = Math.max(arr[i], max);
+    sum += arr[i];
+}
+
+<span class="ty">int</span> l = max, r = sum, ans = -<span class="num">1</span>;
+<span class="kw">while</span> (l &lt;= r) {
+    <span class="ty">int</span> mid = (l + r) / <span class="num">2</span>;
+    <span class="kw">if</span> (<span class="fn">isPossible</span>(arr, p, mid)) {
+        ans = mid;          <span class="cmt">// feasible; try smaller</span>
+        r = mid - <span class="num">1</span>;
+    } <span class="kw">else</span> {
+        l = mid + <span class="num">1</span>;      <span class="cmt">// not feasible; need more time</span>
+    }
+}
+<span class="kw">return</span> ans;</pre>
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(N · log(sum − max))</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Real-World Variant</span>
+    The same pattern solves "Split Array Largest Sum" (LeetCode 410) and the workload-balancing problem: given N emails with complexity scores and K handlers, divide them into K contiguous blocks minimizing the maximum block sum — identical to Painter's Partition with K = P.
+  </div>
+</section>
+
+<!-- ─── SECTION 03 ─── -->
+<section class="section" id="cows">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>Aggressive Cows</h2>
+  </div>
+
+  <p>A farmer has N stalls at given positions (sorted array). M aggressive cows must be placed in M of the N stalls. The cows fight if placed too close. Find the <strong>maximum possible minimum distance</strong> between any pair of cows.</p>
+
+  <h4>Example — arr = [1, 4, 8, 10], M = 3 cows</h4>
+  <div class="stall-vis">
+    <div class="stall cow">1</div>
+    <div class="stall">2</div>
+    <div class="stall">3</div>
+    <div class="stall cow">4</div>
+    <div class="stall">5</div>
+    <div class="stall">6</div>
+    <div class="stall">7</div>
+    <div class="stall cow">8</div>
+    <div class="stall">9</div>
+    <div class="stall">10</div>
+  </div>
+  <p>Best placement: stalls 1, 4, 8 → min distance = 3. Answer = 3.</p>
+
+  <h3>Binary Search on Minimum Distance</h3>
+  <p>The search space for the minimum distance is <code>[1, arr[N−1] − arr[0]]</code> (minimum adjacent gap to maximum possible span). For each candidate minimum distance <code>mid</code>, check if M cows can be placed such that every consecutive pair is at least <code>mid</code> apart.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Monotone Property</span>
+    If we can place M cows with minimum distance ≥ d, we can also place them with minimum distance ≥ d−1. So the feasibility is monotone-decreasing as d increases — binary search for the largest d where it is feasible. Go right when feasible, left when not.
+  </div>
+
+  <h4>isPossible Helper</h4>
+  <p>Place the first cow at <code>arr[0]</code>. Greedily place each subsequent cow at the earliest stall that is at least <code>dist</code> away from the last placed cow. Count cows placed; return true if ≥ M.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java — isPossible</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">boolean</span> <span class="fn">isPossible</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> m, <span class="ty">int</span> dist) {
+    <span class="ty">int</span> lastPos = arr[<span class="num">0</span>], cowsPlaced = <span class="num">1</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">1</span>; i &lt; arr.length; i++) {
+        <span class="kw">if</span> (arr[i] - lastPos &gt;= dist) {
+            cowsPlaced++;
+            lastPos = arr[i];
+        }
+    }
+    <span class="kw">return</span> cowsPlaced &gt;= m;
+}   <span class="cmt">// T.C → O(N), S.C → O(1)</span></pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java — Main Binary Search</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> l = <span class="num">1</span>;
+<span class="ty">int</span> r = arr[n-<span class="num">1</span>] - arr[<span class="num">0</span>];
+<span class="cmt">// Narrow l to the minimum adjacent gap for tighter search</span>
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n-<span class="num">1</span>; i++)
+    l = Math.min(l, arr[i+<span class="num">1</span>] - arr[i]);
+
+<span class="ty">int</span> ans = -<span class="num">1</span>;
+<span class="kw">while</span> (l &lt;= r) {
+    <span class="ty">int</span> mid = (l + r) / <span class="num">2</span>;
+    <span class="kw">if</span> (<span class="fn">isPossible</span>(arr, m, mid)) {
+        ans = mid;          <span class="cmt">// feasible; try larger distance</span>
+        l = mid + <span class="num">1</span>;
+    } <span class="kw">else</span> {
+        r = mid - <span class="num">1</span>;      <span class="cmt">// distance too large; reduce</span>
+    }
+}
+<span class="kw">return</span> ans;</pre>
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(N · log(max distance))</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+
+  <h3>Dry Run — arr = [2, 6, 11, 14, 19, 25, 30, 39, 43], M = 4</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>l</th><th>r</th><th>mid</th><th>Can place 4 cows?</th><th>Action</th></tr></thead>
+      <tbody>
+        <tr><td>3</td><td>41</td><td>22</td><td>No</td><td>r = 21</td></tr>
+        <tr><td>3</td><td>21</td><td>12</td><td>Yes</td><td>ans = 12, l = 13</td></tr>
+        <tr><td>13</td><td>21</td><td>17</td><td>No</td><td>r = 16</td></tr>
+        <tr><td>13</td><td>16</td><td>14</td><td>No</td><td>r = 13</td></tr>
+        <tr><td>13</td><td>13</td><td>13</td><td>No</td><td>r = 12</td></tr>
+        <tr><td>13</td><td>12</td><td>—</td><td>—</td><td>l &gt; r → return 12 ✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── SECTION 04 ─── -->
+<section class="section" id="connection">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2>Common Observation</h2>
+  </div>
+
+  <p>Both Painter's Partition and Aggressive Cows share the exact same algorithmic skeleton. The difference is only in the objective and the feasibility check direction.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Property</th><th>Painter's Partition</th><th>Aggressive Cows</th></tr></thead>
+      <tbody>
+        <tr><td>Objective</td><td>Minimize maximum time</td><td>Maximize minimum distance</td></tr>
+        <tr><td>Search space</td><td>[max element, sum of elements]</td><td>[1, arr[N−1] − arr[0]]</td></tr>
+        <tr><td>Feasibility</td><td>Can P painters finish in ≤ T?</td><td>Can M cows maintain ≥ d gap?</td></tr>
+        <tr><td>On success</td><td>ans = mid; r = mid − 1 (go smaller)</td><td>ans = mid; l = mid + 1 (go larger)</td></tr>
+        <tr><td>Graph shape</td><td>Monotone decreasing (more time ⇒ easier)</td><td>Monotone decreasing (larger dist ⇒ harder)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Recognition Pattern</span>
+    Whenever a problem says "minimize the maximum" or "maximize the minimum" of something, binary search on the answer. Write an O(N) feasibility checker that tests a candidate answer, and wrap it in the binary search template.
+  </div>
+</section>
+
+<!-- ─── SECTION 05: RECAP ─── -->
+<section class="section" id="recap">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2>Quick Recap</h2>
+  </div>
+
+  <div class="recap-grid">
+    <div class="recap-card">
+      <h4>BS on Answer</h4>
+      <p>Binary search over the answer space, not the array index, whenever feasibility is monotone.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Painter's Partition</h4>
+      <p>Minimize max load. Search space = [max board, total length]. Go left on success.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Aggressive Cows</h4>
+      <p>Maximize min distance. Search space = [1, max − min]. Go right on success.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Feasibility Checker</h4>
+      <p>Always O(N) greedy simulation — that is what keeps the overall algorithm at O(N log answer).</p>
+    </div>
+  </div>
+
+  <h3>Complexity Summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Problem</th><th>Time</th><th>Space</th></tr></thead>
+      <tbody>
+        <tr><td>Painter's Partition</td><td>O(N · log(sum − max))</td><td>O(1)</td></tr>
+        <tr><td>Aggressive Cows</td><td>O(N · log(max distance))</td><td>O(1)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── SECTION 06: LEETCODE ─── -->
+<section class="section" id="leetcode">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <h2>LeetCode Problems</h2>
+  </div>
+
+  <p class="lc-group-title">Minimize Maximum (Painter's Partition family)</p>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff hard">Hard</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/split-array-largest-sum/" target="_blank" rel="noopener">Split Array Largest Sum ↗</a><span class="lc-why">Identical to Painter's Partition — split array into K sub-arrays minimizing the maximum sub-array sum.</span></div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/" target="_blank" rel="noopener">Capacity to Ship Packages Within D Days ↗</a><span class="lc-why">Same search space [max weight, total weight], same greedy checker — a slightly reworded Painter's Partition.</span></div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/koko-eating-bananas/" target="_blank" rel="noopener">Koko Eating Bananas ↗</a><span class="lc-why">Binary search on eating speed; feasibility = can Koko finish all piles within H hours. Classic BS-on-answer warm-up.</span></div>
+    </li>
+  </ul>
+
+  <p class="lc-group-title">Maximize Minimum (Aggressive Cows family)</p>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/maximize-the-minimum-powered-city/" target="_blank" rel="noopener">Maximize the Minimum Powered City ↗</a><span class="lc-why">Maximize-the-minimum family with additional sliding window in the checker.</span></div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/magnetic-force-between-two-balls/" target="_blank" rel="noopener">Magnetic Force Between Two Balls ↗</a><span class="lc-why">Exact Aggressive Cows problem under a different name — directly apply Section 03's solution.</span></div>
+    </li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Study Order</span>
+    Start with <strong>Koko Eating Bananas</strong> (clean template), then <strong>Capacity to Ship Packages</strong> (Painter's variant), then <strong>Split Array Largest Sum</strong> (harder), then <strong>Magnetic Force Between Two Balls</strong> (Aggressive Cows), and finally the maximize-minimum problems.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+window.addEventListener('scroll',()=>{const el=document.getElementById('progress-bar');const h=document.documentElement;el.style.width=((h.scrollTop/(h.scrollHeight-h.clientHeight))*100)+'%';});
+const tog=document.getElementById('nav-toggle');const sb=document.querySelector('.sidebar');const ov=document.getElementById('nav-overlay');
+tog.addEventListener('click',()=>{sb.classList.toggle('open');ov.classList.toggle('open');});
+ov.addEventListener('click',()=>{sb.classList.remove('open');ov.classList.remove('open');});
+const links=[...document.querySelectorAll('.nav-link')];const sections=[...document.querySelectorAll('.section')];
+const obs2=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=document.querySelector('.nav-link[href="#'+e.target.id+'"]');if(a){a.classList.add('active');a.scrollIntoView({block:'nearest',behavior:'smooth'});}}});},{rootMargin:'-20% 0px -70% 0px'});
+sections.forEach(s=>obs2.observe(s));
+const obsR=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:0.07});
+sections.forEach(s=>obsR.observe(s));
+function copyCode(btn){const pre=btn.closest('.code-block').querySelector('pre');const text=pre.innerText;try{navigator.clipboard.writeText(text);}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);}btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);}
+</script>
+</body>
+</html>
