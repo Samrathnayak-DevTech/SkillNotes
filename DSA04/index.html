@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA04 · Samrath's Coding Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --ink-mute:    #8a8478;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: radial-gradient(ellipse 120% 80% at 15% 20%, #f5ede8 0%, transparent 60%),
+              radial-gradient(ellipse 80% 60% at 90% 80%, #e8e4f2 0%, transparent 55%),
+              var(--bg);
+  color: var(--ink);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 18px; line-height: 1.7; min-height: 100vh;
+}
+#progress-bar {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+  background: linear-gradient(90deg, var(--blue), var(--accent));
+  z-index: 1000; transition: width .1s linear; border-radius: 0 2px 2px 0;
+}
+.shell { max-width: 1080px; margin: 0 auto; padding: 4rem 2rem 6rem; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 2rem; border-bottom: 1px solid var(--line); margin-bottom: 2.5rem;
+}
+.brand {
+  font-family: "JetBrains Mono", monospace; font-size: .72rem;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--blue);
+}
+.brand strong {
+  display: block; font-family: "Fraunces", serif; font-weight: 600;
+  letter-spacing: 0; font-size: 1rem; color: var(--ink); margin-top: .15rem;
+}
+.topnav-links { display: flex; gap: .5rem; }
+.topnav-links a {
+  font-family: "JetBrains Mono", monospace; font-size: .66rem;
+  letter-spacing: .12em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: .35rem;
+  background: var(--bg); border: 1px solid var(--line); color: var(--ink-soft);
+  padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+  transition: all .18s ease;
+}
+.topnav-links a:hover { color: var(--blue); border-color: var(--blue); background: var(--blue-soft); }
+
+.crumb {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .7rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-mute); margin-bottom: 1.5rem;
+}
+.crumb a { color: var(--ink-soft); text-decoration: none; }
+.crumb a:hover { color: var(--blue); }
+.crumb span { color: var(--blue); }
+
+.hero { padding: 1rem 0 3.5rem; border-bottom: 1px solid var(--line); margin-bottom: 3.5rem; }
+.hero-eyebrow {
+  font-family: "JetBrains Mono", monospace; font-size: .72rem;
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--blue); margin-bottom: 1rem;
+}
+.hero h1 {
+  font-family: "Fraunces", serif; font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 600; line-height: 1.1; color: var(--ink); margin-bottom: 1.1rem;
+}
+.hero-lede { font-size: 1.1rem; color: var(--ink-soft); max-width: 620px; margin-bottom: 1.6rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.chip {
+  font-family: "JetBrains Mono", monospace; font-size: .7rem;
+  letter-spacing: .04em; padding: .3rem .75rem; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft);
+}
+
+.section-header {
+  display: flex; align-items: baseline; gap: 1rem; margin-bottom: 2rem;
+  padding-bottom: .75rem; border-bottom: 1px solid var(--line);
+}
+.section-num {
+  font-family: "JetBrains Mono", monospace; font-size: .72rem;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--blue);
+  background: var(--blue-soft); padding: .2rem .55rem; border-radius: 4px;
+}
+.section-header h2 {
+  font-family: "Fraunces", serif; font-size: 1.9rem; font-weight: 600;
+  color: var(--ink); line-height: 1.2;
+}
+
+.notes-list { display: flex; flex-direction: column; gap: .9rem; }
+.note-row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.1rem 1.4rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.note-row:hover {
+  transform: translateX(4px);
+  border-color: var(--blue);
+  box-shadow: 0 10px 28px -16px rgba(45,42,38,.22);
+}
+.note-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .75rem; letter-spacing: .08em;
+  color: var(--blue); background: var(--blue-soft);
+  text-align: center; padding: .4rem 0; border-radius: 6px;
+}
+.note-body h3 {
+  font-family: "Fraunces", serif; font-size: 1.2rem; font-weight: 600;
+  color: var(--ink); margin-bottom: .15rem; line-height: 1.3;
+}
+.note-body p { font-size: .92rem; color: var(--ink-soft); margin: 0; }
+.note-go {
+  font-family: "JetBrains Mono", monospace; font-size: 1.05rem;
+  color: var(--blue); transition: transform .2s ease;
+}
+.note-row:hover .note-go { transform: translateX(3px); }
+
+.note-group { margin-bottom: 3rem; }
+.note-group-label {
+  font-family: "JetBrains Mono", monospace; font-size: .66rem;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-mute); margin-bottom: .9rem; padding-left: .25rem;
+}
+
+.foot {
+  margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between;
+  font-family: "JetBrains Mono", monospace; font-size: .68rem;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mute);
+}
+
+@media (max-width: 640px) {
+  .shell { padding: 2rem 1.25rem 4rem; }
+  .topbar { flex-direction: column; gap: 1rem; align-items: flex-start; }
+  .note-row { grid-template-columns: 50px 1fr auto; gap: .8rem; padding: .9rem 1rem; }
+  .note-body h3 { font-size: 1.05rem; }
+  .foot { flex-direction: column; gap: .75rem; }
+}
+
+.note-row { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .35s ease, border-color .25s ease, box-shadow .25s ease, background .2s ease; }
+.note-row.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="shell">
+
+  <header class="topbar">
+    <div class="brand">
+      Samrath's Coding Notes · DSA
+      <strong>Series 04</strong>
+    </div>
+    <nav class="topnav-links">
+      <a href="../index.html"><span>⌂</span>Home</a>
+      <a href="../dsa.html"><span>←</span>DSA</a>
+    </nav>
+  </header>
+
+  <div class="crumb">
+    <a href="../index.html">Home</a> &nbsp;›&nbsp;
+    <a href="../dsa.html">DSA</a> &nbsp;›&nbsp;
+    <span>DSA04</span>
+  </div>
+
+  <section class="hero">
+    <p class="hero-eyebrow">DSA · Series 04</p>
+    <h1>Searching, Linked Lists,<br>Stacks, Queues &amp; Trees</h1>
+    <p class="hero-lede">
+      The data-structure tour — binary search and its many flavours,
+      linked-list patterns, stacks and queues, and an end-to-end walk
+      through binary trees and BSTs. Eleven notes.
+    </p>
+    <div class="chips">
+      <span class="chip">11 Notes</span>
+      <span class="chip">Binary Search</span>
+      <span class="chip">Linked List</span>
+      <span class="chip">Stacks</span>
+      <span class="chip">Queues</span>
+      <span class="chip">Trees</span>
+      <span class="chip">BST</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <span class="section-num">Notes</span>
+      <h2>All chapters in this series</h2>
+    </div>
+
+    <!-- BINARY SEARCH -->
+    <div class="note-group">
+      <div class="note-group-label">Part 01 · Binary Search</div>
+      <div class="notes-list">
+        <a class="note-row" href="01-dsa-searching-1.html">
+          <div class="note-num">01</div>
+          <div class="note-body">
+            <h3>Searching 1 — Binary Search</h3>
+            <p>The mental model for binary search, plus the boilerplate that handles edge cases.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="02-dsa-binary-search-2.html">
+          <div class="note-num">02</div>
+          <div class="note-body">
+            <h3>Binary Search Problems II</h3>
+            <p>Lower-bound, upper-bound and rotated-array variants of binary search.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="03-dsa-binary-search-on-answer.html">
+          <div class="note-num">03</div>
+          <div class="note-body">
+            <h3>Binary Search on Answer</h3>
+            <p>Painter's Partition, Aggressive Cows and the "search the answer space" pattern.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- LINKED LIST -->
+    <div class="note-group">
+      <div class="note-group-label">Part 02 · Linked Lists</div>
+      <div class="notes-list">
+        <a class="note-row" href="04-dsa-oop-linked-list-intro.html">
+          <div class="note-num">04</div>
+          <div class="note-body">
+            <h3>OOP &amp; Linked List Introduction</h3>
+            <p>Classes, objects and the linked-list node — the OOP groundwork before the problems.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="05-dsa-linked-list-basic-problems.html">
+          <div class="note-num">05</div>
+          <div class="note-body">
+            <h3>Linked List — Basic Problems</h3>
+            <p>Reverse, middle, cycle detection and other essential linked-list problems.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- STACKS -->
+    <div class="note-group">
+      <div class="note-group-label">Part 03 · Stacks</div>
+      <div class="notes-list">
+        <a class="note-row" href="06-dsa-stacks-1.html">
+          <div class="note-num">06</div>
+          <div class="note-body">
+            <h3>Stacks 1 — Intro, Implementation &amp; Applications</h3>
+            <p>Building the stack from scratch and the classic applications — balanced brackets, postfix, and friends.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="07-dsa-stacks-2.html">
+          <div class="note-num">07</div>
+          <div class="note-body">
+            <h3>Stacks 2 — Advanced Problems</h3>
+            <p>Next-greater-element, largest rectangle in histogram and the monotonic-stack pattern.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- QUEUES -->
+    <div class="note-group">
+      <div class="note-group-label">Part 04 · Queues</div>
+      <div class="notes-list">
+        <a class="note-row" href="08-dsa-queues.html">
+          <div class="note-num">08</div>
+          <div class="note-body">
+            <h3>Queues — FIFO, Implementations &amp; Sliding Window Max</h3>
+            <p>Array and linked-list queues, deque and the sliding-window-maximum pattern.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- TREES -->
+    <div class="note-group">
+      <div class="note-group-label">Part 05 · Trees</div>
+      <div class="notes-list">
+        <a class="note-row" href="09-dsa-trees-1.html">
+          <div class="note-num">09</div>
+          <div class="note-body">
+            <h3>Trees 1 — Introduction, Binary Tree &amp; Traversals</h3>
+            <p>Tree terminology, the binary-tree node and the three classic traversals.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="10-dsa-trees-3-bst.html">
+          <div class="note-num">10</div>
+          <div class="note-body">
+            <h3>Trees 3 — Binary Search Tree</h3>
+            <p>BST invariants, search/insert/delete and the in-order trick.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="11-dsa-trees-lab.html">
+          <div class="note-num">11</div>
+          <div class="note-body">
+            <h3>Trees Lab — Binary Tree Problems</h3>
+            <p>A grab-bag of binary-tree problems to cement the recursion-on-trees pattern.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+  </section>
+
+  <footer class="foot">
+    <span>© Samrath · Coding Notes</span>
+    <span>DSA04 · 11 Notes</span>
+  </footer>
+</div>
+
+<script>
+  const bar = document.getElementById('progress-bar');
+  const updateBar = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    bar.style.width = max > 0 ? (h.scrollTop / max * 100) + '%' : '0%';
+  };
+  document.addEventListener('scroll', updateBar, { passive: true });
+  updateBar();
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: .08 });
+  document.querySelectorAll('.note-row').forEach(c => io.observe(c));
+</script>
+</body>
+</html>

@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL Server — Functions, Views &amp; Temp Storage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arr-cell.dim .val{opacity:.4;border-style:dashed;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:580px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+td.good{background:var(--green-soft);font-weight:700;color:var(--green);}
+td.bad{background:var(--rose-soft);font-weight:700;color:var(--rose);}
+td.mid{background:var(--accent-soft);font-weight:700;color:var(--accent);}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">SQL Server: Functions &amp; Views</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>Functions</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> Overview</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The Sample Schema</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Scalar Functions</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> The Scalar Trap</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Inline TVFs</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Multi-Statement TVFs</a>
+      </div>
+      <div class="nav-group">
+        <h4>Views</h4>
+        <a class="nav-link" href="#s07"><span class="n">07</span> Views</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> Indexed Views</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Updates &amp; SCHEMABINDING</a>
+      </div>
+      <div class="nav-group">
+        <h4>Temp Storage</h4>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Temp Tables</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Table Variables</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> The Trade-offs</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Mistakes &amp; Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// SQL Server &nbsp;·&nbsp; reusable logic, saved queries, and scratch space</p>
+      <h1>Functions, Views &amp; Temp Storage 🧰</h1>
+      <p class="lede">
+        Three toolkits for organizing SQL — and each hides a performance trade-off. <b>Functions</b> package reusable
+        logic (but scalar ones can be secretly slow). <b>Views</b> save a query behind a name (and, when indexed, can
+        materialize it). And for scratch data, you choose among <b>temp tables</b>, <b>table variables</b>, and
+        <b>CTEs</b>. Knowing <em>when</em> each is right — and when it quietly hurts — is the whole skill. No prior
+        coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🔢 <b>Scalar UDF</b></span>
+        <span class="chip">📊 <b>Table-valued</b></span>
+        <span class="chip">🪟 <b>Views</b></span>
+        <span class="chip">💾 <b>Indexed views</b></span>
+        <span class="chip">🗃️ <b>#temp vs @table</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>Overview</h2></div>
+      <p class="sec-sub">Functions return values or tables, views name a query, and temp storage holds intermediate
+        rows. They overlap — and choosing well is mostly about performance.</p>
+
+      <p>All three exist to <strong>reuse and organize</strong> logic, but they behave very differently under the
+        hood. A <strong>function</strong> is called inside a query and returns something (a value or a table). A
+        <strong>view</strong> is a saved <code>SELECT</code> you query like a table. <strong>Temp storage</strong>
+        holds a working set of rows partway through a process. The catch is that the "obvious" choice is often the
+        slow one — scalar functions, multi-statement table functions, and table variables all have well-known
+        performance pitfalls.</p>
+
+      <h3>The toolkit 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">🧰 Functions · Views · Temp</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>🔢 Scalar functions</h5>
+            <ul>
+              <li>Return one value</li>
+              <li>Called per row</li>
+              <li>Historic perf trap</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>📊 Table functions</h5>
+            <ul>
+              <li>Inline TVF (fast)</li>
+              <li>Multi-statement TVF (slow)</li>
+              <li>Return a rowset</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>🪟 Views</h5>
+            <ul>
+              <li>Named saved query</li>
+              <li>Abstraction / security</li>
+              <li>Indexed = materialized</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🗃️ Temp storage</h5>
+            <ul>
+              <li>#temp table</li>
+              <li>@table variable</li>
+              <li>CTE</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>⚖️ Trade-offs</h5>
+            <ul>
+              <li>Statistics &amp; estimates</li>
+              <li>Indexes &amp; reuse</li>
+              <li>Recompiles &amp; scope</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The theme: convenience vs the optimizer</span>
+        <p>Each tool trades developer convenience against how well the query optimizer can reason about it. The
+        recurring lesson is that the <em>set-based, inline</em> options (inline TVFs, plain views, temp tables with
+        statistics) usually let the optimizer produce good plans, while the <em>procedural, opaque</em> options
+        (scalar UDFs, multi-statement TVFs, table variables) can hide cost and mislead its estimates.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>The Sample Schema</h2></div>
+      <p class="sec-sub">Same tables. We'll wrap bonus math in a function, expose high earners as a view, and stage
+        rows in temp storage.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Table</th><th>Columns we'll use</th></tr></thead>
+          <tbody>
+            <tr><td>Employees</td><td><code>EmpId</code>, <code>Name</code>, <code>DeptId</code>, <code>Salary</code></td></tr>
+            <tr><td>Departments</td><td><code>DeptId</code>, <code>Name</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ What we'll build</span>
+        <p>A scalar function for a 10% bonus, an inline and a multi-statement version of "employees by department," a
+        view of high earners, an indexed view of per-department totals, and a batch that stages rows into a temp table
+        versus a table variable — the ideal cast for comparing the trade-offs.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Scalar Functions</h2></div>
+      <p class="sec-sub">A scalar user-defined function (UDF) takes inputs and returns a single value — usable anywhere
+        an expression is allowed.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE FUNCTION</span> dbo.fnAnnualBonus (@Salary <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>))
+<span class="kw">RETURNS</span> <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>)
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">RETURN</span> @Salary * <span class="num">0.10</span>;   <span class="cmt">-- 10% bonus</span>
+<span class="kw">END</span>;
+<span class="kw">GO</span>
+
+<span class="kw">SELECT</span> Name, dbo.fnAnnualBonus(Salary) <span class="kw">AS</span> Bonus
+<span class="kw">FROM</span> dbo.Employees;</code></pre>
+      </div>
+
+      <p>It reads cleanly and centralizes the bonus rule. For a single value or a handful of rows, it's fine. The
+        problem appears when you call it across <em>many</em> rows — the subject of the next section.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Great for reuse, risky at scale</span>
+        <p>A scalar UDF is the natural way to name a reusable calculation. But because it's invoked once per row and
+        (historically) runs as an opaque, procedural black box, using one in the <code>SELECT</code> or
+        <code>WHERE</code> of a large query can be dramatically slower than the equivalent inline expression.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>The Scalar Trap</h2></div>
+      <p class="sec-sub">The classic performance gotcha: a scalar UDF over many rows is called once per row, its cost
+        is hidden from the plan, and it can force the whole query to run single-threaded.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🐢</span><h4>Row-by-row</h4><p>Called once for every row the query touches — millions of calls for a big table.</p></div>
+        <div class="card"><span class="glyph">🕶️</span><h4>Hidden cost</h4><p>Historically the plan showed the UDF as nearly free, so the real expense was invisible.</p></div>
+        <div class="card"><span class="glyph">🚫</span><h4>Serial plans</h4><p>A scalar UDF could force the entire query to run single-threaded (no parallelism).</p></div>
+        <div class="card"><span class="glyph">🙈</span><h4>Opaque to the optimizer</h4><p>The engine couldn't see inside to estimate or optimize it well.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The fix, and what changed in SQL Server 2019</span>
+        <p>Traditionally the remedy was to <strong>avoid scalar UDFs in hot queries</strong> — inline the expression,
+        or convert the logic into an <em>inline table-valued function</em> and <code>CROSS APPLY</code> it. SQL Server
+        <strong>2019</strong> added <strong>Scalar UDF Inlining</strong>, which automatically rewrites many scalar UDFs
+        into the surrounding query so they behave like inline expressions — often a big, free speedup. Not every UDF
+        qualifies, so on any version, prefer set-based/inline logic for performance-critical paths.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Inline TVFs</h2></div>
+      <p class="sec-sub">An inline table-valued function returns a <em>table</em> from a single <code>SELECT</code>. It's
+        essentially a <strong>parameterized view</strong> — and the optimizer expands it inline, so it's fast.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE FUNCTION</span> dbo.fnEmployeesByDept (@DeptId <span class="ty">INT</span>)
+<span class="kw">RETURNS TABLE</span>            <span class="cmt">-- note: RETURNS TABLE, no BEGIN/END</span>
+<span class="kw">AS</span>
+<span class="kw">RETURN</span>
+(
+    <span class="kw">SELECT</span> EmpId, Name, Salary
+    <span class="kw">FROM</span> dbo.Employees
+    <span class="kw">WHERE</span> DeptId = @DeptId
+);
+<span class="kw">GO</span>
+
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> dbo.fnEmployeesByDept(<span class="num">1</span>);   <span class="cmt">-- query it like a table</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 An inline TVF = a view that takes parameters</span>
+        <p>Because it's a single <code>RETURN (SELECT …)</code> with no procedural body, SQL Server can <strong>inline</strong>
+        its definition into the calling query and optimize the whole thing together — just as it would with a view. That
+        means good estimates and good plans. Whenever you're tempted to write a scalar UDF or a multi-statement TVF for
+        performance-sensitive code, see if an inline TVF does the job instead.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Multi-Statement TVFs</h2></div>
+      <p class="sec-sub">A multi-statement TVF declares a table, fills it with several statements, then returns it.
+        Flexible — but historically a performance hazard because the optimizer can't see inside.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE FUNCTION</span> dbo.fnEmployeesByDeptMulti (@DeptId <span class="ty">INT</span>)
+<span class="kw">RETURNS</span> @result <span class="kw">TABLE</span> (        <span class="cmt">-- declares the shape of the returned table</span>
+    EmpId  <span class="ty">INT</span>,
+    Name   <span class="ty">NVARCHAR</span>(<span class="num">100</span>),
+    Salary <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>)
+)
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">INSERT INTO</span> @result
+    <span class="kw">SELECT</span> EmpId, Name, Salary <span class="kw">FROM</span> dbo.Employees <span class="kw">WHERE</span> DeptId = @DeptId;
+    <span class="cmt">-- ...could run more statements here...</span>
+    <span class="kw">RETURN</span>;
+<span class="kw">END</span>;</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Why multi-statement TVFs can be slow</span>
+        <p>The returned table variable is a black box to the optimizer, which historically <strong>guessed a fixed row
+        count</strong> (long assumed to be 1, later 100) regardless of how many rows it really holds. Bad estimates lead
+        to bad plans — wrong join types, too-small memory grants — especially when the function feeds a larger query. SQL
+        Server <strong>2017+</strong> added <em>interleaved execution</em>, which pauses to get a real row count for
+        multi-statement TVFs, easing this considerably.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Prefer inline whenever you can</span>
+        <p>If the logic can be written as a single <code>SELECT</code>, use an <strong>inline</strong> TVF — it's almost
+        always faster because it's optimized as part of the calling query. Reserve multi-statement TVFs for genuinely
+        procedural cases that can't be expressed inline, and be mindful of the estimate risk on older versions.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Views</h2></div>
+      <p class="sec-sub">A view is a named, saved <code>SELECT</code>. You query it like a table, but it stores no data —
+        it's just a stored definition the engine expands when used.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE VIEW</span> dbo.vwHighEarners
+<span class="kw">AS</span>
+<span class="kw">SELECT</span> EmpId, Name, Salary, DeptId
+<span class="kw">FROM</span> dbo.Employees
+<span class="kw">WHERE</span> Salary &gt; <span class="num">100000</span>;
+<span class="kw">GO</span>
+
+<span class="kw">SELECT</span> Name, Salary <span class="kw">FROM</span> dbo.vwHighEarners <span class="kw">WHERE</span> DeptId = <span class="num">1</span>;</code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🧩</span><h4>Abstraction</h4><p>Hide a complex join/filter behind a simple name so callers don't repeat it.</p></div>
+        <div class="card"><span class="glyph">🔒</span><h4>Security</h4><p>Expose only certain columns/rows; grant access to the view, not the base tables.</p></div>
+        <div class="card"><span class="glyph">🔧</span><h4>Stable interface</h4><p>Change the underlying query while callers keep using the same view name.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 A view stores a query, not data</span>
+        <p>By default a view holds <strong>no rows</strong> — each time you query it, SQL Server substitutes its
+        definition into your statement and runs it against the base tables. So a plain view doesn't make things faster;
+        it makes them <em>simpler and safer to reuse</em>. (The exception is an <strong>indexed view</strong>, which
+        does store results — next.)</p>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>Indexed Views</h2></div>
+      <p class="sec-sub">Add a unique clustered index to a view and it becomes <strong>materialized</strong> — its results
+        are physically stored and kept up to date, which can hugely speed up expensive aggregations.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE VIEW</span> dbo.vwDeptTotals
+<span class="kw">WITH SCHEMABINDING</span>          <span class="cmt">-- required for an indexed view</span>
+<span class="kw">AS</span>
+<span class="kw">SELECT</span> DeptId,
+       <span class="fn">COUNT_BIG</span>(*) <span class="kw">AS</span> EmpCount,   <span class="cmt">-- COUNT_BIG, not COUNT, is required</span>
+       <span class="fn">SUM</span>(Salary) <span class="kw">AS</span> TotalSalary
+<span class="kw">FROM</span> dbo.Employees          <span class="cmt">-- two-part name (schema.table) required</span>
+<span class="kw">GROUP BY</span> DeptId;
+<span class="kw">GO</span>
+
+<span class="cmt">-- Materialize it: the unique clustered index stores the results on disk</span>
+<span class="kw">CREATE UNIQUE CLUSTERED INDEX</span> IX_vwDeptTotals
+<span class="kw">ON</span> dbo.vwDeptTotals (DeptId);</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Materialized = precomputed and stored</span>
+        <p>An indexed view actually stores its result rows and maintains them automatically as the base data changes.
+        Queries can then read the precomputed aggregates instead of recomputing them every time — a big win for costly,
+        frequently-run rollups. The requirements are strict: <code>WITH SCHEMABINDING</code>, a unique clustered index,
+        two-part object names, <code>COUNT_BIG(*)</code> for counts, and only deterministic, allowed constructs.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Not free — writes pay the price</span>
+        <p>Because the stored results must stay correct, <strong>every insert/update/delete</strong> to the base tables
+        also maintains the indexed view — extra write cost, just like any index. Use indexed views for read-heavy
+        aggregation where the query savings clearly outweigh the write overhead, not for volatile, write-heavy tables.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Updates &amp; SCHEMABINDING</h2></div>
+      <p class="sec-sub">Simple views can be written through, and <code>SCHEMABINDING</code> locks a view to its base
+        tables' shape.</p>
+
+      <p>You can <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code> <em>through</em> a view when it maps cleanly
+        to a single base table — no aggregates, no <code>DISTINCT</code>, no <code>GROUP BY</code>, and the modification
+        touches only one underlying table. Complex or multi-table views generally aren't directly updatable (though an
+        <code>INSTEAD OF</code> trigger can make them so).</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 What SCHEMABINDING does</span>
+        <p><code>WITH SCHEMABINDING</code> binds the view (or function) to the exact schema of the objects it
+        references, so those columns/tables <strong>can't be dropped or altered</strong> in a way that would break it —
+        you'd have to drop the view first. It's <em>required</em> for indexed views and deterministic
+        schema-bound functions, and it's a good safety habit anywhere you want to prevent surprise breakage from an
+        underlying change.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ WITH CHECK OPTION</span>
+        <p>Adding <code>WITH CHECK OPTION</code> to an updatable view stops modifications that would produce rows no
+        longer visible through the view. For example, updating a row through <code>vwHighEarners</code> so its salary
+        drops below the threshold would be rejected — keeping writes consistent with the view's filter.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Temp Tables</h2></div>
+      <p class="sec-sub">A temp table (<code>#name</code>) is a real table living in <strong>tempdb</strong> for the
+        duration of your session. It behaves like any table — you can index it and it gets statistics.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Stage a working set, then reuse it several times</span>
+<span class="kw">CREATE TABLE</span> #HighEarners (
+    EmpId  <span class="ty">INT</span>,
+    Name   <span class="ty">NVARCHAR</span>(<span class="num">100</span>),
+    Salary <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>)
+);
+
+<span class="kw">INSERT INTO</span> #HighEarners
+<span class="kw">SELECT</span> EmpId, Name, Salary <span class="kw">FROM</span> dbo.Employees <span class="kw">WHERE</span> Salary &gt; <span class="num">100000</span>;
+
+<span class="kw">CREATE INDEX</span> IX_tmp <span class="kw">ON</span> #HighEarners (Salary);   <span class="cmt">-- yes, you can index it</span>
+
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> #HighEarners <span class="kw">WHERE</span> Salary &gt; <span class="num">140000</span>;
+<span class="kw">DROP TABLE</span> #HighEarners;   <span class="cmt">-- (also auto-dropped when the session ends)</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The big advantage: statistics and indexes</span>
+        <p>Because a temp table is a real table, SQL Server keeps <strong>statistics</strong> on it and you can add
+        <strong>indexes</strong> — so the optimizer estimates its row counts accurately and joins to it efficiently.
+        That makes temp tables the right choice for <em>large</em> intermediate results that you'll reference several
+        times. The cost is more tempdb usage and potential recompiles as statistics change.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Table Variables</h2></div>
+      <p class="sec-sub">A table variable (<code>@name</code>) also holds rows, but it's a lighter, batch-scoped
+        construct with limited statistics — great for small sets, risky for large ones.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">DECLARE</span> @HighEarners <span class="kw">TABLE</span> (
+    EmpId  <span class="ty">INT</span>,
+    Name   <span class="ty">NVARCHAR</span>(<span class="num">100</span>),
+    Salary <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>)
+);
+
+<span class="kw">INSERT INTO</span> @HighEarners
+<span class="kw">SELECT</span> EmpId, Name, Salary <span class="kw">FROM</span> dbo.Employees <span class="kw">WHERE</span> Salary &gt; <span class="num">100000</span>;
+
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> @HighEarners;</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The estimate pitfall</span>
+        <p>Historically the optimizer assumed a table variable held <strong>one row</strong> regardless of reality,
+        because it doesn't maintain column statistics on them. Feed a large table variable into a join and you can get a
+        badly wrong plan. SQL Server <strong>2019+</strong> added <em>table-variable deferred compilation</em>, which
+        gets a real row count on first use and improves estimates — but on any version, table variables remain best for
+        <em>small</em> result sets.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Where table variables shine</span>
+        <p>They cause <strong>fewer recompiles</strong>, are convenient in functions (a multi-statement TVF returns
+        one), and are simple for small, well-bounded sets. And unlike temp tables, changes to a table variable are
+        <strong>not rolled back</strong> by a transaction rollback — occasionally useful (e.g., to keep audit rows) but
+        also a surprise to watch for.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>The Trade-offs</h2></div>
+      <p class="sec-sub">CTE, table variable, or temp table? The decision comes down to size, reuse, and whether the
+        optimizer needs accurate statistics.</p>
+
+      <h3>Which scratch space should I use? 🧭</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <span class="st-icon">📖</span>
+          <b>Just naming a step for readability within one query?</b>
+          <small>Use a <b>CTE</b> — no storage, purely a named subquery (see the CTE topic).</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🪶</span>
+          <b>Small result, used across a few statements, estimates don't matter much?</b>
+          <small>Use a <b>table variable</b> (<code>@t</code>) — light, fewer recompiles.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <span class="st-icon">🗃️</span>
+          <b>Large result, reused several times, needs indexes / good estimates?</b>
+          <small>Use a <b>temp table</b> (<code>#t</code>) — real statistics and indexes.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">💾</span>
+          <b>Expensive aggregation read constantly, base data changes rarely?</b>
+          <small>Consider an <b>indexed view</b> — precomputed and maintained.</small>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>CTE</th><th>Table variable (@t)</th><th>Temp table (#t)</th></tr></thead>
+          <tbody>
+            <tr><td>Stores data?</td><td class="bad">No (inline query)</td><td class="mid">Yes (in memory/tempdb)</td><td class="good">Yes (tempdb)</td></tr>
+            <tr><td>Scope</td><td>One statement</td><td>The batch</td><td>The session</td></tr>
+            <tr><td>Statistics?</td><td>—</td><td class="bad">No (poor estimates)</td><td class="good">Yes</td></tr>
+            <tr><td>Indexes?</td><td class="bad">No</td><td>Limited (via constraints)</td><td class="good">Yes, freely</td></tr>
+            <tr><td>Best for</td><td>Readability, recursion</td><td>Small sets</td><td>Large / reused sets</td></tr>
+            <tr><td>Rolled back by transaction?</td><td>—</td><td class="bad">No</td><td class="good">Yes</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The one-line heuristic</span>
+        <p><strong>CTE</strong> for readability in a single query; <strong>table variable</strong> for small sets;
+        <strong>temp table</strong> for large or heavily-reused sets where the optimizer needs real statistics. When a
+        query that uses a table variable is mysteriously slow on big data, swapping to a temp table is the classic fix.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Mistakes &amp; Best Practices</h2></div>
+      <p class="sec-sub">The habits that keep these tools fast and predictable.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🐢</span><h4>Avoid scalar UDFs in hot paths</h4><p>Inline the expression or use an inline TVF; rely on 2019 UDF inlining only where it applies.</p></div>
+        <div class="card"><span class="glyph">📊</span><h4>Prefer inline TVFs</h4><p>Over multi-statement TVFs — they optimize as part of the calling query.</p></div>
+        <div class="card"><span class="glyph">🗃️</span><h4>Temp table for big sets</h4><p>When a table variable's poor estimates cause bad plans, switch to a <code>#temp</code> table.</p></div>
+        <div class="card"><span class="glyph">💾</span><h4>Indexed views cost writes</h4><p>Use them for read-heavy aggregations, not volatile write-heavy tables.</p></div>
+        <div class="card"><span class="glyph">🔒</span><h4>SCHEMABINDING for safety</h4><p>Prevents underlying changes from silently breaking views/functions; required for indexed views.</p></div>
+        <div class="card"><span class="glyph">📖</span><h4>CTE for clarity, not caching</h4><p>A CTE is a named subquery, not stored — a heavily reused one may recompute; use a temp table instead.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The convenient default is often the slow one</span>
+        <p>Scalar UDFs, multi-statement TVFs, and table variables are all easy to reach for and all carry a
+        performance footgun at scale. When something is unexpectedly slow, check whether one of these is hiding a
+        row-by-row execution or a bad cardinality estimate — and reach for the inline/set-based/temp-table alternative.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea, then a full cheat-sheet table.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🔢 Scalar UDF</h4><p>Returns one value; convenient but slow per-row (better since 2019 inlining).</p></div>
+        <div class="recap-card"><h4>📊 Inline TVF</h4><p>Returns a table from one SELECT; a parameterized view — fast.</p></div>
+        <div class="recap-card"><h4>🧱 Multi-statement TVF</h4><p>Builds a table procedurally; opaque estimates, often slower.</p></div>
+        <div class="recap-card"><h4>🪟 View</h4><p>A saved, named SELECT; stores no data by itself.</p></div>
+        <div class="recap-card"><h4>💾 Indexed view</h4><p>Materialized results, maintained on writes; speeds aggregations.</p></div>
+        <div class="recap-card"><h4>🔒 SCHEMABINDING</h4><p>Locks a view/function to base-table shape; required for indexed views.</p></div>
+        <div class="recap-card"><h4>🗃️ Temp table</h4><p>Real tempdb table; has statistics and indexes; for large/reused sets.</p></div>
+        <div class="recap-card"><h4>🪶 Table variable</h4><p>Light, batch-scoped; poor estimates; best for small sets.</p></div>
+        <div class="recap-card"><h4>📖 CTE</h4><p>Named subquery for one statement; readability, not storage.</p></div>
+        <div class="recap-card"><h4>⚖️ Choose by size</h4><p>CTE → readability; @t → small; #t → large/reused.</p></div>
+      </div>
+
+      <h3>Full summary table</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Tool</th><th>Returns / holds</th><th>Key point</th></tr></thead>
+          <tbody>
+            <tr><td>Scalar function</td><td>One value</td><td>Row-by-row cost; prefer inline expressions/TVFs at scale</td></tr>
+            <tr><td>Inline TVF</td><td>A table (one SELECT)</td><td>Parameterized view; optimized inline — the fast table function</td></tr>
+            <tr><td>Multi-statement TVF</td><td>A table (built procedurally)</td><td>Opaque row estimates; use only when inline can't express it</td></tr>
+            <tr><td>View</td><td>A saved query</td><td>Abstraction/security; no stored data</td></tr>
+            <tr><td>Indexed view</td><td>Materialized results</td><td>Fast reads, extra write cost; strict requirements</td></tr>
+            <tr><td>Temp table (#t)</td><td>Rows in tempdb (session)</td><td>Statistics + indexes; large/reused sets</td></tr>
+            <tr><td>Table variable (@t)</td><td>Rows (batch)</td><td>Light, few recompiles; poor estimates → small sets</td></tr>
+            <tr><td>CTE</td><td>Named subquery (statement)</td><td>Readability/recursion; not stored, may recompute</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What is a user-defined function? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A reusable routine you create that takes inputs and returns either a single value (a scalar
+        function) or a table (a table-valued function). You call it inside queries to package logic — like a bonus
+        calculation or a parameterized result set — so it lives in one place instead of being repeated.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> What is a scalar function? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A user-defined function that returns one single value, usable anywhere an expression is allowed —
+        in a <code>SELECT</code> list, a <code>WHERE</code> clause, and so on. For example, a function that takes a salary
+        and returns 10% of it. Handy for reuse, but it can be slow when called across many rows.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> What is a view? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A named, saved <code>SELECT</code> statement that you query as if it were a table. It doesn't store
+        data on its own — each time you use it, SQL Server runs its underlying query. Views are used to simplify complex
+        queries, provide a stable interface, and control which columns/rows users can see.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> What is a temp table? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A real but temporary table (named with a <code>#</code> prefix) stored in the tempdb database for the
+        life of your session. You can insert into it, index it, and query it like any table, and it's automatically dropped
+        when the session ends. It's used to hold intermediate results during a multi-step process.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> What is a table variable? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A variable that holds a set of rows, declared with <code>DECLARE @name TABLE (…)</code>. It's similar to
+        a temp table but lighter and scoped to the current batch. It's best for small result sets; for large ones it can
+        cause poor query plans because the optimizer doesn't keep detailed statistics on it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What is a table-valued function? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A user-defined function that returns a table instead of a single value, so you can query its result
+        like a table (often with a parameter). There are two kinds: inline (a single <code>SELECT</code>, like a parameterized
+        view) and multi-statement (builds the table with several statements). Inline ones perform much better.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> How is a view different from a table? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A table stores actual rows on disk; a view is just a saved query with no data of its own. When you
+        query a view, the engine runs its underlying <code>SELECT</code> against the real tables. (The one exception is an
+        indexed view, which does store its results.)</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> Does a view store data? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Normally no — a view stores a query definition, not rows, and is evaluated each time you use it. The
+        exception is an <em>indexed view</em>, which has a unique clustered index and physically stores (materializes) its
+        results, kept in sync as the base data changes.</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q09</span> What's the difference between a scalar and a table-valued function? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A scalar function returns a single value (used in expressions); a table-valued function returns a set
+        of rows (used in the <code>FROM</code> clause like a table). Table-valued functions come in inline and multi-statement
+        forms. Performance-wise, scalar UDFs and multi-statement TVFs have historic pitfalls, while inline TVFs optimize
+        well.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> Inline vs multi-statement TVF — what's the difference? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>An inline TVF is a single <code>RETURN (SELECT …)</code> with no procedural body — essentially a
+        parameterized view that the optimizer expands and optimizes inline, so it's fast. A multi-statement TVF declares a
+        table variable, fills it with several statements, and returns it; the optimizer can't see inside and historically
+        misestimated its row count, often producing slower plans. Prefer inline whenever the logic allows.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> What is the scalar function performance problem? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A scalar UDF used across many rows is invoked once per row, its cost was hidden from the execution plan
+        (so it looked cheap), it could force the whole query to run single-threaded, and the optimizer couldn't see inside it
+        to optimize. The result is queries that are far slower than the equivalent inline expression. SQL Server 2019's scalar
+        UDF inlining automatically fixes many cases by rewriting the UDF into the query.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> What is an indexed (materialized) view? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A view with a unique clustered index, which causes SQL Server to physically store its result rows and
+        keep them updated as the base tables change. Queries can then read the precomputed results — great for expensive,
+        frequently-run aggregations. It requires <code>WITH SCHEMABINDING</code>, <code>COUNT_BIG(*)</code>, two-part names, and
+        deterministic constructs, and it adds maintenance cost to every base-table write.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> Temp table vs table variable — key differences? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Both hold rows in tempdb, but a temp table (<code>#t</code>) is a full table with statistics and
+        indexes and session scope, so the optimizer estimates it accurately — ideal for large or reused sets. A table variable
+        (<code>@t</code>) is lighter, batch-scoped, has no column statistics (historically estimated as one row), causes fewer
+        recompiles, and isn't affected by transaction rollback — best for small sets.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> When would you use a CTE versus a temp table? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Use a CTE to make a single query readable (or for recursion) — it's a named subquery with no stored
+        data and one-statement scope. Use a temp table when a large intermediate result is expensive to compute and you'll
+        reference it multiple times, because it stores the rows once and gives the optimizer statistics. A heavily reused CTE
+        may be recomputed each reference, which a temp table avoids.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> What is SCHEMABINDING? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>WITH SCHEMABINDING</code> binds a view or function to the schema of the objects it references, so
+        those tables/columns can't be dropped or altered in a way that would break it — you'd have to drop the view/function
+        first. It's required for indexed views and for schema-bound deterministic functions, and it's a useful safeguard against
+        accidental breaking changes.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> Can you update data through a view? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Yes, if the view is simple enough — it maps to a single base table with no aggregates,
+        <code>DISTINCT</code>, or <code>GROUP BY</code>, and the modification affects only that one table. Complex or multi-table
+        views generally aren't directly updatable unless you add an <code>INSTEAD OF</code> trigger. <code>WITH CHECK OPTION</code>
+        can prevent updates that would push a row outside the view's filter.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q17</span> Why are scalar UDFs historically slow, and what changed in 2019? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Before 2019, a scalar UDF executed as a separate, procedural black box invoked once per row: its cost
+        wasn't reflected in the plan, it prevented parallelism (forcing serial execution), and the optimizer couldn't inline or
+        estimate it, so it often produced far more work than an equivalent expression. SQL Server 2019 introduced <strong>Scalar
+        UDF Inlining</strong>, which transforms qualifying scalar UDFs into relational expressions embedded in the calling query
+        — restoring costing, parallelism, and set-based optimization. Not all UDFs qualify, so avoiding them in hot paths remains
+        good practice.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> Why prefer inline TVFs over multi-statement TVFs? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>An inline TVF is expanded into the calling query and optimized as a whole, so it gets accurate estimates
+        and can use indexes on the base tables directly — effectively a parameterized view. A multi-statement TVF materializes rows
+        into a returned table variable that the optimizer treats opaquely, historically guessing a fixed cardinality (1, later 100),
+        which produces poor plans when the function feeds a larger query. Interleaved execution (2017+) helps multi-statement TVFs by
+        obtaining a real row count, but inline remains the faster default.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> What are the requirements and trade-offs of indexed views? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Requirements: the view must be created <code>WITH SCHEMABINDING</code>, reference base tables by two-part
+        names, use <code>COUNT_BIG(*)</code> (not <code>COUNT</code>) if aggregating, avoid non-deterministic and disallowed
+        constructs (many outer joins, subqueries, <code>DISTINCT</code>, etc.), and have a unique clustered index as its first index.
+        Trade-off: reads of the precomputed results are fast (and Enterprise editions can auto-match queries to the view), but every
+        base-table modification must maintain the view, adding write overhead. Best for read-heavy aggregation over relatively stable
+        data.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> Temp table vs table variable — statistics, recompiles, tempdb, transactions? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Temp tables have full statistics (accurate estimates), support indexes, live in tempdb, participate in
+        transactions (rolled back on rollback), but their statistics changes can trigger recompiles. Table variables lack column
+        statistics (leading to poor estimates on large sets, mitigated by 2019 deferred compilation), support only limited indexing via
+        constraints, cause fewer recompiles, also use tempdb, and are <em>not</em> affected by transaction rollback. So: temp table for
+        large/reused sets needing good plans; table variable for small sets or when you want to avoid recompiles or preserve rows across a
+        rollback.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> When does a table variable's cardinality estimate hurt, and how do you mitigate it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>It hurts when the table variable holds many rows and feeds a join or aggregation: the optimizer's
+        low estimate leads to nested-loops where a hash join was needed, tiny memory grants and spills, and generally bad plans.
+        Mitigations: switch to a temp table (real statistics); on 2019+ rely on table-variable deferred compilation; add an
+        <code>OPTION (RECOMPILE)</code> on the statement so it's optimized with the actual row count; or, for multi-statement TVFs,
+        lean on interleaved execution. The most reliable fix for large sets is simply the temp table.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> What are the benefits and pitfalls of using views for security and abstraction? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Benefits: a view can expose a curated subset of columns/rows and be granted independently of the base
+        tables, giving a clean abstraction and a stable interface that shields callers from schema changes. Pitfalls: views don't
+        inherently improve performance (a plain view is just its query), and nesting views deeply or layering them can produce
+        surprisingly complex plans and make it hard to see the real cost. Column-level security and row-level security features are often a
+        better fit than relying solely on views for access control, and over-abstraction can obscure performance problems.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> How do determinism and SCHEMABINDING relate to functions and indexed views? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A function is deterministic if it always returns the same output for the same input (no dependence on
+        <code>GETDATE()</code>, randomness, etc.). Determinism plus <code>SCHEMABINDING</code> lets a function/view be used in places that
+        require stability — most notably, an <strong>indexed view</strong> (and computed columns you want to index) must be schema-bound and
+        built only from deterministic, precise constructs, so its stored results can be reliably maintained. <code>SCHEMABINDING</code> also
+        prevents underlying schema changes from silently invalidating the object.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> How do you choose among CTE, temp table, table variable, and indexed view for a workload? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Match the tool to the need. A <strong>CTE</strong> when you only need to structure/readability a single query
+        (or recurse), with no reuse concern. A <strong>table variable</strong> for small intermediate sets where estimate accuracy doesn't
+        matter and you want fewer recompiles. A <strong>temp table</strong> when the intermediate set is large or referenced multiple times
+        and the optimizer needs statistics/indexes to plan well. An <strong>indexed view</strong> when a costly aggregation is read very
+        frequently over data that changes rarely, so precomputation pays off despite the write cost. In short: readability → CTE; small → @t;
+        large/reused → #t; hot aggregation on stable data → indexed view.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions establish what each object is; <strong>Mid</strong> questions test the key
+        distinctions (scalar vs TVF, inline vs multi-statement, temp table vs table variable, SCHEMABINDING); <strong>Senior</strong>
+        questions probe the performance internals (UDF inlining, cardinality estimates, indexed-view requirements, determinism, and
+        workload-based choice). Say each answer out loud in plain English — the ones you stumble on point straight to the section to
+        re-read.</p>
+      </div>
+
+      <p class="foot">Concepts verified against Microsoft Learn (<code>CREATE FUNCTION</code>, inline and multi-statement table-valued
+        functions, scalar UDF inlining, <code>CREATE VIEW</code> and indexed views, and the temp-table/table-variable guidance). Scalar UDF
+        inlining and table-variable deferred compilation arrived in SQL Server 2019; interleaved execution for multi-statement TVFs in 2017.
+        Otherwise these features are stable across supported versions (through 2025 / 17.x). This single <code>14-sql-functions-views.html</code>
+        file is fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

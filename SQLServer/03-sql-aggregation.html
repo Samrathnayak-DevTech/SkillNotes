@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL Server — Aggregation: GROUP BY &amp; HAVING</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arr-cell.dim .val{opacity:.4;border-style:dashed;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+td.nullcell{color:var(--rose);font-family:"JetBrains Mono",monospace;font-size:.82rem;}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">SQL Server: Aggregation</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>Foundations</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> What Aggregation Is</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The Sample Schema</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Aggregate Functions</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> COUNT in Detail</a>
+      </div>
+      <div class="nav-group">
+        <h4>Grouping &amp; Filtering</h4>
+        <a class="nav-link" href="#s05"><span class="n">05</span> GROUP BY</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> The Golden Rule</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> HAVING</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> WHERE vs HAVING</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Order of Execution</a>
+      </div>
+      <div class="nav-group">
+        <h4>Nuances</h4>
+        <a class="nav-link" href="#s10"><span class="n">10</span> NULLs in Aggregates</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> GROUP BY vs DISTINCT</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Aggregates + JOINs</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Rollups &amp; Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// SQL Server &nbsp;·&nbsp; turning many rows into meaningful summaries</p>
+      <h1>Aggregation: GROUP BY &amp; HAVING 📊</h1>
+      <p class="lede">
+        So far you've selected and joined individual rows. <b>Aggregation</b> is the opposite move: it
+        <b>collapses many rows into summary values</b> — a count, a total, an average. <b>GROUP BY</b> lets you
+        summarize per category (per department, per month), and <b>HAVING</b> filters those groups. Master the
+        difference between filtering rows (<b>WHERE</b>) and filtering groups (<b>HAVING</b>) and you've got the
+        heart of every report and dashboard. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🔢 <b>COUNT / SUM</b></span>
+        <span class="chip">📐 <b>AVG / MIN / MAX</b></span>
+        <span class="chip">🗂️ <b>GROUP BY</b></span>
+        <span class="chip">🚦 <b>HAVING</b></span>
+        <span class="chip">⚖️ <b>WHERE vs HAVING</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>What Aggregation Is</h2></div>
+      <p class="sec-sub">Every query you've written so far returns one output row per input row. Aggregation
+        breaks that rule on purpose — it boils many rows down to a single summary number.</p>
+
+      <p>Imagine a stack of 500 sales receipts. A normal query hands you back all 500. But the questions people
+        actually ask are summaries: "How many receipts are there?" "What's the total?" "What's the average sale?"
+        Answering those means <strong>combining</strong> many rows into one value. That combining is
+        <strong>aggregation</strong>, and the tools that do it are <strong>aggregate functions</strong> like
+        <code>COUNT</code>, <code>SUM</code>, and <code>AVG</code>.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🧾 Analogy</span>
+        <p>Aggregation is the <strong>subtotal at the bottom of a receipt</strong>. The individual line items are
+        your rows; the "Total: $84.20" and "Items: 7" at the bottom are aggregates. <code>GROUP BY</code> is like
+        printing a subtotal <em>per category</em> — one for groceries, one for household, one for snacks — instead
+        of one grand total.</p>
+      </div>
+
+      <h3>The aggregation toolkit 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">📊 Aggregation</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>🔢 Functions</h5>
+            <ul>
+              <li><code>COUNT</code> how many</li>
+              <li><code>SUM</code> total</li>
+              <li><code>AVG</code> average</li>
+              <li><code>MIN</code> / <code>MAX</code> smallest / largest</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>🗂️ GROUP BY</h5>
+            <ul>
+              <li>Splits rows into buckets</li>
+              <li>One summary row per group</li>
+              <li>e.g. per department</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>🚦 HAVING</h5>
+            <ul>
+              <li>Filters whole groups</li>
+              <li>Runs after grouping</li>
+              <li>Can see aggregates</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>⚖️ WHERE</h5>
+            <ul>
+              <li>Filters rows first</li>
+              <li>Runs before grouping</li>
+              <li>Cannot see aggregates</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>👻 NULLs</h5>
+            <ul>
+              <li>Ignored by aggregates</li>
+              <li>Except <code>COUNT(*)</code></li>
+              <li>Watch the averages</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The core shift in thinking</span>
+        <p>Normal query: <em>row in → row out</em>. Aggregate query: <em>many rows in → one row out</em> (or one
+        row <em>per group</em>). Once you group, you can no longer show plain per-row columns unless they're part
+        of the grouping — a rule we'll unpack in section 06.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>The Sample Schema</h2></div>
+      <p class="sec-sub">The same little company database from the earlier notes, so every total and average below
+        maps to rows you can picture.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Departments</th><th>Employees (Dept · Manager · Salary)</th><th>Orders (Emp · Amount)</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>1 · Engineering<br>2 · Sales<br>3 · Support</td>
+              <td>1 · Ada · D1 · Mgr — · 145,000<br>2 · Alan · D1 · Mgr 1 · 98,000<br>3 · Grace · D2 · Mgr — · 120,000</td>
+              <td>101 · Emp 2 · 499.99<br>102 · Emp 3 · 1250.00<br>103 · Emp 2 · 75.50</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Keep these edge cases in view</span>
+        <p><strong>Support</strong> has no employees, and only <strong>Alan</strong> has a manager (Ada and Grace
+        have <code>NULL</code> managers). These make <code>COUNT</code> and grouping behave in the instructive ways
+        you'll see below.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Aggregate Functions</h2></div>
+      <p class="sec-sub">Five workhorses cover almost everything. Each takes a whole set of values and returns one.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔢</span><h4>COUNT</h4><p>How many rows (or non-NULL values). <code>COUNT(*)</code> counts rows; <code>COUNT(col)</code> counts non-NULLs.</p></div>
+        <div class="card"><span class="glyph">➕</span><h4>SUM</h4><p>Adds up all the values in a numeric column. Ignores NULLs.</p></div>
+        <div class="card"><span class="glyph">📐</span><h4>AVG</h4><p>The mean: SUM ÷ count of non-NULL values. NULLs are skipped, not treated as zero.</p></div>
+        <div class="card"><span class="glyph">⬇️</span><h4>MIN</h4><p>The smallest value — works on numbers, dates, and text.</p></div>
+        <div class="card"><span class="glyph">⬆️</span><h4>MAX</h4><p>The largest value — also works on numbers, dates, and text.</p></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Whole-table summary: one row of numbers describing all employees</span>
+<span class="kw">SELECT</span>
+    <span class="fn">COUNT</span>(*)      <span class="kw">AS</span> Headcount,
+    <span class="fn">SUM</span>(Salary)   <span class="kw">AS</span> TotalPay,
+    <span class="fn">AVG</span>(Salary)   <span class="kw">AS</span> AvgPay,
+    <span class="fn">MIN</span>(Salary)   <span class="kw">AS</span> LowestPay,
+    <span class="fn">MAX</span>(Salary)   <span class="kw">AS</span> HighestPay
+<span class="kw">FROM</span> dbo.Employees;</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Headcount</th><th>TotalPay</th><th>AvgPay</th><th>LowestPay</th><th>HighestPay</th></tr></thead>
+          <tbody><tr><td>3</td><td>363,000</td><td>121,000</td><td>98,000</td><td>145,000</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Integer division surprise</span>
+        <p>If you <code>AVG</code> an <strong>integer</strong> column, SQL Server does integer math and drops the
+        decimals (e.g., <code>AVG</code> of 3 and 4 gives 3, not 3.5). To get a decimal average, cast first:
+        <code>AVG(CAST(col AS DECIMAL(19,4)))</code>. Our <code>Salary</code> is already <code>DECIMAL</code>, so
+        it's fine.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>COUNT in Detail</h2></div>
+      <p class="sec-sub">COUNT has three forms that give three different answers. Confusing them is one of the most
+        common interview stumbles.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">SELECT</span>
+    <span class="fn">COUNT</span>(*)                <span class="kw">AS</span> AllRows,       <span class="cmt">-- every row, NULLs included</span>
+    <span class="fn">COUNT</span>(ManagerId)        <span class="kw">AS</span> WithManager,   <span class="cmt">-- non-NULL ManagerId values only</span>
+    <span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> DeptId)  <span class="kw">AS</span> DistinctDepts <span class="cmt">-- unique department values</span>
+<span class="kw">FROM</span> dbo.Employees;</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>AllRows</th><th>WithManager</th><th>DistinctDepts</th></tr></thead>
+          <tbody><tr><td>3</td><td>1</td><td>2</td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Why these numbers? <code>COUNT(*)</code> = 3 (all employees). <code>COUNT(ManagerId)</code> = 1 because
+        only Alan has a manager — Ada's and Grace's <code>ManagerId</code> are <code>NULL</code>, and
+        <code>COUNT(column)</code> skips NULLs. <code>COUNT(DISTINCT DeptId)</code> = 2 because employees span only
+        Engineering and Sales (two distinct departments).</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 The three COUNTs</span>
+        <p><code>COUNT(*)</code> — number of <strong>rows</strong>, regardless of NULLs.
+        <code>COUNT(column)</code> — number of <strong>non-NULL values</strong> in that column.
+        <code>COUNT(DISTINCT column)</code> — number of <strong>unique non-NULL values</strong>. Interviewers love
+        asking the difference, because it reveals whether you understand how NULLs flow through aggregates.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>GROUP BY</h2></div>
+      <p class="sec-sub">Instead of one summary for the whole table, <code>GROUP BY</code> gives you one summary
+        <em>per category</em>.</p>
+
+      <p><code>GROUP BY</code> sorts rows into buckets that share the same value, then runs your aggregate once
+        per bucket. "Headcount per department" means: bucket employees by <code>DeptId</code>, then
+        <code>COUNT(*)</code> inside each bucket.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- One row per department, with that department's headcount</span>
+<span class="kw">SELECT</span> DeptId, <span class="fn">COUNT</span>(*) <span class="kw">AS</span> Headcount, <span class="fn">AVG</span>(Salary) <span class="kw">AS</span> AvgPay
+<span class="kw">FROM</span> dbo.Employees
+<span class="kw">GROUP BY</span> DeptId;</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>DeptId</th><th>Headcount</th><th>AvgPay</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>2</td><td>121,500</td></tr>
+            <tr><td>2</td><td>1</td><td>120,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="diagram-box">
+        <div class="cap">GROUP BY buckets the rows, then aggregates each bucket</div>
+        <div class="arr-row">
+          <div class="arr-cell highlight-green"><div class="val">Ada · Alan<br>(Dept 1)</div><div class="idx">bucket 1</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight"><div class="val">Dept 1<br>count 2</div><div class="idx">one row</div></div>
+        </div>
+        <div class="arr-row" style="margin-top:14px;">
+          <div class="arr-cell highlight-blue"><div class="val">Grace<br>(Dept 2)</div><div class="idx">bucket 2</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight"><div class="val">Dept 2<br>count 1</div><div class="idx">one row</div></div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Support is missing again</span>
+        <p>Support (Dept 3) doesn't appear — it has no employee rows, so there's no bucket for it. To show
+        zero-count groups you must start from <code>Departments</code> and <code>LEFT JOIN</code> the employees
+        (see section 12). This is the aggregation cousin of the "INNER JOIN drops unmatched rows" idea.</p>
+      </div>
+
+      <h3>Grouping by more than one column</h3>
+      <p>You can group by several columns at once — the buckets are then every unique <em>combination</em>. For
+        example, <code>GROUP BY DeptId, HireYear</code> gives one row per department-per-year.</p>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>The Golden Rule</h2></div>
+      <p class="sec-sub">Once you use <code>GROUP BY</code>, every column in your <code>SELECT</code> must be either
+        grouped or aggregated — no exceptions.</p>
+
+      <p>Here's the logic: after grouping, each output row represents a <em>whole bucket</em> of rows. If you ask
+        for a plain column that isn't in the <code>GROUP BY</code>, SQL Server can't know <em>which</em> row's value
+        to show — the bucket may hold many different values. So it refuses.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- ❌ ERROR: Name is neither grouped nor aggregated.</span>
+<span class="cmt">-- Which of the two Engineering names should this row show? Ambiguous.</span>
+<span class="kw">SELECT</span> DeptId, Name, <span class="fn">COUNT</span>(*) <span class="kw">AS</span> Headcount
+<span class="kw">FROM</span> dbo.Employees
+<span class="kw">GROUP BY</span> DeptId;
+
+<span class="cmt">-- ✅ FIX 1: group by Name too (one row per dept + name combination)</span>
+<span class="kw">SELECT</span> DeptId, Name, <span class="fn">COUNT</span>(*) <span class="kw">AS</span> Headcount
+<span class="kw">FROM</span> dbo.Employees
+<span class="kw">GROUP BY</span> DeptId, Name;
+
+<span class="cmt">-- ✅ FIX 2: aggregate it, so the bucket collapses to one value</span>
+<span class="kw">SELECT</span> DeptId, <span class="fn">MAX</span>(Name) <span class="kw">AS</span> AnyName, <span class="fn">COUNT</span>(*) <span class="kw">AS</span> Headcount
+<span class="kw">FROM</span> dbo.Employees
+<span class="kw">GROUP BY</span> DeptId;</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The rule in one line</span>
+        <p>Every non-aggregated column in <code>SELECT</code> <strong>must</strong> appear in <code>GROUP BY</code>.
+        If you want a column's value without grouping by it, wrap it in an aggregate (like <code>MAX()</code>). This
+        is the error beginners hit most: <em>"Column is invalid in the select list because it is not contained in
+        either an aggregate function or the GROUP BY clause."</em></p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>HAVING</h2></div>
+      <p class="sec-sub">A filter that runs <em>after</em> grouping, so it can test aggregate results — something
+        <code>WHERE</code> cannot do.</p>
+
+      <p>Once you've produced one summary row per group, you often want to keep only some of those groups: "only
+        departments with more than one employee," "only months where sales exceeded 10,000." That's a filter on the
+        <em>group's aggregate</em>, and it lives in the <code>HAVING</code> clause.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Departments that have MORE THAN ONE employee</span>
+<span class="kw">SELECT</span> DeptId, <span class="fn">COUNT</span>(*) <span class="kw">AS</span> Headcount
+<span class="kw">FROM</span> dbo.Employees
+<span class="kw">GROUP BY</span> DeptId
+<span class="kw">HAVING</span> <span class="fn">COUNT</span>(*) &gt; <span class="num">1</span>;</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>DeptId</th><th>Headcount</th></tr></thead>
+          <tbody><tr><td>1</td><td>2</td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Engineering (Dept 1) has two employees and stays; Sales (Dept 2) has one and is filtered out. Notice we
+        filtered on <code>COUNT(*)</code> — an aggregate — which only <code>HAVING</code> can do.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 HAVING is "WHERE for groups"</span>
+        <p><code>WHERE</code> asks "should this <em>row</em> be included?" <code>HAVING</code> asks "should this
+        <em>group</em> be included?" Because groups don't exist until after <code>GROUP BY</code> runs,
+        <code>HAVING</code> is the only place you can reference an aggregate like <code>SUM()</code> or
+        <code>COUNT()</code> in a filter.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>WHERE vs HAVING</h2></div>
+      <p class="sec-sub">The single most important distinction in this topic — and a guaranteed interview question.</p>
+
+      <p><code>WHERE</code> filters <strong>individual rows before</strong> they're grouped. <code>HAVING</code>
+        filters <strong>whole groups after</strong> aggregation. Using both together is common and powerful: trim
+        the rows first, group what's left, then trim the groups.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">SELECT</span> DeptId, <span class="fn">AVG</span>(Salary) <span class="kw">AS</span> AvgPay
+<span class="kw">FROM</span> dbo.Employees
+<span class="kw">WHERE</span>  Salary &gt; <span class="num">50000</span>          <span class="cmt">-- 1. drop low-paid rows BEFORE grouping</span>
+<span class="kw">GROUP BY</span> DeptId                    <span class="cmt">-- 2. bucket the survivors by department</span>
+<span class="kw">HAVING</span> <span class="fn">AVG</span>(Salary) &gt; <span class="num">120000</span>;   <span class="cmt">-- 3. keep only high-average groups</span></code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>DeptId</th><th>AvgPay</th></tr></thead>
+          <tbody><tr><td>1</td><td>121,500</td></tr></tbody>
+        </table>
+      </div>
+
+      <p>All three salaries survive the <code>WHERE</code> (all &gt; 50,000). Grouped by department, Engineering
+        averages 121,500 and Sales 120,000. The <code>HAVING AVG(Salary) &gt; 120000</code> keeps Engineering and
+        drops Sales.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>WHERE</th><th>HAVING</th></tr></thead>
+          <tbody>
+            <tr><td>Filters</td><td>Individual rows</td><td>Whole groups</td></tr>
+            <tr><td>Runs</td><td>Before <code>GROUP BY</code></td><td>After <code>GROUP BY</code></td></tr>
+            <tr><td>Can use aggregates?</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Typical use</td><td>"only orders from 2024"</td><td>"only groups totaling over $1,000"</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Performance nudge</span>
+        <p>Put a condition in <code>WHERE</code> whenever you <em>can</em> — filtering rows early means fewer rows
+        to group, which is faster. Reserve <code>HAVING</code> for conditions that genuinely need an aggregate
+        (something you can only know after grouping).</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Order of Execution</h2></div>
+      <p class="sec-sub">SQL runs clauses in a fixed <em>logical</em> order that is different from how you write
+        them. This one diagram explains almost every "why can't I…?" question in aggregation.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <span class="st-icon">📁</span>
+          <b>1. FROM / JOIN</b>
+          <small>Assemble the raw rows from the tables (apply joins).</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">⚖️</span>
+          <b>2. WHERE</b>
+          <small>Filter individual rows. Aggregates don't exist yet, so you can't use them here.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <span class="st-icon">🗂️</span>
+          <b>3. GROUP BY</b>
+          <small>Collapse the surviving rows into groups. Aggregates are computed now.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🚦</span>
+          <b>4. HAVING</b>
+          <small>Filter whole groups. Aggregates now exist, so this is where you test them.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🎯</span>
+          <b>5. SELECT</b>
+          <small>Pick columns and compute expressions. Column aliases are created here.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🔀</span>
+          <b>6. ORDER BY</b>
+          <small>Sort the final result. Because it runs last, it <em>can</em> use SELECT aliases.</small>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 This order explains everything</span>
+        <p><strong>Why can't WHERE use an aggregate?</strong> Because <code>WHERE</code> (step 2) runs before
+        <code>GROUP BY</code> (step 3), so the aggregate doesn't exist yet. <strong>Why can HAVING use one?</strong>
+        Because it runs at step 4, after grouping. <strong>Why can ORDER BY use a SELECT alias but WHERE can't?</strong>
+        Because aliases are born in step 5 (SELECT), before <code>ORDER BY</code> (step 6) but after
+        <code>WHERE</code>.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Logical vs physical</span>
+        <p>This is the <strong>logical</strong> order the language guarantees — the mental model to reason with.
+        The engine's optimizer may physically execute steps differently (and faster) as long as the result matches.
+        For interviews and for writing correct queries, always reason with the logical order above.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>NULLs in Aggregates</h2></div>
+      <p class="sec-sub">Aggregates quietly ignore NULLs — which is usually helpful, but occasionally the source of
+        a "wrong" average.</p>
+
+      <p>With one exception (<code>COUNT(*)</code>), aggregate functions <strong>skip NULL values entirely</strong>.
+        <code>SUM</code> adds only the real numbers; <code>AVG</code> divides by how many <em>non-NULL</em> values
+        there are, not the total row count; <code>MIN</code>/<code>MAX</code> ignore NULLs too.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Function</th><th>How it treats NULL</th></tr></thead>
+          <tbody>
+            <tr><td><code>COUNT(*)</code></td><td>Counts the row anyway (it counts rows, not values)</td></tr>
+            <tr><td><code>COUNT(col)</code></td><td>Skips NULLs — only non-NULL values counted</td></tr>
+            <tr><td><code>SUM(col)</code></td><td>Skips NULLs; if all values are NULL, returns <code>NULL</code></td></tr>
+            <tr><td><code>AVG(col)</code></td><td>Skips NULLs in <em>both</em> the sum and the divisor</td></tr>
+            <tr><td><code>MIN</code> / <code>MAX</code></td><td>Skips NULLs</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The "average" gotcha</span>
+        <p>Suppose 5 employees have a bonus, but 2 of those bonus values are <code>NULL</code> (not yet decided).
+        <code>AVG(Bonus)</code> divides by <strong>3</strong> (the non-NULL bonuses), not 5. If you meant "treat
+        missing bonuses as 0," you must say so explicitly: <code>AVG(COALESCE(Bonus, 0))</code>. Otherwise your
+        average is silently higher than you expect.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Turn NULL into a value when you need to</span>
+        <p>Use <code>COALESCE(col, 0)</code> or <code>ISNULL(col, 0)</code> to replace NULLs with a real value
+        <em>before</em> aggregating, whenever "missing" should count as zero. And use <code>COUNT(*)</code> vs
+        <code>COUNT(col)</code> deliberately depending on whether you're counting rows or actual values.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>GROUP BY vs DISTINCT</h2></div>
+      <p class="sec-sub">Both can remove duplicates and produce a unique list — but they exist for different jobs.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- These two return the SAME unique list of department ids: 1, 2</span>
+<span class="kw">SELECT</span> <span class="kw">DISTINCT</span> DeptId <span class="kw">FROM</span> dbo.Employees;
+
+<span class="kw">SELECT</span> DeptId <span class="kw">FROM</span> dbo.Employees <span class="kw">GROUP BY</span> DeptId;</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Choose by intent</span>
+        <p>Use <code>DISTINCT</code> when you <strong>only</strong> want to remove duplicate rows and show a unique
+        list. Use <code>GROUP BY</code> when you want to <strong>compute an aggregate per group</strong> (a count, a
+        total). If there's no aggregate involved, <code>DISTINCT</code> reads more clearly. If you're summarizing,
+        <code>GROUP BY</code> is the right tool — and it's the only one that lets you add <code>COUNT</code>,
+        <code>SUM</code>, and <code>HAVING</code>.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Don't stack them needlessly</span>
+        <p><code>SELECT DISTINCT ... GROUP BY ...</code> is almost always redundant — grouping already produces one
+        row per group. Seeing both in one query usually signals a misunderstanding worth cleaning up.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Aggregates + JOINs</h2></div>
+      <p class="sec-sub">Combining Day 2's joins with aggregation is where real reports live — and where a subtle
+        double-counting trap waits.</p>
+
+      <p>To show department <em>names</em> (not just ids) with their totals — and to include departments that have
+        no employees — start from <code>Departments</code> and <code>LEFT JOIN</code> the employees, then group by
+        the department name.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">SELECT</span> d.Name <span class="kw">AS</span> Department,
+       <span class="fn">COUNT</span>(e.EmpId) <span class="kw">AS</span> Headcount,   <span class="cmt">-- counts real employees (NULLs skipped)</span>
+       <span class="fn">SUM</span>(e.Salary)  <span class="kw">AS</span> TotalPay
+<span class="kw">FROM</span> dbo.Departments <span class="kw">AS</span> d
+<span class="kw">LEFT JOIN</span> dbo.Employees <span class="kw">AS</span> e <span class="kw">ON</span> e.DeptId = d.DeptId
+<span class="kw">GROUP BY</span> d.Name;</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Department</th><th>Headcount</th><th>TotalPay</th></tr></thead>
+          <tbody>
+            <tr><td>Engineering</td><td>2</td><td>243,000</td></tr>
+            <tr><td>Sales</td><td>1</td><td>120,000</td></tr>
+            <tr><td>Support</td><td>0</td><td class="nullcell">NULL</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 COUNT(e.EmpId) vs COUNT(*) here</span>
+        <p>For Support, the LEFT JOIN produces one row with all employee columns <code>NULL</code>.
+        <code>COUNT(*)</code> would count that phantom row as <strong>1</strong>. <code>COUNT(e.EmpId)</code> counts
+        non-NULL employee ids, giving the correct <strong>0</strong>. When aggregating after an outer join, count a
+        column from the <em>optional</em> table, not <code>*</code>.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The double-counting trap</span>
+        <p>If you join Employees to Orders (one-to-many) and then <code>SUM(e.Salary)</code>, each employee's salary
+        is repeated once per order and summed multiple times — inflating the total. When you need totals from two
+        different one-to-many relationships, aggregate each in its own subquery first, then join the summaries.
+        This is the aggregation version of the duplicate-row trap from the joins topic.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Rollups &amp; Best Practices</h2></div>
+      <p class="sec-sub">A quick look at subtotal/grand-total extensions, plus the habits that keep aggregate
+        queries correct and readable.</p>
+
+      <h3>Subtotals with ROLLUP 🧮</h3>
+      <p>Sometimes you want each group's total <em>and</em> a grand total in the same result.
+        <code>GROUP BY ROLLUP(...)</code> adds those extra summary rows automatically.</p>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">SELECT</span> d.Name <span class="kw">AS</span> Department, <span class="fn">SUM</span>(e.Salary) <span class="kw">AS</span> TotalPay
+<span class="kw">FROM</span> dbo.Departments <span class="kw">AS</span> d
+<span class="kw">JOIN</span> dbo.Employees <span class="kw">AS</span> e <span class="kw">ON</span> e.DeptId = d.DeptId
+<span class="kw">GROUP BY</span> <span class="kw">ROLLUP</span>(d.Name);
+<span class="cmt">-- adds a final row where Department = NULL, TotalPay = 363,000 (grand total)</span></code></pre>
+      </div>
+      <p>Related extensions: <code>CUBE</code> gives totals for <em>every</em> combination of the grouped columns,
+        and <code>GROUPING SETS</code> lets you list exactly which groupings you want in one query. All three are
+        senior-level "I know these exist" knowledge; <code>ROLLUP</code> is the one you'll actually use most.</p>
+
+      <h3>Conditional aggregation 🎛️</h3>
+      <p>To aggregate only rows meeting a condition — without splitting into separate queries — wrap a
+        <code>CASE</code> inside the aggregate:</p>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Count active vs total in one pass (pivot-style)</span>
+<span class="kw">SELECT</span>
+    <span class="fn">COUNT</span>(*) <span class="kw">AS</span> Total,
+    <span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> Salary &gt;= <span class="num">120000</span> <span class="kw">THEN</span> <span class="num">1</span> <span class="kw">ELSE</span> <span class="num">0</span> <span class="kw">END</span>) <span class="kw">AS</span> HighEarners
+<span class="kw">FROM</span> dbo.Employees;</code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">⚖️</span><h4>Filter early with WHERE</h4><p>Trim rows before grouping; only use HAVING for conditions that need an aggregate.</p></div>
+        <div class="card"><span class="glyph">🔢</span><h4>Mind your COUNTs</h4><p>Pick <code>COUNT(*)</code>, <code>COUNT(col)</code>, or <code>COUNT(DISTINCT col)</code> on purpose.</p></div>
+        <div class="card"><span class="glyph">👻</span><h4>Decide on NULLs</h4><p>Use <code>COALESCE</code> when "missing" should count as zero in a SUM or AVG.</p></div>
+        <div class="card"><span class="glyph">🧮</span><h4>Beware double counting</h4><p>Aggregate each one-to-many relationship in its own subquery before joining totals.</p></div>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea, then a full cheat-sheet table.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>📊 Aggregate</h4><p>A function that turns many values into one: COUNT, SUM, AVG, MIN, MAX.</p></div>
+        <div class="recap-card"><h4>🗂️ GROUP BY</h4><p>Splits rows into buckets and produces one summary row per bucket.</p></div>
+        <div class="recap-card"><h4>📏 Golden rule</h4><p>Every SELECT column must be grouped or wrapped in an aggregate.</p></div>
+        <div class="recap-card"><h4>🚦 HAVING</h4><p>Filters whole groups after aggregation; the only place aggregates can be tested.</p></div>
+        <div class="recap-card"><h4>⚖️ WHERE vs HAVING</h4><p>WHERE filters rows before grouping; HAVING filters groups after.</p></div>
+        <div class="recap-card"><h4>🔁 Order of execution</h4><p>FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY.</p></div>
+        <div class="recap-card"><h4>🔢 Three COUNTs</h4><p><code>COUNT(*)</code> rows, <code>COUNT(col)</code> non-NULLs, <code>COUNT(DISTINCT)</code> uniques.</p></div>
+        <div class="recap-card"><h4>👻 NULLs</h4><p>Ignored by aggregates (except <code>COUNT(*)</code>); watch your averages.</p></div>
+        <div class="recap-card"><h4>🆚 GROUP BY vs DISTINCT</h4><p>DISTINCT just dedupes; GROUP BY dedupes and lets you aggregate.</p></div>
+        <div class="recap-card"><h4>🧮 Double count</h4><p>Aggregating across one-to-many joins can inflate sums — subquery first.</p></div>
+      </div>
+
+      <h3>Full summary table</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it does</th><th>Key point</th></tr></thead>
+          <tbody>
+            <tr><td><code>COUNT / SUM / AVG</code></td><td>Summarize a set of values</td><td>All ignore NULL except <code>COUNT(*)</code></td></tr>
+            <tr><td><code>MIN / MAX</code></td><td>Smallest / largest value</td><td>Work on numbers, dates, and text</td></tr>
+            <tr><td><code>GROUP BY</code></td><td>One summary row per group</td><td>Non-aggregated SELECT columns must be listed here</td></tr>
+            <tr><td><code>HAVING</code></td><td>Filter groups</td><td>Runs after GROUP BY; can use aggregates</td></tr>
+            <tr><td><code>WHERE</code></td><td>Filter rows</td><td>Runs before GROUP BY; cannot use aggregates</td></tr>
+            <tr><td><code>COUNT(DISTINCT)</code></td><td>Count unique values</td><td>Great for "how many different…"</td></tr>
+            <tr><td><code>ROLLUP</code></td><td>Adds subtotals + grand total</td><td>Extra summary rows have NULL in the grouped column</td></tr>
+            <tr><td>Conditional aggregate</td><td>Aggregate a subset</td><td><code>SUM(CASE WHEN … THEN 1 ELSE 0 END)</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What is aggregation, and what is an aggregate function? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Aggregation means combining many rows into a single summary value. An aggregate function is
+        the tool that does it — like <code>COUNT</code> (how many), <code>SUM</code> (total), or <code>AVG</code>
+        (average). Instead of returning every row, it returns one number describing the whole set.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> Name the five main aggregate functions and what each does. <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>COUNT</code> = how many rows or values; <code>SUM</code> = the total of a numeric column;
+        <code>AVG</code> = the average (mean); <code>MIN</code> = the smallest value; <code>MAX</code> = the largest
+        value. MIN and MAX also work on dates and text (earliest/latest, first/last alphabetically).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> What does GROUP BY do? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It sorts rows into groups that share the same value (say, all employees in the same
+        department) and then runs the aggregate once per group. The result has one summary row per group — for
+        example, one headcount and average salary per department.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> What's the difference between COUNT(*) and COUNT(column)? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>COUNT(*)</code> counts every row, no matter what's in it. <code>COUNT(column)</code>
+        counts only the rows where that column has a real (non-NULL) value. So if a column has some blanks,
+        <code>COUNT(column)</code> will be smaller than <code>COUNT(*)</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> How does AVG treat NULL values? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It ignores them. <code>AVG</code> adds up only the non-NULL values and divides by how many
+        non-NULL values there were — not by the total number of rows. So NULLs are treated as "not there," not as
+        zero. If you want blanks counted as zero, convert them first with <code>COALESCE(col, 0)</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What is the HAVING clause? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>HAVING</code> filters groups after they've been formed by <code>GROUP BY</code>. It's how
+        you keep only certain groups — for example, "only departments with more than one employee" or "only months
+        with total sales above $10,000." It's the one place you can filter using an aggregate like
+        <code>COUNT()</code> or <code>SUM()</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> Why can't you use an aggregate function in a WHERE clause? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Because <code>WHERE</code> runs <em>before</em> the rows are grouped, so aggregates like
+        <code>SUM</code> or <code>COUNT</code> don't exist yet at that point. To filter based on an aggregate, you
+        use <code>HAVING</code>, which runs <em>after</em> grouping.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> What does SUM return if there are no matching rows or all values are NULL? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It returns <code>NULL</code>, not 0. This surprises people who expect an empty total to be
+        zero. If you want a zero instead, wrap it: <code>COALESCE(SUM(col), 0)</code>. (<code>COUNT</code>, by
+        contrast, returns 0 when there are no rows.)</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q09</span> What is the difference between WHERE and HAVING? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>WHERE</code> filters individual rows <em>before</em> grouping and cannot use
+        aggregates. <code>HAVING</code> filters whole groups <em>after</em> grouping and can use aggregates. A common
+        query uses both: <code>WHERE</code> to trim rows first, then <code>GROUP BY</code>, then <code>HAVING</code>
+        to keep only certain groups. Filtering early with WHERE is also faster.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> What's the rule about columns in SELECT when you use GROUP BY? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Every column in the <code>SELECT</code> list must either appear in the <code>GROUP BY</code>
+        or be wrapped in an aggregate function. If you try to select a plain column that isn't grouped, SQL Server
+        errors, because each output row represents a whole group and it wouldn't know which underlying row's value to
+        show.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> Explain COUNT(*) vs COUNT(col) vs COUNT(DISTINCT col). <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>COUNT(*)</code> = number of rows. <code>COUNT(col)</code> = number of rows where
+        <code>col</code> is not NULL. <code>COUNT(DISTINCT col)</code> = number of <em>different</em> non-NULL values
+        in <code>col</code>. Example: a table of 3 employees spanning 2 departments where only 1 has a manager gives
+        <code>COUNT(*)</code>=3, <code>COUNT(ManagerId)</code>=1, <code>COUNT(DISTINCT DeptId)</code>=2.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> GROUP BY vs DISTINCT — when do you use each? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Use <code>DISTINCT</code> when you just want a unique list of rows/values, with no
+        aggregation. Use <code>GROUP BY</code> when you want to compute an aggregate per group (a count, sum,
+        average). For a plain unique list they give the same result, but only <code>GROUP BY</code> supports
+        aggregates and <code>HAVING</code>. Stacking both is usually redundant.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> How do aggregate functions handle NULLs in general? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>They skip NULLs. <code>SUM</code>, <code>AVG</code>, <code>MIN</code>, <code>MAX</code>, and
+        <code>COUNT(col)</code> all ignore NULL values. The sole exception is <code>COUNT(*)</code>, which counts rows
+        regardless of content. This is why an <code>AVG</code> can be higher than expected — it divides by the number
+        of non-NULL values, not the total row count.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> Can you use a SELECT column alias in WHERE, GROUP BY, HAVING, or ORDER BY? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Only in <code>ORDER BY</code>. Aliases are created in the <code>SELECT</code> step, which runs
+        after <code>WHERE</code>, <code>GROUP BY</code>, and <code>HAVING</code> but before <code>ORDER BY</code>. So
+        those earlier clauses must repeat the full expression, while <code>ORDER BY</code> can use the short alias.
+        This falls straight out of the logical order of execution.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> How do you count rows per group and keep only groups above a threshold? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Group by the category, count with <code>COUNT(*)</code>, and filter with <code>HAVING</code>:
+        <code>SELECT DeptId, COUNT(*) FROM Employees GROUP BY DeptId HAVING COUNT(*) &gt; 1;</code>. The
+        <code>HAVING</code> tests the per-group count, keeping only groups that clear the bar.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> A department with no employees vanishes from a GROUP BY — why, and how do you include it? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Grouping the <code>Employees</code> table only creates buckets for departments that
+        <em>have</em> employees, so an empty department never forms a group. To include it, start from
+        <code>Departments</code> and <code>LEFT JOIN</code> the employees, group by the department, and use
+        <code>COUNT(EmpId)</code> so the empty department shows a count of 0.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain the logical order of execution and why it matters. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Logically SQL processes: <code>FROM/JOIN</code> → <code>WHERE</code> → <code>GROUP BY</code> →
+        <code>HAVING</code> → <code>SELECT</code> → <code>ORDER BY</code>. It explains almost every aggregation rule:
+        <code>WHERE</code> can't use aggregates (they aren't computed until <code>GROUP BY</code>); <code>HAVING</code>
+        can (it runs after); and <code>ORDER BY</code> can use <code>SELECT</code> aliases while earlier clauses can't.
+        The optimizer may physically execute differently, but the guaranteed result matches this logical order.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> What is the double-counting trap when aggregating across joins, and how do you avoid it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Joining to a one-to-many table multiplies the "one" side's rows — so summing a value from
+        the "one" side counts it once per matching child, inflating the total. For example, summing employee salary
+        after joining to their orders counts salary once per order. The fix is to aggregate each one-to-many
+        relationship in its own subquery (or CTE) first, then join the pre-computed summaries together so nothing is
+        multiplied.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> What are ROLLUP, CUBE, and GROUPING SETS? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>They extend <code>GROUP BY</code> to produce extra summary rows in one query.
+        <code>ROLLUP(a, b)</code> adds subtotals along a hierarchy plus a grand total. <code>CUBE(a, b)</code> adds
+        totals for <em>every</em> combination of the grouped columns. <code>GROUPING SETS</code> lets you specify
+        exactly which groupings you want. The extra summary rows carry <code>NULL</code> in the columns they total
+        over; the <code>GROUPING()</code> function distinguishes those from real NULLs.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> How does COUNT(e.EmpId) differ from COUNT(*) after a LEFT JOIN? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A LEFT JOIN keeps unmatched left rows with the right table's columns set to NULL.
+        <code>COUNT(*)</code> counts those phantom rows too, so an empty group shows 1 instead of 0.
+        <code>COUNT(e.EmpId)</code> counts only non-NULL ids from the optional table, correctly returning 0 for a
+        group with no matches. Rule of thumb: after an outer join, count a column from the optional side, not
+        <code>*</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> When do you need a window function instead of GROUP BY? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>GROUP BY</code> collapses rows — you lose the individual rows and keep only the summary.
+        A <strong>window function</strong> (like <code>SUM() OVER (...)</code>) computes an aggregate <em>alongside</em>
+        each original row, so you keep both the detail and the summary (e.g., each employee's salary next to their
+        department's total, or a running total). If you must show detail rows and a summary together, reach for a
+        window function rather than <code>GROUP BY</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> What affects the performance of a GROUP BY? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Grouping requires the engine to organize rows by the grouping key, typically via a sort or a
+        hash aggregate. An index on the grouping (and filtering) columns can let it group with a cheap ordered scan
+        instead of a costly sort. Filtering early with <code>WHERE</code> reduces the rows to group. High-cardinality
+        groupings and large row counts increase memory and CPU. Good indexes and current statistics are the main
+        levers.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> Can you use HAVING without GROUP BY? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Yes. Without <code>GROUP BY</code>, the whole table is treated as a single group, so
+        <code>HAVING</code> filters that one group. For example, <code>SELECT SUM(Salary) FROM Employees HAVING
+        SUM(Salary) &gt; 1000000;</code> returns the total only if it exceeds a million, otherwise no rows. It's
+        uncommon but valid — useful for "return this summary only if it meets a condition."</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> How do you compute a conditional aggregate, like counting only certain rows? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Put a <code>CASE</code> expression inside the aggregate. To count high earners:
+        <code>SUM(CASE WHEN Salary &gt;= 120000 THEN 1 ELSE 0 END)</code>, or equivalently
+        <code>COUNT(CASE WHEN Salary &gt;= 120000 THEN 1 END)</code> (since <code>COUNT</code> ignores the NULLs the
+        ELSE-less CASE produces). This lets you compute several conditional totals in a single pass — the basis of
+        pivot-style reporting.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions cement the functions and what GROUP BY/HAVING do;
+        <strong>Mid</strong> questions test the real decisions (WHERE vs HAVING, the COUNT flavors, the golden rule,
+        empty groups); <strong>Senior</strong> questions probe the model behind it all (execution order,
+        double-counting, ROLLUP, window functions, performance). Say each answer out loud in plain English — the ones
+        you stumble on point straight to the section to re-read.</p>
+      </div>
+
+      <p class="foot">Concepts verified against Microsoft Learn (Transact-SQL aggregate functions,
+        <code>GROUP BY</code>, <code>HAVING</code>, and the logical query processing order) and standard relational
+        references. This behavior is stable across supported SQL Server versions (2016 through 2025 / 17.x). This
+        single <code>03-sql-aggregation.html</code> file is fully self-contained and works offline (only Google
+        Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

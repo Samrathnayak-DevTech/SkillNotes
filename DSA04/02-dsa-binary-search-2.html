@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Binary Search Problems II</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear;border-radius:0 2px 2px 0;}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s;}
+.nav-toggle:hover{transform:scale(1.08);}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease;}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem;}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem;}
+.nav-group{margin-bottom:.2rem;}
+.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem;}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:0.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s;}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft);}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500;}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:var(--accent);opacity:.7;flex-shrink:0;}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px;}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem;}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem;}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem;}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);}
+.section{margin-bottom:5rem;scroll-margin-top:2rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}
+.section.visible{opacity:1;transform:none;}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line);}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0;}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2;}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem;}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem;}
+p{margin-bottom:1rem;}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid;}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:0.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}
+.callout.tip .callout-tag{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}
+.callout.key .callout-tag{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}
+.callout.analogy .callout-tag{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}
+.callout.warn .callout-tag{color:var(--accent);}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:0.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em;}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:0.85rem;}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem;}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.06em;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s;}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980;}
+.copy-btn.copied{color:#89d185;border-color:#89d185;}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink);}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+.table-wrap{overflow-x:auto;margin:1.5rem 0;}
+table{width:100%;border-collapse:collapse;font-size:0.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line);}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--bg-soft);}
+.diagram{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;margin:1.5rem 0;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;overflow-x:auto;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem;min-width:42px;}
+.arr-cell .val{font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;background:var(--bg);border:2px solid var(--line);border-radius:6px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;color:var(--ink);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--blue);}
+.arr-cell .label{font-family:"JetBrains Mono",monospace;font-size:.6rem;color:var(--ink-soft);white-space:nowrap;}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0;}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:0.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg);}
+.complexity-badge .label{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:600;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin:1.5rem 0;}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.3rem;transition:box-shadow .2s,transform .2s;}
+.card:hover{box-shadow:0 4px 16px rgba(45,42,38,.07);transform:translateY(-2px);}
+.card-glyph{font-family:"Fraunces",serif;font-size:1.6rem;margin-bottom:.4rem;display:block;}
+.card h4{font-family:"Fraunces",serif;font-size:1rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .35rem;}
+.card p{font-size:.88rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem;}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent);}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem;}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.lc-list{list-style:none;padding:0;margin:1rem 0;}
+.lc-list li{display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;}
+.lc-list li:last-child{border-bottom:none;}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;margin-top:.15rem;}
+.lc-diff.easy{background:var(--green-soft);color:var(--green);}
+.lc-diff.medium{background:var(--accent-soft);color:var(--accent);}
+.lc-diff.hard{background:var(--rose-soft);color:var(--rose);}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s;}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent);}
+.lc-why{color:var(--ink-soft);font-size:.82rem;width:100%;margin-top:.1rem;display:block;}
+.lc-group-title{font-family:"Fraunces",serif;font-size:1.1rem;font-weight:600;color:var(--ink);margin:1.8rem 0 .5rem;}
+.partition-vis{display:flex;align-items:center;gap:.4rem;margin:1.2rem 0;flex-wrap:wrap;}
+.partition-seg{padding:.35rem .8rem;border-radius:6px;font-family:"JetBrains Mono",monospace;font-size:.8rem;font-weight:600;}
+.partition-seg.left{background:var(--accent-soft);border:2px solid var(--accent);color:var(--accent);}
+.partition-seg.right{background:var(--blue-soft);border:2px solid var(--blue);color:var(--blue);}
+.partition-sep{font-size:1.2rem;color:var(--ink-soft);}
+@media(max-width:768px){
+  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12);}
+  .sidebar.open{transform:translateX(0);}
+  .nav-toggle{display:flex;}
+  .main{padding:0 1.2rem 4rem;}
+  .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px);}
+  .sidebar-overlay.open{display:block;}
+}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+
+<div class="layout">
+<nav class="sidebar" aria-label="Page navigation">
+  <div class="sidebar-logo">
+    DSA Notes · Series 3
+    <strong>Binary Search Problems</strong>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Problems</div>
+    <a class="nav-link" href="#unique"><span class="nav-num">01</span>Unique Element in Pairs</a>
+    <a class="nav-link" href="#rotated"><span class="nav-num">02</span>Search in Rotated Array</a>
+    <a class="nav-link" href="#median"><span class="nav-num">03</span>Median of Two Sorted Arrays</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">04</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">05</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 3</p>
+  <h1>Binary Search<br>Problem Set II</h1>
+  <p class="hero-lede">Three classic interview problems that stretch binary search beyond sorted arrays — finding the lone element in a paired list, searching a rotated array, and the famous Google median problem.</p>
+  <div class="chips">
+    <span class="chip">Single Non-Duplicate</span>
+    <span class="chip">Rotated Sorted Array</span>
+    <span class="chip">Median of Two Arrays</span>
+    <span class="chip">O(log N) — O(log(N+M))</span>
+  </div>
+</header>
+
+<!-- ─── SECTION 01 ─── -->
+<section class="section" id="unique">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>Unique Element Among Pairs</h2>
+  </div>
+
+  <p>Every element in the array appears <strong>exactly twice</strong>, except for one element which appears once. Duplicates are adjacent to each other, but the array is not sorted. Find the unique element.</p>
+
+  <h4>Example — arr = [8, 8, 5, 5, 6, 2, 2]</h4>
+  <div class="diagram">
+    <div class="arr-cell highlight-blue"><div class="val">8</div><div class="idx">0</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">8</div><div class="idx">1</div></div>
+    <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">2</div></div>
+    <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight"><div class="val">6</div><div class="idx">4</div><div class="label">unique</div></div>
+    <div class="arr-cell neg"><div class="val">2</div><div class="idx">5</div></div>
+    <div class="arr-cell neg"><div class="val">2</div><div class="idx">6</div></div>
+  </div>
+  <p>Answer: 6</p>
+
+  <h3>Brute Force</h3>
+  <p>XOR all elements together. Because <code>x ^ x = 0</code> for any x and <code>x ^ 0 = x</code>, all paired elements cancel out, leaving only the unique one. Time: O(N), Space: O(1).</p>
+
+  <h3>Binary Search Approach O(log N)</h3>
+  <p>The key observation: before the unique element, every pair starts at an even index. After the unique element, every pair starts at an odd index. Use this parity flip as the condition to halve the search space.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Insight</span>
+    At index <code>mid</code>, determine which of the two neighbors is the <em>pair partner</em>. If the pair occupies <code>[mid, mid+1]</code> (i.e., <code>arr[mid] == arr[mid+1]</code>), then <code>mid</code> is the first of a pair at an even index — the unique element is to the <strong>right</strong>. If the pair occupies <code>[mid−1, mid]</code>, then <code>mid</code> is the second of a pair and the unique element is to the <strong>left</strong>.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">if</span> (n == <span class="num">1</span>) <span class="kw">return</span> arr[<span class="num">0</span>];
+<span class="kw">else if</span> (arr[<span class="num">0</span>] != arr[<span class="num">1</span>]) <span class="kw">return</span> arr[<span class="num">0</span>];
+<span class="kw">else if</span> (arr[n-<span class="num">1</span>] != arr[n-<span class="num">2</span>]) <span class="kw">return</span> arr[n-<span class="num">1</span>];
+
+<span class="ty">int</span> l = <span class="num">1</span>, r = n - <span class="num">2</span>;
+<span class="kw">while</span> (l &lt;= r) {
+    <span class="ty">int</span> mid = (l + r) / <span class="num">2</span>;
+    <span class="kw">if</span> (arr[mid] != arr[mid-<span class="num">1</span>] &amp;&amp; arr[mid] != arr[mid+<span class="num">1</span>]) {
+        <span class="kw">return</span> arr[mid];        <span class="cmt">// unique found</span>
+    }
+    <span class="ty">int</span> fo = mid;               <span class="cmt">// index of first occurrence in the pair</span>
+    <span class="kw">if</span> (arr[mid] == arr[mid-<span class="num">1</span>]) fo = mid - <span class="num">1</span>;
+
+    <span class="kw">if</span> (fo % <span class="num">2</span> == <span class="num">0</span>) {
+        l = mid + <span class="num">1</span>;            <span class="cmt">// pair starts at even → unique is to the right</span>
+    } <span class="kw">else</span> {
+        r = mid - <span class="num">1</span>;            <span class="cmt">// pair starts at odd  → unique is to the left</span>
+    }
+}
+<span class="kw">return</span> <span class="num">-1</span>;</pre>
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(log N)</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- ─── SECTION 02 ─── -->
+<section class="section" id="rotated">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>Search in a Sorted &amp; Rotated Array</h2>
+  </div>
+
+  <p>A sorted array has been rotated at some unknown pivot. Given a target K, find its index or return −1. The brute-force linear search is O(N); binary search achieves O(log N).</p>
+
+  <h4>Example — arr = [20, 40, 50, 60, 70, 80, 10, 20, 25], K = 40 → ans = 1</h4>
+  <div class="diagram">
+    <div class="arr-cell highlight-green"><div class="val">20</div><div class="idx">0</div></div>
+    <div class="arr-cell highlight"><div class="val">40</div><div class="idx">1</div><div class="label">answer</div></div>
+    <div class="arr-cell highlight-green"><div class="val">50</div><div class="idx">2</div></div>
+    <div class="arr-cell highlight-green"><div class="val">60</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight-green"><div class="val">70</div><div class="idx">4</div></div>
+    <div class="arr-cell highlight-green"><div class="val">80</div><div class="idx">5</div></div>
+    <div class="arr-cell neg"><div class="val">10</div><div class="idx">6</div></div>
+    <div class="arr-cell neg"><div class="val">20</div><div class="idx">7</div></div>
+    <div class="arr-cell neg"><div class="val">25</div><div class="idx">8</div></div>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Insight — Two Sorted Halves</span>
+    A rotated sorted array always contains <strong>one sorted half and one unsorted half</strong>. Determine which half <code>arr[mid]</code> falls in using <code>arr[mid] ≥ arr[0]</code> (first sorted half) or <code>arr[mid] &lt; arr[0]</code> (second sorted half). Then check whether the target lies within the sorted half; if it does, recurse into it; otherwise, recurse into the other half.
+  </div>
+
+  <h3>Decision Logic at each step</h3>
+  <div class="cards-grid">
+    <div class="card">
+      <span class="card-glyph">✅</span>
+      <h4>Match</h4>
+      <p><code>arr[mid] == target</code> → return <code>mid</code>.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">➡️</span>
+      <h4>mid in 1st half, target in 2nd</h4>
+      <p><code>arr[mid] ≥ arr[0]</code> and <code>target &lt; arr[0]</code> → go right: <code>l = mid + 1</code>.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">⬅️</span>
+      <h4>mid in 2nd half, target in 1st</h4>
+      <p><code>arr[mid] &lt; arr[0]</code> and <code>target ≥ arr[0]</code> → go left: <code>r = mid − 1</code>.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">↔️</span>
+      <h4>Both in same half</h4>
+      <p>Apply standard binary search: if <code>arr[mid] &lt; target</code> go right; else go left.</p>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> l = <span class="num">0</span>, r = n - <span class="num">1</span>;
+<span class="kw">while</span> (l &lt;= r) {
+    <span class="ty">int</span> mid = (l + r) / <span class="num">2</span>;
+    <span class="kw">if</span> (arr[mid] == target) <span class="kw">return</span> mid;
+
+    <span class="cmt">// mid is in the first (left) sorted half</span>
+    <span class="kw">if</span> (arr[mid] &gt;= arr[<span class="num">0</span>]) {
+        <span class="kw">if</span> (target &lt; arr[<span class="num">0</span>]) {          <span class="cmt">// target in 2nd half</span>
+            l = mid + <span class="num">1</span>;
+        } <span class="kw">else if</span> (arr[mid] &lt; target) {  <span class="cmt">// both in 1st, go right</span>
+            l = mid + <span class="num">1</span>;
+        } <span class="kw">else</span> {                           <span class="cmt">// both in 1st, go left</span>
+            r = mid - <span class="num">1</span>;
+        }
+    } <span class="kw">else</span> {  <span class="cmt">// mid is in the second (right) sorted half</span>
+        <span class="kw">if</span> (target &gt;= arr[<span class="num">0</span>]) {          <span class="cmt">// target in 1st half</span>
+            r = mid - <span class="num">1</span>;
+        } <span class="kw">else if</span> (arr[mid] &lt; target) {  <span class="cmt">// both in 2nd, go right</span>
+            l = mid + <span class="num">1</span>;
+        } <span class="kw">else</span> {                           <span class="cmt">// both in 2nd, go left</span>
+            r = mid - <span class="num">1</span>;
+        }
+    }
+}
+<span class="kw">return</span> <span class="num">-1</span>;</pre>
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(log N)</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- ─── SECTION 03 ─── -->
+<section class="section" id="median">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>Median of Two Sorted Arrays</h2>
+  </div>
+
+  <p>Given two sorted arrays A (size N) and B (size M), find the median of the combined sorted array. A naïve merge takes O(N + M) time and O(N + M) space; the optimal solution uses binary search and runs in <strong>O(log(N + M)) time, O(1) space</strong>.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Intuition</span>
+    The median divides the combined array into two halves of equal size. We need to find a partition in A and a corresponding partition in B such that all elements in the left half are ≤ all elements in the right half.
+  </div>
+
+  <h4>Partition Idea</h4>
+  <p>Let <code>x = (N + M) / 2</code> be the number of elements we want on the left side. If we choose <code>α</code> elements from A on the left, we take <code>x − α</code> elements from B. We binary search on <code>α</code> (the number of elements from A that go left).</p>
+
+  <div class="partition-vis">
+    <span class="partition-seg left">A: 1, 3, 4</span><span class="partition-sep">|</span><span class="partition-seg right">7, 10, 12</span>
+  </div>
+  <div class="partition-vis">
+    <span class="partition-seg left">B: 2, 3</span><span class="partition-sep">|</span><span class="partition-seg right">6, 15</span>
+  </div>
+  <p>Left side: {1, 2, 3, 3, 4} — Right side: {6, 7, 10, 12, 15}. Median = (4 + 6) / 2 = 5.</p>
+
+  <h3>Validity Condition</h3>
+  <p>A partition is valid when: <code>l₁ ≤ r₂</code> and <code>l₂ ≤ r₁</code>, where <code>l₁, r₁</code> are the boundary elements of A's partition and <code>l₂, r₂</code> are the boundary elements of B's partition.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Boundary Convention</span>
+    When a partition takes 0 elements from the left, use <code>l = −∞</code>. When it takes all elements, use <code>r = +∞</code>. These sentinel values ensure the validity check never throws an array out-of-bounds error.
+  </div>
+
+  <h3>Median Formula</h3>
+  <p>Once a valid partition is found, let <code>a = max(l₁, l₂)</code> and <code>b = min(r₁, r₂)</code>. If the combined length is even: median = (a + b) / 2.0. If odd: median = b (the min of the right boundary).</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">double</span> <span class="fn">medianValue</span>(<span class="ty">int</span>[] A, <span class="ty">int</span>[] B, <span class="ty">int</span> n, <span class="ty">int</span> m) {
+    <span class="ty">int</span> x = (n + m) / <span class="num">2</span>;
+    <span class="ty">int</span> l = <span class="num">0</span>, r = Math.min(n, x);
+
+    <span class="kw">while</span> (l &lt;= r) {
+        <span class="ty">int</span> c1 = (l + r) / <span class="num">2</span>;      <span class="cmt">// elements from A on the left</span>
+        <span class="ty">int</span> c2 = x - c1;              <span class="cmt">// elements from B on the left</span>
+
+        <span class="ty">long</span> l1 = (c1 &gt;= <span class="num">1</span>) ? A[c1-<span class="num">1</span>] : Long.MIN_VALUE;
+        <span class="ty">long</span> l2 = (c2 &gt;= <span class="num">1</span>) ? B[c2-<span class="num">1</span>] : Long.MIN_VALUE;
+        <span class="ty">long</span> r1 = (c1 &lt; n) ? A[c1]   : Long.MAX_VALUE;
+        <span class="ty">long</span> r2 = (c2 &lt; m) ? B[c2]   : Long.MAX_VALUE;
+
+        <span class="kw">if</span> (l1 &lt;= r2 &amp;&amp; l2 &lt;= r1) {   <span class="cmt">// valid partition</span>
+            <span class="kw">if</span> ((n + m) % <span class="num">2</span> == <span class="num">0</span>)
+                <span class="kw">return</span> (Math.max(l1, l2) + Math.min(r1, r2)) / <span class="num">2</span>.0;
+            <span class="kw">else</span>
+                <span class="kw">return</span> Math.min(r1, r2);
+        } <span class="kw">else if</span> (l1 &gt; r2) {
+            r = c1 - <span class="num">1</span>;                <span class="cmt">// too many from A; go left</span>
+        } <span class="kw">else</span> {
+            l = c1 + <span class="num">1</span>;                <span class="cmt">// too few from A; go right</span>
+        }
+    }
+    <span class="kw">return</span> -<span class="num">1</span>;
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time </span><span class="val">O(log(N+M))</span></span>
+    <span class="complexity-badge"><span class="label">Space </span><span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- ─── SECTION 04: RECAP ─── -->
+<section class="section" id="recap">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2>Quick Recap</h2>
+  </div>
+
+  <div class="recap-grid">
+    <div class="recap-card">
+      <h4>Unique in Pairs</h4>
+      <p>Use parity of the first occurrence index to determine which side to search — pairs before the unique start at even indices.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Rotated Array Search</h4>
+      <p>One half of a rotated sorted array is always fully sorted — identify it using <code>arr[mid] ≥ arr[0]</code>, then decide which half to enter.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Median of Two Arrays</h4>
+      <p>Binary search on the number of elements from A that belong on the left; complement the remaining from B. Check cross-boundary validity.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Sentinel Values</h4>
+      <p>Use ±∞ sentinels when one array contributes 0 or N elements — prevents index errors and simplifies the validity check.</p>
+    </div>
+  </div>
+
+  <h3>Complexity Summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Problem</th><th>Time</th><th>Space</th></tr></thead>
+      <tbody>
+        <tr><td>Unique Element Among Pairs</td><td>O(log N)</td><td>O(1)</td></tr>
+        <tr><td>Search in Rotated Array</td><td>O(log N)</td><td>O(1)</td></tr>
+        <tr><td>Median of Two Sorted Arrays</td><td>O(log(N+M))</td><td>O(1)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── SECTION 05: LEETCODE ─── -->
+<section class="section" id="leetcode">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2>LeetCode Problems</h2>
+  </div>
+
+  <p class="lc-group-title">Unique Element</p>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/single-element-in-a-sorted-array/" target="_blank" rel="noopener">Single Element in a Sorted Array ↗</a><span class="lc-why">Sorted variant — the parity-of-index approach from Section 01 applies directly.</span></div>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/single-number/" target="_blank" rel="noopener">Single Number ↗</a><span class="lc-why">The XOR brute-force approach — O(N) but a great warm-up for the concept.</span></div>
+    </li>
+  </ul>
+
+  <p class="lc-group-title">Rotated Sorted Array</p>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/search-in-rotated-sorted-array/" target="_blank" rel="noopener">Search in Rotated Sorted Array ↗</a><span class="lc-why">Direct application of Section 02's algorithm.</span></div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/search-in-rotated-sorted-array-ii/" target="_blank" rel="noopener">Search in Rotated Sorted Array II ↗</a><span class="lc-why">Same problem with possible duplicates — requires extra handling.</span></div>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/" target="_blank" rel="noopener">Find Minimum in Rotated Sorted Array ↗</a><span class="lc-why">Related: find the pivot point using the same two-sorted-halves insight.</span></div>
+    </li>
+  </ul>
+
+  <p class="lc-group-title">Median / Partition</p>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff hard">Hard</span>
+      <div><a class="lc-name" href="https://leetcode.com/problems/median-of-two-sorted-arrays/" target="_blank" rel="noopener">Median of Two Sorted Arrays ↗</a><span class="lc-why">Exactly Section 03 — a classic hard-level binary search problem asked at Google, Amazon, and Meta.</span></div>
+    </li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Study Order</span>
+    Practice <strong>Single Number</strong> (XOR warm-up) → <strong>Single Element in a Sorted Array</strong> (parity BS) → <strong>Find Minimum in Rotated Sorted Array</strong> (rotation insight) → <strong>Search in Rotated Sorted Array</strong> → <strong>Median of Two Sorted Arrays</strong> (hardest). Each problem builds on the previous one.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+window.addEventListener('scroll',()=>{const el=document.getElementById('progress-bar');const h=document.documentElement;el.style.width=((h.scrollTop/(h.scrollHeight-h.clientHeight))*100)+'%';});
+const tog=document.getElementById('nav-toggle');const sb=document.querySelector('.sidebar');const ov=document.getElementById('nav-overlay');
+tog.addEventListener('click',()=>{sb.classList.toggle('open');ov.classList.toggle('open');});
+ov.addEventListener('click',()=>{sb.classList.remove('open');ov.classList.remove('open');});
+const links=[...document.querySelectorAll('.nav-link')];const sections=[...document.querySelectorAll('.section')];
+const obs2=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));const a=document.querySelector('.nav-link[href="#'+e.target.id+'"]');if(a){a.classList.add('active');a.scrollIntoView({block:'nearest',behavior:'smooth'});}}});},{rootMargin:'-20% 0px -70% 0px'});
+sections.forEach(s=>obs2.observe(s));
+const obsR=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:0.07});
+sections.forEach(s=>obsR.observe(s));
+function copyCode(btn){const pre=btn.closest('.code-block').querySelector('pre');const text=pre.innerText;try{navigator.clipboard.writeText(text);}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);}btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);}
+</script>
+</body>
+</html>

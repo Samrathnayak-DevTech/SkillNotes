@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL Server — CTEs &amp; Recursive CTEs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arr-cell.dim .val{opacity:.4;border-style:dashed;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- tree (org chart) ---------- */
+.tree{margin:24px 0;font-family:"JetBrains Mono",monospace;font-size:13.5px;color:var(--ink);
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:22px 26px;line-height:2;}
+.tree .lvl1{color:var(--accent);font-weight:700;}
+.tree .lvl2{color:var(--blue);}
+.tree .lvl3{color:var(--green);}
+.tree .br{color:var(--ink-soft);}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+td.nullcell{color:var(--rose);font-family:"JetBrains Mono",monospace;font-size:.82rem;}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">SQL Server: CTEs</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>Non-Recursive CTEs</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> What a CTE Is</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The Sample Schema</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Basic Syntax</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Why Use a CTE</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Multiple CTEs</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> CTE vs Alternatives</a>
+      </div>
+      <div class="nav-group">
+        <h4>Recursive CTEs</h4>
+        <a class="nav-link" href="#s07"><span class="n">07</span> The Idea</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> Anchor + Recursive</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> The Org Chart</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Level &amp; Path</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Termination &amp; Limits</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Generating Series</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Mistakes &amp; Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// SQL Server &nbsp;·&nbsp; naming query steps &amp; walking hierarchies</p>
+      <h1>CTEs &amp; Recursive CTEs 🪜</h1>
+      <p class="lede">
+        A <b>Common Table Expression</b> (CTE) is a named, temporary result set defined with <code>WITH</code> at
+        the top of a query. It turns a tangle of nested subqueries into a readable, top-to-bottom pipeline. And in
+        its <b>recursive</b> form, a CTE can reference <b>itself</b> — the standard way to walk a hierarchy like an
+        org chart or a folder tree, one level at a time. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">📝 <b>WITH</b></span>
+        <span class="chip">🔗 <b>Chained CTEs</b></span>
+        <span class="chip">🪜 <b>Recursive</b></span>
+        <span class="chip">🌳 <b>Hierarchies</b></span>
+        <span class="chip">🛑 <b>MAXRECURSION</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>What a CTE Is</h2></div>
+      <p class="sec-sub">A CTE gives a name to a query result so you can use it, like a temporary table that exists
+        only for the single statement that follows.</p>
+
+      <p>You've already met CTEs in passing — the "rank, then filter" pattern used <code>WITH</code>. A
+        <strong>Common Table Expression</strong> is a query you define up front and give a name; the main query then
+        refers to that name as if it were a table. It lives only for the duration of the one statement, then
+        disappears. Nothing is stored on disk.</p>
+
+      <div class="callout analogy">
+        <span class="tag">📋 Analogy</span>
+        <p>A CTE is like jotting a labeled note before doing a calculation: "Let <em>DeptAvg</em> = the average
+        salary per department." Once you've named it, you can refer to "DeptAvg" in the rest of your work instead of
+        rewriting the whole calculation each time. When you finish the task, you throw the note away.</p>
+      </div>
+
+      <h3>The CTE landscape 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">🪜 CTEs</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>📝 Non-recursive</h5>
+            <ul>
+              <li>Starts with <code>WITH</code></li>
+              <li>Named result set</li>
+              <li>Readability over subqueries</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>🪜 Recursive</h5>
+            <ul>
+              <li>References itself</li>
+              <li>Anchor + recursive member</li>
+              <li>Joined by <code>UNION ALL</code></li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🌳 Use cases</h5>
+            <ul>
+              <li>Clean multi-step queries</li>
+              <li>Org charts / trees</li>
+              <li>Number &amp; date series</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🆚 Alternatives</h5>
+            <ul>
+              <li>Derived table</li>
+              <li>View</li>
+              <li>Temp table / table variable</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>🛑 Safety</h5>
+            <ul>
+              <li>Stops when no new rows</li>
+              <li><code>MAXRECURSION</code> guard</li>
+              <li>Beware cycles</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Scope: one statement only</span>
+        <p>A CTE exists only for the <strong>single query</strong> immediately after it. You can't define a CTE and
+        then reference it in a separate statement later — unlike a temp table or a view, which persist. That short
+        lifetime is exactly why CTEs are great for organizing one complex query without leaving anything behind.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>The Sample Schema</h2></div>
+      <p class="sec-sub">We use the same Employees table — and this time lean on its self-referencing
+        <code>ManagerId</code>, which forms a small org tree ideal for recursion.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Employees with a self-referencing ManagerId (see the Schema &amp; DDL notes)</span>
+<span class="cmt">-- ManagerId points to another employee's EmpId; NULL = top of the tree.</span>
+<span class="kw">INSERT INTO</span> dbo.Employees (EmpId, Name, ManagerId) <span class="kw">VALUES</span>
+    (<span class="num">1</span>, <span class="str">N'Ada'</span>,       <span class="kw">NULL</span>),   <span class="cmt">-- CEO (no manager)</span>
+    (<span class="num">2</span>, <span class="str">N'Alan'</span>,      <span class="num">1</span>),      <span class="cmt">-- reports to Ada</span>
+    (<span class="num">3</span>, <span class="str">N'Grace'</span>,     <span class="num">1</span>),      <span class="cmt">-- reports to Ada</span>
+    (<span class="num">4</span>, <span class="str">N'Edsger'</span>,    <span class="num">2</span>),      <span class="cmt">-- reports to Alan</span>
+    (<span class="num">5</span>, <span class="str">N'Katherine'</span>, <span class="num">2</span>);      <span class="cmt">-- reports to Alan</span></code></pre>
+      </div>
+
+      <div class="tree">
+        <div><span class="lvl1">Ada</span> <span class="br">(Level 1 — CEO)</span></div>
+        <div><span class="br">├─</span> <span class="lvl2">Alan</span> <span class="br">(Level 2)</span></div>
+        <div><span class="br">│&nbsp;&nbsp;├─</span> <span class="lvl3">Edsger</span> <span class="br">(Level 3)</span></div>
+        <div><span class="br">│&nbsp;&nbsp;└─</span> <span class="lvl3">Katherine</span> <span class="br">(Level 3)</span></div>
+        <div><span class="br">└─</span> <span class="lvl2">Grace</span> <span class="br">(Level 2)</span></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Why this matters for recursion</span>
+        <p>The hierarchy is three levels deep. A single self-join only reaches <em>one</em> level (employee →
+        their manager). To walk the whole chain from Ada down to Edsger, you need a query that repeats itself — a
+        recursive CTE — which is the second half of this page.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Basic Syntax</h2></div>
+      <p class="sec-sub">A CTE is written with <code>WITH name AS ( query )</code>, followed immediately by a
+        statement that uses that name.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Define DeptAvg once, then use it to find above-average earners</span>
+<span class="kw">WITH</span> DeptAvg <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> DeptId, <span class="fn">AVG</span>(Salary) <span class="kw">AS</span> AvgSalary
+    <span class="kw">FROM</span> dbo.Employees
+    <span class="kw">GROUP BY</span> DeptId
+)
+<span class="kw">SELECT</span> e.Name, e.Salary, d.AvgSalary
+<span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e
+<span class="kw">JOIN</span> DeptAvg <span class="kw">AS</span> d <span class="kw">ON</span> d.DeptId = e.DeptId
+<span class="kw">WHERE</span> e.Salary &gt; d.AvgSalary;</code></pre>
+      </div>
+
+      <p>Read it top to bottom: first compute <code>DeptAvg</code> (the average salary per department), then join
+        each employee to their department's average and keep those who earn more. The CTE reads like a labeled
+        first step.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The CTE must be followed immediately by its statement</span>
+        <p>The <code>SELECT</code> (or <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code>) that uses the CTE
+        has to come <strong>right after</strong> the closing parenthesis — no other statements in between. Also, if
+        the statement before a <code>WITH</code> didn't end in a semicolon, SQL Server may complain; a common habit
+        is to prefix the CTE with <code>;WITH</code> to be safe.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Why Use a CTE</h2></div>
+      <p class="sec-sub">CTEs don't usually make queries faster — they make them <em>readable</em>. That's the whole
+        point, and it's a big one.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- The same logic as a NESTED SUBQUERY -- harder to read, inside-out</span>
+<span class="kw">SELECT</span> e.Name, e.Salary
+<span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e
+<span class="kw">JOIN</span> (
+    <span class="kw">SELECT</span> DeptId, <span class="fn">AVG</span>(Salary) <span class="kw">AS</span> AvgSalary
+    <span class="kw">FROM</span> dbo.Employees <span class="kw">GROUP BY</span> DeptId
+) <span class="kw">AS</span> d <span class="kw">ON</span> d.DeptId = e.DeptId
+<span class="kw">WHERE</span> e.Salary &gt; d.AvgSalary;</code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📖</span><h4>Reads top-to-bottom</h4><p>Steps are named and ordered like a recipe, instead of nested inside-out.</p></div>
+        <div class="card"><span class="glyph">♻️</span><h4>Reuse a step</h4><p>Reference the same CTE several times in one query without repeating its SQL.</p></div>
+        <div class="card"><span class="glyph">🧩</span><h4>Break up complexity</h4><p>Split a monster query into a few small, understandable pieces.</p></div>
+        <div class="card"><span class="glyph">🪜</span><h4>Enables recursion</h4><p>The recursive form (self-reference) is only possible with a CTE.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Readability is a real benefit</span>
+        <p>Both queries above produce the same result and usually the same execution plan. The CTE version wins on
+        <strong>maintainability</strong>: a colleague (or future you) can read the named steps and follow the logic.
+        On a team, clarity prevents bugs — which is why CTEs are the default style for anything beyond a trivial
+        query.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Multiple CTEs</h2></div>
+      <p class="sec-sub">You can define several CTEs in one <code>WITH</code>, separated by commas — and a later CTE
+        can build on an earlier one.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">WITH</span>
+DeptAvg <span class="kw">AS</span> (                        <span class="cmt">-- step 1: per-department averages</span>
+    <span class="kw">SELECT</span> DeptId, <span class="fn">AVG</span>(Salary) <span class="kw">AS</span> AvgSalary
+    <span class="kw">FROM</span> dbo.Employees <span class="kw">GROUP BY</span> DeptId
+),
+AbovePeers <span class="kw">AS</span> (                     <span class="cmt">-- step 2: uses step 1</span>
+    <span class="kw">SELECT</span> e.EmpId, e.Name, e.Salary
+    <span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e
+    <span class="kw">JOIN</span> DeptAvg <span class="kw">AS</span> d <span class="kw">ON</span> d.DeptId = e.DeptId
+    <span class="kw">WHERE</span> e.Salary &gt; d.AvgSalary
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> AbovePeers <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>;</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 One WITH, commas between CTEs</span>
+        <p>You write <code>WITH</code> <strong>once</strong>, then list each CTE separated by a comma. Each CTE can
+        reference any CTE defined <em>before</em> it, forming a readable pipeline: step 1 → step 2 → final query.
+        This is how you decompose a genuinely complex report into digestible stages.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Common comma slips</span>
+        <p>Two frequent syntax errors: putting a comma <em>before</em> the first CTE (right after <code>WITH</code>),
+        or forgetting the comma <em>between</em> two CTEs. The pattern is <code>WITH a AS (...), b AS (...)</code> —
+        commas only <em>between</em> definitions.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>CTE vs Alternatives</h2></div>
+      <p class="sec-sub">CTEs, derived tables, views, and temp tables all hold intermediate results, but they differ
+        in lifetime, reuse, and cost.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Option</th><th>Lives for</th><th>Reusable?</th><th>Stored?</th><th>Best when</th></tr></thead>
+          <tbody>
+            <tr><td><strong>CTE</strong></td><td>One statement</td><td>Within that statement</td><td>No</td><td>Readability; recursion; single complex query</td></tr>
+            <tr><td>Derived table</td><td>One statement</td><td>No (inline, once)</td><td>No</td><td>A quick, one-off inline subquery</td></tr>
+            <tr><td>View</td><td>Permanent (a saved definition)</td><td>Across many queries</td><td>Definition only</td><td>Reusing the same logic in many places</td></tr>
+            <tr><td>Temp table (<code>#t</code>)</td><td>The session</td><td>Across statements</td><td>Yes (in tempdb)</td><td>Big intermediate sets reused several times</td></tr>
+            <tr><td>Table variable (<code>@t</code>)</td><td>The batch</td><td>Across statements</td><td>Yes (small)</td><td>Small sets; simple procedural work</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Quick decision</span>
+        <p>Reach for a <strong>CTE</strong> to make one query readable or to do recursion. Use a <strong>view</strong>
+        when the same logic is reused across many queries. Use a <strong>temp table</strong> when a large
+        intermediate result is expensive to compute and you'll reference it several times (a CTE would recompute it
+        each time it's referenced). Use a <strong>derived table</strong> for a simple one-off inline subquery.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ A CTE is not a stored table</span>
+        <p>Unlike a temp table, a CTE holds no data of its own — it's a named query. If you reference the same CTE
+        three times, SQL Server may execute its definition three times. When that recomputation is costly, a temp
+        table (computed once, then reused) can be faster.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Recursive CTEs: The Idea</h2></div>
+      <p class="sec-sub">A recursive CTE is one that <em>refers to itself</em>. It's the standard tool for data that
+        forms a chain or a tree of unknown depth.</p>
+
+      <p>Some data is naturally hierarchical: employees reporting to managers, folders inside folders, categories
+        with sub-categories, parts made of parts. You can't know in advance how many levels deep it goes, so a fixed
+        number of joins won't do. A <strong>recursive CTE</strong> handles it by starting at the top and repeatedly
+        applying the same step — "find the children of everything I've found so far" — until there are no more
+        children.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🪜 Analogy</span>
+        <p>Imagine walking down a family tree. You start with one ancestor (the <strong>anchor</strong>). Then you
+        ask, "who are their children?" — that's the <strong>recursive step</strong>. Then you ask the same question
+        of <em>those</em> children, and their children, level by level, until you reach people with no children and
+        the tree runs out. A recursive CTE automates exactly that repeated question.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 When to reach for it</span>
+        <p>Use a recursive CTE whenever you must traverse a <strong>variable-depth hierarchy</strong>: full
+        management chains, folder trees, bill-of-materials, threaded comments, or any "walk from a node to all its
+        descendants (or ancestors)" problem. For a single known level, a plain self-join is enough.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>Anchor + Recursive</h2></div>
+      <p class="sec-sub">Every recursive CTE has exactly two parts, glued together by <code>UNION ALL</code>: a
+        starting point, and a step that references the CTE itself.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">WITH</span> cte <span class="kw">AS</span> (
+    <span class="cmt">-- 1) ANCHOR MEMBER: the starting rows. Runs ONCE.</span>
+    <span class="kw">SELECT</span> ... <span class="kw">FROM</span> SomeTable <span class="kw">WHERE</span> &lt;base condition&gt;
+
+    <span class="kw">UNION ALL</span>                         <span class="cmt">-- must be UNION ALL</span>
+
+    <span class="cmt">-- 2) RECURSIVE MEMBER: references cte. Runs REPEATEDLY.</span>
+    <span class="kw">SELECT</span> ... <span class="kw">FROM</span> SomeTable <span class="kw">AS</span> t
+    <span class="kw">JOIN</span> cte <span class="kw">ON</span> t.parent = cte.id
+)
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> cte;</code></pre>
+      </div>
+
+      <h3>How it actually runs 🔁</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <span class="st-icon">🌱</span>
+          <b>1. Run the anchor once</b>
+          <small>Produces the starting rows (e.g., the top boss). These become the current working set.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <span class="st-icon">🔁</span>
+          <b>2. Run the recursive member on the last batch</b>
+          <small>It joins the table back to the rows just produced, finding the next level down.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">➕</span>
+          <b>3. Add those new rows &amp; repeat</b>
+          <small>Feed the new rows back into step 2. Keep going, level by level.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🛑</span>
+          <b>4. Stop when a pass returns no new rows</b>
+          <small>No more children found → recursion ends. The union of every batch is the result.</small>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ It must be UNION ALL, not UNION</span>
+        <p>Recursive CTEs require <code>UNION ALL</code> between the anchor and recursive members —
+        <code>UNION</code> (which removes duplicates) isn't allowed here. Also, the recursive member may reference
+        the CTE <strong>only once</strong>, and can't use aggregates, <code>TOP</code>, <code>ORDER BY</code>,
+        <code>DISTINCT</code>, or outer joins against the CTE.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>The Org Chart</h2></div>
+      <p class="sec-sub">The canonical example: start at the CEO and walk down the entire management tree, tagging
+        each person with their level.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">WITH</span> OrgChart <span class="kw">AS</span> (
+    <span class="cmt">-- ANCHOR: the top boss has no manager</span>
+    <span class="kw">SELECT</span> EmpId, Name, ManagerId, <span class="num">1</span> <span class="kw">AS</span> Level
+    <span class="kw">FROM</span> dbo.Employees
+    <span class="kw">WHERE</span> ManagerId <span class="kw">IS NULL</span>
+
+    <span class="kw">UNION ALL</span>
+
+    <span class="cmt">-- RECURSIVE: people who report to someone already in OrgChart</span>
+    <span class="kw">SELECT</span> e.EmpId, e.Name, e.ManagerId, oc.Level + <span class="num">1</span>
+    <span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e
+    <span class="kw">JOIN</span> OrgChart <span class="kw">AS</span> oc <span class="kw">ON</span> e.ManagerId = oc.EmpId
+)
+<span class="kw">SELECT</span> Name, Level <span class="kw">FROM</span> OrgChart <span class="kw">ORDER BY</span> Level, Name;</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Level</th><th>Found in pass</th></tr></thead>
+          <tbody>
+            <tr><td>Ada</td><td>1</td><td>anchor</td></tr>
+            <tr><td>Alan</td><td>2</td><td>pass 1</td></tr>
+            <tr><td>Grace</td><td>2</td><td>pass 1</td></tr>
+            <tr><td>Edsger</td><td>3</td><td>pass 2</td></tr>
+            <tr><td>Katherine</td><td>3</td><td>pass 2</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The anchor finds Ada (Level 1). Pass 1 finds everyone reporting to Ada — Alan and Grace (Level 2). Pass 2
+        finds everyone reporting to <em>them</em> — Edsger and Katherine (Level 3). Pass 3 finds nobody (no one
+        reports to Edsger or Katherine), so recursion stops.</p>
+
+      <div class="callout tip">
+        <span class="tag">✅ Flip it to walk upward</span>
+        <p>To find a person's chain of <em>managers</em> instead of reports, swap the join direction: anchor on the
+        specific employee, and in the recursive member join <code>e.EmpId = oc.ManagerId</code>. Same structure,
+        opposite direction — from an employee up to the CEO.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Level &amp; Path</h2></div>
+      <p class="sec-sub">Because each pass can carry columns forward, you can accumulate a running <em>path</em>
+        string that shows the full chain from the root to each person.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">WITH</span> OrgChart <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> EmpId, Name, ManagerId, <span class="num">1</span> <span class="kw">AS</span> Level,
+           <span class="fn">CAST</span>(Name <span class="kw">AS</span> <span class="ty">VARCHAR</span>(<span class="num">500</span>)) <span class="kw">AS</span> Path
+    <span class="kw">FROM</span> dbo.Employees
+    <span class="kw">WHERE</span> ManagerId <span class="kw">IS NULL</span>
+
+    <span class="kw">UNION ALL</span>
+
+    <span class="kw">SELECT</span> e.EmpId, e.Name, e.ManagerId, oc.Level + <span class="num">1</span>,
+           <span class="fn">CAST</span>(oc.Path + <span class="str">' &gt; '</span> + e.Name <span class="kw">AS</span> <span class="ty">VARCHAR</span>(<span class="num">500</span>))
+    <span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e
+    <span class="kw">JOIN</span> OrgChart <span class="kw">AS</span> oc <span class="kw">ON</span> e.ManagerId = oc.EmpId
+)
+<span class="kw">SELECT</span> Name, Level, Path <span class="kw">FROM</span> OrgChart <span class="kw">ORDER BY</span> Path;</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Level</th><th>Path</th></tr></thead>
+          <tbody>
+            <tr><td>Ada</td><td>1</td><td>Ada</td></tr>
+            <tr><td>Alan</td><td>2</td><td>Ada &gt; Alan</td></tr>
+            <tr><td>Edsger</td><td>3</td><td>Ada &gt; Alan &gt; Edsger</td></tr>
+            <tr><td>Katherine</td><td>3</td><td>Ada &gt; Alan &gt; Katherine</td></tr>
+            <tr><td>Grace</td><td>2</td><td>Ada &gt; Grace</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ CAST the path in the anchor</span>
+        <p>The recursive member appends text to <code>Path</code>, so <code>Path</code> must be wide enough from the
+        start. If you don't <code>CAST</code> the anchor's <code>Path</code> to a large enough
+        <code>VARCHAR</code>, SQL Server sizes the column to the anchor's short value and later passes fail with a
+        truncation error. Cast both members to the same type and length.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Termination &amp; Limits</h2></div>
+      <p class="sec-sub">A recursive CTE stops on its own when a pass finds nothing — but bad data can make it loop
+        forever, so SQL Server ships with a safety brake.</p>
+
+      <p>Recursion ends naturally when the recursive member returns <strong>zero new rows</strong> (in the org chart,
+        when we reach people with no reports). But if the data contains a <strong>cycle</strong> — say A manages B
+        and B manages A — the recursion never runs out of "children" and would loop endlessly.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- The default recursion limit is 100 levels. Change it with OPTION.</span>
+<span class="kw">WITH</span> OrgChart <span class="kw">AS</span> ( <span class="cmt">... anchor + recursive ...</span> )
+<span class="kw">SELECT</span> * <span class="kw">FROM</span> OrgChart
+<span class="kw">OPTION</span> (<span class="kw">MAXRECURSION</span> <span class="num">50</span>);   <span class="cmt">-- cap at 50; use 0 for unlimited (careful!)</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 MAXRECURSION</span>
+        <p>By default, SQL Server stops a recursive CTE after <strong>100</strong> levels and raises an error, to
+        prevent runaway queries. <code>OPTION (MAXRECURSION n)</code> sets a different cap (0 through 32767);
+        <code>MAXRECURSION 0</code> means <em>no limit</em> — only use it when you're certain the data can't cycle,
+        or you risk an infinite loop.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Guard against cycles</span>
+        <p>To survive cyclic data, carry the accumulated <code>Path</code> and, in the recursive member, only follow
+        a child whose id isn't already in the path (e.g., <code>WHERE oc.Path NOT LIKE '%' + child + '%'</code>, or
+        track visited ids). That way a repeated node is never expanded twice and the recursion terminates safely.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Generating Series</h2></div>
+      <p class="sec-sub">Recursion isn't only for trees — it can manufacture rows, like a sequence of numbers or a
+        run of dates.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Generate the numbers 1 through 10</span>
+<span class="kw">WITH</span> Numbers <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> <span class="num">1</span> <span class="kw">AS</span> n              <span class="cmt">-- anchor: start at 1</span>
+    <span class="kw">UNION ALL</span>
+    <span class="kw">SELECT</span> n + <span class="num">1</span> <span class="kw">FROM</span> Numbers    <span class="cmt">-- recursive: add 1 each pass</span>
+    <span class="kw">WHERE</span> n &lt; <span class="num">10</span>               <span class="cmt">-- stop condition (no rows once n = 10)</span>
+)
+<span class="kw">SELECT</span> n <span class="kw">FROM</span> Numbers;
+
+<span class="cmt">-- A run of dates works the same way</span>
+<span class="kw">WITH</span> Days <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> <span class="fn">CAST</span>(<span class="str">'2024-01-01'</span> <span class="kw">AS</span> <span class="ty">DATE</span>) <span class="kw">AS</span> d
+    <span class="kw">UNION ALL</span>
+    <span class="kw">SELECT</span> <span class="fn">DATEADD</span>(<span class="kw">DAY</span>, <span class="num">1</span>, d) <span class="kw">FROM</span> Days
+    <span class="kw">WHERE</span> d &lt; <span class="str">'2024-01-07'</span>
+)
+<span class="kw">SELECT</span> d <span class="kw">FROM</span> Days;</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Note the built-in alternative</span>
+        <p>Recursive series generation is a classic trick, but for plain integer ranges <strong>SQL Server 2022 and
+        later</strong> offer the simpler built-in <code>GENERATE_SERIES(start, stop, step)</code>. For very large
+        ranges, a permanent "tally" (numbers) table is often the fastest option. Recursive CTEs remain ideal for
+        modest series and, above all, for genuine hierarchies.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Mistakes &amp; Best Practices</h2></div>
+      <p class="sec-sub">The habits that keep CTEs correct — especially the recursive ones.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">➕</span><h4>UNION ALL, not UNION</h4><p>Recursive CTEs require <code>UNION ALL</code>; <code>UNION</code> is not allowed between the members.</p></div>
+        <div class="card"><span class="glyph">🌱</span><h4>Give the anchor a real base</h4><p>The anchor needs a condition (like <code>ManagerId IS NULL</code>) so recursion has a defined starting point.</p></div>
+        <div class="card"><span class="glyph">📏</span><h4>Size accumulated columns</h4><p><code>CAST</code> a growing path/level column to a wide type in the anchor, or later passes truncate.</p></div>
+        <div class="card"><span class="glyph">🛑</span><h4>Mind MAXRECURSION</h4><p>Default cap is 100 levels; raise it deliberately and never blindly use 0 on data that might cycle.</p></div>
+        <div class="card"><span class="glyph">🔁</span><h4>Detect cycles</h4><p>Track visited nodes (via the path) so cyclic data can't loop forever.</p></div>
+        <div class="card"><span class="glyph">🗃️</span><h4>Temp table for reuse</h4><p>If a heavy CTE is referenced many times, materialize it in a temp table so it's computed once.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ A CTE doesn't cache its result</span>
+        <p>Referencing the same non-recursive CTE multiple times can cause SQL Server to execute its definition each
+        time — a CTE is a named query, not a saved table. If the query is expensive and reused, that's wasted work;
+        switch to a temp table computed once. Measure with the execution plan if performance matters.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea, then a full cheat-sheet table.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>📝 CTE</h4><p>A named, temporary result set defined with <code>WITH</code>, alive for one statement.</p></div>
+        <div class="recap-card"><h4>📖 Why</h4><p>Readability — turns nested subqueries into a named, top-to-bottom pipeline.</p></div>
+        <div class="recap-card"><h4>🔗 Multiple</h4><p>One <code>WITH</code>, CTEs separated by commas; later ones can use earlier ones.</p></div>
+        <div class="recap-card"><h4>🆚 vs temp table</h4><p>CTE isn't stored; a heavy, reused CTE may be faster as a temp table.</p></div>
+        <div class="recap-card"><h4>🪜 Recursive</h4><p>A CTE that references itself to walk a hierarchy of unknown depth.</p></div>
+        <div class="recap-card"><h4>🌱 Anchor</h4><p>The starting rows; runs once (e.g., the top of the tree).</p></div>
+        <div class="recap-card"><h4>🔁 Recursive member</h4><p>References the CTE; runs repeatedly on the last batch of rows.</p></div>
+        <div class="recap-card"><h4>➕ UNION ALL</h4><p>Required glue between anchor and recursive members.</p></div>
+        <div class="recap-card"><h4>🛑 Termination</h4><p>Stops when a pass returns no new rows; capped by <code>MAXRECURSION</code> (default 100).</p></div>
+        <div class="recap-card"><h4>🔢 Series</h4><p>Recursion can also generate number/date sequences (or use <code>GENERATE_SERIES</code>).</p></div>
+      </div>
+
+      <h3>Full summary table</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it is</th><th>Key point</th></tr></thead>
+          <tbody>
+            <tr><td><code>WITH name AS (...)</code></td><td>Defines a CTE</td><td>Must be followed immediately by the statement that uses it</td></tr>
+            <tr><td>Multiple CTEs</td><td>Comma-separated after one <code>WITH</code></td><td>A later CTE can reference an earlier one</td></tr>
+            <tr><td>Recursive CTE</td><td>Anchor + recursive member</td><td>Joined by <code>UNION ALL</code>; recursive part references the CTE once</td></tr>
+            <tr><td>Anchor member</td><td>Base rows, runs once</td><td>Needs a base condition (the starting node)</td></tr>
+            <tr><td>Recursive member</td><td>Repeats on the prior batch</td><td>No aggregates / TOP / ORDER BY / DISTINCT / outer join on the CTE</td></tr>
+            <tr><td>Termination</td><td>Recursion ends</td><td>When a pass yields no new rows</td></tr>
+            <tr><td><code>MAXRECURSION</code></td><td>Safety cap</td><td>Default 100; <code>OPTION (MAXRECURSION 0)</code> = unlimited</td></tr>
+            <tr><td>CTE vs temp table</td><td>Named query vs stored rows</td><td>CTE may recompute; temp table stores once</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What is a CTE? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A Common Table Expression — a named, temporary result set you define with <code>WITH</code> at
+        the top of a query and then use in the statement that follows. It behaves like a temporary table that exists
+        only for that one statement, and it's mainly used to make complex queries readable.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> What keyword introduces a CTE? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>WITH</code>. You write <code>WITH name AS ( query )</code> and then immediately follow it
+        with the <code>SELECT</code> (or <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code>) that references
+        <code>name</code>. Because of a parsing quirk, people often write <code>;WITH</code> to make sure the previous
+        statement is properly terminated.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> Why use a CTE instead of a subquery? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Mainly readability. A CTE gives a name to a step and lets the query read top-to-bottom like
+        a recipe, instead of being nested inside-out. It also lets you reference the same step more than once, break a
+        big query into pieces, and — uniquely — enables recursion. It usually doesn't change performance.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> How long does a CTE exist? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Only for the single statement that immediately follows its definition. Once that statement
+        finishes, the CTE is gone. You can't define a CTE in one statement and use it in a later, separate statement —
+        for that you'd need a temp table or a view.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> Can you have more than one CTE in a query? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Yes. You write <code>WITH</code> once and separate the CTEs with commas:
+        <code>WITH a AS (...), b AS (...)</code>. Each CTE can reference any CTE defined before it, so you can build a
+        readable pipeline of steps that culminates in the final query.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What is a recursive CTE, in simple terms? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A CTE that refers to itself in order to walk through hierarchical data — like an org chart or
+        a folder tree — one level at a time. It starts at a known point and keeps applying the same step ("find the
+        next level") until there's nothing left to find.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> What are the two parts of a recursive CTE? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The <strong>anchor member</strong>, which produces the starting rows and runs once (for example,
+        the employee with no manager), and the <strong>recursive member</strong>, which references the CTE itself and
+        runs repeatedly to find each next level. Together they build up the full result.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> What connects the two parts of a recursive CTE? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>UNION ALL</code>. It sits between the anchor member and the recursive member and combines
+        their rows. It must be <code>UNION ALL</code> specifically — plain <code>UNION</code> (which removes duplicates)
+        is not permitted in a recursive CTE.</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q09</span> How does a CTE differ from a derived table? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Both are temporary, single-statement result sets. A derived table is a subquery written inline in
+        the <code>FROM</code> clause; a CTE is defined up front with <code>WITH</code> and given a name. CTEs read more
+        clearly, can be referenced multiple times in the same query, can chain, and can be recursive — things a derived
+        table can't do as cleanly.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> How does a CTE differ from a temp table, and when do you use each? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A CTE is a named query with no stored data and a one-statement lifetime; a temp table (<code>#t</code>)
+        physically stores rows in tempdb for the whole session and can be reused across statements. Use a CTE for
+        readability and recursion within one query. Use a temp table when a large intermediate result is expensive to
+        compute and you'll reference it several times — the temp table computes it once, whereas a CTE may recompute
+        it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> How does a CTE differ from a view? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A view is a permanently saved query definition you can reuse across many different queries and
+        sessions; a CTE exists only for the single statement it precedes. If the same logic is needed in many places,
+        make it a view. If it's a one-off building block for a single complex query, use a CTE.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> How does a recursive CTE know when to stop? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It stops automatically when a recursive pass returns <strong>no new rows</strong> — for example,
+        when you reach employees who have no reports. As a safety net, SQL Server also stops after a maximum number of
+        recursion levels (default 100) and raises an error, which protects against runaway or cyclic data.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What is MAXRECURSION and its default? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>MAXRECURSION</code> is a query hint that caps how many recursion levels a CTE may run. The
+        default is <strong>100</strong>; exceeding it raises an error. You override it with <code>OPTION (MAXRECURSION
+        n)</code> where n is 0–32767, and <code>0</code> means unlimited — use 0 only when you're sure the data can't
+        cycle, or you risk an infinite loop.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> Can a CTE reference itself or another CTE? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A <em>recursive</em> CTE references itself (that's what makes it recursive). Any CTE can also
+        reference other CTEs defined <em>earlier</em> in the same <code>WITH</code> clause. It cannot reference a CTE
+        defined <em>after</em> it, and a non-recursive CTE cannot reference itself.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> Can you INSERT, UPDATE, or DELETE using a CTE? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Yes. A CTE can precede an <code>INSERT</code>, <code>UPDATE</code>, or <code>DELETE</code>, and
+        you can modify data through the CTE when it maps to a single underlying table. A common use is deduplication:
+        number duplicates with <code>ROW_NUMBER</code> in a CTE, then <code>DELETE FROM cte WHERE rn &gt; 1</code> to
+        remove all but one of each.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> Why must recursive CTEs use UNION ALL rather than UNION? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Recursion is defined to accumulate rows pass by pass with <code>UNION ALL</code>, which simply
+        appends without deduplicating — that's required by the recursive CTE grammar. <code>UNION</code> would try to
+        remove duplicates across the whole growing set, which isn't allowed here. If you need to avoid revisiting nodes
+        (cycles), you handle that with a visited/path check, not with <code>UNION</code>.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain step by step how a recursive CTE executes. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The anchor member runs once, producing the initial set. Then the recursive member runs, joining
+        the source table to the rows produced in the <em>previous</em> pass to find the next level, and those new rows
+        are added to the result. The recursive member runs again on just that latest batch, and so on. When a pass
+        returns zero rows, recursion stops, and the final result is the union of every batch. It's breadth-first,
+        level by level.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> How do you prevent infinite loops from cyclic data? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Two layers. First, the built-in <code>MAXRECURSION</code> cap aborts with an error after a set
+        number of levels (default 100). Second, and better, detect cycles yourself: carry the accumulated path (or a
+        set of visited ids) and, in the recursive member, only follow a child that isn't already on the path — e.g.,
+        exclude ids already visited. That makes the recursion terminate cleanly instead of erroring out.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> Are CTEs materialized, and what are the performance implications? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>In SQL Server, a non-recursive CTE is generally <strong>inlined</strong> (expanded into the main
+        query), not materialized into a stored temporary result. So referencing the same CTE multiple times can cause
+        its definition to be evaluated multiple times. When that recomputation is expensive, materializing into a temp
+        table (computed once) is faster. The optimizer treats the CTE like a subquery, so a CTE per se doesn't add or
+        remove performance versus the equivalent subquery.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> Can you reference a CTE multiple times, and is it re-evaluated? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Yes, a non-recursive CTE can be referenced multiple times in the statement, but because it's
+        typically inlined rather than cached, each reference may trigger a separate evaluation of its definition. If the
+        CTE is costly and used several times, that's duplicated work — the standard remedy is to compute it once into a
+        temp table (or an indexed intermediate) and reference that.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> Recursive CTE vs a cursor or loop for hierarchies — trade-offs? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A recursive CTE is set-based and declarative: it expresses "walk the whole tree" in one
+        statement and lets the engine process level by level, which is usually far faster and cleaner than a row-by-row
+        cursor or a procedural <code>WHILE</code> loop. Cursors/loops are slow and verbose but occasionally justified for
+        very deep or complex traversals with per-node side effects. For pure hierarchy retrieval, prefer the recursive
+        CTE.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> How do you track depth and detect cycles in a recursive CTE? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Add a level column in the anchor (<code>1</code>) and increment it in the recursive member
+        (<code>parent.Level + 1</code>) to track depth. Build a path string the same way (append each node), casting it
+        to a wide type in the anchor. To detect cycles, check in the recursive join that the child isn't already in the
+        path (or in a visited set), so a node is never expanded twice. That combination gives you depth, full path, and
+        loop safety.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> How would you generate a number or date series, and what are the alternatives? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A recursive CTE works: anchor at the first value, recursive member adds a step, with a
+        <code>WHERE</code> stop condition. But for integer ranges, SQL Server 2022+ has the built-in
+        <code>GENERATE_SERIES(start, stop, step)</code>, which is simpler and efficient. For large or frequently used
+        ranges, a permanent "tally"/numbers table is typically the fastest. Recursion is best for modest series and,
+        primarily, for real hierarchies rather than plain sequences.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> What are the limitations of the recursive member? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The recursive member may reference the CTE <strong>only once</strong>, must be combined with the
+        anchor via <code>UNION ALL</code>, and cannot use <code>TOP</code>, <code>DISTINCT</code>, <code>GROUP BY</code>
+        or aggregate functions, <code>HAVING</code>, scalar aggregation, subqueries that reference the CTE, or
+        <code>OUTER</code>/right joins against the CTE. Data types of a column must match between the anchor and
+        recursive members (hence casting accumulated columns). These rules exist so the engine can process the recursion
+        one bounded level at a time.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions establish what a CTE is, the <code>WITH</code> syntax,
+        and the two recursive parts; <strong>Mid</strong> questions test the real decisions (CTE vs temp table vs view,
+        termination, MAXRECURSION, UNION ALL); <strong>Senior</strong> questions probe execution, cycle-safety,
+        materialization/performance, and the recursive-member limitations. Say each answer out loud in plain English —
+        the ones you stumble on point straight to the section to re-read.</p>
+      </div>
+
+      <p class="foot">Concepts verified against Microsoft Learn (Transact-SQL <code>WITH common_table_expression</code>,
+        recursive CTEs, <code>MAXRECURSION</code>, and <code>GENERATE_SERIES</code>). CTEs and recursive CTEs have been
+        available since SQL Server 2005 and are stable across supported versions (through 2025 / 17.x);
+        <code>GENERATE_SERIES</code> was added in SQL Server 2022. This single <code>07-sql-ctes.html</code> file is
+        fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

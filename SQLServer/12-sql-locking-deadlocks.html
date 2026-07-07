@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL Server — Locking &amp; Deadlocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arr-cell.dim .val{opacity:.4;border-style:dashed;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- cycle diagram ---------- */
+.cycle{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:8px 0;}
+.cycle .node{background:#fff;border:2px solid var(--rose);border-radius:12px;padding:12px 18px;
+  font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--rose);font-weight:700;text-align:center;}
+.cycle .waits{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-soft);text-align:center;}
+.cycle .big{font-size:26px;color:var(--rose);}
+
+/* ---------- two-session timeline ---------- */
+.timeline{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:24px 0;border:1px solid var(--line);
+  border-radius:14px;overflow:hidden;font-family:"JetBrains Mono",monospace;font-size:12.5px;}
+.timeline .th{background:var(--bg-soft);padding:10px 16px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;font-size:11px;}
+.timeline .th.t1{color:var(--blue);border-right:1px solid var(--line);}
+.timeline .th.t2{color:var(--rose);}
+.timeline .cell{padding:10px 16px;border-top:1px solid var(--line);min-height:20px;}
+.timeline .cell.t1{border-right:1px solid var(--line);color:var(--blue);}
+.timeline .cell.t2{color:var(--rose);}
+.timeline .cell.empty{background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(0,0,0,.02) 6px,rgba(0,0,0,.02) 12px);}
+.timeline .wait{color:var(--accent);font-weight:700;}
+.timeline .kill{color:var(--rose);font-weight:700;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:580px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+td.yes{background:var(--green-soft);font-weight:700;color:var(--green);text-align:center;}
+td.no{background:var(--rose-soft);font-weight:700;color:var(--rose);text-align:center;}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">SQL Server: Locking</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>Locking Basics</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> What Locking Is</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The Sample Scenario</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Lock Modes</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Lock Compatibility</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Granularity &amp; Escalation</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Blocking</a>
+      </div>
+      <div class="nav-group">
+        <h4>Deadlocks</h4>
+        <a class="nav-link" href="#s07"><span class="n">07</span> The Idea</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> One in Action</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Detection &amp; Victim</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Prevention</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Blocking vs Deadlock</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Diagnosing</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Mistakes &amp; Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// SQL Server &nbsp;·&nbsp; how concurrency is enforced, and when it jams</p>
+      <h1>Locking &amp; Deadlocks 🔐</h1>
+      <p class="lede">
+        Isolation levels are <em>enforced</em> by <b>locks</b> — short-lived claims on rows, pages, or tables that
+        stop transactions from corrupting each other. Usually locks just cause brief <b>blocking</b> (one transaction
+        waits its turn). But when two transactions each hold what the other needs, they wait forever — a
+        <b>deadlock</b> — and SQL Server must kill one to break the cycle. This page covers lock modes, blocking vs
+        deadlock, and how to prevent the jams. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🔒 <b>S / X / U locks</b></span>
+        <span class="chip">📏 <b>Granularity</b></span>
+        <span class="chip">⏳ <b>Blocking</b></span>
+        <span class="chip">💀 <b>Deadlock &amp; victim</b></span>
+        <span class="chip">🛡️ <b>Prevention</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>What Locking Is</h2></div>
+      <p class="sec-sub">A lock is a temporary claim a transaction places on data so that others can't interfere with
+        it while it's being read or changed.</p>
+
+      <p>The isolation levels from the previous topic are promises ("no dirty reads," "repeatable reads"). Locks are
+        <em>how SQL Server keeps those promises</em>. When a transaction reads or writes a row, it takes a lock on it;
+        other transactions that want an incompatible lock on the same data must wait until the first one releases (at
+        commit or rollback). Locking is automatic — the engine manages it — but understanding it explains both slow
+        queries (blocking) and mysterious errors (deadlocks).</p>
+
+      <div class="callout analogy">
+        <span class="tag">🚻 Analogy</span>
+        <p>A lock is like occupying a single-stall restroom. While you're inside (holding the lock), the door is
+        latched and others wait outside (blocking). When you leave (commit), the next person goes in. A
+        <strong>deadlock</strong> is the absurd case where two people each hold a key the other needs and refuse to
+        move — someone has to be made to leave for anyone to proceed.</p>
+      </div>
+
+      <h3>The locking landscape 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">🔐 Locking &amp; Deadlocks</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>🔒 Lock modes</h5>
+            <ul>
+              <li>Shared (S) — reads</li>
+              <li>Exclusive (X) — writes</li>
+              <li>Update (U), Intent</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>📏 Granularity</h5>
+            <ul>
+              <li>Row / page / table</li>
+              <li>Escalation</li>
+              <li>Fewer, bigger locks = less concurrency</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>⏳ Blocking</h5>
+            <ul>
+              <li>One waits on another</li>
+              <li>Normal &amp; temporary</li>
+              <li>Resolves on release</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>💀 Deadlock</h5>
+            <ul>
+              <li>Circular wait</li>
+              <li>Never self-resolves</li>
+              <li>Victim killed (error 1205)</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🛡️ Prevention</h5>
+            <ul>
+              <li>Consistent access order</li>
+              <li>Short transactions</li>
+              <li>Indexes, RCSI, retry</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Locks are the mechanism, not the goal</span>
+        <p>You rarely take locks manually — SQL Server acquires them automatically to enforce your isolation level.
+        The reason to understand them is diagnostic: nearly every "the app randomly hangs" or "we get deadlock errors"
+        problem traces back to how locks are being taken and held. Knowing the modes and lifetimes lets you fix the
+        cause.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>The Sample Scenario</h2></div>
+      <p class="sec-sub">Two sessions (T1 and T2) both want to update the same two employees — the setup for both
+        blocking and the classic deadlock.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Row</th><th>Employee</th><th>Salary</th></tr></thead>
+          <tbody>
+            <tr><td>Row A</td><td>Ada</td><td>145,000</td></tr>
+            <tr><td>Row B</td><td>Alan</td><td>120,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Whenever a transaction updates Ada, it takes an <strong>exclusive lock</strong> on Row A; updating Alan locks
+        Row B. If two transactions touch these two rows <em>in different orders</em>, they can end up each holding one
+        row and waiting for the other — the deadlock we'll build in section 08.</p>
+
+      <div class="callout tip">
+        <span class="tag">✅ Keep "Row A = Ada, Row B = Alan" in mind</span>
+        <p>Every example below uses just these two rows and two sessions. That's all it takes to demonstrate a lock, a
+        block, and a full deadlock — real systems are bigger, but the mechanics are identical.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Lock Modes</h2></div>
+      <p class="sec-sub">Different operations take different <em>modes</em> of lock. The mode determines what others
+        can and can't do to the same data at the same time.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">👀</span><h4>Shared (S)</h4><p>Taken to <strong>read</strong> data. Multiple transactions can hold S locks on the same row at once — readers don't block each other.</p></div>
+        <div class="card"><span class="glyph">✍️</span><h4>Exclusive (X)</h4><p>Taken to <strong>modify</strong> (INSERT/UPDATE/DELETE). Incompatible with everything — no one else may read or write that data.</p></div>
+        <div class="card"><span class="glyph">🔄</span><h4>Update (U)</h4><p>Taken while <strong>searching</strong> for rows to update. Only one U at a time; it converts to X when the change happens. Prevents a common deadlock.</p></div>
+        <div class="card"><span class="glyph">📣</span><h4>Intent (IS/IX/IU)</h4><p>Placed on higher levels (page, table) to <strong>signal</strong> a lock exists below, so the engine checks compatibility cheaply.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why the Update (U) lock exists</span>
+        <p>Consider two transactions that both read a row (S lock) intending to update it, then both try to upgrade to
+        X — each waits for the other to drop its S lock: an instant deadlock. The <strong>U lock</strong> solves this:
+        only one transaction can hold a U lock while searching, so they naturally serialize instead of deadlocking.
+        It's compatible with shared reads but not with another U or an X.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Intent locks in one line</span>
+        <p>Before locking a row, SQL Server puts an <strong>intent</strong> lock (like IX) on the page and table above
+        it. That way, a transaction wanting a full table lock can see "someone holds a row lock in here" instantly,
+        without scanning every row's lock — a performance optimization for the lock manager.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Lock Compatibility</h2></div>
+      <p class="sec-sub">Whether one transaction must wait for another comes down to whether their lock modes are
+        <em>compatible</em>. This little matrix drives all blocking.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Held ↓ / Requested →</th><th>Shared (S)</th><th>Update (U)</th><th>Exclusive (X)</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Shared (S)</strong></td><td class="yes">✔ compatible</td><td class="yes">✔ compatible</td><td class="no">✗ blocks</td></tr>
+            <tr><td><strong>Update (U)</strong></td><td class="yes">✔ compatible</td><td class="no">✗ blocks</td><td class="no">✗ blocks</td></tr>
+            <tr><td><strong>Exclusive (X)</strong></td><td class="no">✗ blocks</td><td class="no">✗ blocks</td><td class="no">✗ blocks</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Read the matrix in plain English</span>
+        <p><strong>Many readers, one writer.</strong> Shared locks coexist (lots of readers are fine). An
+        <strong>exclusive</strong> lock is compatible with nothing — while someone is writing a row, no one else may
+        read or write it. An <strong>update</strong> lock tolerates shared readers but not another update or an
+        exclusive, which is exactly what makes it a safe "I'm about to write this" marker.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ This is why writes block and reads (mostly) don't</span>
+        <p>Two <code>SELECT</code>s on the same row run side by side (S + S). A <code>SELECT</code> and an
+        <code>UPDATE</code> on the same row conflict (S vs X), so one waits. Under row-versioning (RCSI/snapshot), reads
+        don't take S locks at all, which is why enabling it dramatically cuts reader/writer blocking — a point we'll
+        return to.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Granularity &amp; Escalation</h2></div>
+      <p class="sec-sub">Locks can be taken at different sizes — a single row, a page, or a whole table. Bigger locks
+        cost less to manage but block far more.</p>
+
+      <div class="diagram-box">
+        <div class="cap">lock granularity — smaller = more concurrency, more overhead</div>
+        <div class="arr-row">
+          <div class="arr-cell highlight-green"><div class="val">Row</div><div class="idx">one row</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">Page</div><div class="idx">~8 KB of rows</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell neg"><div class="val">Table</div><div class="idx">every row</div></div>
+        </div>
+      </div>
+
+      <p>A <strong>row lock</strong> blocks only that row — maximum concurrency, but each lock uses memory and there's
+        management overhead. A <strong>table lock</strong> is one cheap lock but blocks everyone. SQL Server usually
+        starts with fine-grained row locks and picks the level automatically.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Lock escalation</span>
+        <p>When a single statement acquires too many row/page locks (by default around <strong>5,000</strong>), SQL
+        Server <strong>escalates</strong> them to a single table lock to save memory. That's efficient for the lock
+        manager but a concurrency disaster: one statement now blocks the whole table. Escalation is often a sign a
+        query is touching far more rows than it should — usually a missing index causing a scan.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ How to avoid unwanted escalation</span>
+        <p>The best fix is to touch fewer rows: add an index so the statement seeks a small set instead of scanning,
+        or process large modifications in <strong>batches</strong> (e.g., delete 5,000 rows at a time in a loop). You
+        can also disable escalation per table as a last resort, but reducing the row count is the real cure.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Blocking</h2></div>
+      <p class="sec-sub">Blocking is simply one transaction waiting for another to release a lock. It's normal,
+        expected, and usually brief — it only becomes a problem when the wait is long.</p>
+
+      <div class="timeline">
+        <div class="th t1">T1</div>
+        <div class="th t2">T2</div>
+        <div class="cell t1">UPDATE Ada → holds X lock on Row A</div>
+        <div class="cell t2 empty"></div>
+        <div class="cell t1 empty"></div>
+        <div class="cell t2 wait">UPDATE Ada → waits (X vs X)…</div>
+        <div class="cell t1">COMMIT → releases Row A</div>
+        <div class="cell t2 empty"></div>
+        <div class="cell t1 empty"></div>
+        <div class="cell t2">…lock granted, proceeds, COMMIT</div>
+      </div>
+
+      <p>T2 isn't broken — it's just <em>waiting its turn</em>. The moment T1 commits and releases the lock, T2
+        continues. This one-directional wait always resolves on its own once the blocker finishes.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Blocking is only a problem when it's long</span>
+        <p>Short blocking is the normal cost of consistency and you'll always have some. It turns pathological when a
+        transaction holds locks for a long time — a slow query, a transaction left open waiting for user input, or a
+        big unindexed update. The fix is almost always to make the blocking transaction <strong>shorter or
+        faster</strong>, not to remove locking.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Deadlocks: The Idea</h2></div>
+      <p class="sec-sub">A deadlock is a <em>circular</em> wait: two (or more) transactions each hold a lock the other
+        needs, so neither can ever proceed. Unlike blocking, it never resolves on its own.</p>
+
+      <div class="diagram-box">
+        <div class="cap">the circular wait that defines a deadlock</div>
+        <div class="cycle">
+          <div style="text-align:center">
+            <div class="node">T1</div>
+            <div class="waits">holds Row A<br>wants Row B</div>
+          </div>
+          <div class="big">⇄</div>
+          <div style="text-align:center">
+            <div class="node">T2</div>
+            <div class="waits">holds Row B<br>wants Row A</div>
+          </div>
+        </div>
+      </div>
+
+      <p>T1 is waiting for T2 to release Row B; T2 is waiting for T1 to release Row A. Each is waiting for the other,
+        and neither will give up its lock until it finishes — but neither can finish. That mutual, circular dependency
+        is the deadlock.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Deadlock ≠ heavy blocking</span>
+        <p>A deadlock is not "very slow blocking." Blocking is a line at one door that clears when the front person
+        leaves. A deadlock is a genuine <strong>cycle</strong> with no natural end — waiting longer would never help.
+        That's precisely why SQL Server has to step in and forcibly break it.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>One in Action</h2></div>
+      <p class="sec-sub">The classic two-row deadlock, step by step — caused entirely by the two sessions touching the
+        rows in <em>opposite orders</em>.</p>
+
+      <div class="timeline">
+        <div class="th t1">T1 (Ada → Alan)</div>
+        <div class="th t2">T2 (Alan → Ada)</div>
+        <div class="cell t1">UPDATE Ada → X lock on Row A ✅</div>
+        <div class="cell t2 empty"></div>
+        <div class="cell t1 empty"></div>
+        <div class="cell t2">UPDATE Alan → X lock on Row B ✅</div>
+        <div class="cell t1 wait">UPDATE Alan → wants Row B… waits on T2</div>
+        <div class="cell t2 empty"></div>
+        <div class="cell t1 empty"></div>
+        <div class="cell t2 wait">UPDATE Ada → wants Row A… waits on T1</div>
+        <div class="cell t1 kill">💀 chosen as victim → rolled back (error 1205)</div>
+        <div class="cell t2">lock granted → proceeds → COMMIT ✅</div>
+      </div>
+
+      <p>Each transaction grabbed one row, then reached for the row the other already held. The cycle formed the
+        instant T2 asked for Row A. SQL Server's deadlock monitor detected it and killed T1 to let T2 finish.</p>
+
+      <div class="callout tip">
+        <span class="tag">✅ Spot the root cause</span>
+        <p>The bug isn't the locks — it's the <strong>ordering</strong>. T1 went Ada→Alan while T2 went Alan→Ada. If
+        both had touched the rows in the <em>same</em> order, one would simply have blocked briefly and then proceeded
+        — no cycle. That single insight is the key to prevention (section 10).</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Detection &amp; Victim</h2></div>
+      <p class="sec-sub">SQL Server actively watches for deadlock cycles and, when it finds one, kills a transaction to
+        break it. That transaction is the "deadlock victim."</p>
+
+      <p>A background process (the <strong>deadlock monitor</strong>, waking roughly every few seconds) builds a
+        wait-for graph and looks for cycles. When it finds one, it picks a <strong>victim</strong>, rolls that
+        transaction back entirely, and raises <strong>error 1205</strong> to that session. The other transaction(s)
+        then get their locks and continue.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 How the victim is chosen</span>
+        <p>By default, SQL Server picks the transaction that is <strong>cheapest to roll back</strong> — the one that
+        has done the least work (smallest amount of transaction log to undo). You can influence this with
+        <code>SET DEADLOCK_PRIORITY</code> (LOW / NORMAL / HIGH, or a number): a lower-priority session is chosen as
+        the victim first, regardless of cost. Ties fall back to the rollback-cost rule.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The victim's transaction is fully rolled back</span>
+        <p>Being the victim means <em>all</em> of that transaction's work is undone, not just the last statement. The
+        application receives error 1205 and must decide what to do — which is why the standard response is to
+        <strong>catch 1205 and retry</strong> the whole transaction (covered next). A deadlock isn't a corruption; it's
+        a "please try again."</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Prevention</h2></div>
+      <p class="sec-sub">Deadlocks are almost always preventable. A short ladder of habits eliminates the vast
+        majority.</p>
+
+      <div class="flow">
+        <div class="flow-step highlight">
+          <span class="st-icon">🔢</span>
+          <b>Access objects in a consistent order everywhere</b>
+          <small>If every transaction touches Ada before Alan, the cycle can't form. The single biggest fix.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">⏱️</span>
+          <b>Keep transactions short and fast</b>
+          <small>Hold locks for less time → smaller window for a cycle. Never wait on user input mid-transaction.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">📑</span>
+          <b>Add indexes so locks are narrow</b>
+          <small>A seek locks a few rows; a scan locks many and invites escalation and conflicts.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">📸</span>
+          <b>Use RCSI / snapshot to drop read locks</b>
+          <small>Row-versioning means readers don't block writers, removing a whole class of deadlocks.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🔁</span>
+          <b>Catch error 1205 and retry</b>
+          <small>Some deadlocks are unavoidable; make the app retry the victim transaction a few times.</small>
+        </div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Retrying a deadlock victim (error 1205) a few times</span>
+<span class="kw">DECLARE</span> @retries <span class="ty">INT</span> = <span class="num">3</span>;
+<span class="kw">WHILE</span> @retries &gt; <span class="num">0</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">BEGIN TRY</span>
+        <span class="kw">BEGIN TRANSACTION</span>;
+            <span class="cmt">-- ...always touch Ada, then Alan (consistent order)...</span>
+            <span class="kw">UPDATE</span> dbo.Employees <span class="kw">SET</span> Salary = Salary - <span class="num">5000</span> <span class="kw">WHERE</span> Name = <span class="str">N'Ada'</span>;
+            <span class="kw">UPDATE</span> dbo.Employees <span class="kw">SET</span> Salary = Salary + <span class="num">5000</span> <span class="kw">WHERE</span> Name = <span class="str">N'Alan'</span>;
+        <span class="kw">COMMIT TRANSACTION</span>;
+        <span class="kw">BREAK</span>;                       <span class="cmt">-- success -> leave the loop</span>
+    <span class="kw">END TRY</span>
+    <span class="kw">BEGIN CATCH</span>
+        <span class="kw">IF</span> @@TRANCOUNT &gt; <span class="num">0</span> <span class="kw">ROLLBACK TRANSACTION</span>;
+        <span class="kw">IF</span> <span class="fn">ERROR_NUMBER</span>() = <span class="num">1205</span> <span class="kw">SET</span> @retries -= <span class="num">1</span>;  <span class="cmt">-- deadlock: try again</span>
+        <span class="kw">ELSE</span> <span class="kw">THROW</span>;                    <span class="cmt">-- other errors: bubble up</span>
+    <span class="kw">END CATCH</span>;
+<span class="kw">END</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Consistent ordering is the headline fix</span>
+        <p>Almost every classic deadlock comes from two code paths acquiring the same locks in different orders. If all
+        transactions always access tables/rows in the <strong>same order</strong>, a cycle is impossible — the second
+        transaction simply blocks and then proceeds. Combine that with short transactions and good indexes, and
+        deadlocks become rare; the retry loop mops up the unavoidable remainder.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Blocking vs Deadlock</h2></div>
+      <p class="sec-sub">The distinction interviewers love, because people conflate them. They're fundamentally
+        different situations.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>Blocking</th><th>Deadlock</th></tr></thead>
+          <tbody>
+            <tr><td>Shape</td><td>One-directional wait</td><td>Circular (mutual) wait</td></tr>
+            <tr><td>Resolves itself?</td><td>Yes — when the blocker releases</td><td>No — never on its own</td></tr>
+            <tr><td>SQL Server intervenes?</td><td>No (just waits)</td><td>Yes — kills a victim</td></tr>
+            <tr><td>Outcome</td><td>Waiter proceeds after a delay</td><td>Victim rolled back, error 1205</td></tr>
+            <tr><td>Normal?</td><td>Yes, expected; bad only if long</td><td>A bug/anti-pattern to prevent</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The one-sentence answer</span>
+        <p><strong>Blocking</strong> is a transaction <em>waiting</em> for a lock that will eventually free up;
+        <strong>deadlock</strong> is two transactions <em>each waiting for the other</em> so neither ever frees up, and
+        SQL Server must kill one to resolve it. Blocking is a queue; a deadlock is a standoff.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Diagnosing</h2></div>
+      <p class="sec-sub">The tools that show you what's locked, who's waiting, and how a deadlock happened.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🕸️</span><h4>Deadlock graph</h4><p>An XML/visual diagram of the exact deadlock — the transactions, resources, and who held/wanted what. Captured via Extended Events (the <code>system_health</code> session records them automatically).</p></div>
+        <div class="card"><span class="glyph">🔒</span><h4>sys.dm_tran_locks</h4><p>A DMV listing every current lock: mode, resource, and which session holds or is waiting for it. The go-to for "what's locked right now."</p></div>
+        <div class="card"><span class="glyph">⏳</span><h4>sys.dm_exec_requests</h4><p>Shows running requests with their <code>blocking_session_id</code> and wait type — how you find who is blocking whom.</p></div>
+        <div class="card"><span class="glyph">📋</span><h4>Blocked process report</h4><p>An event that fires when blocking exceeds a threshold, capturing the blocked and blocking statements for later analysis.</p></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Where deadlocks are already recorded</span>
+        <p>You usually don't need to reproduce a deadlock to investigate it: SQL Server's built-in
+        <strong>system_health</strong> Extended Events session automatically captures recent deadlock graphs. Open it,
+        read the graph to see which two statements and resources formed the cycle, and you'll immediately see the
+        inconsistent lock ordering to fix.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Mistakes &amp; Best Practices</h2></div>
+      <p class="sec-sub">The habits that keep locking healthy and deadlocks rare.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔢</span><h4>Consistent access order</h4><p>Always touch tables/rows in the same order across all code paths — the number-one deadlock preventer.</p></div>
+        <div class="card"><span class="glyph">⏱️</span><h4>Short transactions</h4><p>Do the minimum between BEGIN and COMMIT; never hold a transaction open awaiting user input.</p></div>
+        <div class="card"><span class="glyph">📑</span><h4>Index to narrow locks</h4><p>Seeks lock few rows; scans lock many and trigger escalation. Good indexes reduce contention.</p></div>
+        <div class="card"><span class="glyph">📸</span><h4>Consider RCSI</h4><p>Row-versioning removes read locks, eliminating a large class of reader/writer deadlocks.</p></div>
+        <div class="card"><span class="glyph">🔁</span><h4>Retry on 1205</h4><p>Treat deadlocks as retryable: catch error 1205 and re-run the transaction a few times.</p></div>
+        <div class="card"><span class="glyph">🚫</span><h4>Don't fight it with NOLOCK</h4><p>Sprinkling <code>NOLOCK</code> to "avoid blocking" trades correctness for speed; fix the cause instead.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Escalation and scans go hand in hand</span>
+        <p>A statement that scans a large table takes many locks and may escalate to a table lock, blocking everyone and
+        raising deadlock risk. If you see escalation or table-level blocking, look for a missing index turning a seek
+        into a scan — fixing the query usually fixes the locking as a side effect.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea, then a full cheat-sheet table.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🔐 Lock</h4><p>A temporary claim on data that enforces isolation; taken automatically.</p></div>
+        <div class="recap-card"><h4>👀 Shared (S)</h4><p>For reads; multiple readers share the same row.</p></div>
+        <div class="recap-card"><h4>✍️ Exclusive (X)</h4><p>For writes; incompatible with everything.</p></div>
+        <div class="recap-card"><h4>🔄 Update (U)</h4><p>Taken while searching to update; prevents S→X upgrade deadlocks.</p></div>
+        <div class="recap-card"><h4>📏 Granularity</h4><p>Row / page / table; smaller = more concurrency, more overhead.</p></div>
+        <div class="recap-card"><h4>⬆️ Escalation</h4><p>Too many locks → escalate to a table lock; blocks everyone.</p></div>
+        <div class="recap-card"><h4>⏳ Blocking</h4><p>One waits for another; normal, self-resolving.</p></div>
+        <div class="recap-card"><h4>💀 Deadlock</h4><p>Circular wait; SQL Server kills a victim (error 1205).</p></div>
+        <div class="recap-card"><h4>🎯 Victim</h4><p>Cheapest to roll back, or lowest DEADLOCK_PRIORITY.</p></div>
+        <div class="recap-card"><h4>🛡️ Prevent</h4><p>Consistent order, short txns, indexes, RCSI, retry.</p></div>
+      </div>
+
+      <h3>Full summary table</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it is</th><th>Key point</th></tr></thead>
+          <tbody>
+            <tr><td>Shared / Exclusive / Update</td><td>Lock modes for read / write / search-to-update</td><td>Many readers, one writer; U prevents a common deadlock</td></tr>
+            <tr><td>Intent locks</td><td>Signals on page/table above a row lock</td><td>Makes compatibility checks cheap</td></tr>
+            <tr><td>Granularity</td><td>Row → page → table</td><td>Trade concurrency against lock overhead</td></tr>
+            <tr><td>Lock escalation</td><td>Many locks collapse into a table lock</td><td>~5,000-lock threshold; usually a scan symptom</td></tr>
+            <tr><td>Blocking</td><td>One-directional wait</td><td>Normal; resolves when blocker releases</td></tr>
+            <tr><td>Deadlock</td><td>Circular wait</td><td>Never self-resolves; victim killed with error 1205</td></tr>
+            <tr><td>Deadlock victim</td><td>The rolled-back transaction</td><td>Cheapest to undo / lowest priority; retry it</td></tr>
+            <tr><td>Prevention</td><td>Ordering, short txns, indexes, RCSI, retry</td><td>Consistent access order is the biggest lever</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What is a lock? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A temporary claim a transaction places on data (a row, page, or table) so that other
+        transactions can't interfere while it reads or changes that data. Locks are how SQL Server enforces isolation —
+        they're acquired and released automatically as transactions run.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> Why does SQL Server use locks? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>To keep concurrent transactions from corrupting each other — preventing the anomalies like dirty
+        reads and lost updates that the isolation levels promise to avoid. Locks make sure that while one transaction is
+        modifying data, others don't read or overwrite it in conflicting ways.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> What's the difference between a shared and an exclusive lock? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A shared (S) lock is taken to read data, and several transactions can hold shared locks on the same
+        row at once — readers don't block each other. An exclusive (X) lock is taken to modify data and is incompatible with
+        every other lock, so while one transaction writes a row, no one else may read or write it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> What is blocking? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Blocking is when one transaction has to wait because another holds an incompatible lock on the data
+        it wants. It's normal and temporary — as soon as the first transaction releases its lock (by committing or rolling
+        back), the waiting one proceeds. It's only a problem when the wait is long.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> What is a deadlock? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A deadlock is when two (or more) transactions each hold a lock the other needs, so they wait on each
+        other in a circle and neither can ever finish. Because it never resolves on its own, SQL Server steps in and kills one
+        of them to break the cycle.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What happens when a deadlock occurs? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>SQL Server detects the circular wait, picks one transaction as the "victim," rolls it back completely,
+        and returns error 1205 to that session. The other transaction then gets its locks and continues. The victim's
+        application typically retries the transaction.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> What's the difference between blocking and a deadlock? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Blocking is a one-way wait that resolves itself when the blocker releases its lock. A deadlock is a
+        mutual, circular wait that never resolves on its own, so SQL Server must kill a victim. Blocking is a queue; a deadlock
+        is a standoff.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> Do reads take locks? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Under the default locking behaviour, yes — a read takes a shared (S) lock, though it's usually released
+        quickly and multiple reads can share it. Under row-versioning (RCSI/snapshot), reads don't take shared locks at all;
+        they read a consistent version instead, which is why versioning greatly reduces reader/writer blocking.</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q09</span> Name the main lock modes. <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Shared (S) for reads, Exclusive (X) for modifications, and Update (U) taken while searching for rows to
+        update. There are also Intent locks (IS/IX/IU) placed on pages and tables to signal that finer-grained locks exist below,
+        plus specialized ones like schema and key-range locks.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> What is an update (U) lock and why does it exist? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A U lock is taken while a statement searches for the rows it's about to update. Only one transaction can
+        hold a U lock on a resource, and it's compatible with shared reads but not with another U or an X. It exists to prevent a
+        common deadlock: without it, two transactions could both hold shared locks intending to upgrade to exclusive, each waiting
+        for the other to release — the U lock serializes them instead.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> What are intent locks? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Intent locks (IS, IX, IU) are placed on higher-level objects — the page and table — to indicate that a
+        transaction holds or intends to hold locks on rows beneath them. They let the lock manager check compatibility efficiently:
+        a transaction wanting a full table lock can see "row locks exist here" from the intent lock, without scanning every row.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> What is lock granularity? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The size of the thing being locked: a single row, a page (about 8 KB of rows), or an entire table. Finer
+        granularity (row locks) allows more concurrency but uses more memory and management overhead; coarser granularity (table
+        locks) is cheap to manage but blocks far more. SQL Server chooses automatically, usually starting fine.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What is lock escalation? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>When a single statement acquires too many fine-grained locks (by default around 5,000), SQL Server converts
+        them into one coarser lock — typically a full table lock — to save memory. It's efficient for the lock manager but hurts
+        concurrency because the statement now blocks the whole table. Frequent escalation usually means a query is touching too many
+        rows, often due to a missing index.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> How does SQL Server detect and resolve a deadlock? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A background deadlock monitor periodically builds a wait-for graph of which sessions are waiting on which
+        locks and checks for cycles. When it finds one, it chooses a victim, rolls that transaction back entirely, and raises error
+        1205 to it, freeing the locks so the other transaction can proceed.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> What is the deadlock victim and how is it chosen? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The victim is the transaction SQL Server rolls back to break the cycle. By default it picks the one that's
+        cheapest to roll back (least transaction-log work done so far). You can override this with <code>SET DEADLOCK_PRIORITY</code>:
+        the session with the lower priority is chosen as the victim regardless of cost.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> How do you prevent deadlocks? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The biggest lever is accessing tables and rows in a <em>consistent order</em> across all code paths, so a
+        cycle can't form. Also keep transactions short, add indexes so statements lock few rows (seek not scan), consider RCSI/snapshot
+        to remove read locks, and make the application catch error 1205 and retry the transaction for the deadlocks that remain.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain lock compatibility between S, U, and X. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Shared is compatible with Shared and Update (many readers, plus one searcher, can coexist). Update is
+        compatible with Shared but not with another Update or Exclusive (only one intended writer). Exclusive is compatible with nothing
+        — while a row is being modified, no other lock is allowed on it. In short: reads share; a single U can sit among readers; a write
+        excludes everyone.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> Walk through a classic deadlock scenario. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>T1 updates Row A (takes X on A); concurrently T2 updates Row B (takes X on B). Then T1 tries to update Row B
+        and waits on T2's lock; T2 tries to update Row A and waits on T1's lock. Now each holds what the other needs — a cycle. The
+        deadlock monitor detects it and kills the cheaper-to-roll-back transaction, which gets error 1205; the survivor proceeds. The root
+        cause is the two transactions locking A and B in opposite orders.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> How does consistent access order prevent deadlocks? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A deadlock cycle requires two transactions to acquire the same locks in different orders. If every transaction
+        always acquires locks in the same global order (say, always Row A before Row B), then when a second transaction wants a lock the
+        first holds, it simply blocks and waits — there's no way for the first to also be waiting on the second, so no cycle can form. It
+        converts a potential deadlock into ordinary, self-resolving blocking.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> How do indexes and isolation level affect locking and deadlocks? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Indexes let a statement seek a small, precise set of rows, so it locks few rows and holds them briefly;
+        without one, a scan locks many rows (and may escalate to a table lock), massively increasing contention and deadlock odds. Isolation
+        level sets how many locks are taken and for how long: higher levels (repeatable read, serializable) hold read locks longer and add
+        range locks, raising deadlock risk, while row-versioning (RCSI/snapshot) removes read locks entirely, cutting reader/writer deadlocks.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> How do DEADLOCK_PRIORITY and retrying error 1205 work together? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>SET DEADLOCK_PRIORITY</code> lets you nominate which session should be sacrificed first — e.g., set a
+        low-value background job to LOW so a user-facing transaction is never the victim. But since being a victim is expected, robust code
+        also wraps the transaction in a retry loop: catch error 1205 in <code>CATCH</code>, roll back, and re-run the whole transaction a
+        few times (ideally with a tiny backoff). Priority decides <em>who</em> loses; the retry decides how the loser recovers.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> How do you diagnose deadlocks and blocking in production? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>For deadlocks, read the <strong>deadlock graph</strong> — SQL Server's built-in <code>system_health</code>
+        Extended Events session captures them automatically, showing the two statements, the resources, and who held/wanted what (revealing the
+        inconsistent lock order). For live blocking, use <code>sys.dm_exec_requests</code> (its <code>blocking_session_id</code> and wait type),
+        <code>sys.dm_tran_locks</code> (every current lock), and the blocked-process report for waits over a threshold.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> What problems does lock escalation cause, and how do you mitigate it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Escalation turns thousands of row/page locks into a single table lock, so one statement suddenly blocks the whole
+        table and concurrency collapses. Mitigations, in order of preference: add an index so the statement touches far fewer rows (avoiding the
+        threshold); process large modifications in <strong>batches</strong> so no single statement crosses it; and, as a last resort, disable
+        escalation on the table (<code>ALTER TABLE … SET (LOCK_ESCALATION = DISABLE)</code>), accepting higher lock memory. The row-count reduction
+        is the real fix.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> How does row-versioning reduce blocking and deadlocks? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>With RCSI or snapshot isolation, readers get a consistent committed version of each row from the version store
+        instead of taking shared locks. So readers never block writers and writers never block readers, which eliminates the very common
+        reader-vs-writer blocking and the deadlocks that arise from lock upgrades and read/write ordering. The costs are extra tempdb usage for the
+        version store and (for full snapshot) possible update-conflict errors to retry — but for read-heavy systems it dramatically smooths
+        concurrency.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions establish locks, blocking, and the basic idea of a deadlock;
+        <strong>Mid</strong> questions test the lock modes, granularity/escalation, and detection; <strong>Senior</strong> questions probe
+        compatibility, the classic scenario, prevention strategy, and diagnosis. Say each answer out loud in plain English — the ones you
+        stumble on point straight to the section to re-read.</p>
+      </div>
+
+      <p class="foot">Concepts verified against Microsoft Learn (transaction locking and row-versioning guide, lock modes and compatibility,
+        lock escalation, and deadlock detection/handling including <code>DEADLOCK_PRIORITY</code> and error 1205). Locking behavior is stable
+        across supported SQL Server versions (through 2025 / 17.x). This single <code>12-sql-locking-deadlocks.html</code> file is fully
+        self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

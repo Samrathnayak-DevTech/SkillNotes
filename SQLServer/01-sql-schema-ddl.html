@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL Server — Schema &amp; DDL Foundation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">SQL Server: Schema &amp; DDL</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>Foundations</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> The Big Picture</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> What DDL Is</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Databases, Schemas, Tables</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Data Types</a>
+      </div>
+      <div class="nav-group">
+        <h4>Building a Table</h4>
+        <a class="nav-link" href="#s05"><span class="n">05</span> CREATE TABLE</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Keys</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> Constraints</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> IDENTITY &amp; SEQUENCE</a>
+      </div>
+      <div class="nav-group">
+        <h4>Good Design</h4>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Normalization</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Referential Integrity</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> ALTER, DROP, TRUNCATE</a>
+      </div>
+      <div class="nav-group">
+        <h4>Applied</h4>
+        <a class="nav-link" href="#s12"><span class="n">12</span> The Sample Schema</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Best Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// SQL Server &nbsp;·&nbsp; designing the shape of your data</p>
+      <h1>Schema &amp; DDL Foundation 🗂️</h1>
+      <p class="lede">
+        Before you can store a single fact, you have to decide what shape your data will take:
+        which <b>tables</b> exist, what <b>columns</b> they hold, which values are <b>allowed</b>, and
+        how the tables <b>connect</b>. That blueprint is your <b>schema</b>, and the language you use
+        to build it is <b>DDL</b> — Data Definition Language. This page teaches all of it from zero,
+        then builds one complete, realistic company database you can reuse. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🏛️ <b>Schema</b></span>
+        <span class="chip">🛠️ <b>DDL</b></span>
+        <span class="chip">📦 <b>Data Types</b></span>
+        <span class="chip">🔑 <b>Keys</b></span>
+        <span class="chip">🛡️ <b>Constraints</b></span>
+        <span class="chip">🧩 <b>Normalization</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>The Big Picture</h2></div>
+      <p class="sec-sub">What actually happens between "I have some information to store" and
+        "there's a real, rule-enforced table living inside SQL Server."</p>
+
+      <p>Imagine a giant, well-organized filing cabinet. A <strong>database</strong> is the whole cabinet.
+        Inside it are <strong>tables</strong> — think of each table as one labeled drawer holding cards of the
+        same kind (a drawer of <em>employee</em> cards, a drawer of <em>order</em> cards). Every card has the
+        same printed fields (Name, Salary, Hire Date). In database language, each card is a <strong>row</strong>
+        and each printed field is a <strong>column</strong>.</p>
+
+      <p>But a good filing system is more than empty drawers. Someone decided the drawers, the fields on each
+        card, the rules ("Salary can't be blank," "no two departments share a name"), and how drawers relate
+        ("this order card points to that employee card"). Designing all of that up front is <strong>schema
+        design</strong>, and you express it with a set of commands called <strong>DDL</strong>.</p>
+
+      <h3>The journey from idea to table 🧭</h3>
+      <div class="diagram-box">
+        <div class="cap">how a plan becomes a living, rule-enforced table</div>
+        <div class="arr-row">
+          <div class="arr-cell highlight-green"><div class="val">Real-world<br>things</div><div class="idx">employees, orders</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">Logical<br>design</div><div class="idx">entities + rules</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight"><div class="val">DDL<br>script</div><div class="idx">CREATE TABLE …</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">SQL Server<br>engine</div><div class="idx">runs the script</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell neg"><div class="val">Physical<br>tables</div><div class="idx">ready for data</div></div>
+        </div>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🏗️ Analogy</span>
+        <p>DDL is the <strong>architect's blueprint and building crew</strong>; the data you add later is the
+        <strong>furniture</strong>. You don't rearrange furniture with a blueprint — you use a different set of
+        commands (called <strong>DML</strong>: INSERT, UPDATE, DELETE) for that. DDL builds and reshapes the
+        <em>rooms</em>; DML moves the <em>stuff</em> in and out of them.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The one idea to hold onto</span>
+        <p>A <strong>schema</strong> is the <em>shape and rules</em> of your data. <strong>DDL</strong> is the
+        <em>language that defines that shape</em>. Get the shape right early, because everything you store and
+        every query you write later depends on it.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>What DDL Is</h2></div>
+      <p class="sec-sub">The small family of commands that create and change the <em>structure</em> of a
+        database — not the data inside it.</p>
+
+      <p><strong>SQL</strong> (Structured Query Language) is the language for talking to relational databases.
+        It is split into a few families by <em>job</em>. The one that defines structure is
+        <strong>DDL — Data Definition Language</strong>. Its verbs are few, and this whole page is really about
+        using them well.</p>
+
+      <div class="cards-grid">
+        <div class="card">
+          <span class="glyph">🧱</span>
+          <h4>CREATE</h4>
+          <p>Make a brand-new object: a database, table, view, index, or sequence. This is where most schema
+            work happens.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">🔧</span>
+          <h4>ALTER</h4>
+          <p>Change an object that already exists — add a column, widen a data type, add or drop a constraint.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">🗑️</span>
+          <h4>DROP</h4>
+          <p>Delete an object and everything in it, permanently. The table and all its rows are gone.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">🧹</span>
+          <h4>TRUNCATE</h4>
+          <p>Empty a table of all rows fast, but keep the empty table (its structure) in place.</p>
+        </div>
+      </div>
+
+      <h3>DDL vs the other SQL families 📚</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Family</th><th>Full name</th><th>Job</th><th>Example verbs</th></tr></thead>
+          <tbody>
+            <tr><td><strong>DDL</strong></td><td>Data Definition Language</td><td>Define / change structure</td><td><code>CREATE</code>, <code>ALTER</code>, <code>DROP</code>, <code>TRUNCATE</code></td></tr>
+            <tr><td>DML</td><td>Data Manipulation Language</td><td>Read / change the data itself</td><td><code>SELECT</code>, <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code></td></tr>
+            <tr><td>DCL</td><td>Data Control Language</td><td>Permissions &amp; security</td><td><code>GRANT</code>, <code>REVOKE</code>, <code>DENY</code></td></tr>
+            <tr><td>TCL</td><td>Transaction Control Language</td><td>Group work into safe units</td><td><code>BEGIN TRAN</code>, <code>COMMIT</code>, <code>ROLLBACK</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Watch out</span>
+        <p>In SQL Server, most DDL commands are <strong>auto-committed</strong> the moment they run — but they
+        <em>can</em> be wrapped in a transaction and rolled back. Regardless, <code>DROP</code> and
+        <code>TRUNCATE</code> are destructive and easy to run by accident. Always double-check which database
+        and table you're pointed at before running them.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Databases, Schemas &amp; Tables</h2></div>
+      <p class="sec-sub">Three nested containers — plus a heads-up that the word "schema" has two meanings you'll
+        hear used interchangeably.</p>
+
+      <p>SQL Server organizes objects in layers, like folders inside folders:</p>
+
+      <div class="diagram-box">
+        <div class="cap">the containment hierarchy</div>
+        <div class="arr-row">
+          <div class="arr-cell highlight-blue"><div class="val">Server<br>(instance)</div><div class="idx">the SQL Server</div></div>
+          <div class="arrow">⊃</div>
+          <div class="arr-cell highlight-green"><div class="val">Database</div><div class="idx">CompanyDB</div></div>
+          <div class="arrow">⊃</div>
+          <div class="arr-cell highlight"><div class="val">Schema</div><div class="idx">dbo, sales, hr</div></div>
+          <div class="arrow">⊃</div>
+          <div class="arr-cell neg"><div class="val">Table</div><div class="idx">Employees</div></div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 "Schema" means two things — don't get tripped up</span>
+        <p><strong>1) Schema (the design)</strong> — the overall blueprint of all your tables, columns, and
+        rules. This is the sense in the page title.<br>
+        <strong>2) Schema (the object)</strong> — in SQL Server a schema is also a literal <em>namespace</em>,
+        a named folder that groups tables and controls permissions. The default one is called
+        <code>dbo</code> (database owner). That's why tables are written <code>dbo.Employees</code>:
+        it means "the <code>Employees</code> table inside the <code>dbo</code> schema."</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Create a database, then a named schema (namespace) inside it</span>
+<span class="kw">CREATE DATABASE</span> CompanyDB;
+<span class="kw">GO</span>
+<span class="kw">USE</span> CompanyDB;
+<span class="kw">GO</span>
+
+<span class="cmt">-- Group HR-related tables under their own 'hr' schema for tidiness + security</span>
+<span class="kw">CREATE SCHEMA</span> hr;
+<span class="kw">GO</span>
+
+<span class="cmt">-- A table written with its schema prefix. If you omit it, SQL Server assumes dbo.</span>
+<span class="kw">CREATE TABLE</span> hr.Employees (
+    EmpId <span class="ty">INT</span> <span class="kw">PRIMARY KEY</span>
+);</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Good habit</span>
+        <p>Always write the schema prefix (<code>dbo.Employees</code>, not just <code>Employees</code>). It
+        makes your intent explicit, avoids surprises when multiple schemas exist, and lets SQL Server reuse
+        query plans more efficiently.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Data Types</h2></div>
+      <p class="sec-sub">Every column must declare what kind of value it holds. Choosing the right type is the
+        single most impactful early decision.</p>
+
+      <p>A <strong>data type</strong> is a promise: "this column will only ever hold whole numbers," or "text up
+        to 100 characters," or "a date." SQL Server uses that promise to reserve the right amount of storage,
+        reject bad values automatically, and run faster. Picking the wrong type is a bug you feel for years.</p>
+
+      <h3>The four families 📦</h3>
+      <div class="mindmap">
+        <div class="mm-core">📦 Data Type Families</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>🔢 Numbers</h5>
+            <ul>
+              <li><code>TINYINT</code> 0–255</li>
+              <li><code>INT</code> ±2.1 billion</li>
+              <li><code>BIGINT</code> huge whole numbers</li>
+              <li><code>DECIMAL(p,s)</code> exact, for money</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🔤 Text</h5>
+            <ul>
+              <li><code>CHAR(n)</code> fixed length</li>
+              <li><code>VARCHAR(n)</code> variable, ASCII</li>
+              <li><code>NVARCHAR(n)</code> variable, Unicode</li>
+              <li><code>...(MAX)</code> very long text</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>📅 Date &amp; Time</h5>
+            <ul>
+              <li><code>DATE</code> just the day</li>
+              <li><code>TIME</code> just the time</li>
+              <li><code>DATETIME2</code> date + time (preferred)</li>
+              <li><code>DATETIMEOFFSET</code> with time zone</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🧰 Other</h5>
+            <ul>
+              <li><code>BIT</code> true/false (1/0)</li>
+              <li><code>UNIQUEIDENTIFIER</code> a GUID</li>
+              <li><code>VARBINARY</code> raw bytes/files</li>
+              <li><code>VECTOR</code> AI embeddings (2025)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h3>Common types at a glance</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Type</th><th>Holds</th><th>Storage</th><th>Use it for</th></tr></thead>
+          <tbody>
+            <tr><td><code>INT</code></td><td>Whole numbers ±2,147,483,647</td><td>4 bytes</td><td>IDs, counts, quantities</td></tr>
+            <tr><td><code>BIGINT</code></td><td>Very large whole numbers</td><td>8 bytes</td><td>IDs on huge tables</td></tr>
+            <tr><td><code>DECIMAL(19,4)</code></td><td>Exact decimals</td><td>~9 bytes</td><td>Money, rates, anything exact</td></tr>
+            <tr><td><code>NVARCHAR(100)</code></td><td>Unicode text, up to 100 chars</td><td>2 bytes/char</td><td>Names, emails, any real-world text</td></tr>
+            <tr><td><code>DATE</code></td><td>A calendar date</td><td>3 bytes</td><td>Birth date, hire date</td></tr>
+            <tr><td><code>DATETIME2(0)</code></td><td>Date + time (to the second)</td><td>6–8 bytes</td><td>Timestamps, order times</td></tr>
+            <tr><td><code>BIT</code></td><td>1 or 0</td><td>1 bit</td><td>Yes/no flags (IsActive)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Money mistake #1</span>
+        <p>Never store money in <code>FLOAT</code> or <code>REAL</code> — those are <em>approximate</em> and will
+        quietly produce rounding errors (a total that ends in <code>...0000001</code>). Use
+        <strong><code>DECIMAL</code></strong> (exact). Avoid the old <code>MONEY</code> type too; it has fixed
+        4-decimal precision and rounding quirks. <code>DECIMAL(19,4)</code> is the safe default for currency.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 VARCHAR vs NVARCHAR</span>
+        <p><code>VARCHAR</code> stores 1 byte per character and only handles basic Latin text.
+        <code>NVARCHAR</code> stores 2 bytes per character (Unicode) and can hold <em>any</em> language, emoji,
+        and accented names. For real-world names and user input, default to <strong><code>NVARCHAR</code></strong>.
+        The <code>N</code> literally stands for "National" (international) characters.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Right-sizing rule</span>
+        <p>Pick the <strong>smallest type that will always fit the real data</strong>. Smaller types mean less
+        storage, more rows per page, and faster reads. But don't be <em>too</em> tight — widening a type later
+        (<code>INT</code> → <code>BIGINT</code>) on a giant table is painful.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>CREATE TABLE</h2></div>
+      <p class="sec-sub">The core DDL command. Let's read one line by line, so every piece makes sense.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Anatomy of a table definition</span>
+<span class="kw">CREATE TABLE</span> dbo.Employees (
+    EmpId     <span class="ty">INT</span>            <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,  <span class="cmt">-- auto-numbered unique ID</span>
+    Name      <span class="ty">NVARCHAR</span>(<span class="num">100</span>) <span class="kw">NOT NULL</span>,               <span class="cmt">-- text, required</span>
+    Salary    <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>) <span class="kw">NOT NULL</span>,               <span class="cmt">-- exact money, required</span>
+    IsActive  <span class="ty">BIT</span>            <span class="kw">NOT NULL DEFAULT</span> (<span class="num">1</span>),     <span class="cmt">-- flag, defaults to "yes"</span>
+    HireDate  <span class="ty">DATE</span>           <span class="kw">NOT NULL DEFAULT</span> (<span class="fn">GETDATE</span>())  <span class="cmt">-- fills today if omitted</span>
+);</code></pre>
+      </div>
+
+      <p>Reading it as plain English: "Create a table called <code>Employees</code> in the <code>dbo</code>
+        schema. It has five columns. <code>EmpId</code> is a whole number that SQL Server fills in automatically
+        and that uniquely identifies each row. <code>Name</code> is required text. <code>Salary</code> is an
+        exact decimal and required. <code>IsActive</code> is a yes/no flag that defaults to yes. <code>HireDate</code>
+        is a date that defaults to today if you don't provide one."</p>
+
+      <h3>Every column definition follows one pattern</h3>
+      <div class="diagram-box">
+        <div class="cap">column = name + type + optional rules</div>
+        <div class="arr-row">
+          <div class="arr-cell highlight-green"><div class="val">Salary</div><div class="idx">column name</div></div>
+          <div class="arr-cell highlight-blue"><div class="val">DECIMAL(19,4)</div><div class="idx">data type</div></div>
+          <div class="arr-cell highlight"><div class="val">NOT NULL</div><div class="idx">constraint</div></div>
+          <div class="arr-cell neg"><div class="val">DEFAULT 0</div><div class="idx">optional default</div></div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 NULL — the "we don't know" value</span>
+        <p><code>NULL</code> is not zero and not an empty string — it means "no value / unknown." Marking a column
+        <code>NOT NULL</code> forces every row to supply a real value. Marking it <code>NULL</code> (the default)
+        allows blanks. Decide deliberately for each column: is missing data ever acceptable here?</p>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Keys</h2></div>
+      <p class="sec-sub">Keys give each row an identity and let tables point at one another. They are the
+        skeleton of a relational database.</p>
+
+      <div class="cards-grid">
+        <div class="card">
+          <span class="glyph">🔑</span>
+          <h4>Primary Key (PK)</h4>
+          <p>One column (or set of columns) that <strong>uniquely identifies each row</strong>. It can never be
+            NULL and never repeat. Every table should have exactly one.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">🔗</span>
+          <h4>Foreign Key (FK)</h4>
+          <p>A column that <strong>points to the primary key of another table</strong>, creating a link — e.g.,
+            an order pointing to the employee who handled it.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">🧩</span>
+          <h4>Composite Key</h4>
+          <p>A primary key made of <strong>two or more columns together</strong>, used when no single column is
+            unique on its own (e.g., <code>StudentId</code> + <code>CourseId</code>).</p>
+        </div>
+        <div class="card">
+          <span class="glyph">🌱</span>
+          <h4>Natural vs Surrogate</h4>
+          <p>A <strong>natural</strong> key is real data (a national ID). A <strong>surrogate</strong> key is an
+            invented number (an auto ID). Surrogates are usually the safer default.</p>
+        </div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- The "one" side: each department has a unique id</span>
+<span class="kw">CREATE TABLE</span> dbo.Departments (
+    DeptId <span class="ty">INT</span>           <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    Name   <span class="ty">NVARCHAR</span>(<span class="num">100</span>) <span class="kw">NOT NULL</span>
+);
+
+<span class="cmt">-- The "many" side: many employees point to one department via a FOREIGN KEY</span>
+<span class="kw">CREATE TABLE</span> dbo.Employees (
+    EmpId  <span class="ty">INT</span>           <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    Name   <span class="ty">NVARCHAR</span>(<span class="num">100</span>) <span class="kw">NOT NULL</span>,
+    DeptId <span class="ty">INT</span>           <span class="kw">NOT NULL</span>,
+    <span class="kw">CONSTRAINT</span> FK_Employees_Dept
+        <span class="kw">FOREIGN KEY</span> (DeptId) <span class="kw">REFERENCES</span> dbo.Departments (DeptId)
+);</code></pre>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🎟️ Analogy</span>
+        <p>A <strong>primary key</strong> is like the unique ticket number on a coat-check tag — no two are the
+        same. A <strong>foreign key</strong> is the matching stub you keep: it doesn't hold the coat, it just
+        <em>points</em> to the exact tag that does. Follow the stub and you always find the right coat.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 PK quietly builds an index</span>
+        <p>When you declare a <code>PRIMARY KEY</code>, SQL Server by default also creates a <strong>clustered
+        index</strong> on it — meaning the rows are physically stored in primary-key order. That's why lookups
+        by primary key are extremely fast. (You'll go deep on indexes on a later day; just note the connection.)</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Constraints</h2></div>
+      <p class="sec-sub">Rules baked into the table itself so bad data can never get in — no matter which app or
+        person tries.</p>
+
+      <p>A <strong>constraint</strong> is a guarantee the database enforces automatically. Because the rule lives
+        in the table (not in one application), it protects your data from <em>every</em> direction: your app, a
+        colleague's script, a manual edit. This is the database earning its keep.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Constraint</th><th>What it enforces</th><th>Everyday example</th></tr></thead>
+          <tbody>
+            <tr><td><code>NOT NULL</code></td><td>A value must be present</td><td>Every employee must have a name</td></tr>
+            <tr><td><code>UNIQUE</code></td><td>No duplicates in this column</td><td>No two departments share a name</td></tr>
+            <tr><td><code>CHECK</code></td><td>Value must satisfy a rule</td><td>Salary must be greater than 0</td></tr>
+            <tr><td><code>DEFAULT</code></td><td>Auto-fill when no value is given</td><td>HireDate defaults to today</td></tr>
+            <tr><td><code>PRIMARY KEY</code></td><td>Unique + not null (row identity)</td><td>Each employee's EmpId</td></tr>
+            <tr><td><code>FOREIGN KEY</code></td><td>Value must exist in another table</td><td>DeptId must be a real department</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE TABLE</span> dbo.Employees (
+    EmpId   <span class="ty">INT</span>           <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    Name    <span class="ty">NVARCHAR</span>(<span class="num">100</span>) <span class="kw">NOT NULL</span>,                 <span class="cmt">-- required</span>
+    Email   <span class="ty">NVARCHAR</span>(<span class="num">255</span>) <span class="kw">NULL</span>,
+    Salary  <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>) <span class="kw">NOT NULL</span>,
+    Status  <span class="ty">NVARCHAR</span>(<span class="num">20</span>)  <span class="kw">NOT NULL DEFAULT</span> (<span class="str">'Active'</span>),
+
+    <span class="cmt">-- Named constraints are easier to find and drop later</span>
+    <span class="kw">CONSTRAINT</span> UQ_Employees_Email <span class="kw">UNIQUE</span> (Email),
+    <span class="kw">CONSTRAINT</span> CK_Employees_Salary <span class="kw">CHECK</span> (Salary &gt; <span class="num">0</span>),
+    <span class="kw">CONSTRAINT</span> CK_Employees_Status
+        <span class="kw">CHECK</span> (Status <span class="kw">IN</span> (<span class="str">'Active'</span>, <span class="str">'OnLeave'</span>, <span class="str">'Terminated'</span>))
+);</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Always name your constraints</span>
+        <p>If you don't name a constraint, SQL Server auto-generates a cryptic name like
+        <code>CK__Employee__Salar__3B75D760</code>. Naming them yourself (<code>CK_Employees_Salary</code>)
+        makes error messages readable and lets you drop or change them later without guesswork.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ UNIQUE allows one NULL</span>
+        <p>A <code>UNIQUE</code> constraint permits a single <code>NULL</code> value (since NULL means "unknown,"
+        SQL Server treats it as not-a-duplicate of another NULL — with standard settings, only one NULL is
+        allowed). A <code>PRIMARY KEY</code> forbids NULL entirely. So a PK is really "UNIQUE + NOT NULL."</p>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>IDENTITY &amp; SEQUENCE</h2></div>
+      <p class="sec-sub">Two ways to let the database generate unique numbers for you, so you never have to invent
+        IDs by hand.</p>
+
+      <p>You rarely want to type ID numbers yourself — it's error-prone and hard to keep unique. SQL Server can
+        generate them automatically in two ways.</p>
+
+      <div class="cards-grid">
+        <div class="card">
+          <span class="glyph">🔢</span>
+          <h4>IDENTITY — column-bound</h4>
+          <p>A property on a single column. <code>IDENTITY(1,1)</code> means "start at 1, add 1 each new row."
+            Simple and by far the most common way to make a surrogate primary key.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">🎰</span>
+          <h4>SEQUENCE — standalone</h4>
+          <p>A separate, reusable number generator (added in SQL Server 2012). One sequence can hand out numbers
+            to <em>several</em> tables, and you can grab a number <em>before</em> inserting a row.</p>
+        </div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- IDENTITY: the number is generated when you insert the row</span>
+<span class="kw">CREATE TABLE</span> dbo.Invoice (
+    InvoiceId <span class="ty">INT</span> <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    Total     <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>) <span class="kw">NOT NULL</span>
+);
+
+<span class="cmt">-- SEQUENCE: a shareable generator you can call whenever you like</span>
+<span class="kw">CREATE SEQUENCE</span> dbo.OrderNumberSeq
+    <span class="kw">AS</span> <span class="ty">INT</span>
+    <span class="kw">START WITH</span> <span class="num">1000</span>
+    <span class="kw">INCREMENT BY</span> <span class="num">1</span>;
+
+<span class="cmt">-- Ask the sequence for the next number, then use it</span>
+<span class="kw">SELECT NEXT VALUE FOR</span> dbo.OrderNumberSeq;   <span class="cmt">-- returns 1000, then 1001, ...</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 When to use which</span>
+        <p>Reach for <strong>IDENTITY</strong> for a normal auto-numbered primary key — it's the default choice.
+        Reach for a <strong>SEQUENCE</strong> when you need the number <em>before</em> the insert, want one shared
+        counter across multiple tables, or need a custom cycle/range. Both give unique numbers; they differ in
+        flexibility.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Gaps are normal</span>
+        <p>IDENTITY and SEQUENCE values can have <strong>gaps</strong> (from rolled-back inserts or server
+        restarts). That's fine — their only job is uniqueness, not being a perfect unbroken count. Never rely on
+        "no gaps," and never assume the newest ID is exactly "previous + 1."</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Normalization</h2></div>
+      <p class="sec-sub">A step-by-step way to organize columns so each fact is stored exactly once — killing
+        duplication and the bugs that come with it.</p>
+
+      <p><strong>Normalization</strong> means splitting data into well-focused tables so you don't repeat the same
+        fact in many places. Why care? If a department's name is copied onto 500 employee rows and it gets
+        renamed, you'd have to fix 500 rows — miss one and your data now disagrees with itself. Store the name
+        once, and everyone points to it.</p>
+
+      <h3>The first three normal forms 🧩</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <span class="st-icon">1️⃣</span>
+          <b>First Normal Form (1NF)</b>
+          <small>One value per cell — no lists. Split "Phone: 555-1, 555-2" into separate rows/columns.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">2️⃣</span>
+          <b>Second Normal Form (2NF)</b>
+          <small>Every non-key column depends on the <em>whole</em> key, not just part of a composite key.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <span class="st-icon">3️⃣</span>
+          <b>Third Normal Form (3NF)</b>
+          <small>No column depends on another non-key column. Move "DepartmentName" out of Employees and into
+            its own Departments table.</small>
+        </div>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">📇 Analogy</span>
+        <p>Normalization is tidying a messy address book where you scribbled each friend's company address next
+        to their name — over and over. Instead, keep one <em>Companies</em> page and just note which company each
+        friend belongs to. Update the company's address once, and every friend's entry is instantly correct.</p>
+      </div>
+
+      <h3>Before vs after 3NF</h3>
+      <div class="cards-grid">
+        <div class="card" style="border-color:var(--rose)">
+          <span class="glyph">🚫</span>
+          <h4>Not normalized</h4>
+          <p>One big <em>Employees</em> table repeats <code>DeptName</code> and <code>DeptLocation</code> on every
+            row. Rename a department → hundreds of edits → easy to get out of sync.</p>
+        </div>
+        <div class="card" style="border-color:var(--green)">
+          <span class="glyph">✅</span>
+          <h4>Normalized (3NF)</h4>
+          <p>A <em>Departments</em> table holds each department once; <em>Employees</em> stores just a
+            <code>DeptId</code> that points to it. One edit updates everyone.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ How far to go</span>
+        <p><strong>3NF is the practical sweet spot</strong> for most business databases. Higher forms exist, but
+        aim for 3NF first: every fact in one place, tables focused on one thing, links via keys. You can
+        <em>deliberately</em> break the rules later for speed (see the next callout) — but only on purpose.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Denormalization is a choice, not a mistake</span>
+        <p>Sometimes you copy data on purpose (e.g., storing a total instead of recomputing it) to make reads
+        faster. That's <strong>denormalization</strong>. It's valid — but it's a conscious trade of "faster
+        reads" for "more places to keep in sync." Normalize first; denormalize only where measurements prove
+        you need to.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Referential Integrity</h2></div>
+      <p class="sec-sub">The guarantee that every link between tables actually points to something real — no
+        "orphan" rows allowed.</p>
+
+      <p>A <strong>foreign key</strong> doesn't just document a relationship — it <em>enforces</em> it. If
+        <code>Orders.EmpId</code> is a foreign key to <code>Employees</code>, SQL Server will refuse to insert an
+        order for an employee that doesn't exist, and refuse to delete an employee who still has orders (unless
+        you tell it what to do). A leftover row pointing to a deleted parent is called an <strong>orphan</strong>,
+        and referential integrity prevents them.</p>
+
+      <h3>What happens when a parent is deleted? 🌩️</h3>
+      <p>You control this with <strong>cascading referential actions</strong> on the foreign key:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Action</th><th>Meaning when the parent row is deleted/updated</th></tr></thead>
+          <tbody>
+            <tr><td><code>NO ACTION</code></td><td>Default. Block the delete if children exist — you must handle them first.</td></tr>
+            <tr><td><code>CASCADE</code></td><td>Automatically delete (or update) the matching child rows too.</td></tr>
+            <tr><td><code>SET NULL</code></td><td>Set the child's foreign-key column to NULL (the link column must allow NULL).</td></tr>
+            <tr><td><code>SET DEFAULT</code></td><td>Set the child's foreign-key column to its DEFAULT value.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- If a department is removed, set its employees' DeptId to NULL</span>
+<span class="cmt">-- rather than deleting the employees. (DeptId must allow NULL for this.)</span>
+<span class="kw">ALTER TABLE</span> dbo.Employees
+    <span class="kw">ADD CONSTRAINT</span> FK_Employees_Dept
+        <span class="kw">FOREIGN KEY</span> (DeptId) <span class="kw">REFERENCES</span> dbo.Departments (DeptId)
+        <span class="kw">ON DELETE SET NULL</span>
+        <span class="kw">ON UPDATE NO ACTION</span>;</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ CASCADE is powerful and dangerous</span>
+        <p><code>ON DELETE CASCADE</code> feels convenient, but deleting one parent can silently wipe out
+        thousands of related rows across many tables. Use it only where that chain reaction is truly intended
+        (e.g., deleting an order also deletes its order-lines). For important records, prefer <code>NO ACTION</code>
+        and delete deliberately.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>ALTER, DROP, TRUNCATE</h2></div>
+      <p class="sec-sub">Changing a table after it exists, and three very different ways of "removing" things —
+        one of the most common interview traps.</p>
+
+      <h3>ALTER — reshape an existing table 🔧</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Add a new column (existing rows get NULL or the default)</span>
+<span class="kw">ALTER TABLE</span> dbo.Employees <span class="kw">ADD</span> Email <span class="ty">NVARCHAR</span>(<span class="num">255</span>) <span class="kw">NULL</span>;
+
+<span class="cmt">-- Add a rule after the fact</span>
+<span class="kw">ALTER TABLE</span> dbo.Employees
+    <span class="kw">ADD CONSTRAINT</span> UQ_Employees_Email <span class="kw">UNIQUE</span> (Email);
+
+<span class="cmt">-- Widen a column's type</span>
+<span class="kw">ALTER TABLE</span> dbo.Employees <span class="kw">ALTER COLUMN</span> Name <span class="ty">NVARCHAR</span>(<span class="num">200</span>) <span class="kw">NOT NULL</span>;
+
+<span class="cmt">-- Remove a column</span>
+<span class="kw">ALTER TABLE</span> dbo.Employees <span class="kw">DROP COLUMN</span> Email;</code></pre>
+      </div>
+
+      <h3>DELETE vs TRUNCATE vs DROP — pick the right eraser 🧽</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Command</th><th>Family</th><th>Removes</th><th>Keeps the table?</th><th>Can filter rows?</th></tr></thead>
+          <tbody>
+            <tr><td><code>DELETE</code></td><td>DML</td><td>Some or all rows</td><td>✅ Yes</td><td>✅ Yes (<code>WHERE</code>)</td></tr>
+            <tr><td><code>TRUNCATE</code></td><td>DDL</td><td>All rows, fast</td><td>✅ Yes (empty)</td><td>❌ No (all or nothing)</td></tr>
+            <tr><td><code>DROP</code></td><td>DDL</td><td>The entire table</td><td>❌ No — gone</td><td>❌ No</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The distinction interviewers love</span>
+        <p><code>DELETE</code> removes rows one by one and can target specific rows with a <code>WHERE</code>
+        clause. <code>TRUNCATE</code> empties the whole table in one fast operation, resets the IDENTITY counter,
+        and is minimally logged — but it's all-or-nothing and won't run if a foreign key points at the table.
+        <code>DROP</code> deletes the table itself, structure and all.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ There is no undo button</span>
+        <p>Outside an open transaction, <code>TRUNCATE</code> and <code>DROP</code> are effectively permanent.
+        Before running either, confirm the database (<code>SELECT DB_NAME();</code>) and consider wrapping the
+        work in <code>BEGIN TRAN</code> so you can <code>ROLLBACK</code> if something looks wrong.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>The Sample Schema</h2></div>
+      <p class="sec-sub">Everything so far, assembled into one realistic company database — the exact foundation
+        you'll reuse for joins, indexing, and every later SQL topic.</p>
+
+      <p>We'll model three related things: <strong>Departments</strong>, <strong>Employees</strong> (each in a
+        department, and possibly reporting to a manager who is also an employee), and <strong>Orders</strong>
+        (each handled by an employee). Notice how keys, constraints, and defaults from earlier sections all show
+        up together.</p>
+
+      <h3>How the tables relate 🔗</h3>
+      <div class="diagram-box">
+        <div class="cap">one department → many employees → many orders</div>
+        <div class="arr-row">
+          <div class="arr-cell highlight-blue"><div class="val">Departments</div><div class="idx">DeptId (PK)</div></div>
+          <div class="arrow">1 → ∞</div>
+          <div class="arr-cell highlight-green"><div class="val">Employees</div><div class="idx">EmpId (PK) · DeptId (FK)</div></div>
+          <div class="arrow">1 → ∞</div>
+          <div class="arr-cell highlight"><div class="val">Orders</div><div class="idx">OrderId (PK) · EmpId (FK)</div></div>
+        </div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- ============ 0. Fresh database ============</span>
+<span class="kw">CREATE DATABASE</span> CompanyDB;
+<span class="kw">GO</span>
+<span class="kw">USE</span> CompanyDB;
+<span class="kw">GO</span>
+
+<span class="cmt">-- ============ 1. Departments (the "one" side) ============</span>
+<span class="kw">CREATE TABLE</span> dbo.Departments (
+    DeptId <span class="ty">INT</span>           <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    Name   <span class="ty">NVARCHAR</span>(<span class="num">100</span>) <span class="kw">NOT NULL</span>,
+    <span class="kw">CONSTRAINT</span> UQ_Departments_Name <span class="kw">UNIQUE</span> (Name)   <span class="cmt">-- no duplicate dept names</span>
+);
+
+<span class="cmt">-- ============ 2. Employees (belongs to a dept, may have a manager) ==========</span>
+<span class="kw">CREATE TABLE</span> dbo.Employees (
+    EmpId     <span class="ty">INT</span>           <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    Name      <span class="ty">NVARCHAR</span>(<span class="num">100</span>) <span class="kw">NOT NULL</span>,
+    DeptId    <span class="ty">INT</span>           <span class="kw">NOT NULL</span>,
+    ManagerId <span class="ty">INT</span>           <span class="kw">NULL</span>,                       <span class="cmt">-- NULL = top of the tree</span>
+    Salary    <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>) <span class="kw">NOT NULL</span>,
+    HireDate  <span class="ty">DATE</span>          <span class="kw">NOT NULL DEFAULT</span> (<span class="fn">GETDATE</span>()),
+
+    <span class="kw">CONSTRAINT</span> CK_Employees_Salary <span class="kw">CHECK</span> (Salary &gt; <span class="num">0</span>),
+    <span class="kw">CONSTRAINT</span> FK_Employees_Dept
+        <span class="kw">FOREIGN KEY</span> (DeptId)    <span class="kw">REFERENCES</span> dbo.Departments (DeptId),
+    <span class="kw">CONSTRAINT</span> FK_Employees_Manager        <span class="cmt">-- self-reference: manager is an employee</span>
+        <span class="kw">FOREIGN KEY</span> (ManagerId) <span class="kw">REFERENCES</span> dbo.Employees (EmpId)
+);
+
+<span class="cmt">-- ============ 3. Orders (each handled by one employee) ============</span>
+<span class="kw">CREATE TABLE</span> dbo.Orders (
+    OrderId   <span class="ty">INT</span>          <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    EmpId     <span class="ty">INT</span>          <span class="kw">NOT NULL</span>,
+    Amount    <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>) <span class="kw">NOT NULL</span>,
+    OrderDate <span class="ty">DATETIME2</span>(<span class="num">0</span>) <span class="kw">NOT NULL DEFAULT</span> (<span class="fn">SYSUTCDATETIME</span>()),
+
+    <span class="kw">CONSTRAINT</span> CK_Orders_Amount <span class="kw">CHECK</span> (Amount &gt;= <span class="num">0</span>),
+    <span class="kw">CONSTRAINT</span> FK_Orders_Employee
+        <span class="kw">FOREIGN KEY</span> (EmpId) <span class="kw">REFERENCES</span> dbo.Employees (EmpId)
+);</code></pre>
+      </div>
+
+      <h3>Seeding a little data 🌱</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Note the N prefix: it marks the text as Unicode for the NVARCHAR columns</span>
+<span class="kw">INSERT INTO</span> dbo.Departments (Name) <span class="kw">VALUES</span>
+    (<span class="str">N'Engineering'</span>), (<span class="str">N'Sales'</span>), (<span class="str">N'Support'</span>);
+
+<span class="cmt">-- Ada has no manager (NULL); Alan reports to Ada (EmpId 1)</span>
+<span class="kw">INSERT INTO</span> dbo.Employees (Name, DeptId, ManagerId, Salary, HireDate) <span class="kw">VALUES</span>
+    (<span class="str">N'Ada Lovelace'</span>, <span class="num">1</span>, <span class="kw">NULL</span>, <span class="num">145000</span>, <span class="str">'2019-03-01'</span>),
+    (<span class="str">N'Alan Turing'</span>,  <span class="num">1</span>, <span class="num">1</span>,     <span class="num">98000</span>, <span class="str">'2021-06-15'</span>),
+    (<span class="str">N'Grace Hopper'</span>, <span class="num">2</span>, <span class="kw">NULL</span>, <span class="num">120000</span>, <span class="str">'2018-01-20'</span>);
+
+<span class="kw">INSERT INTO</span> dbo.Orders (EmpId, Amount) <span class="kw">VALUES</span>
+    (<span class="num">2</span>, <span class="num">499.99</span>), (<span class="num">3</span>, <span class="num">1250.00</span>), (<span class="num">2</span>, <span class="num">75.50</span>);</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Day-1 success check</span>
+        <p>Your schema works if these all hold true: inserting a negative salary is <em>rejected</em>
+        (<code>CK_Employees_Salary</code>), a duplicate department name is <em>rejected</em>
+        (<code>UQ_Departments_Name</code>), and an employee with a made-up <code>DeptId</code> is <em>rejected</em>
+        (<code>FK_Employees_Dept</code>). If the database pushes back on bad data, your constraints are doing
+        their job.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Best Practices &amp; Common Pitfalls</h2></div>
+      <p class="sec-sub">The habits that separate a schema you'll thank yourself for from one you'll be fighting in
+        six months.</p>
+
+      <div class="cards-grid">
+        <div class="card">
+          <span class="glyph">🔑</span>
+          <h4>Every table gets a primary key</h4>
+          <p>A table without a PK has no reliable row identity, and many tools and indexes assume one. Default to
+            an <code>IDENTITY</code> surrogate key.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">🛡️</span>
+          <h4>Enforce rules in the database</h4>
+          <p>Put <code>NOT NULL</code>, <code>CHECK</code>, and foreign keys on the table, not only in app code.
+            The database protects data from every source.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">🏷️</span>
+          <h4>Name things consistently</h4>
+          <p>Pick a convention (<code>FK_Child_Parent</code>, <code>CK_Table_Rule</code>) and stick to it, so
+            errors and scripts read clearly.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">📦</span>
+          <h4>Right-size data types</h4>
+          <p>Smallest correct type wins. <code>DECIMAL</code> for money, <code>NVARCHAR</code> for real text,
+            <code>DATETIME2</code> over the legacy <code>DATETIME</code>.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">🧩</span>
+          <h4>Normalize to 3NF first</h4>
+          <p>Store each fact once. Denormalize later only where real performance measurements demand it.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">💥</span>
+          <h4>Handle CASCADE with care</h4>
+          <p>Chain-deletes are convenient but can erase far more than intended. Prefer <code>NO ACTION</code> for
+            important records.</p>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Classic beginner traps</span>
+        <p>Storing money as <code>FLOAT</code>; making everything <code>NULL</code> "just in case"; using
+        <code>VARCHAR</code> for names that need accents or non-Latin scripts; forgetting foreign keys so orphan
+        rows creep in; and leaving out the schema prefix (<code>dbo.</code>). Each one is cheap to fix now and
+        expensive to fix once real data has piled up.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea — skim these to check you've got the whole picture, then use the
+        table as a cheat sheet.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🏛️ Schema</h4><p>The blueprint of your data's shape and rules — and also a named namespace like <code>dbo</code>.</p></div>
+        <div class="recap-card"><h4>🛠️ DDL</h4><p>The SQL family that defines structure: <code>CREATE</code>, <code>ALTER</code>, <code>DROP</code>, <code>TRUNCATE</code>.</p></div>
+        <div class="recap-card"><h4>📦 Data type</h4><p>A column's promise about what it stores; pick the smallest type that always fits.</p></div>
+        <div class="recap-card"><h4>🔑 Primary key</h4><p>Uniquely identifies each row; never NULL, never repeats; usually an IDENTITY surrogate.</p></div>
+        <div class="recap-card"><h4>🔗 Foreign key</h4><p>Points to another table's primary key and enforces that the link is real.</p></div>
+        <div class="recap-card"><h4>🛡️ Constraint</h4><p>A rule the database enforces itself: NOT NULL, UNIQUE, CHECK, DEFAULT.</p></div>
+        <div class="recap-card"><h4>🔢 IDENTITY / SEQUENCE</h4><p>Two ways to auto-generate unique numbers; gaps are normal and fine.</p></div>
+        <div class="recap-card"><h4>🧩 Normalization</h4><p>Split data so each fact lives once; 3NF is the everyday target.</p></div>
+        <div class="recap-card"><h4>🌩️ Referential integrity</h4><p>No orphan rows; cascade actions decide what happens to children on delete.</p></div>
+        <div class="recap-card"><h4>🧽 DELETE / TRUNCATE / DROP</h4><p>Remove some rows / all rows / the whole table, respectively.</p></div>
+      </div>
+
+      <h3>Full summary table</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it is</th><th>Key point to remember</th></tr></thead>
+          <tbody>
+            <tr><td><strong>DDL vs DML</strong></td><td>Structure vs data</td><td>DDL builds the rooms; DML moves the furniture</td></tr>
+            <tr><td><strong>Schema (object)</strong></td><td>A namespace for tables</td><td>Default is <code>dbo</code>; always prefix table names</td></tr>
+            <tr><td><strong>DECIMAL vs FLOAT</strong></td><td>Exact vs approximate numbers</td><td>Money is always <code>DECIMAL</code>, never <code>FLOAT</code></td></tr>
+            <tr><td><strong>VARCHAR vs NVARCHAR</strong></td><td>ASCII vs Unicode text</td><td>Real-world text → <code>NVARCHAR</code></td></tr>
+            <tr><td><strong>Primary key</strong></td><td>Row identity</td><td>UNIQUE + NOT NULL; builds a clustered index by default</td></tr>
+            <tr><td><strong>Foreign key</strong></td><td>Cross-table link</td><td>Blocks orphans; choose the cascade action deliberately</td></tr>
+            <tr><td><strong>UNIQUE vs PK</strong></td><td>Both prevent duplicates</td><td>UNIQUE allows one NULL; PK allows none</td></tr>
+            <tr><td><strong>IDENTITY vs SEQUENCE</strong></td><td>Auto-number sources</td><td>IDENTITY = column-bound; SEQUENCE = standalone, shareable</td></tr>
+            <tr><td><strong>Normalization</strong></td><td>Remove duplication</td><td>Aim for 3NF; denormalize only on purpose</td></tr>
+            <tr><td><strong>TRUNCATE vs DELETE</strong></td><td>Empty vs remove rows</td><td>TRUNCATE = fast, all-or-nothing, resets IDENTITY</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level so you can
+        pace yourself.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What is a database schema? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It's the blueprint of a database — which tables exist, what columns each has, the data
+        types of those columns, and the rules connecting them. It describes the <strong>shape and rules</strong>
+        of the data, not the data itself. In SQL Server, "schema" also has a second meaning: a named container
+        (like <code>dbo</code>) that groups tables and manages permissions.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> What does DDL stand for, and what is it for? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><strong>Data Definition Language.</strong> It's the set of SQL commands that create and
+        change the <em>structure</em> of a database — mainly <code>CREATE</code>, <code>ALTER</code>,
+        <code>DROP</code>, and <code>TRUNCATE</code>. Think of it as construction commands, versus DML
+        (<code>SELECT</code>/<code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code>), which works with the
+        data inside the structures.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> What are a table, a row, and a column? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A <strong>table</strong> stores one kind of thing (all employees, all orders). A
+        <strong>column</strong> is one attribute every item shares (Name, Salary). A <strong>row</strong> is one
+        actual item — one employee, with a value in each column. Picture a spreadsheet: the sheet is the table,
+        the headers are columns, and each filled line is a row.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> Why does the data type of a column matter? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The data type tells SQL Server what a column is allowed to hold (numbers, text, dates).
+        That lets the database reserve the right amount of storage, automatically reject wrong values (you can't
+        put "hello" in a number column), sort and compare correctly, and run faster. A wrong type causes bugs and
+        wasted space for years.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> What is a primary key? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A column (or combination of columns) whose value <strong>uniquely identifies each
+        row</strong> in a table. It can never be empty (NULL) and can never repeat. It's how the database — and
+        other tables — pinpoint exactly one row, like a unique membership number.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What is a foreign key? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A column that <strong>points to the primary key of another table</strong>, creating a
+        relationship. For example, <code>Orders.EmpId</code> points to <code>Employees.EmpId</code>, linking each
+        order to the employee who handled it. The database enforces that the value it points to actually exists.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> What does NOT NULL mean, and what is NULL? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>NULL</code> means "no value / unknown" — it is <em>not</em> zero and <em>not</em> an
+        empty string. A <code>NOT NULL</code> column requires every row to have a real value, so it can't be left
+        blank. You mark required fields (like a person's name) as <code>NOT NULL</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> What is a DEFAULT constraint? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A value the database fills in automatically when you insert a row without specifying that
+        column. For example, <code>HireDate DEFAULT (GETDATE())</code> stamps today's date if you don't provide
+        one, and <code>Status DEFAULT ('Active')</code> starts everyone as active. It saves effort and keeps data
+        consistent.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q09</span> What's the difference between CHAR, VARCHAR, and NVARCHAR? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>CHAR(n)</code> is fixed length — it always uses <em>n</em> characters of space, padding
+        with blanks. <code>VARCHAR(n)</code> is variable length (uses only what it needs) but stores basic Latin
+        text only. <code>NVARCHAR(n)</code> is variable length <em>and</em> Unicode, so it handles any language,
+        accents, and emoji. For real-world names and user input, default to <code>NVARCHAR</code>.</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q10</span> Primary key vs unique constraint — what's the difference? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Both prevent duplicate values. The differences: a table has <strong>only one</strong>
+        primary key but can have <strong>many</strong> unique constraints; a primary key <strong>cannot contain
+        NULL</strong>, while a unique constraint <strong>allows a single NULL</strong>; and a primary key is the
+        row's official identity (and creates a clustered index by default). In short, a primary key is essentially
+        "UNIQUE + NOT NULL + row identity."</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> What is a composite key, and when do you use one? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A primary key made of <strong>two or more columns combined</strong>, used when no single
+        column is unique by itself. Classic example: a class-enrollment table where neither <code>StudentId</code>
+        nor <code>CourseId</code> is unique alone, but the <em>pair</em> (a specific student in a specific course)
+        is. The combination becomes the key.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> IDENTITY vs SEQUENCE — how do they differ? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Both auto-generate unique numbers. <code>IDENTITY</code> is a <strong>property of one
+        column</strong> and produces its number only when a row is inserted. A <code>SEQUENCE</code> is a
+        <strong>standalone object</strong> (SQL Server 2012+) that can feed numbers to several tables and can be
+        asked for a value <em>before</em> inserting. Use IDENTITY for a normal auto-key; use a SEQUENCE when you
+        need the number early or shared across tables.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What is a CHECK constraint? Give an example. <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A rule that a column's value must satisfy, enforced on every insert and update. For
+        example <code>CHECK (Salary &gt; 0)</code> refuses any non-positive salary, and
+        <code>CHECK (Status IN ('Active','OnLeave','Terminated'))</code> restricts a column to an approved list.
+        It moves validation into the database so no application can bypass it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> What is the difference between DELETE, TRUNCATE, and DROP? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>DELETE</code> (DML) removes rows and can target specific ones with a
+        <code>WHERE</code> clause; the table remains. <code>TRUNCATE</code> (DDL) removes <em>all</em> rows very
+        fast, keeps the empty table, and resets the IDENTITY counter — but it's all-or-nothing and won't run if a
+        foreign key references the table. <code>DROP</code> (DDL) deletes the entire table, structure and data
+        together.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> What is referential integrity, and what is an orphan row? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Referential integrity is the guarantee that every foreign-key value points to a row that
+        <strong>actually exists</strong> in the referenced table. An <strong>orphan</strong> is a child row whose
+        parent has been deleted — e.g., an order pointing to an employee who no longer exists. Foreign keys prevent
+        orphans by blocking such deletes or by cascading the change.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> In SQL Server, what does "schema" mean as an object (like dbo)? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Beyond the "overall design" meaning, a schema is a <strong>named namespace</strong> inside a
+        database that groups objects and controls permissions. Tables are referenced as
+        <code>schema.table</code> (e.g., <code>dbo.Employees</code>). The default schema is <code>dbo</code>
+        (database owner). Grouping tables into schemas like <code>hr</code> or <code>sales</code> keeps large
+        databases organized and lets you grant access per schema.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> Why prefer DECIMAL over FLOAT (or MONEY) for currency? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>FLOAT</code>/<code>REAL</code> are <strong>approximate</strong> — they can't represent
+        many decimal fractions exactly, so sums drift by tiny amounts and produce wrong totals. <code>DECIMAL</code>
+        is <strong>exact</strong>, storing the precise value you asked for. The legacy <code>MONEY</code> type is
+        exact but has a fixed 4-decimal scale and awkward rounding in division. <code>DECIMAL(19,4)</code> is the
+        reliable default for money.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> What happens to a table's clustered index when you define a primary key? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>By default, declaring a <code>PRIMARY KEY</code> also creates a <strong>clustered
+        index</strong> on those columns, which means the rows are physically stored on disk in primary-key order.
+        A table can have only one clustered index, which is why PK lookups are so fast. You can override this
+        (make the PK non-clustered and cluster on a different column), but the default is a clustered PK.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q19</span> Explain normalization (1NF, 2NF, 3NF) in plain terms. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Normalization organizes columns so each fact is stored once. <strong>1NF:</strong> one
+        value per cell — no lists crammed into a single field. <strong>2NF:</strong> every non-key column depends
+        on the <em>whole</em> primary key, not just part of a composite key. <strong>3NF:</strong> no non-key
+        column depends on another non-key column — so a department's name lives in a Departments table, not copied
+        onto every employee. The payoff is no duplication and no data that can disagree with itself.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> When would you deliberately denormalize? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>When reads are far more frequent than writes and the joins/aggregations needed to
+        reassemble normalized data are measurably too slow. Examples: storing a precomputed order total, or
+        keeping a copy of a rarely-changing label to avoid a join on a hot query path. The trade-off is that the
+        duplicated value must be kept in sync, so denormalize <strong>only where profiling proves the need</strong>,
+        and document it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> What are cascading referential actions, and what are their risks? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>They tell a foreign key what to do to child rows when the parent is deleted or its key
+        updated: <code>NO ACTION</code> (block it — the default), <code>CASCADE</code> (delete/update the children
+        too), <code>SET NULL</code>, or <code>SET DEFAULT</code>. The main risk is <code>ON DELETE CASCADE</code>:
+        one delete can silently remove huge numbers of related rows across many tables, and multiple cascade paths
+        can even conflict. Use cascade only where the chain reaction is genuinely intended.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> How do you choose a primary key — natural vs surrogate? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A <strong>natural key</strong> uses real business data (an ISBN, a national ID); a
+        <strong>surrogate key</strong> is a meaningless generated number (an IDENTITY id). Surrogates are usually
+        preferred because business values can change, may not be truly unique, and can be wide (slowing indexes and
+        foreign keys). A surrogate key is stable, compact, and never needs to change. You can still enforce the
+        natural value's uniqueness with a separate <code>UNIQUE</code> constraint.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> What are the trade-offs of adding many constraints and indexes at design time? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Constraints and foreign keys guarantee correctness and let the query optimizer make better
+        decisions — big wins. The cost is that every constraint and index must be checked or maintained on writes,
+        so heavy insert/update workloads slow down, and too many indexes waste storage. The balance: always enforce
+        <strong>correctness</strong> constraints (keys, NOT NULL, CHECK, FK), and add indexes based on real query
+        patterns rather than guessing up front.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> How would you model an employee-to-manager relationship, and what pitfalls exist? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Use a <strong>self-referencing foreign key</strong>: add a <code>ManagerId</code> column to
+        <code>Employees</code> that points back to <code>Employees.EmpId</code>. A top-level manager has
+        <code>ManagerId = NULL</code>. Pitfalls: <code>ManagerId</code> must allow NULL (or you can never insert the
+        first person); avoid accidental cycles (A manages B who manages A); <code>ON DELETE CASCADE</code> is unsafe
+        on a self-reference (SQL Server disallows it), so handle manager deletions deliberately; and querying the
+        full hierarchy needs a recursive query (a recursive CTE) rather than a simple join.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions build the vocabulary (schema, DDL, keys,
+        constraints, data types). <strong>Mid</strong> questions connect those ideas into real decisions
+        (PK vs UNIQUE, DELETE vs TRUNCATE, referential integrity). <strong>Senior</strong> questions test judgment
+        (normalization trade-offs, cascade risks, key strategy, self-references). If you can answer one out loud in
+        plain English without peeking, move on — the ones you stumble on point straight to the section to re-read.</p>
+      </div>
+
+      <p class="foot">Technical details verified against Microsoft Learn (Transact-SQL <code>CREATE TABLE</code>,
+        data types, constraints, and normalization guidance) and the SQL Server documentation. Version note:
+        <strong>SQL Server 2025 (17.x)</strong> is the current release (general availability November 18, 2025),
+        following SQL Server 2022 (16.x); the DDL fundamentals covered here are stable across supported versions.
+        This single <code>01-sql-schema-ddl.html</code> file is fully self-contained and works offline (only
+        Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL Server — Stored Procedures, Dynamic SQL &amp; Injection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.code-lang.danger{color:#f9a8a8;} .code-lang.safe{color:#c3e88d;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arr-cell.dim .val{opacity:.4;border-style:dashed;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:580px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+td.good{background:var(--green-soft);font-weight:700;color:var(--green);}
+td.bad{background:var(--rose-soft);font-weight:700;color:var(--rose);}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">SQL Server: Stored Procs</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>Stored Procedures</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> What a Proc Is</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The Sample Schema</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Create &amp; Execute</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Parameters</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Why Use Them</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Control Flow</a>
+      </div>
+      <div class="nav-group">
+        <h4>Dynamic SQL</h4>
+        <a class="nav-link" href="#s07"><span class="n">07</span> What &amp; Why</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> EXEC vs sp_executesql</a>
+      </div>
+      <div class="nav-group">
+        <h4>Injection &amp; Defense</h4>
+        <a class="nav-link" href="#s09"><span class="n">09</span> The Risk</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Defense: Parameters</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Defense: QUOTENAME</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Procs vs Ad-hoc</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Mistakes &amp; Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// SQL Server &nbsp;·&nbsp; reusable logic, built-at-runtime queries, and keeping them safe</p>
+      <h1>Stored Procedures &amp; Safe Dynamic SQL 🛡️</h1>
+      <p class="lede">
+        A <b>stored procedure</b> is a named, reusable block of T-SQL saved in the database — parameters in, work
+        done, results out. Sometimes a query's <em>shape</em> must be built at runtime (<b>dynamic SQL</b>), and
+        that's where danger lives: naively pasting user input into a query string opens the door to <b>SQL
+        injection</b>. This page shows how to build procs well and — the part interviewers care about — how to write
+        dynamic SQL <b>safely</b> with parameters and <code>QUOTENAME</code>. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">📦 <b>CREATE PROCEDURE</b></span>
+        <span class="chip">🔌 <b>Parameters</b></span>
+        <span class="chip">⚙️ <b>Dynamic SQL</b></span>
+        <span class="chip">🧵 <b>sp_executesql</b></span>
+        <span class="chip">🛡️ <b>Injection defense</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>What a Proc Is</h2></div>
+      <p class="sec-sub">A stored procedure is a named batch of SQL statements saved in the database, callable by
+        name, usually with parameters — like a function for your data layer.</p>
+
+      <p>Instead of sending the same query text from your application every time, you define it once as a
+        <strong>stored procedure</strong> and call it by name: <code>EXEC dbo.GetEmployeesByDept @DeptId = 1</code>.
+        The logic lives in the database, is compiled and cached, and can be reused by any caller. Procedures can take
+        inputs, return outputs, run multiple statements, use control flow, and wrap work in transactions.</p>
+
+      <div class="callout analogy">
+        <span class="tag">📞 Analogy</span>
+        <p>A stored procedure is like a saved contact with a speed-dial. Rather than typing out the full number (the
+        whole query) every time, you press one button with a name on it and optionally say who it's for (the
+        parameters). The instructions live in one place; everyone dials the same, well-tested routine.</p>
+      </div>
+
+      <h3>The landscape 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">🛡️ Procs &amp; Dynamic SQL</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>📦 Stored procs</h5>
+            <ul>
+              <li><code>CREATE PROCEDURE</code></li>
+              <li>Reuse, encapsulation</li>
+              <li>Cached plans</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🔌 Parameters</h5>
+            <ul>
+              <li>Input / output</li>
+              <li>Defaults</li>
+              <li>Typed &amp; safe</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>⚙️ Dynamic SQL</h5>
+            <ul>
+              <li>Query built at runtime</li>
+              <li>Dynamic sort / filters</li>
+              <li>Use sparingly</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🧵 Executing it</h5>
+            <ul>
+              <li><code>EXEC(string)</code> — risky</li>
+              <li><code>sp_executesql</code> — parameterized</li>
+              <li>Plan reuse</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>🛡️ Injection defense</h5>
+            <ul>
+              <li>Never concatenate input</li>
+              <li>Parameters for values</li>
+              <li><code>QUOTENAME</code> + whitelist for names</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The through-line of this page</span>
+        <p>Procedures and parameters are the <em>safe, default</em> way to run SQL. Dynamic SQL is a powerful escape
+        hatch for when a query's structure must vary — but it reintroduces the risk that parameters removed. The whole
+        skill is: prefer parameters, and when you must build SQL as text, build it <strong>safely</strong>.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>The Sample Schema</h2></div>
+      <p class="sec-sub">The same tables. We'll wrap common operations — fetching employees, counting, giving a raise —
+        into procedures.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Table</th><th>Columns we'll use</th></tr></thead>
+          <tbody>
+            <tr><td>Employees</td><td><code>EmpId</code>, <code>Name</code>, <code>DeptId</code>, <code>Salary</code>, <code>HireDate</code></td></tr>
+            <tr><td>Departments</td><td><code>DeptId</code>, <code>Name</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ What we'll build</span>
+        <p>A read procedure (<code>GetEmployeesByDept</code>), one with an output parameter
+        (<code>GetDeptHeadcount</code>), a transactional one (<code>GiveRaise</code>), and a search procedure that
+        legitimately needs dynamic SQL for an optional sort column — the ideal setting to show safe versus unsafe
+        construction.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Create &amp; Execute</h2></div>
+      <p class="sec-sub">Define a procedure with <code>CREATE PROCEDURE</code>; run it with <code>EXEC</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE PROCEDURE</span> dbo.GetEmployeesByDept
+    @DeptId <span class="ty">INT</span>                     <span class="cmt">-- an input parameter</span>
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">SET</span> NOCOUNT <span class="kw">ON</span>;                   <span class="cmt">-- suppress "N rows affected" messages</span>
+    <span class="kw">SELECT</span> EmpId, Name, Salary
+    <span class="kw">FROM</span> dbo.Employees
+    <span class="kw">WHERE</span> DeptId = @DeptId;
+<span class="kw">END</span>;
+<span class="kw">GO</span>
+
+<span class="cmt">-- Call it</span>
+<span class="kw">EXEC</span> dbo.GetEmployeesByDept @DeptId = <span class="num">1</span>;</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 SET NOCOUNT ON is a habit worth keeping</span>
+        <p>It stops SQL Server from sending a "N rows affected" message after every statement. Those extra messages
+        add network chatter and can confuse some client libraries, so putting <code>SET NOCOUNT ON</code> at the top
+        of a procedure is a standard best practice. Use <code>ALTER PROCEDURE</code> to change an existing proc, or
+        <code>CREATE OR ALTER PROCEDURE</code> to create-or-update in one statement.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Parameters</h2></div>
+      <p class="sec-sub">Procedures take <strong>input</strong> parameters (values passed in), can hand back
+        <strong>output</strong> parameters, and can give parameters <strong>default</strong> values.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE PROCEDURE</span> dbo.GetDeptHeadcount
+    @DeptId <span class="ty">INT</span> = <span class="kw">NULL</span>,          <span class="cmt">-- default: NULL means "all departments"</span>
+    @Count  <span class="ty">INT</span> <span class="kw">OUTPUT</span>            <span class="cmt">-- hands a value back to the caller</span>
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">SET</span> NOCOUNT <span class="kw">ON</span>;
+    <span class="kw">SELECT</span> @Count = <span class="fn">COUNT</span>(*)
+    <span class="kw">FROM</span> dbo.Employees
+    <span class="kw">WHERE</span> (@DeptId <span class="kw">IS NULL</span> <span class="kw">OR</span> DeptId = @DeptId);
+<span class="kw">END</span>;
+<span class="kw">GO</span>
+
+<span class="kw">DECLARE</span> @n <span class="ty">INT</span>;
+<span class="kw">EXEC</span> dbo.GetDeptHeadcount @DeptId = <span class="num">1</span>, @Count = @n <span class="kw">OUTPUT</span>;
+<span class="kw">SELECT</span> @n <span class="kw">AS</span> Headcount;</code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">➡️</span><h4>Input</h4><p>The default kind — a value the caller passes in, like <code>@DeptId</code>.</p></div>
+        <div class="card"><span class="glyph">⬅️</span><h4>Output</h4><p>Marked <code>OUTPUT</code>; the proc writes to it and the caller reads it back.</p></div>
+        <div class="card"><span class="glyph">🔧</span><h4>Default</h4><p>Give a value (e.g., <code>= NULL</code>) so callers may omit the argument.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Parameters are typed and safe by design</span>
+        <p>A parameter has a declared data type, and its value is passed <em>separately</em> from the SQL text — the
+        engine never treats it as code. That single fact is the foundation of injection safety: whatever a user types
+        into <code>@DeptId</code> is only ever a value, never a command. Keep this in mind for the dynamic-SQL sections
+        below.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Why Use Them</h2></div>
+      <p class="sec-sub">Procedures aren't just tidy — they bring concrete performance, security, and maintainability
+        benefits.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">♻️</span><h4>Reuse &amp; encapsulation</h4><p>Write the logic once; every app and report calls the same tested routine instead of duplicating SQL.</p></div>
+        <div class="card"><span class="glyph">🛡️</span><h4>Security surface</h4><p>Grant users <code>EXECUTE</code> on the proc without direct table access, and parameters resist injection.</p></div>
+        <div class="card"><span class="glyph">⚡</span><h4>Plan reuse</h4><p>The execution plan is cached and reused across calls, avoiding repeated compilation.</p></div>
+        <div class="card"><span class="glyph">🔧</span><h4>Central maintenance</h4><p>Change the logic in one place; callers don't need redeploying to get the fix.</p></div>
+        <div class="card"><span class="glyph">📉</span><h4>Less network traffic</h4><p>Send a short <code>EXEC name @args</code> instead of a long query string each time.</p></div>
+        <div class="card"><span class="glyph">🔗</span><h4>Transaction control</h4><p>Wrap multi-step operations in a transaction inside the proc for atomicity.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The security angle interviewers like</span>
+        <p>With stored procedures you can give an application account permission to <code>EXECUTE</code> a specific
+        procedure while <strong>denying</strong> it direct <code>SELECT</code>/<code>UPDATE</code> on the underlying
+        tables. Through <em>ownership chaining</em>, the proc can still touch those tables. That narrows what a
+        compromised account can do to exactly the operations the procedures expose — a real least-privilege win.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Control Flow</h2></div>
+      <p class="sec-sub">Procedures can branch, loop, validate, and manage transactions — the reason they're more than
+        just saved queries.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE PROCEDURE</span> dbo.GiveRaise
+    @EmpId  <span class="ty">INT</span>,
+    @Amount <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>)
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">SET</span> NOCOUNT <span class="kw">ON</span>;
+    <span class="kw">BEGIN TRY</span>
+        <span class="kw">BEGIN TRANSACTION</span>;
+            <span class="kw">IF</span> @Amount &lt;= <span class="num">0</span>
+                <span class="kw">THROW</span> <span class="num">50001</span>, <span class="str">N'Raise must be positive.'</span>, <span class="num">1</span>;
+
+            <span class="kw">UPDATE</span> dbo.Employees
+            <span class="kw">SET</span> Salary = Salary + @Amount
+            <span class="kw">WHERE</span> EmpId = @EmpId;
+
+            <span class="kw">IF</span> @@ROWCOUNT = <span class="num">0</span>
+                <span class="kw">THROW</span> <span class="num">50002</span>, <span class="str">N'No such employee.'</span>, <span class="num">1</span>;
+        <span class="kw">COMMIT TRANSACTION</span>;
+    <span class="kw">END TRY</span>
+    <span class="kw">BEGIN CATCH</span>
+        <span class="kw">IF</span> @@TRANCOUNT &gt; <span class="num">0</span> <span class="kw">ROLLBACK TRANSACTION</span>;
+        <span class="kw">THROW</span>;                       <span class="cmt">-- re-raise to the caller</span>
+    <span class="kw">END CATCH</span>;
+<span class="kw">END</span>;</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Validate, act, and protect atomically</span>
+        <p>This proc checks its input (<code>@Amount &gt; 0</code>), performs the update inside a transaction, verifies
+        a row was actually changed (<code>@@ROWCOUNT</code>), and rolls back on any error. That combination —
+        validation, transaction, and <code>TRY…CATCH</code> with re-<code>THROW</code> — is the reliable template for
+        any procedure that changes data. Other tools available: <code>IF/ELSE</code>, <code>WHILE</code> loops, and
+        local variables via <code>DECLARE</code>.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Dynamic SQL: What &amp; Why</h2></div>
+      <p class="sec-sub">Dynamic SQL is a query <em>built as a string at runtime</em> and then executed. You need it
+        only when the query's <strong>structure</strong> — not just its values — has to vary.</p>
+
+      <p>A normal parameterized query can vary its <em>values</em> (<code>WHERE DeptId = @DeptId</code>) but not its
+        <em>structure</em>: you can't parameterize a table name, a column name, or which columns to sort by. When
+        those must change at runtime, you assemble the SQL text yourself and run it. Legitimate cases include:</p>
+
+      <ul>
+        <li>A <strong>dynamic sort</strong> — the user picks which column to order by.</li>
+        <li><strong>Optional filters</strong> — building a <code>WHERE</code> only from the filters actually
+          supplied.</li>
+        <li>A <strong>dynamic table/schema name</strong> — e.g., the same logic run against a table chosen at
+          runtime.</li>
+      </ul>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Use it sparingly — it's a last resort, not a default</span>
+        <p>Dynamic SQL is harder to read, harder for the optimizer to reuse plans for, and — most importantly — it
+        reopens the door to <strong>SQL injection</strong> if you build the string by pasting in user input. Always
+        ask first whether a plain parameterized query or proc can do the job. Only reach for dynamic SQL when the
+        structure genuinely must vary, and then build it defensively (the next sections).</p>
+      </div>
+
+      <h3>Do I need dynamic SQL — and how do I keep it safe? 🧭</h3>
+      <div class="flow">
+        <div class="flow-step highlight">
+          <span class="st-icon">✅</span>
+          <b>Can a normal parameterized query or proc do it?</b>
+          <small>Yes → use that. No dynamic SQL, no injection risk. This is the default.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🔌</span>
+          <b>Does only a <em>value</em> vary (<code>WHERE col = ?</code>)?</b>
+          <small>Pass it as a <code>sp_executesql</code> parameter — never concatenate it.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🏷️</span>
+          <b>Does an <em>identifier</em> vary (table / column / sort)?</b>
+          <small>It can't be a parameter → validate against a whitelist, then wrap with <code>QUOTENAME</code>.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🧵</span>
+          <b>Building the string?</b>
+          <small>Run it with <code>sp_executesql</code> + parameters — never <code>EXEC</code> of concatenated input.</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>EXEC vs sp_executesql</h2></div>
+      <p class="sec-sub">There are two ways to run a SQL string. One accepts parameters and one doesn't — and that
+        difference is the whole ballgame for safety.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang danger">sql · avoid: concatenated EXEC</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- ❌ EXEC of a concatenated string: user input becomes part of the SQL text</span>
+<span class="cmt">--    This is the pattern that enables injection. Do not build SQL this way.</span>
+<span class="kw">EXEC</span> (<span class="str">N'SELECT EmpId, Name FROM dbo.Employees WHERE DeptId = '</span> + @DeptInput);</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang safe">sql · prefer: sp_executesql with parameters</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- ✅ sp_executesql: the value is passed as a typed PARAMETER, never as text</span>
+<span class="kw">EXEC</span> sys.sp_executesql
+    <span class="str">N'SELECT EmpId, Name FROM dbo.Employees WHERE DeptId = @DeptId'</span>,
+    <span class="str">N'@DeptId INT'</span>,          <span class="cmt">-- parameter definition</span>
+    @DeptId = @DeptInput;         <span class="cmt">-- parameter value, supplied separately</span></code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th><code>EXEC (string)</code></th><th><code>sp_executesql</code></th></tr></thead>
+          <tbody>
+            <tr><td>Accepts parameters?</td><td class="bad">No — values must be concatenated in</td><td class="good">Yes — typed parameters</td></tr>
+            <tr><td>Injection-safe for values?</td><td class="bad">No (if input is concatenated)</td><td class="good">Yes</td></tr>
+            <tr><td>Plan reuse?</td><td class="bad">Poor (text differs each time)</td><td class="good">Good (parameterized text is stable)</td></tr>
+            <tr><td>Recommended?</td><td class="bad">Avoid for anything with input</td><td class="good">The standard for dynamic SQL</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Always prefer sp_executesql</span>
+        <p><code>sp_executesql</code> lets you write dynamic SQL that still uses <strong>parameters</strong>, so
+        values are passed separately and never interpreted as commands — plus the parameterized text is stable enough
+        for the optimizer to cache and reuse a plan. <code>EXEC(@string)</code> has no parameters, so any variability
+        must be concatenated, which is exactly what makes it unsafe. The rest of the page uses
+        <code>sp_executesql</code>.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>The Risk</h2></div>
+      <p class="sec-sub">SQL injection happens when user-supplied text is concatenated into a query string, so that
+        input can change the query's <em>meaning</em> rather than just its data. Understanding the mechanism is what
+        makes the defense obvious.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang danger">sql · vulnerable pattern (for understanding only)</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- ❌ The user's text is glued directly into the SQL string.</span>
+<span class="cmt">--    Whatever they type is parsed as part of the command.</span>
+<span class="kw">DECLARE</span> @sql <span class="ty">NVARCHAR</span>(<span class="ty">MAX</span>) =
+    <span class="str">N'SELECT * FROM dbo.Employees WHERE Name = '''</span> + @UserInput + <span class="str">''''</span>;
+<span class="kw">EXEC</span> (@sql);</code></pre>
+      </div>
+
+      <p>The intended query filters by a name. But because <code>@UserInput</code> is concatenated into the command
+        text, a crafted value can close the string early and append <em>its own</em> SQL. A classic illustration is an
+        input that makes the <code>WHERE</code> condition always true (so every row returns), and more damaging inputs
+        can append additional statements. The database can't tell the difference between the developer's SQL and the
+        attacker's — it's all just one string of text now.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Why this is so dangerous</span>
+        <p>Because the input is treated as <strong>code</strong>, a successful injection can read data the user
+        shouldn't see, bypass authentication filters, or modify and destroy data — limited only by what the database
+        account is permitted to do. It's consistently ranked among the most serious and common web-application
+        vulnerabilities. The root cause is always the same: <strong>mixing untrusted input into command text</strong>.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The one-sentence takeaway</span>
+        <p>Injection is possible <em>only</em> when user input is concatenated into SQL text. If input is never
+        concatenated — if it's always passed as a <strong>parameter</strong> — there is no string for an attacker to
+        break out of, and injection simply cannot occur. That's why the fixes below all amount to "stop concatenating,
+        start parameterizing."</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Defense: Parameters</h2></div>
+      <p class="sec-sub">The primary defense: pass every user-supplied <em>value</em> as a parameter, never as
+        concatenated text. Then it can only ever be data.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang safe">sql · safe: value passed as a parameter</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- ✅ The name is a parameter. Whatever the user types is only ever a value.</span>
+<span class="kw">EXEC</span> sys.sp_executesql
+    <span class="str">N'SELECT EmpId, Name, Salary
+      FROM dbo.Employees
+      WHERE Name = @Name'</span>,
+    <span class="str">N'@Name NVARCHAR(100)'</span>,
+    @Name = @UserInput;           <span class="cmt">-- passed separately -- not part of the SQL text</span></code></pre>
+      </div>
+
+      <p>Here the query text is <strong>fixed</strong>: <code>WHERE Name = @Name</code>. The user's input is handed to
+        <code>@Name</code> as a separate, typed value. Even if someone types SQL-looking text, it's compared as a
+        literal name — there's no string for it to escape from, so the query's meaning can't be altered.</p>
+
+      <div class="callout tip">
+        <span class="tag">✅ This is the same idea as app-side parameterized queries</span>
+        <p>In application code (ADO.NET, Entity Framework, etc.), the equivalent is using command parameters or an ORM
+        rather than building SQL with string concatenation. Whether in T-SQL via <code>sp_executesql</code> or in C#
+        via parameters, the principle is identical: <strong>separate the code from the data</strong>. Stored
+        procedures called with parameters get this safety automatically.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ "Escaping quotes" is not a real defense</span>
+        <p>Trying to sanitize input by doubling apostrophes or stripping keywords is fragile and repeatedly bypassed —
+        different encodings, comment tricks, and edge cases defeat it. Don't rely on blacklists or manual escaping for
+        values. <strong>Parameterization</strong> is the robust, complete defense for values; use it everywhere.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Defense: QUOTENAME</h2></div>
+      <p class="sec-sub">Some things — table names, column names, sort columns — <em>can't</em> be parameters. For those
+        <strong>identifiers</strong>, defend with a whitelist plus <code>QUOTENAME</code>.</p>
+
+      <p>You cannot write <code>ORDER BY @columnName</code> as a parameter — a parameter is a value, and a column name
+        is part of the query's structure. So a dynamic sort column must be built into the text. The safe way is to
+        (1) validate the name against a known list, and (2) wrap it with <code>QUOTENAME</code>, which safely brackets
+        an identifier and escapes any special characters.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang safe">sql · safe dynamic sort: whitelist + QUOTENAME</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE PROCEDURE</span> dbo.SearchEmployees
+    @SortColumn <span class="ty">SYSNAME</span> = <span class="str">N'Name'</span>     <span class="cmt">-- SYSNAME is the type for identifiers</span>
+<span class="kw">AS</span>
+<span class="kw">BEGIN</span>
+    <span class="kw">SET</span> NOCOUNT <span class="kw">ON</span>;
+
+    <span class="cmt">-- 1) WHITELIST: reject anything not in the known-good set</span>
+    <span class="kw">IF</span> @SortColumn <span class="kw">NOT IN</span> (<span class="str">N'Name'</span>, <span class="str">N'Salary'</span>, <span class="str">N'HireDate'</span>)
+        <span class="kw">THROW</span> <span class="num">50010</span>, <span class="str">N'Invalid sort column.'</span>, <span class="num">1</span>;
+
+    <span class="kw">DECLARE</span> @sql <span class="ty">NVARCHAR</span>(<span class="ty">MAX</span>) =
+        <span class="str">N'SELECT EmpId, Name, Salary, HireDate
+          FROM dbo.Employees
+          ORDER BY '</span> + <span class="fn">QUOTENAME</span>(@SortColumn);   <span class="cmt">-- 2) bracket-escape the identifier</span>
+
+    <span class="kw">EXEC</span> sys.sp_executesql @sql;
+<span class="kw">END</span>;</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Two layers for identifiers</span>
+        <p>The <strong>whitelist</strong> is the strongest protection: if the requested column isn't one you explicitly
+        allow, reject it outright. <code>QUOTENAME</code> is defense-in-depth — it wraps the name in
+        <code>[brackets]</code> and doubles any embedded closing bracket, so even an unexpected identifier can't break
+        out of its position. Use both. Any <em>values</em> in the same query still go through parameters as before.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The rule of thumb</span>
+        <p><strong>Values</strong> (things compared with <code>=</code>, <code>&gt;</code>, <code>IN</code>) → always
+        <strong>parameters</strong>. <strong>Identifiers</strong> (table, column, sort names that must vary) →
+        <strong>whitelist + <code>QUOTENAME</code></strong>. If you follow those two rules, your dynamic SQL is safe
+        from injection.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Procs vs Ad-hoc</h2></div>
+      <p class="sec-sub">Where do stored procedures fit next to parameterized application queries and ORMs? All can be
+        safe; they differ in where the logic lives.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Approach</th><th>Logic lives in</th><th>Injection-safe?</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Stored procedure</td><td>The database</td><td class="good">Yes (with parameters)</td><td>Central, reusable, permissionable; DB-team owned</td></tr>
+            <tr><td>Parameterized ad-hoc query</td><td>App code</td><td class="good">Yes</td><td>Flexible; parameters make it safe; logic in the app</td></tr>
+            <tr><td>ORM (EF, etc.)</td><td>App code / generated</td><td class="good">Yes (parameterized by default)</td><td>Productive; watch raw-SQL escape hatches</td></tr>
+            <tr><td>Concatenated ad-hoc SQL</td><td>App code</td><td class="bad">No</td><td>The vulnerable anti-pattern — avoid entirely</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Safety is about parameterization, not the tool</span>
+        <p>Stored procedures, ad-hoc parameterized queries, and ORMs are all safe <em>because they parameterize</em>.
+        The only universally unsafe option is hand-concatenating input into SQL. The proc-vs-ORM choice is really about
+        architecture — where you want logic to live, how you manage permissions and deployments — not about injection
+        safety, which every parameterized approach provides.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Mistakes &amp; Best Practices</h2></div>
+      <p class="sec-sub">The habits that keep procedures clean and dynamic SQL safe.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔌</span><h4>Parameterize every value</h4><p>Never concatenate user input; pass it via <code>sp_executesql</code> parameters or proc parameters.</p></div>
+        <div class="card"><span class="glyph">✅</span><h4>Whitelist identifiers</h4><p>Validate dynamic table/column/sort names against a known set, then wrap with <code>QUOTENAME</code>.</p></div>
+        <div class="card"><span class="glyph">🧵</span><h4>Prefer sp_executesql</h4><p>Over <code>EXEC(@string)</code> — it supports parameters and reuses plans.</p></div>
+        <div class="card"><span class="glyph">🧯</span><h4>Validate &amp; TRY…CATCH</h4><p>Check inputs, wrap changes in a transaction, roll back and re-<code>THROW</code> on error.</p></div>
+        <div class="card"><span class="glyph">🔒</span><h4>Least privilege</h4><p>Grant <code>EXECUTE</code> on procs instead of table access; the account can do only what procs allow.</p></div>
+        <div class="card"><span class="glyph">📉</span><h4>Avoid needless dynamic SQL</h4><p>If a plain parameterized query works, use it — dynamic SQL only when the structure must vary.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The single rule that matters most</span>
+        <p>If you remember one thing: <strong>never build SQL by concatenating untrusted input</strong>. Values become
+        parameters; identifiers get whitelisted and <code>QUOTENAME</code>d. Every other practice here is good hygiene,
+        but that one rule is the difference between safe and exploitable code — and it's exactly what interviewers
+        probe.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea, then a full cheat-sheet table.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>📦 Stored proc</h4><p>A named, reusable T-SQL block saved in the database, called by name.</p></div>
+        <div class="recap-card"><h4>🔌 Parameters</h4><p>Input, output, and default; typed and passed separately from SQL text.</p></div>
+        <div class="recap-card"><h4>🔇 NOCOUNT</h4><p><code>SET NOCOUNT ON</code> suppresses "rows affected" chatter.</p></div>
+        <div class="recap-card"><h4>🧯 Robust proc</h4><p>Validate → transaction → <code>TRY…CATCH</code> → rollback &amp; re-<code>THROW</code>.</p></div>
+        <div class="recap-card"><h4>⚙️ Dynamic SQL</h4><p>Query built as text at runtime; only when the structure must vary.</p></div>
+        <div class="recap-card"><h4>🧵 sp_executesql</h4><p>Runs dynamic SQL with typed parameters and good plan reuse.</p></div>
+        <div class="recap-card"><h4>🩸 Injection</h4><p>Happens when input is concatenated into SQL text and parsed as code.</p></div>
+        <div class="recap-card"><h4>🛡️ Values → params</h4><p>Pass every user value as a parameter — the complete defense for values.</p></div>
+        <div class="recap-card"><h4>✅ Names → QUOTENAME</h4><p>Whitelist dynamic identifiers, then bracket-escape with <code>QUOTENAME</code>.</p></div>
+        <div class="recap-card"><h4>🔒 Least privilege</h4><p>Grant <code>EXECUTE</code> on procs, not raw table access.</p></div>
+      </div>
+
+      <h3>Full summary table</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it is</th><th>Key point</th></tr></thead>
+          <tbody>
+            <tr><td><code>CREATE PROCEDURE</code></td><td>Defines a stored proc</td><td><code>CREATE OR ALTER</code> to create/update; call with <code>EXEC</code></td></tr>
+            <tr><td>Input / output / default params</td><td>Values in/out, optional</td><td>Typed; passed separately from SQL text (safe)</td></tr>
+            <tr><td>Benefits</td><td>Reuse, security, plan reuse</td><td>Grant EXECUTE, not table access</td></tr>
+            <tr><td>Dynamic SQL</td><td>Query built at runtime</td><td>Only when structure must vary; use sparingly</td></tr>
+            <tr><td><code>EXEC(@string)</code></td><td>Runs a string, no params</td><td>Avoid — concatenation enables injection</td></tr>
+            <tr><td><code>sp_executesql</code></td><td>Runs a string with params</td><td>The safe, plan-reusing way to run dynamic SQL</td></tr>
+            <tr><td>Injection defense (values)</td><td>Parameterize</td><td>User values are never part of the SQL text</td></tr>
+            <tr><td>Injection defense (identifiers)</td><td>Whitelist + <code>QUOTENAME</code></td><td>For names that can't be parameters</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What is a stored procedure? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A named, reusable block of T-SQL saved in the database and called by name, usually with
+        parameters. Instead of sending the same query text repeatedly, you define the logic once and run it with
+        <code>EXEC procName @args</code>. It can take inputs, return outputs, run multiple statements, and use control
+        flow and transactions.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> How do you create and run one? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Define it with <code>CREATE PROCEDURE name @param TYPE AS BEGIN … END</code>, and run it with
+        <code>EXEC name @param = value</code>. Use <code>ALTER PROCEDURE</code> to change it, or <code>CREATE OR ALTER
+        PROCEDURE</code> to create-or-update in one step.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> What is an input parameter? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A typed value the caller passes into the procedure, like <code>@DeptId INT</code>. It's the
+        default kind of parameter. Inside the proc you use it like a variable, and crucially its value is passed
+        separately from the SQL text, so it can never be interpreted as code.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> What is an output parameter? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A parameter marked <code>OUTPUT</code> that the procedure writes to so the caller can read the
+        result back. You declare a variable, pass it with <code>OUTPUT</code> in the <code>EXEC</code>, and after the
+        call it holds the value the proc set — useful for returning a single computed value like a count.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> Why use stored procedures? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>They centralize and reuse logic, reduce network traffic (send a short call instead of a long
+        query), let you grant execute permission without exposing tables, cache and reuse execution plans, and keep
+        maintenance in one place. They also make parameterized, injection-resistant access the natural default.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What does SET NOCOUNT ON do? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It stops SQL Server from sending the "N rows affected" informational message after each statement.
+        That reduces network chatter and avoids confusing some client libraries, so it's a common best practice at the top
+        of a stored procedure.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> What is dynamic SQL? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>SQL that is built as a text string at runtime and then executed, rather than written as a fixed
+        statement. You use it when the query's structure must vary — for example, sorting by a column the user chooses, or
+        adding filters only for the criteria supplied. It should be used sparingly and built safely.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> What is SQL injection? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A vulnerability where user-supplied input is concatenated into a SQL command string, so the input
+        can change the query's meaning instead of just its data. Because the database parses the whole string as code, a
+        crafted input can read or alter data it shouldn't. The fix is to never concatenate input — pass it as a parameter.</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q09</span> What are the main benefits of stored procedures? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Reuse and encapsulation (logic in one tested place), a smaller security surface (grant
+        <code>EXECUTE</code> without table access, and parameters resist injection), plan caching and reuse, reduced network
+        traffic, and centralized maintenance so a fix doesn't require redeploying every caller. They also make transaction
+        control and validation easy to keep server-side.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> EXEC versus sp_executesql — what's the difference? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>EXEC(@string)</code> just runs a text string and has no parameters, so any variability must be
+        concatenated in — which enables injection and hurts plan reuse. <code>sp_executesql</code> runs a string but accepts
+        typed <em>parameters</em>, so values are passed separately (safe) and the parameterized text is stable enough for the
+        optimizer to reuse a cached plan. Prefer <code>sp_executesql</code> for all dynamic SQL.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> When do you genuinely need dynamic SQL? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>When the query's <em>structure</em> must change at runtime — things you can't parameterize: a table
+        or column name, a sort column the user picks, or a <code>WHERE</code> clause built from whichever optional filters were
+        supplied. If only <em>values</em> vary, a normal parameterized query or proc is better and safer.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> How do parameters prevent injection? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A parameter's value is sent to the engine <em>separately</em> from the SQL text and is never parsed as
+        part of the command — it's treated purely as data. So there's no string boundary for an attacker to break out of; whatever
+        they type stays a value. Since injection requires input to become part of the command text, parameterization removes the
+        possibility entirely.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> Why is string concatenation of input dangerous? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Because the concatenated input becomes part of the command that the database parses. Crafted input can
+        close out the intended string and add its own SQL, changing the query's meaning — for instance turning a filter into an
+        always-true condition, or appending extra statements. The database can't distinguish the developer's SQL from the injected
+        SQL; it's all one string. Parameterizing avoids this completely.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> How do you handle errors in a procedure? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Wrap the work in <code>BEGIN TRY … END TRY BEGIN CATCH … END CATCH</code>. In the <code>CATCH</code>, roll
+        back if a transaction is open (<code>IF @@TRANCOUNT &gt; 0 ROLLBACK</code>) and then <code>THROW</code> to re-raise the error
+        to the caller. Combine that with input validation (raising a custom error via <code>THROW</code>) and a transaction around
+        any data changes.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> Can you use transactions inside a procedure? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Yes — that's a core use. You <code>BEGIN TRANSACTION</code>, do the multi-step work, and
+        <code>COMMIT</code>, with a <code>TRY…CATCH</code> that rolls back on error, so the whole operation is atomic. Just keep the
+        transaction short, and be careful about nesting: an inner rollback affects the whole transaction, so use the
+        <code>@@TRANCOUNT</code>/savepoint patterns when a proc might be called inside another transaction.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> What is QUOTENAME and when do you use it? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>QUOTENAME</code> wraps a string as a safely-delimited SQL identifier — by default in
+        <code>[brackets]</code>, doubling any closing bracket inside it. You use it when you must place a dynamic <em>identifier</em>
+        (a table, column, or sort-column name) into dynamic SQL, since identifiers can't be parameters. Pair it with a whitelist of
+        allowed names for real safety.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain how injection works and the layered defenses. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Injection occurs when untrusted input is concatenated into command text, letting the input alter the
+        parsed statement rather than just supply data. The layered defenses: (1) <strong>parameterize all values</strong> via
+        <code>sp_executesql</code> or app parameters, so values are never text — this is the primary, complete defense for values; (2)
+        for <strong>identifiers</strong> that can't be parameters, use a <strong>whitelist</strong> of allowed names plus
+        <code>QUOTENAME</code>; (3) apply <strong>least privilege</strong> so even a slip limits the damage; and (4) validate input types
+        and lengths. Manual escaping/blacklists are not reliable and shouldn't be the defense.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> Why can't you parameterize a table or column name, and what do you do instead? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Parameters supply <em>values</em>, but a table/column name is part of the query's <em>structure</em>, which
+        the engine must know at parse/compile time — so <code>ORDER BY @col</code> or <code>FROM @table</code> isn't allowed. Instead, you
+        build the identifier into the dynamic SQL text safely: validate it against a fixed whitelist of permitted names (reject anything
+        else) and wrap it with <code>QUOTENAME</code> so it's bracket-escaped. Values in the same statement still go through parameters.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> How does sp_executesql help with plan reuse and parameter sniffing? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Because the SQL text is parameterized and stays constant across calls (only the parameter values change),
+        the optimizer can cache one plan and reuse it — unlike concatenated <code>EXEC</code> strings that differ every time and bloat the
+        plan cache. The flip side is parameter sniffing: the cached plan is optimized for the first values seen, which can be suboptimal for
+        very different later values. Remedies include <code>OPTION (RECOMPILE)</code>, <code>OPTIMIZE FOR</code> hints, or local-variable
+        patterns when needed.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> Stored procs versus ORM/parameterized ad-hoc queries — trade-offs? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>All three are injection-safe as long as they parameterize; the choice is architectural. Stored procs keep
+        logic and permissions in the database (great for central control, fine-grained <code>EXECUTE</code> grants, and shielding tables), but
+        can scatter business logic server-side and add deployment coordination. ORMs and parameterized app queries keep logic in code (more
+        productive and testable, easier refactoring) but move data logic into the app and rely on developers not dropping to unsafe raw SQL.
+        Many teams blend them: procs for critical/complex operations, ORM for routine CRUD.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> How do EXECUTE AS, ownership chaining, and least privilege apply to procs? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><strong>Ownership chaining</strong> means that when a proc and the tables it touches share an owner, a user with
+        only <code>EXECUTE</code> on the proc can run it without direct table permissions — enabling least privilege. <code>EXECUTE AS</code> lets a
+        proc run under a specified security context (e.g., a limited principal) rather than the caller's, useful when a proc needs a permission the
+        caller lacks. Together they let you expose exactly the operations you intend and nothing more — but note that dynamic SQL inside a proc breaks
+        the ownership chain, so the caller does need underlying rights (or <code>EXECUTE AS</code>) for dynamic statements.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> What are the pitfalls of dynamic SQL beyond injection? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Plan-cache bloat and poor reuse if the text varies each call (mitigated by parameterizing via
+        <code>sp_executesql</code>); broken ownership chaining, so permissions on underlying objects are re-checked against the caller; harder
+        debugging and readability; the need to use <code>NVARCHAR</code> for the <code>sp_executesql</code> statement; scope isolation (variables and
+        temp tables created inside the dynamic batch aren't visible outside it, though <code>#temp</code> tables created before it are); and subtler
+        parameter-sniffing behavior. These are why dynamic SQL should be a considered last resort, not a default.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> How do you safely validate a dynamic identifier? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Strongest is a <strong>whitelist</strong>: compare the requested name against an explicit set of allowed values (or
+        look it up in <code>sys.columns</code>/<code>sys.tables</code> to confirm it's a real, permitted object) and reject anything else. Then apply
+        <code>QUOTENAME</code> as defense-in-depth to bracket-escape it. Avoid trying to sanitize by removing characters — that's fragile. The combination
+        of "must be one of these known-good names" plus <code>QUOTENAME</code> makes a dynamic identifier safe to embed.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> Output parameters vs return values vs result sets — when do you use each? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A <strong>result set</strong> (a <code>SELECT</code>) is for returning rows/tabular data — the usual output.
+        <strong>Output parameters</strong> return one or a few scalar values back to the caller (like a computed count or a new id).
+        The <strong>return value</strong> of a proc (<code>RETURN n</code>) is an integer conventionally used only for status/success codes, not data.
+        So: rows → result set; scalars → output params; status code → return value. Mixing them up (e.g., using <code>RETURN</code> to pass real data)
+        is a common anti-pattern.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions establish procs, parameters, and the definition of injection;
+        <strong>Mid</strong> questions test the real tools (<code>sp_executesql</code>, when dynamic SQL is needed, how parameters defend,
+        <code>QUOTENAME</code>); <strong>Senior</strong> questions probe layered defenses, why identifiers differ from values, plan reuse,
+        permissions, and dynamic-SQL pitfalls. Say each answer out loud in plain English — the ones you stumble on point straight to the section to
+        re-read.</p>
+      </div>
+
+      <p class="foot">Concepts verified against Microsoft Learn (<code>CREATE PROCEDURE</code>, <code>sp_executesql</code>, <code>QUOTENAME</code>,
+        and Microsoft's SQL injection prevention guidance). These features and defenses are stable across supported SQL Server versions (through 2025 /
+        17.x). The injection material here is defensive — it explains why concatenation is unsafe and how to write parameterized, safe code. This single
+        <code>13-sql-stored-procs.html</code> file is fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Stacks 2 — Advanced Stack Problems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;border-radius:0 2px 2px 0;}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease;}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem;}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem;}
+.nav-group{margin-bottom:.2rem;}.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem;}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:0.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s;}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft);}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500;}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:var(--accent);opacity:.7;flex-shrink:0;}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px;}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem;}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem;}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem;}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);}
+.section{margin-bottom:5rem;scroll-margin-top:2rem;}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line);}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0;}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2;}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem;}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem;}
+p{margin-bottom:1rem;}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid;}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:0.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}.callout.tip .callout-tag{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}.callout.key .callout-tag{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}.callout.analogy .callout-tag{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}.callout.warn .callout-tag{color:var(--accent);}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:0.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em;}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:0.85rem;}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem;}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980;}.copy-btn.copied{color:#89d185;border-color:#89d185;}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink);}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+.table-wrap{overflow-x:auto;margin:1.5rem 0;}
+table{width:100%;border-collapse:collapse;font-size:0.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line);}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}tbody tr:hover{background:var(--bg-soft);}
+.diagram{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;margin:1.5rem 0;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;overflow-x:auto;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem;min-width:42px;}
+.arr-cell .val{font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;background:var(--bg);border:2px solid var(--line);border-radius:6px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--blue);}
+.arr-cell .label{font-family:"JetBrains Mono",monospace;font-size:.6rem;color:var(--ink-soft);}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0;}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:0.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg);}
+.complexity-badge .label{color:var(--ink-soft);}.complexity-badge .val{color:var(--accent);font-weight:600;}
+.hist-diagram{display:flex;align-items:flex-end;gap:3px;padding:1.5rem 1.4rem 0.8rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;margin:1.5rem 0;min-height:200px;overflow-x:auto;}
+.hist-bar{display:flex;flex-direction:column;align-items:center;}
+.hist-bar .bar-body{width:44px;background:var(--accent-soft);border:2px solid var(--accent);border-radius:4px 4px 0 0;}
+.hist-bar .bar-num{font-family:"JetBrains Mono",monospace;font-size:.7rem;color:var(--accent);margin-top:4px;}
+.hist-bar .bar-idx{font-family:"JetBrains Mono",monospace;font-size:.62rem;color:var(--blue);}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem;}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent);}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem;}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.lc-list{list-style:none;padding:0;margin:1rem 0;}
+.lc-list li{display:flex;align-items:center;gap:.75rem;padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;}
+.lc-list li:last-child{border-bottom:none;}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;}
+.lc-diff.easy{background:var(--green-soft);color:var(--green);}.lc-diff.medium{background:var(--accent-soft);color:var(--accent);}.lc-diff.hard{background:var(--rose-soft);color:var(--rose);}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s;}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent);}
+.lc-why{color:var(--ink-soft);font-size:.82rem;}
+@media(max-width:768px){.sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);}.sidebar.open{transform:translateX(0);}.nav-toggle{display:flex;}.main{padding:0 1.2rem 4rem;}.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px);}.sidebar-overlay.open{display:block;}}
+.section{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}.section.visible{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+
+<div class="layout">
+<nav class="sidebar">
+  <div class="sidebar-logo">DSA Notes · Module 7<strong>Stacks 2</strong></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Revision</div>
+    <a class="nav-link" href="#nsr"><span class="nav-num">01</span>NSL & NSR</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Problems</div>
+    <a class="nav-link" href="#remove-pairs"><span class="nav-num">02</span>Remove Equal Pairs</a>
+    <a class="nav-link" href="#histogram"><span class="nav-num">03</span>Largest Area in Histogram</a>
+    <a class="nav-link" href="#sum-max-min"><span class="nav-num">04</span>Sum of (Max − Min)</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">05</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">06</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 7</p>
+  <h1>Stacks 2</h1>
+  <p class="hero-lede">Advanced monotone-stack patterns: NSL/NSR, removing equal consecutive pairs, the largest rectangle in a histogram, and sum of (max − min) for all subarrays.</p>
+  <div class="chips">
+    <span class="chip">Monotone Stack</span><span class="chip">NSL / NSR</span><span class="chip">Remove Pairs</span>
+    <span class="chip">Largest Histogram Area</span><span class="chip">Sum Max−Min</span><span class="chip">Contribution Technique</span>
+  </div>
+</header>
+
+<!-- 01 NSL & NSR -->
+<section class="section" id="nsr">
+  <div class="section-header"><span class="section-num">01</span><h2>NSL &amp; NSR — Quick Revision</h2></div>
+
+  <p>Two canonical monotone-stack patterns appear repeatedly in hard problems:</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Pattern</th><th>Iterate</th><th>Stack condition to pop</th><th>Answer for index i</th></tr></thead>
+      <tbody>
+        <tr><td><strong>NSL</strong> — Nearest Smaller on Left</td><td>Left → Right</td><td>Pop while <code>arr[st.peek()] ≥ arr[i]</code></td><td><code>st.isEmpty() ? −1 : st.peek()</code></td></tr>
+        <tr><td><strong>NSR</strong> — Nearest Smaller on Right</td><td>Right → Left</td><td>Pop while <code>arr[st.peek()] ≥ arr[i]</code></td><td><code>st.isEmpty() ? N : st.peek()</code></td></tr>
+        <tr><td><strong>NGL</strong> — Nearest Greater on Left</td><td>Left → Right</td><td>Pop while <code>arr[st.peek()] ≤ arr[i]</code></td><td><code>st.isEmpty() ? −1 : st.peek()</code></td></tr>
+        <tr><td><strong>NGR</strong> — Nearest Greater on Right</td><td>Right → Left</td><td>Pop while <code>arr[st.peek()] ≤ arr[i]</code></td><td><code>st.isEmpty() ? N : st.peek()</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Example — NSL</span>
+    <code>arr = [5, 4, 2, 7, 6, 9, 15, 3]</code><br>
+    <code>nsl = [−1, −1, −1, 2, 2, 4, 5, 2]</code>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — NSL (iterate left to right)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span>[] <span class="fn">nsl</span>(<span class="ty">int</span>[] arr) {
+    <span class="ty">int</span> n = arr.length;
+    <span class="ty">int</span>[] ans = <span class="kw">new</span> <span class="ty">int</span>[n];
+    <span class="ty">Stack</span>&lt;<span class="ty">Integer</span>&gt; st = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="kw">while</span> (st.<span class="fn">size</span>() &gt; <span class="num">0</span> &amp;&amp; arr[st.<span class="fn">peek</span>()] &gt;= arr[i]) st.<span class="fn">pop</span>();
+        ans[i] = st.<span class="fn">isEmpty</span>() ? <span class="num">-1</span> : st.<span class="fn">peek</span>();
+        st.<span class="fn">push</span>(i);
+    }
+    <span class="kw">return</span> ans;
+}
+
+<span class="ty">int</span>[] <span class="fn">nsr</span>(<span class="ty">int</span>[] arr) {           <span class="cmt">// NSR — iterate right to left</span>
+    <span class="ty">int</span> n = arr.length;
+    <span class="ty">int</span>[] ans = <span class="kw">new</span> <span class="ty">int</span>[n];
+    <span class="ty">Stack</span>&lt;<span class="ty">Integer</span>&gt; st = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();
+    <span class="kw">for</span> (<span class="ty">int</span> i = n - <span class="num">1</span>; i &gt;= <span class="num">0</span>; i--) {
+        <span class="kw">while</span> (st.<span class="fn">size</span>() &gt; <span class="num">0</span> &amp;&amp; arr[st.<span class="fn">peek</span>()] &gt;= arr[i]) st.<span class="fn">pop</span>();
+        ans[i] = st.<span class="fn">isEmpty</span>() ? n : st.<span class="fn">peek</span>();   <span class="cmt">// use n as sentinel</span>
+        st.<span class="fn">push</span>(i);
+    }
+    <span class="kw">return</span> ans;
+}
+<span class="cmt">// Both: T.C → O(N)   S.C → O(N)</span></pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+</section>
+
+<!-- 02 REMOVE PAIRS -->
+<section class="section" id="remove-pairs">
+  <div class="section-header"><span class="section-num">02</span><h2>Remove Equal Pairs of Consecutive Elements</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given a string, repeatedly remove any two <strong>adjacent identical characters</strong> until no more removals are possible. Return the resulting string.
+  </div>
+
+  <h3>Examples</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Input</th><th>Steps</th><th>Output</th></tr></thead>
+      <tbody>
+        <tr><td><code>abcdd</code></td><td>remove <code>dd</code></td><td><code>abc</code></td></tr>
+        <tr><td><code>abcddc</code></td><td><code>abcddc</code> → <code>abcc</code> → <code>ab</code></td><td><code>ab</code></td></tr>
+        <tr><td><code>abbcbbcacx</code></td><td>chains of removals → <code>cx</code></td><td><code>cx</code></td></tr>
+        <tr><td><code>abbb</code></td><td><code>abbb</code> → <code>ab</code></td><td><code>ab</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Algorithm — Stack</h3>
+  <p>Push characters one by one. If the character matches the stack's top, pop (removing the pair). Otherwise push. At the end, pop everything from the stack, reverse, and return.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">String</span> <span class="fn">removeEqualPairs</span>(<span class="ty">String</span> s) {
+    <span class="ty">Stack</span>&lt;<span class="ty">Character</span>&gt; st = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();
+
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; s.length(); i++) {
+        <span class="kw">if</span> (st.<span class="fn">isEmpty</span>() || st.<span class="fn">peek</span>() != s.<span class="fn">charAt</span>(i)) {
+            st.<span class="fn">push</span>(s.<span class="fn">charAt</span>(i));
+        } <span class="kw">else</span> {
+            st.<span class="fn">pop</span>();               <span class="cmt">// remove the pair</span>
+        }
+    }
+
+    <span class="ty">StringBuilder</span> sb = <span class="kw">new</span> <span class="ty">StringBuilder</span>();
+    <span class="kw">while</span> (!st.<span class="fn">isEmpty</span>()) sb.<span class="fn">append</span>(st.<span class="fn">pop</span>());
+    sb.<span class="fn">reverse</span>();
+    <span class="kw">return</span> sb.<span class="fn">toString</span>();
+}
+<span class="cmt">// T.C → O(N)   S.C → O(N)</span></pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+</section>
+
+<!-- 03 HISTOGRAM -->
+<section class="section" id="histogram">
+  <div class="section-header"><span class="section-num">03</span><h2>Largest Rectangle Area in Histogram</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given an array of bar heights in a histogram, find the area of the largest rectangle that can be formed using consecutive bars. Each bar has width 1.
+  </div>
+
+  <h3>Visual — arr = [8, 6, 2, 5, 6, 5, 7, 4]</h3>
+  <div class="hist-diagram">
+    <div class="hist-bar"><div class="bar-body" style="height:160px"></div><div class="bar-num">8</div><div class="bar-idx">0</div></div>
+    <div class="hist-bar"><div class="bar-body" style="height:120px"></div><div class="bar-num">6</div><div class="bar-idx">1</div></div>
+    <div class="hist-bar"><div class="bar-body" style="height:40px"></div><div class="bar-num">2</div><div class="bar-idx">2</div></div>
+    <div class="hist-bar"><div class="bar-body" style="height:100px"></div><div class="bar-num">5</div><div class="bar-idx">3</div></div>
+    <div class="hist-bar"><div class="bar-body" style="height:120px"></div><div class="bar-num">6</div><div class="bar-idx">4</div></div>
+    <div class="hist-bar"><div class="bar-body" style="height:100px"></div><div class="bar-num">5</div><div class="bar-idx">5</div></div>
+    <div class="hist-bar"><div class="bar-body" style="height:140px"></div><div class="bar-num">7</div><div class="bar-idx">6</div></div>
+    <div class="hist-bar"><div class="bar-body" style="height:80px"></div><div class="bar-num">4</div><div class="bar-idx">7</div></div>
+  </div>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--accent)">ans = 20 (bar at index 6, height 5 extending 4 bars wide)</p>
+
+  <h3>Key Insight</h3>
+  <p>For every bar <code>i</code> treated as the <strong>minimum height</strong> bar of the rectangle, the width extends from just after the nearest smaller bar on the left (NSL) to just before the nearest smaller bar on the right (NSR).</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Formula</span>
+    Area for bar <code>i</code> = <code>arr[i] × (nsr[i] − nsl[i] − 1)</code><br>
+    Answer = max over all <code>i</code>.
+  </div>
+
+  <h3>Algorithm — O(N) using NSL + NSR</h3>
+  <p>Compute <code>nsl[]</code> (nearest strictly-smaller index on left, default <code>−1</code>) and <code>nsr[]</code> (nearest smaller-or-equal index on right, default <code>N</code>) using two monotone-stack passes. Then compute the area for each bar and track the maximum.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Tie-breaking</span>
+    To handle duplicate heights correctly: for NSL use strict <code>&lt;</code> (pop on <code>≥</code>), for NSR use non-strict <code>≤</code> (pop on <code>≥</code> from right, sentinel <code>N</code>). This avoids double-counting rectangles of equal height.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">public</span> <span class="ty">int</span> <span class="fn">largestRectangleArea</span>(<span class="ty">int</span>[] arr) {
+    <span class="ty">int</span> n = arr.length;
+    <span class="ty">int</span>[] nsl = <span class="kw">new</span> <span class="ty">int</span>[n];
+    <span class="ty">int</span>[] nsr = <span class="kw">new</span> <span class="ty">int</span>[n];
+
+    <span class="cmt">// NSL — nearest smaller on left</span>
+    <span class="ty">Stack</span>&lt;<span class="ty">Integer</span>&gt; st = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="kw">while</span> (st.<span class="fn">size</span>() &gt; <span class="num">0</span> &amp;&amp; arr[st.<span class="fn">peek</span>()] &gt;= arr[i]) st.<span class="fn">pop</span>();
+        nsl[i] = st.<span class="fn">isEmpty</span>() ? <span class="num">-1</span> : st.<span class="fn">peek</span>();
+        st.<span class="fn">push</span>(i);
+    }
+
+    <span class="cmt">// NSR — nearest smaller on right</span>
+    st = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();
+    <span class="kw">for</span> (<span class="ty">int</span> i = n - <span class="num">1</span>; i &gt;= <span class="num">0</span>; i--) {
+        <span class="kw">while</span> (st.<span class="fn">size</span>() &gt; <span class="num">0</span> &amp;&amp; arr[st.<span class="fn">peek</span>()] &gt;= arr[i]) st.<span class="fn">pop</span>();
+        nsr[i] = st.<span class="fn">isEmpty</span>() ? n : st.<span class="fn">peek</span>();
+        st.<span class="fn">push</span>(i);
+    }
+
+    <span class="cmt">// Compute max area</span>
+    <span class="ty">int</span> ans = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        ans = Math.<span class="fn">max</span>(ans, arr[i] * (nsr[i] - nsl[i] - <span class="num">1</span>));
+    }
+    <span class="kw">return</span> ans;
+}
+<span class="cmt">// T.C → O(N)   S.C → O(N)</span></pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+</section>
+
+<!-- 04 SUM MAX MIN -->
+<section class="section" id="sum-max-min">
+  <div class="section-header"><span class="section-num">04</span><h2>Sum of (Max − Min) for All Subarrays</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given an array of N integers, find the sum of <code>(max − min)</code> over all possible subarrays. Since the answer can be large, return it modulo 10⁹ + 7. (1 ≤ N ≤ 10⁵)
+  </div>
+
+  <h3>Example — arr = [1, 2, 3]</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Subarray</th><th>max</th><th>min</th><th>max − min</th></tr></thead>
+      <tbody>
+        <tr><td>[1]</td><td>1</td><td>1</td><td>0</td></tr>
+        <tr><td>[1,2]</td><td>2</td><td>1</td><td>1</td></tr>
+        <tr><td>[1,2,3]</td><td>3</td><td>1</td><td>2</td></tr>
+        <tr><td>[2]</td><td>2</td><td>2</td><td>0</td></tr>
+        <tr><td>[2,3]</td><td>3</td><td>2</td><td>1</td></tr>
+        <tr><td>[3]</td><td>3</td><td>3</td><td>0</td></tr>
+        <tr><td colspan="3"><strong>Total</strong></td><td><strong>4</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Key Observation</h3>
+  <p><code>Σ(max − min) = Σmax − Σmin</code>. We need the total contribution of each element as a maximum and as a minimum across all subarrays.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Contribution Technique</span>
+    For element at index <code>i</code>, the number of subarrays where it is the <strong>maximum</strong> equals <code>(i − ngl[i]) × (ngr[i] − i)</code>, where <code>ngl</code> = nearest greater on left and <code>ngr</code> = nearest greater on right.<br><br>
+    Similarly, subarrays where it is the <strong>minimum</strong> = <code>(i − nsl[i]) × (nsr[i] − i)</code>.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">sumSubarrayMaxMin</span>(<span class="ty">int</span>[] arr) {
+    <span class="ty">int</span> n = arr.length;
+    <span class="ty">long</span> ans = <span class="num">0</span>;
+    <span class="ty">int</span> mod = (<span class="ty">int</span>)<span class="num">1e9</span> + <span class="num">7</span>;
+
+    <span class="ty">int</span>[] nsl = <span class="fn">nsl</span>(arr);  <span class="cmt">// nearest strictly smaller left  (default -1)</span>
+    <span class="ty">int</span>[] nsr = <span class="fn">nsr</span>(arr);  <span class="cmt">// nearest smaller-equal right   (default n)</span>
+    <span class="ty">int</span>[] ngl = <span class="fn">ngl</span>(arr);  <span class="cmt">// nearest strictly greater left  (default -1)</span>
+    <span class="ty">int</span>[] ngr = <span class="fn">ngr</span>(arr);  <span class="cmt">// nearest greater-equal right    (default n)</span>
+
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="ty">long</span> maxContrib = (<span class="ty">long</span>) arr[i] * (i - ngl[i]) * (ngr[i] - i);
+        <span class="ty">long</span> minContrib = (<span class="ty">long</span>) arr[i] * (i - nsl[i]) * (nsr[i] - i);
+        ans = (ans + (maxContrib - minContrib) + mod) % mod; <span class="cmt">// check</span>
+    }
+    <span class="kw">return</span> (<span class="ty">int</span>) ans;
+}
+<span class="cmt">// T.C → O(N)   S.C → O(N)</span></pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Tie-breaking Rule</span>
+    To avoid double-counting when equal elements exist: for <em>max</em> — NGL strict (<code>&lt;</code>), NGR non-strict (<code>≤</code>). For <em>min</em> — NSL strict (<code>&lt;</code>), NSR non-strict (<code>≤</code>). Apply this consistently.
+  </div>
+</section>
+
+<!-- 05 RECAP -->
+<section class="section" id="recap">
+  <div class="section-header"><span class="section-num">05</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><h4>NSL / NSR</h4><p>Iterate left→right (NSL) or right→left (NSR). Pop while top ≥ current. O(N).</p></div>
+    <div class="recap-card"><h4>Remove Pairs</h4><p>Push char if different from top; else pop. O(N) single pass.</p></div>
+    <div class="recap-card"><h4>Largest Histogram</h4><p>Formula: <code>arr[i] × (nsr[i] − nsl[i] − 1)</code>. Requires NSL + NSR. O(N).</p></div>
+    <div class="recap-card"><h4>Sum Max−Min</h4><p>Contribution technique: count subarrays where each element is max/min. O(N).</p></div>
+    <div class="recap-card"><h4>Monotone Stack</h4><p>Each element pushed and popped at most once → amortised O(N) total.</p></div>
+    <div class="recap-card"><h4>Tie-breaking</h4><p>Strict vs non-strict comparisons in NSL/NSR avoid double-counting equal elements.</p></div>
+  </div>
+</section>
+
+<!-- 06 LEETCODE -->
+<section class="section" id="leetcode">
+  <div class="section-header"><span class="section-num">06</span><h2>LeetCode Problems</h2></div>
+
+  <h3>Remove Pairs</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff easy">Easy</span><span><a class="lc-name" href="https://leetcode.com/problems/remove-all-adjacent-duplicates-in-string/" target="_blank" rel="noopener">#1047 — Remove All Adjacent Duplicates In String ↗</a><br/><span class="lc-why">Direct application of the equal-pair removal algorithm from Section 02.</span></span></li>
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/remove-all-adjacent-duplicates-in-string-ii/" target="_blank" rel="noopener">#1209 — Remove All Adjacent Duplicates in String II ↗</a><br/><span class="lc-why">Extension: remove k consecutive duplicates. Use stack of (char, count) pairs.</span></span></li>
+  </ul>
+
+  <h3>Largest Rectangle in Histogram</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff hard">Hard</span><span><a class="lc-name" href="https://leetcode.com/problems/largest-rectangle-in-histogram/" target="_blank" rel="noopener">#84 — Largest Rectangle in Histogram ↗</a><br/><span class="lc-why">Exact problem from Section 03. NSL + NSR in two passes, or one-pass monotone stack.</span></span></li>
+    <li><span class="lc-diff hard">Hard</span><span><a class="lc-name" href="https://leetcode.com/problems/maximal-rectangle/" target="_blank" rel="noopener">#85 — Maximal Rectangle ↗</a><br/><span class="lc-why">Build a histogram per row in a 0-1 matrix, then apply #84 solution for each row.</span></span></li>
+  </ul>
+
+  <h3>Sum of Subarray Ranges (Max − Min)</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/sum-of-subarray-ranges/" target="_blank" rel="noopener">#2104 — Sum of Subarray Ranges ↗</a><br/><span class="lc-why">Exact sum of (max − min) problem from Section 04. Contribution technique with monotone stack.</span></span></li>
+    <li><span class="lc-diff hard">Hard</span><span><a class="lc-name" href="https://leetcode.com/problems/sum-of-subarray-minimums/" target="_blank" rel="noopener">#907 — Sum of Subarray Minimums ↗</a><br/><span class="lc-why">Half of the above: sum of minimums only. Same contribution pattern with NSL × NSR.</span></span></li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Study Order</span>
+    1047 → 84 → 907 → 2104 → 1209 → 85
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+function copyCode(btn){const pre=btn.closest('.code-block').querySelector('pre');const text=pre.innerText;const finish=()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);};if(navigator.clipboard){navigator.clipboard.writeText(text).then(finish);}else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);finish();}}
+const bar=document.getElementById('progress-bar');window.addEventListener('scroll',()=>{const d=document.documentElement.scrollHeight-window.innerHeight;bar.style.width=(d>0?(window.scrollY/d)*100:0)+'%';},{passive:true});
+document.querySelectorAll('.nav-link').forEach(l=>{l.addEventListener('click',e=>{const href=l.getAttribute('href');if(!href||!href.startsWith('#'))return;e.preventDefault();const t=document.querySelector(href);if(!t)return;window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-24,behavior:'smooth'});sidebar.classList.remove('open');overlay.classList.remove('open');navToggle.textContent='☰';});});
+const sidebar=document.querySelector('.sidebar');const overlay=document.getElementById('nav-overlay');const navToggle=document.getElementById('nav-toggle');
+navToggle.addEventListener('click',()=>{const o=sidebar.classList.toggle('open');overlay.classList.toggle('open',o);navToggle.textContent=o?'✕':'☰';});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');navToggle.textContent='☰';});
+const sections=document.querySelectorAll('.section');
+const spy=new IntersectionObserver(entries=>{const vis=entries.filter(e=>e.isIntersecting).map(e=>e.target);if(!vis.length)return;vis.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top);const id=vis[0].id;document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${id}"]`);if(a)a.classList.add('active');},{rootMargin:'-10% 0px -55% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+const rev=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:0.06});
+sections.forEach(s=>rev.observe(s));
+</script>
+</body>
+</html>

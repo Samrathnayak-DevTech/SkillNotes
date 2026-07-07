@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Queues — FIFO, Implementations &amp; Sliding Window Maximum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;border-radius:0 2px 2px 0;}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;transition:transform .3s ease;}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem;}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem;}
+.nav-group{margin-bottom:.2rem;}.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem;}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:0.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s;}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft);}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500;}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:var(--accent);opacity:.7;flex-shrink:0;}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px;}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem;}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem;}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem;}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);}
+.section{margin-bottom:5rem;scroll-margin-top:2rem;}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line);}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0;}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2;}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem;}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem;}
+p{margin-bottom:1rem;}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid;}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:0.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}.callout.tip .callout-tag{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}.callout.key .callout-tag{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}.callout.analogy .callout-tag{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}.callout.warn .callout-tag{color:var(--accent);}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:0.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em;}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:0.85rem;}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem;}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980;}.copy-btn.copied{color:#89d185;border-color:#89d185;}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink);}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+.table-wrap{overflow-x:auto;margin:1.5rem 0;}
+table{width:100%;border-collapse:collapse;font-size:0.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line);}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}tbody tr:hover{background:var(--bg-soft);}
+.queue-viz{display:flex;align-items:center;gap:0;margin:1.5rem 0;overflow-x:auto;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:1rem;}
+.q-cell{min-width:56px;height:52px;border:2px solid var(--line);background:var(--bg);font-family:"JetBrains Mono",monospace;font-size:.85rem;display:flex;align-items:center;justify-content:center;color:var(--ink);}
+.q-cell:first-child{border-radius:6px 0 0 6px;}
+.q-cell:last-child{border-radius:0 6px 6px 0;}
+.q-cell.front{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:600;}
+.q-cell.rear{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600;}
+.q-arrow{font-family:"JetBrains Mono",monospace;font-size:.7rem;color:var(--ink-soft);margin:0 .8rem;display:flex;flex-direction:column;align-items:center;gap:.1rem;}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0;}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:0.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg);}
+.complexity-badge .label{color:var(--ink-soft);}.complexity-badge .val{color:var(--accent);font-weight:600;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin:1.5rem 0;}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.3rem;transition:box-shadow .2s,transform .2s;}
+.card:hover{box-shadow:0 4px 16px rgba(45,42,38,.07);transform:translateY(-2px);}
+.card-glyph{font-size:1.6rem;margin-bottom:.4rem;display:block;}
+.card h4{font-family:"Fraunces",serif;font-size:1rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .35rem;}
+.card p{font-size:.88rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.diagram{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;margin:1.5rem 0;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;overflow-x:auto;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem;min-width:42px;}
+.arr-cell .val{font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;background:var(--bg);border:2px solid var(--line);border-radius:6px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--blue);}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem;}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent);}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem;}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.lc-list{list-style:none;padding:0;margin:1rem 0;}
+.lc-list li{display:flex;align-items:center;gap:.75rem;padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;}
+.lc-list li:last-child{border-bottom:none;}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;}
+.lc-diff.easy{background:var(--green-soft);color:var(--green);}.lc-diff.medium{background:var(--accent-soft);color:var(--accent);}.lc-diff.hard{background:var(--rose-soft);color:var(--rose);}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s;}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent);}
+.lc-why{color:var(--ink-soft);font-size:.82rem;}
+@media(max-width:768px){.sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);}.sidebar.open{transform:translateX(0);}.nav-toggle{display:flex;}.main{padding:0 1.2rem 4rem;}.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;}.sidebar-overlay.open{display:block;}}
+.section{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}.section.visible{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle">☰</button>
+<div class="layout">
+<nav class="sidebar">
+  <div class="sidebar-logo">DSA Notes · Module 8<strong>Queues</strong></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Foundations</div>
+    <a class="nav-link" href="#intro"><span class="nav-num">01</span>What is a Queue?</a>
+    <a class="nav-link" href="#operations"><span class="nav-num">02</span>Operations</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Implementations</div>
+    <a class="nav-link" href="#array-impl"><span class="nav-num">03</span>Array (Linear)</a>
+    <a class="nav-link" href="#circular-impl"><span class="nav-num">04</span>Circular Array</a>
+    <a class="nav-link" href="#ll-impl"><span class="nav-num">05</span>Linked List</a>
+    <a class="nav-link" href="#stack-impl"><span class="nav-num">06</span>Queue via Stacks</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Problems</div>
+    <a class="nav-link" href="#deque"><span class="nav-num">07</span>Deque</a>
+    <a class="nav-link" href="#sliding-window"><span class="nav-num">08</span>Sliding Window Max</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">09</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">10</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 8</p>
+  <h1>Queues</h1>
+  <p class="hero-lede">FIFO from theory to four implementations — linear array, circular array, linked list, and queue-via-stacks — culminating in the classic Sliding Window Maximum.</p>
+  <div class="chips">
+    <span class="chip">FIFO</span><span class="chip">Circular Array</span><span class="chip">Queue via Stacks</span>
+    <span class="chip">Deque</span><span class="chip">Sliding Window Max O(N)</span>
+  </div>
+</header>
+
+<!-- 01 INTRO -->
+<section class="section" id="intro">
+  <div class="section-header"><span class="section-num">01</span><h2>What is a Queue?</h2></div>
+  <p>A <strong>queue</strong> is a linear data structure where <em>First In, First Out</em> (FIFO) discipline is maintained — elements are inserted at the <strong>back</strong> and removed from the <strong>front</strong>.</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="card-glyph">🎫</span><h4>Ticket Counter</h4><p>People join the back of the line and are served from the front. The first person to arrive is the first to be served.</p></div>
+    <div class="card"><span class="card-glyph">🖨️</span><h4>Print Queue</h4><p>Documents are printed in the order they were sent — the first document sent is the first to print.</p></div>
+    <div class="card"><span class="card-glyph">🌐</span><h4>BFS Traversal</h4><p>Breadth-first search uses a queue to explore nodes level by level.</p></div>
+    <div class="card"><span class="card-glyph">📦</span><h4>Task Scheduling</h4><p>OS process queues and CPU scheduling use FIFO (or priority variants).</p></div>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Property — FIFO</span>
+    First In, First Out. Elements are added at the <code>rear</code> and removed from the <code>front</code>. All four core operations run in <strong>O(1)</strong> time.
+  </div>
+</section>
+
+<!-- 02 OPERATIONS -->
+<section class="section" id="operations">
+  <div class="section-header"><span class="section-num">02</span><h2>Operations in a Queue</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Operation</th><th>Description</th><th>Time</th></tr></thead>
+      <tbody>
+        <tr><td><code>enqueue(x)</code></td><td>Insert element <code>x</code> at the rear</td><td>O(1)</td></tr>
+        <tr><td><code>dequeue()</code></td><td>Remove and return the front element</td><td>O(1)</td></tr>
+        <tr><td><code>front() / peek()</code></td><td>Access the front element without removing it</td><td>O(1)</td></tr>
+        <tr><td><code>size()</code></td><td>Return the number of elements in the queue</td><td>O(1)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Visual — Enqueue 5, 6, 9, −1 then Dequeue twice</h3>
+  <div class="queue-viz">
+    <div class="q-arrow">remove<br>↓</div>
+    <div class="q-cell front">5 (front)</div>
+    <div class="q-cell">6</div>
+    <div class="q-cell">9</div>
+    <div class="q-cell rear">−1 (rear)</div>
+    <div class="q-arrow">↑<br>insert</div>
+  </div>
+</section>
+
+<!-- 03 ARRAY IMPL (LINEAR) -->
+<section class="section" id="array-impl">
+  <div class="section-header"><span class="section-num">03</span><h2>Array Implementation (Linear)</h2></div>
+  <p>Two pointers: <code>front</code> and <code>rear</code>, both start at <code>−1</code>. Enqueue increments <code>rear</code>; dequeue increments <code>front</code>.</p>
+  <div class="callout warn">
+    <span class="callout-tag">Limitation</span>
+    Once <code>rear</code> reaches the end of the array, no more enqueues are possible even if the front portion is free — wasted space. Fixed by the circular array variant.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">LinearQueue</span> {
+    <span class="ty">int</span>[] arr = <span class="kw">new</span> <span class="ty">int</span>[<span class="num">1000</span>];
+    <span class="ty">int</span> front = <span class="num">-1</span>, rear = <span class="num">-1</span>;
+
+    <span class="ty">void</span> <span class="fn">enqueue</span>(<span class="ty">int</span> n) {
+        <span class="kw">if</span> (rear == arr.length - <span class="num">1</span>) { System.out.<span class="fn">println</span>(<span class="str">"Queue Full"</span>); <span class="kw">return</span>; }
+        rear++;
+        arr[rear] = n;
+    }
+
+    <span class="ty">int</span> <span class="fn">dequeue</span>() {
+        <span class="kw">if</span> (front == rear) { System.out.<span class="fn">println</span>(<span class="str">"Queue Empty"</span>); <span class="kw">return</span> <span class="num">-1</span>; }
+        front++;
+        <span class="kw">return</span> arr[front];
+    }
+
+    <span class="ty">int</span> <span class="fn">peek</span>() {
+        <span class="kw">if</span> (front == rear) <span class="kw">return</span> <span class="num">-1</span>;
+        <span class="kw">return</span> arr[front + <span class="num">1</span>];
+    }
+}
+<span class="cmt">// All ops: O(1)   Space: O(N)</span></pre>
+  </div>
+</section>
+
+<!-- 04 CIRCULAR IMPL -->
+<section class="section" id="circular-impl">
+  <div class="section-header"><span class="section-num">04</span><h2>Circular Array Implementation</h2></div>
+  <p>Use modular arithmetic (<code>% N</code>) so <code>rear</code> wraps around after reaching the end. Track element count with a separate <code>size</code> variable to distinguish empty (<code>size == 0</code>) from full (<code>size == cap</code>).</p>
+
+  <div class="callout tip">
+    <span class="callout-tag">Ambiguity Problem</span>
+    Without a <code>size</code> variable, <code>front == rear</code> is ambiguous — it could mean <em>empty</em> or <em>full</em>. Using <code>size</code> resolves this cleanly.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">CircularQueue</span> {
+    <span class="ty">int</span>[] arr;
+    <span class="ty">int</span> front = <span class="num">0</span>, rear = <span class="num">0</span>, size = <span class="num">0</span>, cap;
+
+    <span class="ty">CircularQueue</span>(<span class="ty">int</span> cap) { <span class="kw">this</span>.cap = cap; arr = <span class="kw">new</span> <span class="ty">int</span>[cap]; }
+
+    <span class="ty">void</span> <span class="fn">enqueue</span>(<span class="ty">int</span> n) {
+        <span class="kw">if</span> (size == cap) { System.out.<span class="fn">println</span>(<span class="str">"Queue Full"</span>); <span class="kw">return</span>; }
+        rear = (rear + <span class="num">1</span>) % cap;
+        arr[rear] = n;
+        size++;
+    }
+
+    <span class="ty">int</span> <span class="fn">dequeue</span>() {
+        <span class="kw">if</span> (size == <span class="num">0</span>) { System.out.<span class="fn">println</span>(<span class="str">"Queue Empty"</span>); <span class="kw">return</span> <span class="num">-1</span>; }
+        front = (front + <span class="num">1</span>) % cap;
+        size--;
+        <span class="kw">return</span> arr[front];
+    }
+
+    <span class="ty">int</span> <span class="fn">peek</span>()   { <span class="kw">if</span> (size == <span class="num">0</span>) <span class="kw">return</span> <span class="num">-1</span>; <span class="kw">return</span> arr[(front + <span class="num">1</span>) % cap]; }
+    <span class="ty">int</span> <span class="fn">size</span>()   { <span class="kw">return</span> size; }
+}
+<span class="cmt">// All ops: O(1)   Space: O(N)</span></pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">All operations: </span><span class="val">O(1)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+</section>
+
+<!-- 05 LL IMPL -->
+<section class="section" id="ll-impl">
+  <div class="section-header"><span class="section-num">05</span><h2>Linked List Implementation</h2></div>
+  <p>Of the four add/remove combinations, only one achieves O(1) for both enqueue and dequeue in a singly-linked list:</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Correct Strategy</span>
+    <strong>Enqueue: add at tail</strong> (keep a <code>tail</code> pointer → O(1)).<br>
+    <strong>Dequeue: remove at head</strong> → O(1).
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Combination</th><th>Enqueue</th><th>Dequeue</th><th>Works?</th></tr></thead>
+      <tbody>
+        <tr><td>Add head, Remove head</td><td>O(1)</td><td>O(1)</td><td>❌ LIFO not FIFO</td></tr>
+        <tr><td>Add tail, Remove tail</td><td>O(1)</td><td>O(N)*</td><td>❌ remove-tail is O(N)</td></tr>
+        <tr><td>Add head, Remove tail</td><td>O(1)</td><td>O(N)*</td><td>❌ remove-tail is O(N)</td></tr>
+        <tr><td><strong>Add tail, Remove head</strong></td><td><strong>O(1)</strong></td><td><strong>O(1)</strong></td><td>✅ <strong>Use this</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-size:.85rem;color:var(--ink-soft)">*Singly-linked list — remove-tail requires traversal to the second-last node.</p>
+</section>
+
+<!-- 06 QUEUE VIA STACKS -->
+<section class="section" id="stack-impl">
+  <div class="section-header"><span class="section-num">06</span><h2>Queue via Stacks</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Implement a queue using only stack operations (push, pop, peek, isEmpty, size). The amortised cost of each queue operation should be O(1).
+  </div>
+
+  <p>Use two stacks: <code>st1</code> (inbox) and <code>st2</code> (outbox). Enqueue always pushes to <code>st1</code>. Dequeue/peek pops from <code>st2</code> — but if <code>st2</code> is empty, first drain all of <code>st1</code> into <code>st2</code> (reversing the order to achieve FIFO).</p>
+
+  <div class="callout tip">
+    <span class="callout-tag">Amortised O(1)</span>
+    Each element is moved from <code>st1</code> → <code>st2</code> at most once. Total moves = 2N → O(1) amortised per operation.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">MyQueue</span> {
+    <span class="ty">Stack</span>&lt;<span class="ty">Integer</span>&gt; st1 = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();  <span class="cmt">// inbox</span>
+    <span class="ty">Stack</span>&lt;<span class="ty">Integer</span>&gt; st2 = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();  <span class="cmt">// outbox</span>
+
+    <span class="ty">void</span> <span class="fn">enqueue</span>(<span class="ty">int</span> x) { st1.<span class="fn">push</span>(x); }
+
+    <span class="ty">int</span> <span class="fn">dequeue</span>() {
+        <span class="kw">if</span> (st2.<span class="fn">size</span>() &gt; <span class="num">0</span>) <span class="kw">return</span> st2.<span class="fn">pop</span>();
+        <span class="kw">while</span> (st1.<span class="fn">size</span>() &gt; <span class="num">0</span>) st2.<span class="fn">push</span>(st1.<span class="fn">pop</span>());
+        <span class="kw">return</span> st2.<span class="fn">pop</span>();
+    }
+
+    <span class="ty">int</span> <span class="fn">peek</span>() {
+        <span class="kw">if</span> (st2.<span class="fn">size</span>() &gt; <span class="num">0</span>) <span class="kw">return</span> st2.<span class="fn">peek</span>();
+        <span class="kw">while</span> (st1.<span class="fn">size</span>() &gt; <span class="num">0</span>) st2.<span class="fn">push</span>(st1.<span class="fn">pop</span>());
+        <span class="kw">return</span> st2.<span class="fn">peek</span>();
+    }
+
+    <span class="ty">int</span> <span class="fn">size</span>() { <span class="kw">return</span> st1.<span class="fn">size</span>() + st2.<span class="fn">size</span>(); }
+}
+<span class="cmt">// Enqueue O(1)  |  Dequeue O(1) amortised  |  Peek O(1) amortised</span></pre>
+  </div>
+</section>
+
+<!-- 07 DEQUE -->
+<section class="section" id="deque">
+  <div class="section-header"><span class="section-num">07</span><h2>Deque (Double-Ended Queue)</h2></div>
+  <p>A <strong>Deque</strong> supports O(1) insert and remove at <em>both ends</em>. In Java it is available as <code>ArrayDeque&lt;T&gt;</code> or <code>LinkedList&lt;T&gt;</code> implementing the <code>Deque</code> interface.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Operation</th><th>Front (Head)</th><th>Rear (Tail)</th></tr></thead>
+      <tbody>
+        <tr><td>Insert</td><td><code>addFirst()</code></td><td><code>addLast()</code></td></tr>
+        <tr><td>Remove</td><td><code>removeFirst()</code></td><td><code>removeLast()</code></td></tr>
+        <tr><td>Peek</td><td><code>getFirst()</code></td><td><code>getLast()</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Implementation</span>
+    Best implemented using a Doubly-Linked List (DLL) — O(1) add/remove at both ends with O(1) direct access to head and tail pointers.
+  </div>
+</section>
+
+<!-- 08 SLIDING WINDOW MAX -->
+<section class="section" id="sliding-window">
+  <div class="section-header"><span class="section-num">08</span><h2>Sliding Window Maximum</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given an array of N integers and a window size K, find the <strong>maximum element in every contiguous subarray of size K</strong>. Return an array of N − K + 1 results. (1 ≤ N ≤ 10⁵)
+  </div>
+
+  <h3>Example — arr = [3, 2, 9, 4, −1, 16, 1, 7, −2, 5, −5], K = 4</h3>
+  <div class="diagram">
+    <div class="arr-cell"><div class="val">3</div><div class="idx">0</div></div>
+    <div class="arr-cell"><div class="val">2</div><div class="idx">1</div></div>
+    <div class="arr-cell highlight"><div class="val">9</div><div class="idx">2</div></div>
+    <div class="arr-cell"><div class="val">4</div><div class="idx">3</div></div>
+    <div class="arr-cell"><div class="val">−1</div><div class="idx">4</div></div>
+    <div class="arr-cell highlight"><div class="val">16</div><div class="idx">5</div></div>
+    <div class="arr-cell"><div class="val">1</div><div class="idx">6</div></div>
+    <div class="arr-cell"><div class="val">7</div><div class="idx">7</div></div>
+    <div class="arr-cell"><div class="val">−2</div><div class="idx">8</div></div>
+    <div class="arr-cell"><div class="val">5</div><div class="idx">9</div></div>
+    <div class="arr-cell"><div class="val">−5</div><div class="idx">10</div></div>
+  </div>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--accent)">Output: [9, 9, 16, 16, 16, 16, 7, 7]</p>
+
+  <h3>O(N) Algorithm — Monotone Deque</h3>
+  <p>Maintain a <strong>deque of indices</strong> in decreasing order of their values. For each new element, remove from the <em>back</em> all indices whose values are smaller (they can never be the max of any future window). Remove from the <em>front</em> any index that has fallen out of the window. The front always holds the index of the current window's maximum.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">3-Step Loop Body</span>
+    1. <strong>Remove from back</strong> — all indices whose values &lt; arr[i] (they are dominated).<br>
+    2. <strong>Add current index</strong> to back.<br>
+    3. <strong>Remove from front</strong> — if front index ≤ i − K (out of window).<br>
+    Then: if i ≥ K − 1, record <code>arr[dq.getFirst()]</code> as the answer for this window.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span>[] <span class="fn">maxSlidingWindow</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> k) {
+    <span class="ty">int</span> n = arr.length;
+    <span class="ty">int</span>[] result = <span class="kw">new</span> <span class="ty">int</span>[n - k + <span class="num">1</span>];
+    <span class="ty">Deque</span>&lt;<span class="ty">Integer</span>&gt; dq = <span class="kw">new</span> <span class="ty">ArrayDeque</span>&lt;&gt;();  <span class="cmt">// stores indices</span>
+
+    <span class="cmt">// Build first window (indices 0 to k-1)</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; k; i++) {
+        <span class="kw">while</span> (!dq.<span class="fn">isEmpty</span>() &amp;&amp; arr[dq.<span class="fn">getLast</span>()] &lt; arr[i])
+            dq.<span class="fn">removeLast</span>();
+        dq.<span class="fn">addLast</span>(i);
+    }
+    result[<span class="num">0</span>] = arr[dq.<span class="fn">getFirst</span>()];
+
+    <span class="cmt">// Slide window</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = k; i &lt; n; i++) {
+        <span class="kw">while</span> (!dq.<span class="fn">isEmpty</span>() &amp;&amp; arr[dq.<span class="fn">getLast</span>()] &lt; arr[i])
+            dq.<span class="fn">removeLast</span>();
+        dq.<span class="fn">addLast</span>(i);
+        <span class="kw">if</span> (dq.<span class="fn">getFirst</span>() &lt;= i - k)   <span class="cmt">// out of window</span>
+            dq.<span class="fn">removeFirst</span>();
+        result[i - k + <span class="num">1</span>] = arr[dq.<span class="fn">getFirst</span>()];
+    }
+    <span class="kw">return</span> result;
+}
+<span class="cmt">// T.C → O(N)   each element added and removed from deque at most once
+// S.C → O(N)</span></pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+</section>
+
+<!-- 09 RECAP -->
+<section class="section" id="recap">
+  <div class="section-header"><span class="section-num">09</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><h4>FIFO</h4><p>Front removes, rear inserts. Opposite discipline to a stack.</p></div>
+    <div class="recap-card"><h4>Circular Array</h4><p>Use <code>% N</code> wrap-around and a <code>size</code> counter. Removes the wasted-space issue of linear arrays.</p></div>
+    <div class="recap-card"><h4>LL Queue</h4><p>Add at tail (with tail pointer), remove at head. Both O(1).</p></div>
+    <div class="recap-card"><h4>Queue via Stacks</h4><p>Inbox + outbox. Drain inbox into outbox lazily. Amortised O(1).</p></div>
+    <div class="recap-card"><h4>Deque</h4><p>Insert/remove at both ends in O(1). Implemented with DLL. Used in sliding-window max.</p></div>
+    <div class="recap-card"><h4>Sliding Window Max</h4><p>Monotone deque of indices. Pop dominated from back; pop expired from front. O(N).</p></div>
+  </div>
+</section>
+
+<!-- 10 LEETCODE -->
+<section class="section" id="leetcode">
+  <div class="section-header"><span class="section-num">10</span><h2>LeetCode Problems</h2></div>
+
+  <h3>Queue Implementations</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff easy">Easy</span><span><a class="lc-name" href="https://leetcode.com/problems/implement-queue-using-stacks/" target="_blank" rel="noopener">#232 — Implement Queue using Stacks ↗</a><br/><span class="lc-why">Direct application of the two-stack queue from Section 06.</span></span></li>
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/design-circular-queue/" target="_blank" rel="noopener">#622 — Design Circular Queue ↗</a><br/><span class="lc-why">Implement the circular array queue from Section 04 with full bounds checking.</span></span></li>
+    <li><span class="lc-diff hard">Hard</span><span><a class="lc-name" href="https://leetcode.com/problems/design-circular-deque/" target="_blank" rel="noopener">#641 — Design Circular Deque ↗</a><br/><span class="lc-why">Extends circular queue to support front and rear insertions/removals.</span></span></li>
+  </ul>
+
+  <h3>Sliding Window Maximum</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff hard">Hard</span><span><a class="lc-name" href="https://leetcode.com/problems/sliding-window-maximum/" target="_blank" rel="noopener">#239 — Sliding Window Maximum ↗</a><br/><span class="lc-why">Exact problem from Section 08. Monotone deque, O(N).</span></span></li>
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/sliding-window-minimum/" target="_blank" rel="noopener">#1438 — Longest Continuous Subarray With Absolute Diff ≤ Limit ↗</a><br/><span class="lc-why">Requires both a sliding-max and sliding-min deque simultaneously.</span></span></li>
+  </ul>
+
+  <h3>BFS with Queue</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/number-of-islands/" target="_blank" rel="noopener">#200 — Number of Islands ↗</a><br/><span class="lc-why">Classic BFS / DFS grid problem — queue naturally drives BFS exploration.</span></span></li>
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/rotting-oranges/" target="_blank" rel="noopener">#994 — Rotting Oranges ↗</a><br/><span class="lc-why">Multi-source BFS using a queue — track how many rounds until all oranges rot.</span></span></li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Study Order</span>
+    232 → 622 → 239 → 200 → 994 → 641 → 1438
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+function copyCode(btn){const pre=btn.closest('.code-block').querySelector('pre');const text=pre.innerText;const finish=()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);};if(navigator.clipboard){navigator.clipboard.writeText(text).then(finish);}else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);finish();}}
+const bar=document.getElementById('progress-bar');window.addEventListener('scroll',()=>{const d=document.documentElement.scrollHeight-window.innerHeight;bar.style.width=(d>0?(window.scrollY/d)*100:0)+'%';},{passive:true});
+document.querySelectorAll('.nav-link').forEach(l=>{l.addEventListener('click',e=>{const href=l.getAttribute('href');if(!href||!href.startsWith('#'))return;e.preventDefault();const t=document.querySelector(href);if(!t)return;window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-24,behavior:'smooth'});sidebar.classList.remove('open');overlay.classList.remove('open');navToggle.textContent='☰';});});
+const sidebar=document.querySelector('.sidebar');const overlay=document.getElementById('nav-overlay');const navToggle=document.getElementById('nav-toggle');
+navToggle.addEventListener('click',()=>{const o=sidebar.classList.toggle('open');overlay.classList.toggle('open',o);navToggle.textContent=o?'✕':'☰';});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');navToggle.textContent='☰';});
+const sections=document.querySelectorAll('.section');
+const spy=new IntersectionObserver(entries=>{const vis=entries.filter(e=>e.isIntersecting).map(e=>e.target);if(!vis.length)return;vis.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top);const id=vis[0].id;document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${id}"]`);if(a)a.classList.add('active');},{rootMargin:'-10% 0px -55% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+const rev=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:0.06});
+sections.forEach(s=>rev.observe(s));
+</script>
+</body>
+</html>

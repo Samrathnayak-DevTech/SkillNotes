@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Trees 1 — Introduction, Binary Tree &amp; Traversals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;}
+.layout{display:flex;min-height:100vh;}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;border-radius:0 2px 2px 0;}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;transition:transform .3s ease;}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem;}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem;}
+.nav-group{margin-bottom:.2rem;}.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem;}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:0.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s;}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft);}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500;}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:var(--accent);opacity:.7;flex-shrink:0;}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px;}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem;}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem;}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem;}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem;}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft);}
+.section{margin-bottom:5rem;scroll-margin-top:2rem;}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line);}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0;}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2;}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem;}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem;}
+p{margin-bottom:1rem;}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid;}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:0.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}.callout.tip .callout-tag{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}.callout.key .callout-tag{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}.callout.analogy .callout-tag{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}.callout.warn .callout-tag{color:var(--accent);}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:0.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em;}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:0.85rem;}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem;}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980;}.copy-btn.copied{color:#89d185;border-color:#89d185;}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink);}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+.table-wrap{overflow-x:auto;margin:1.5rem 0;}
+table{width:100%;border-collapse:collapse;font-size:0.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line);}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;}
+tbody tr:last-child td{border-bottom:none;}tbody tr:hover{background:var(--bg-soft);}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0;}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:0.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg);}
+.complexity-badge .label{color:var(--ink-soft);}.complexity-badge .val{color:var(--accent);font-weight:600;}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin:1.5rem 0;}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.3rem;transition:box-shadow .2s,transform .2s;}
+.card:hover{box-shadow:0 4px 16px rgba(45,42,38,.07);transform:translateY(-2px);}
+.card-glyph{font-size:1.6rem;margin-bottom:.4rem;display:block;}
+.card h4{font-family:"Fraunces",serif;font-size:1rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .35rem;}
+.card p{font-size:.88rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.tree-svg-wrap{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:1.5rem;margin:1.5rem 0;text-align:center;overflow-x:auto;}
+.tree-svg-wrap svg{max-width:100%;height:auto;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem;}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent);}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem;}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5;}
+.lc-list{list-style:none;padding:0;margin:1rem 0;}
+.lc-list li{display:flex;align-items:center;gap:.75rem;padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;}
+.lc-list li:last-child{border-bottom:none;}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;}
+.lc-diff.easy{background:var(--green-soft);color:var(--green);}.lc-diff.medium{background:var(--accent-soft);color:var(--accent);}.lc-diff.hard{background:var(--rose-soft);color:var(--rose);}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s;}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent);}
+.lc-why{color:var(--ink-soft);font-size:.82rem;}
+@media(max-width:768px){.sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);}.sidebar.open{transform:translateX(0);}.nav-toggle{display:flex;}.main{padding:0 1.2rem 4rem;}.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;}.sidebar-overlay.open{display:block;}}
+.section{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}.section.visible{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle">☰</button>
+<div class="layout">
+<nav class="sidebar">
+  <div class="sidebar-logo">DSA Notes · Module 9<strong>Trees 1</strong></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Foundations</div>
+    <a class="nav-link" href="#intro"><span class="nav-num">01</span>Introduction to Trees</a>
+    <a class="nav-link" href="#terminology"><span class="nav-num">02</span>Terminology</a>
+    <a class="nav-link" href="#binary-tree"><span class="nav-num">03</span>Binary Tree</a>
+    <a class="nav-link" href="#types"><span class="nav-num">04</span>Types of Binary Trees</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Traversals</div>
+    <a class="nav-link" href="#preorder"><span class="nav-num">05</span>Pre-order (Root L R)</a>
+    <a class="nav-link" href="#inorder"><span class="nav-num">06</span>In-order (L Root R)</a>
+    <a class="nav-link" href="#postorder"><span class="nav-num">07</span>Post-order (L R Root)</a>
+    <a class="nav-link" href="#iterative-inorder"><span class="nav-num">08</span>Iterative In-order</a>
+    <a class="nav-link" href="#level-order"><span class="nav-num">09</span>Level Order (BFS)</a>
+    <a class="nav-link" href="#left-view"><span class="nav-num">10</span>Left View</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">11</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">12</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 9</p>
+  <h1>Trees 1</h1>
+  <p class="hero-lede">From tree terminology to binary tree types, then all four recursive traversals (pre / in / post / level-order), iterative in-order with a stack, and printing the left view using BFS.</p>
+  <div class="chips">
+    <span class="chip">Tree Terminology</span><span class="chip">Binary Tree</span><span class="chip">Pre-order</span>
+    <span class="chip">In-order</span><span class="chip">Post-order</span><span class="chip">Level Order BFS</span><span class="chip">Left View</span>
+  </div>
+</header>
+
+<!-- 01 INTRO -->
+<section class="section" id="intro">
+  <div class="section-header"><span class="section-num">01</span><h2>Introduction to Trees</h2></div>
+  <p>A <strong>tree</strong> is a hierarchical, non-linear data structure where nodes are connected by edges, with no cycles. Unlike arrays or linked lists, a tree branches — each node can have multiple children.</p>
+  <div class="callout analogy">
+    <span class="callout-tag">Programmer vs Normal Person</span>
+    For normal people, trees have their root at the bottom. For programmers, the root is at the top and the branches grow downward — exactly how we draw them in computer science diagrams.
+  </div>
+
+  <h3>Real-World Examples</h3>
+  <div class="cards-grid">
+    <div class="card"><span class="card-glyph">🏢</span><h4>Company Org Chart</h4><p>CEO at the root; CTO, CMO, CFO are children; Engineering Managers are grandchildren, and so on.</p></div>
+    <div class="card"><span class="card-glyph">💻</span><h4>File System</h4><p>"This PC" → Documents, Movies, Books → sub-folders and files. A perfect tree structure.</p></div>
+    <div class="card"><span class="card-glyph">🌐</span><h4>HTML DOM</h4><p>The browser parses HTML into a tree where <code>&lt;html&gt;</code> is the root, with <code>&lt;head&gt;</code> and <code>&lt;body&gt;</code> as children.</p></div>
+  </div>
+</section>
+
+<!-- 02 TERMINOLOGY -->
+<section class="section" id="terminology">
+  <div class="section-header"><span class="section-num">02</span><h2>Tree Terminology</h2></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Root</strong></td><td>The topmost node — no parent.</td></tr>
+        <tr><td><strong>Parent / Child</strong></td><td>If A has an edge to B going downward, A is B's parent and B is A's child.</td></tr>
+        <tr><td><strong>Leaf node</strong></td><td>A node with no children.</td></tr>
+        <tr><td><strong>Sibling</strong></td><td>Nodes that share the same parent.</td></tr>
+        <tr><td><strong>Ancestor</strong></td><td>All nodes from a node's parent up to (and including) the root.</td></tr>
+        <tr><td><strong>Descendant</strong></td><td>All nodes in the subtree rooted at a given node.</td></tr>
+        <tr><td><strong>Depth of a node</strong></td><td>The level (distance from the root) at which the node resides. Root is at depth 0.</td></tr>
+        <tr><td><strong>Height of a node</strong></td><td>Maximum number of edges from the node to any leaf in its subtree. Leaf height = 0.</td></tr>
+        <tr><td><strong>Height of the tree</strong></td><td>Height of the root node.</td></tr>
+        <tr><td><strong>Subtree</strong></td><td>A node together with all its descendants.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 03 BINARY TREE -->
+<section class="section" id="binary-tree">
+  <div class="section-header"><span class="section-num">03</span><h2>Binary Tree</h2></div>
+  <p>A tree where every node has <strong>at most 2 children</strong> — a left child and a right child.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — Node class</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Node</span> {
+    <span class="ty">int</span> val;
+    <span class="ty">Node</span> left;
+    <span class="ty">Node</span> right;
+
+    <span class="ty">Node</span>(<span class="ty">int</span> v) { val = v; }
+}
+<span class="cmt">// Each node stores its value and pointers to left and right children.
+// null means "no child".</span></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Memory Layout</span>
+    Each <code>Node</code> object uses approximately 12 bytes on the heap: 4 bytes for <code>int val</code>, 4 bytes for the <code>left</code> reference, 4 bytes for the <code>right</code> reference (on 32-bit JVM; 8 bytes per reference on 64-bit without compressed OOPs).
+  </div>
+</section>
+
+<!-- 04 TYPES -->
+<section class="section" id="types">
+  <div class="section-header"><span class="section-num">04</span><h2>Types of Binary Trees</h2></div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Type</th><th>Property</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Full / Proper</strong></td><td>Every node has exactly 0 or 2 children (no node has exactly 1 child)</td><td>Perfect trees, expression trees</td></tr>
+        <tr><td><strong>Complete</strong></td><td>All levels fully filled except possibly the last, which is filled left to right</td><td>Heap</td></tr>
+        <tr><td><strong>Perfect</strong></td><td>All levels fully filled including the last — all leaves at the same depth</td><td>A perfect binary tree with N = 2ʰ⁺¹ − 1 nodes</td></tr>
+        <tr><td><strong>Balanced</strong></td><td>Height difference of left and right subtrees ≤ 1 for every node</td><td>AVL tree, Red-Black tree</td></tr>
+        <tr><td><strong>Degenerate / Skewed</strong></td><td>Every node has only one child — essentially a linked list</td><td>Worst-case BST after sorted insertions</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Key Formula</span>
+    A perfect binary tree of height <em>h</em> contains exactly <strong>2<sup>h+1</sup> − 1</strong> nodes, and height h = ⌊log₂ N⌋.
+  </div>
+</section>
+
+<!-- 05 PREORDER -->
+<section class="section" id="preorder">
+  <div class="section-header"><span class="section-num">05</span><h2>Pre-order Traversal — Root → Left → Right</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Order</span>
+    Visit the <strong>current node first</strong>, then recursively traverse the left subtree, then the right subtree.
+  </div>
+
+  <p>For the tree with root 1, left child 2 (children 4, 5 where 5 has child 7), right child 3 (children 6 with children 8 and 9):</p>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--accent)">Pre-order: [1, 2, 4, 5, 7, 3, 6, 8, 9]</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">void</span> <span class="fn">preorder</span>(<span class="ty">Node</span> root) {
+    <span class="kw">if</span> (root == <span class="kw">null</span>) <span class="kw">return</span>;
+    System.out.<span class="fn">print</span>(root.val + <span class="str">" "</span>);  <span class="cmt">// ① visit root</span>
+    <span class="fn">preorder</span>(root.left);               <span class="cmt">// ② left subtree</span>
+    <span class="fn">preorder</span>(root.right);              <span class="cmt">// ③ right subtree</span>
+}
+<span class="cmt">// T.C → O(N)   S.C → O(Height of tree)  [recursive call stack]</span></pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(H) — H = height</span></div>
+  </div>
+</section>
+
+<!-- 06 INORDER -->
+<section class="section" id="inorder">
+  <div class="section-header"><span class="section-num">06</span><h2>In-order Traversal — Left → Root → Right</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Order</span>
+    Recursively traverse the <strong>left subtree</strong>, then visit the <strong>current node</strong>, then recursively traverse the <strong>right subtree</strong>.
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Special Property</span>
+    In-order traversal of a <strong>Binary Search Tree (BST)</strong> always yields elements in <strong>sorted ascending order</strong>. This is the key insight behind many BST problems.
+  </div>
+
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--accent)">In-order on the same tree: [4, 2, 7, 5, 1, 3, 8, 6, 9]</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">void</span> <span class="fn">inorder</span>(<span class="ty">Node</span> root) {
+    <span class="kw">if</span> (root == <span class="kw">null</span>) <span class="kw">return</span>;
+    <span class="fn">inorder</span>(root.left);               <span class="cmt">// ① left subtree</span>
+    System.out.<span class="fn">print</span>(root.val + <span class="str">" "</span>);  <span class="cmt">// ② visit root</span>
+    <span class="fn">inorder</span>(root.right);              <span class="cmt">// ③ right subtree</span>
+}
+<span class="cmt">// T.C → O(N)   S.C → O(H)</span></pre>
+  </div>
+</section>
+
+<!-- 07 POSTORDER -->
+<section class="section" id="postorder">
+  <div class="section-header"><span class="section-num">07</span><h2>Post-order Traversal — Left → Right → Root</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Order</span>
+    Recursively traverse the left subtree, then the right subtree, then visit the <strong>current node last</strong>.
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Use Case</span>
+    Post-order is natural when you need to process a node <em>after</em> its children — e.g., deleting a tree (delete children before parent), computing subtree sizes, or evaluating expression trees.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">void</span> <span class="fn">postorder</span>(<span class="ty">Node</span> root) {
+    <span class="kw">if</span> (root == <span class="kw">null</span>) <span class="kw">return</span>;
+    <span class="fn">postorder</span>(root.left);             <span class="cmt">// ① left subtree</span>
+    <span class="fn">postorder</span>(root.right);            <span class="cmt">// ② right subtree</span>
+    System.out.<span class="fn">print</span>(root.val + <span class="str">" "</span>);  <span class="cmt">// ③ visit root</span>
+}
+<span class="cmt">// T.C → O(N)   S.C → O(H)</span></pre>
+  </div>
+
+  <div class="table-wrap" style="margin-top:1.5rem">
+    <table>
+      <thead><tr><th>Traversal</th><th>Order</th><th>Typical Use</th></tr></thead>
+      <tbody>
+        <tr><td>Pre-order</td><td>Root → L → R</td><td>Copy / serialize a tree, prefix expression</td></tr>
+        <tr><td>In-order</td><td>L → Root → R</td><td>BST sorted output, check BST</td></tr>
+        <tr><td>Post-order</td><td>L → R → Root</td><td>Delete tree, compute subtree aggregates, postfix expression</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 08 ITERATIVE INORDER -->
+<section class="section" id="iterative-inorder">
+  <div class="section-header"><span class="section-num">08</span><h2>Iterative In-order Traversal</h2></div>
+
+  <p>The recursive stack is implicit. We can make it explicit using a manual <code>Stack</code> and a <code>curr</code> pointer.</p>
+
+  <h3>Algorithm</h3>
+  <p>Maintain a <code>curr</code> pointer starting at root. While <code>curr != null</code> OR stack is non-empty: if <code>curr != null</code> push it and go left. Otherwise pop, print, and go right.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">void</span> <span class="fn">iterativeInorder</span>(<span class="ty">Node</span> root) {
+    <span class="ty">Stack</span>&lt;<span class="ty">Node</span>&gt; st = <span class="kw">new</span> <span class="ty">Stack</span>&lt;&gt;();
+    <span class="ty">Node</span> curr = root;
+
+    <span class="kw">while</span> (curr != <span class="kw">null</span> || st.<span class="fn">size</span>() &gt; <span class="num">0</span>) {
+        <span class="kw">if</span> (curr != <span class="kw">null</span>) {
+            st.<span class="fn">push</span>(curr);
+            curr = curr.left;         <span class="cmt">// go left first</span>
+        } <span class="kw">else</span> {
+            curr = st.<span class="fn">pop</span>();
+            System.out.<span class="fn">print</span>(curr.val + <span class="str">" "</span>);  <span class="cmt">// visit</span>
+            curr = curr.right;        <span class="cmt">// then go right</span>
+        }
+    }
+}
+<span class="cmt">// T.C → O(N)   S.C → O(H) — explicit stack replaces call stack</span></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Why Iterative?</span>
+    Recursive traversals can cause a stack overflow on extremely deep trees (skewed trees, height ~ N). Iterative traversals are stack-overflow-safe and use the same asymptotic space.
+  </div>
+</section>
+
+<!-- 09 LEVEL ORDER -->
+<section class="section" id="level-order">
+  <div class="section-header"><span class="section-num">09</span><h2>Level Order Traversal (BFS)</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Idea</span>
+    Visit all nodes level by level from top to bottom, left to right. Use a <strong>Queue</strong>. For each level, capture its size first (<code>sz = q.size()</code>), process exactly <code>sz</code> nodes, then print a newline.
+  </div>
+
+  <p>For the tree: 3 → children 7, 9 → 7's children 5, 6 → 9's child 2 → 2's children 60, 30 → 5's child 40 → 6's child 15, 20:</p>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.9rem;color:var(--accent)">Level order: 3 / 7 9 / 5 6 2 / 40 15 20 60 30</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">void</span> <span class="fn">levelOrder</span>(<span class="ty">Node</span> root) {
+    <span class="ty">Queue</span>&lt;<span class="ty">Node</span>&gt; q = <span class="kw">new</span> <span class="ty">LinkedList</span>&lt;&gt;();
+    q.<span class="fn">add</span>(root);
+
+    <span class="kw">while</span> (!q.<span class="fn">isEmpty</span>()) {
+        <span class="ty">int</span> sz = q.<span class="fn">size</span>();               <span class="cmt">// nodes in current level</span>
+
+        <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; sz; i++) {
+            <span class="ty">Node</span> rn = q.<span class="fn">poll</span>();
+            System.out.<span class="fn">print</span>(rn.val + <span class="str">" "</span>);
+
+            <span class="kw">if</span> (rn.left  != <span class="kw">null</span>) q.<span class="fn">add</span>(rn.left);
+            <span class="kw">if</span> (rn.right != <span class="kw">null</span>) q.<span class="fn">add</span>(rn.right);
+        }
+        System.out.<span class="fn">println</span>();           <span class="cmt">// newline after each level</span>
+    }
+}
+<span class="cmt">// T.C → O(N)   S.C → O(N)  [queue holds at most one full level ~ N/2 nodes]</span></pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+</section>
+
+<!-- 10 LEFT VIEW -->
+<section class="section" id="left-view">
+  <div class="section-header"><span class="section-num">10</span><h2>Left View of a Binary Tree</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Print the first (leftmost) node visible at each level when the tree is viewed from the left side.
+  </div>
+
+  <p>This is a BFS modification: in the inner loop, print the value only when <code>i == 0</code> (first node of the level).</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">void</span> <span class="fn">leftView</span>(<span class="ty">Node</span> root) {
+    <span class="kw">if</span> (root == <span class="kw">null</span>) <span class="kw">return</span>;
+    <span class="ty">Queue</span>&lt;<span class="ty">Node</span>&gt; q = <span class="kw">new</span> <span class="ty">LinkedList</span>&lt;&gt;();
+    q.<span class="fn">add</span>(root);
+
+    <span class="kw">while</span> (!q.<span class="fn">isEmpty</span>()) {
+        <span class="ty">int</span> sz = q.<span class="fn">size</span>();
+
+        <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; sz; i++) {
+            <span class="ty">Node</span> rn = q.<span class="fn">poll</span>();
+
+            <span class="kw">if</span> (i == <span class="num">0</span>) System.out.<span class="fn">print</span>(rn.val + <span class="str">" "</span>);  <span class="cmt">// first node of level</span>
+
+            <span class="kw">if</span> (rn.left  != <span class="kw">null</span>) q.<span class="fn">add</span>(rn.left);
+            <span class="kw">if</span> (rn.right != <span class="kw">null</span>) q.<span class="fn">add</span>(rn.right);
+        }
+    }
+}
+<span class="cmt">// Right view: print when i == sz - 1 (last node of each level)
+// T.C → O(N)   S.C → O(N)</span></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Right View</span>
+    Change the condition to <code>i == sz - 1</code> to get the right view. Both are O(N) BFS modifications.
+  </div>
+</section>
+
+<!-- 11 RECAP -->
+<section class="section" id="recap">
+  <div class="section-header"><span class="section-num">11</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><h4>Pre-order RLR</h4><p>Root → Left → Right. Used for tree serialization and prefix expressions.</p></div>
+    <div class="recap-card"><h4>In-order LRR</h4><p>Left → Root → Right. Gives sorted output for BSTs. Key for BST problems.</p></div>
+    <div class="recap-card"><h4>Post-order LRR</h4><p>Left → Right → Root. Process children before parent. Used for deletion and aggregation.</p></div>
+    <div class="recap-card"><h4>Iterative In-order</h4><p>Explicit stack + curr pointer. Same O(H) space but avoids recursive stack overflow.</p></div>
+    <div class="recap-card"><h4>Level Order BFS</h4><p>Queue. Capture level size first. Process sz nodes per level. O(N) time and space.</p></div>
+    <div class="recap-card"><h4>Left / Right View</h4><p>BFS variant: print when <code>i==0</code> (left view) or <code>i==sz-1</code> (right view) per level.</p></div>
+  </div>
+</section>
+
+<!-- 12 LEETCODE -->
+<section class="section" id="leetcode">
+  <div class="section-header"><span class="section-num">12</span><h2>LeetCode Problems</h2></div>
+
+  <h3>Traversals</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff easy">Easy</span><span><a class="lc-name" href="https://leetcode.com/problems/binary-tree-preorder-traversal/" target="_blank" rel="noopener">#144 — Binary Tree Preorder Traversal ↗</a><br/><span class="lc-why">Root → Left → Right, both recursive and iterative.</span></span></li>
+    <li><span class="lc-diff easy">Easy</span><span><a class="lc-name" href="https://leetcode.com/problems/binary-tree-inorder-traversal/" target="_blank" rel="noopener">#94 — Binary Tree Inorder Traversal ↗</a><br/><span class="lc-why">Left → Root → Right. Section 06 &amp; 08 (iterative).</span></span></li>
+    <li><span class="lc-diff easy">Easy</span><span><a class="lc-name" href="https://leetcode.com/problems/binary-tree-postorder-traversal/" target="_blank" rel="noopener">#145 — Binary Tree Postorder Traversal ↗</a><br/><span class="lc-why">Left → Right → Root.</span></span></li>
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/binary-tree-level-order-traversal/" target="_blank" rel="noopener">#102 — Binary Tree Level Order Traversal ↗</a><br/><span class="lc-why">Direct application of Section 09 — BFS with level-size snapshot.</span></span></li>
+  </ul>
+
+  <h3>Tree Views</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/binary-tree-right-side-view/" target="_blank" rel="noopener">#199 — Binary Tree Right Side View ↗</a><br/><span class="lc-why">Right view = last node per level in BFS. Swap <code>i==0</code> to <code>i==sz-1</code> from Section 10.</span></span></li>
+  </ul>
+
+  <h3>Level Order Variants</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/binary-tree-zigzag-level-order-traversal/" target="_blank" rel="noopener">#103 — Binary Tree Zigzag Level Order Traversal ↗</a><br/><span class="lc-why">BFS with alternating left→right and right→left per level — use a flag to reverse.</span></span></li>
+    <li><span class="lc-diff easy">Easy</span><span><a class="lc-name" href="https://leetcode.com/problems/maximum-depth-of-binary-tree/" target="_blank" rel="noopener">#104 — Maximum Depth of Binary Tree ↗</a><br/><span class="lc-why">Count levels in BFS, or use recursive height formula.</span></span></li>
+    <li><span class="lc-diff medium">Medium</span><span><a class="lc-name" href="https://leetcode.com/problems/average-of-levels-in-binary-tree/" target="_blank" rel="noopener">#637 — Average of Levels in Binary Tree ↗</a><br/><span class="lc-why">BFS with per-level sum — collect and average after each level snapshot.</span></span></li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Study Order</span>
+    94 → 144 → 145 → 102 → 104 → 199 → 103 → 637
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+function copyCode(btn){const pre=btn.closest('.code-block').querySelector('pre');const text=pre.innerText;const finish=()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);};if(navigator.clipboard){navigator.clipboard.writeText(text).then(finish);}else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);finish();}}
+const bar=document.getElementById('progress-bar');window.addEventListener('scroll',()=>{const d=document.documentElement.scrollHeight-window.innerHeight;bar.style.width=(d>0?(window.scrollY/d)*100:0)+'%';},{passive:true});
+document.querySelectorAll('.nav-link').forEach(l=>{l.addEventListener('click',e=>{const href=l.getAttribute('href');if(!href||!href.startsWith('#'))return;e.preventDefault();const t=document.querySelector(href);if(!t)return;window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-24,behavior:'smooth'});sidebar.classList.remove('open');overlay.classList.remove('open');navToggle.textContent='☰';});});
+const sidebar=document.querySelector('.sidebar');const overlay=document.getElementById('nav-overlay');const navToggle=document.getElementById('nav-toggle');
+navToggle.addEventListener('click',()=>{const o=sidebar.classList.toggle('open');overlay.classList.toggle('open',o);navToggle.textContent=o?'✕':'☰';});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open');navToggle.textContent='☰';});
+const sections=document.querySelectorAll('.section');
+const spy=new IntersectionObserver(entries=>{const vis=entries.filter(e=>e.isIntersecting).map(e=>e.target);if(!vis.length)return;vis.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top);const id=vis[0].id;document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${id}"]`);if(a)a.classList.add('active');},{rootMargin:'-10% 0px -55% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+const rev=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');});},{threshold:0.06});
+sections.forEach(s=>rev.observe(s));
+</script>
+</body>
+</html>

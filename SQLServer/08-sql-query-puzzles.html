@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL Server — Classic Interview Query Puzzles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arr-cell.dim .val{opacity:.4;border-style:dashed;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+td.nullcell{color:var(--rose);font-family:"JetBrains Mono",monospace;font-size:.82rem;}
+td.hl{background:var(--accent-soft);font-weight:700;color:var(--accent);}
+td.keep{background:var(--green-soft);font-weight:700;color:var(--green);}
+td.drop{background:var(--rose-soft);font-weight:700;color:var(--rose);}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">SQL Server: Query Puzzles</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>Setup</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> The Puzzle Landscape</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The Sample Data</a>
+      </div>
+      <div class="nav-group">
+        <h4>Puzzle A · Nth-Highest</h4>
+        <a class="nav-link" href="#s03"><span class="n">03</span> The Problem</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Way 1: Subquery</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Way 2: DENSE_RANK</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Way 3: OFFSET…FETCH</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> Comparing the Three</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> The TOP/DISTINCT Trap</a>
+      </div>
+      <div class="nav-group">
+        <h4>Puzzles B &amp; C · Duplicates</h4>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Finding Duplicates</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Which Rows Repeat</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Deleting Duplicates</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Which One to Keep</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Mistakes &amp; Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// SQL Server &nbsp;·&nbsp; the questions that show up in live coding rounds</p>
+      <h1>Classic Query Puzzles 🧩</h1>
+      <p class="lede">
+        Three problems appear in SQL interviews again and again: find the <b>Nth-highest</b> value, <b>find
+        duplicate rows</b>, and <b>delete duplicates keeping one</b>. This page solves all three on our schema —
+        Nth-highest <b>three different ways</b> (subquery, <code>DENSE_RANK</code>, <code>OFFSET…FETCH</code>) — and
+        dwells on the two traps that sink candidates: <b>TOP/DISTINCT tricks that break on ties</b>, and deleting
+        duplicates with <b>no deterministic rule for which row to keep</b>. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🥈 <b>Nth-highest ×3</b></span>
+        <span class="chip">🔎 <b>Find dupes</b></span>
+        <span class="chip">🗑️ <b>Delete dupes</b></span>
+        <span class="chip">⚠️ <b>Tie traps</b></span>
+        <span class="chip">🎯 <b>Deterministic keep</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>The Puzzle Landscape</h2></div>
+      <p class="sec-sub">Three canonical puzzles, and the tools from earlier days that solve them — ranking,
+        subqueries, and CTEs, now working together.</p>
+
+      <p>None of these puzzles needs a new feature. They're a workout that combines what you already know:
+        <code>DENSE_RANK</code> from window ranking, the CTE-and-filter pattern, correlated subqueries, and
+        <code>ROW_NUMBER</code>. What interviewers actually test is whether you handle <strong>ties</strong> and
+        <strong>determinism</strong> correctly — the places where quick tricks silently give wrong answers.</p>
+
+      <h3>What the puzzles cover 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">🧩 Query Puzzles</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>🥈 Nth-highest</h5>
+            <ul>
+              <li>Correlated subquery</li>
+              <li><code>DENSE_RANK</code></li>
+              <li><code>OFFSET…FETCH</code></li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🔎 Find dupes</h5>
+            <ul>
+              <li><code>GROUP BY</code> the key</li>
+              <li><code>HAVING COUNT(*) &gt; 1</code></li>
+              <li>whole row vs business key</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>🗑️ Delete dupes</h5>
+            <ul>
+              <li><code>ROW_NUMBER</code> in a CTE</li>
+              <li><code>DELETE … WHERE rn &gt; 1</code></li>
+              <li>keep exactly one</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>⚠️ The traps</h5>
+            <ul>
+              <li><code>TOP</code>/<code>DISTINCT</code> + ties</li>
+              <li>Non-deterministic delete</li>
+              <li>"which one to keep?"</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🧰 Tools reused</h5>
+            <ul>
+              <li>Window ranking (Day 5)</li>
+              <li>Subqueries (Day 4)</li>
+              <li>CTEs (Day 7)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The theme of the whole page</span>
+        <p>Every puzzle has an "obvious" answer that works on clean data and fails on messy data. The two failure
+        modes are <strong>ties</strong> (equal values that a row-counting trick can't distinguish) and
+        <strong>non-determinism</strong> (no rule for which of several equal candidates to pick). Master those two
+        and the puzzles become routine.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>The Sample Data</h2></div>
+      <p class="sec-sub">We need salaries <em>with ties</em> for the Nth-highest puzzle, and a table that actually
+        <em>contains duplicate rows</em> for the dedup puzzles.</p>
+
+      <h3>Employees — with a salary tie (for Puzzle A)</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Salary</th><th>Distinct rank (desc)</th></tr></thead>
+          <tbody>
+            <tr><td>Ada</td><td>145,000</td><td>1st</td></tr>
+            <tr><td>Alan</td><td class="hl">120,000</td><td>2nd</td></tr>
+            <tr><td>Edsger</td><td class="hl">120,000</td><td>2nd (tie)</td></tr>
+            <tr><td>Grace</td><td>110,000</td><td>3rd</td></tr>
+            <tr><td>Katherine</td><td>95,000</td><td>4th</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The distinct salaries, high to low, are <strong>145,000 · 120,000 · 110,000 · 95,000</strong>. So the
+        <strong>2nd-highest distinct salary is 120,000</strong> — shared by Alan and Edsger. That tie is what makes
+        the puzzle interesting.</p>
+
+      <h3>EmployeeStaging — with duplicate rows (for Puzzles B &amp; C)</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- A staging table loaded from an import -- has an id, but rows got duplicated</span>
+<span class="kw">CREATE TABLE</span> dbo.EmployeeStaging (
+    StagingId <span class="ty">INT</span> <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,
+    Name      <span class="ty">NVARCHAR</span>(<span class="num">100</span>),
+    DeptId    <span class="ty">INT</span>,
+    Salary    <span class="ty">DECIMAL</span>(<span class="num">19</span>,<span class="num">4</span>)
+);
+<span class="kw">INSERT INTO</span> dbo.EmployeeStaging (Name, DeptId, Salary) <span class="kw">VALUES</span>
+    (<span class="str">N'Ada'</span>,       <span class="num">1</span>, <span class="num">145000</span>),   <span class="cmt">-- StagingId 1</span>
+    (<span class="str">N'Alan'</span>,      <span class="num">1</span>, <span class="num">120000</span>),   <span class="cmt">-- StagingId 2</span>
+    (<span class="str">N'Alan'</span>,      <span class="num">1</span>, <span class="num">120000</span>),   <span class="cmt">-- StagingId 3  ← duplicate of 2</span>
+    (<span class="str">N'Grace'</span>,     <span class="num">2</span>, <span class="num">110000</span>),   <span class="cmt">-- StagingId 4</span>
+    (<span class="str">N'Grace'</span>,     <span class="num">2</span>, <span class="num">110000</span>),   <span class="cmt">-- StagingId 5  ← duplicate of 4</span>
+    (<span class="str">N'Katherine'</span>, <span class="num">2</span>,  <span class="num">95000</span>);   <span class="cmt">-- StagingId 6</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The setup in one glance</span>
+        <p><strong>Alan</strong> (rows 2 &amp; 3) and <strong>Grace</strong> (rows 4 &amp; 5) each appear twice on the
+        business key <code>(Name, DeptId, Salary)</code>. The surrogate <code>StagingId</code> is unique, which will
+        give us a deterministic way to decide which copy survives.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Puzzle A · The Problem</h2></div>
+      <p class="sec-sub">"Find the 2nd-highest salary." Simple to say — but the first thing to do is pin down what it
+        means, because ties make it ambiguous.</p>
+
+      <p>Before writing SQL, clarify the definition. "2nd highest" can mean three different things:</p>
+      <ul>
+        <li><strong>2nd distinct value</strong> — ignore duplicates; the second-largest <em>different</em> salary.
+          (Here: 120,000.) This is what people usually mean.</li>
+        <li><strong>2nd row</strong> — the second row when sorted, which could equal the first if the top value is
+          tied.</li>
+        <li><strong>Medal-style 2nd place</strong> — ties at the top consume the position.</li>
+      </ul>
+
+      <div class="callout key">
+        <span class="tag">🔑 Say the definition out loud in the interview</span>
+        <p>Stating "I'll assume you mean the 2nd-highest <em>distinct</em> salary" is itself a point in your favour —
+        it shows you've spotted the tie ambiguity. All three approaches below target the distinct-value meaning, and
+        each can be adjusted for the others. Our expected answer throughout is <strong>120,000</strong>.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Way 1 · Correlated Subquery</h2></div>
+      <p class="sec-sub">The oldest, most portable approach: a salary is the Nth-highest if exactly N−1 distinct
+        salaries are strictly greater than it.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- 2nd highest: the salary with exactly 1 distinct salary above it (N - 1 = 1)</span>
+<span class="kw">SELECT DISTINCT</span> e1.Salary
+<span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e1
+<span class="kw">WHERE</span> (
+    <span class="kw">SELECT</span> <span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> e2.Salary)
+    <span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e2
+    <span class="kw">WHERE</span> e2.Salary &gt; e1.Salary
+) = <span class="num">1</span>;   <span class="cmt">-- change 1 to N-1 for the Nth highest</span></code></pre>
+      </div>
+
+      <p>For salary 120,000, the only distinct salary strictly greater is 145,000 — a count of 1, which matches
+        <code>N−1 = 1</code>. So it's kept. Result: <strong>120,000</strong>. The <code>COUNT(DISTINCT …)</code> is
+        what makes it count <em>values</em>, not rows, so the tie doesn't fool it.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why this is portable</span>
+        <p>It uses nothing but <code>SELECT</code>, <code>COUNT(DISTINCT)</code>, and a comparison — supported by
+        essentially every SQL database and every version. That's its main appeal. Its downside is performance: it's a
+        correlated subquery that conceptually re-counts for each row, so it scales poorly on large tables.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Way 2 · DENSE_RANK</h2></div>
+      <p class="sec-sub">The clearest modern approach, and the one to reach for by default: rank distinct salaries and
+        pick rank N.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">WITH</span> Ranked <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> Salary,
+           <span class="fn">DENSE_RANK</span>() <span class="kw">OVER</span> (<span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>) <span class="kw">AS</span> dr
+    <span class="kw">FROM</span> dbo.Employees
+)
+<span class="kw">SELECT DISTINCT</span> Salary
+<span class="kw">FROM</span> Ranked
+<span class="kw">WHERE</span> dr = <span class="num">2</span>;   <span class="cmt">-- dr = N for the Nth highest</span></code></pre>
+      </div>
+
+      <p><code>DENSE_RANK</code> gives tied salaries the same rank with no gaps, so distinct values map exactly to
+        1, 2, 3, 4. Rank 2 is 120,000 (shared by Alan and Edsger); <code>DISTINCT</code> collapses those two rows to
+        a single value. Result: <strong>120,000</strong>.</p>
+
+      <div class="callout tip">
+        <span class="tag">✅ Why DENSE_RANK is the default choice</span>
+        <p>It reads exactly like the requirement ("the 2nd distinct highest"), it handles ties correctly by design,
+        and changing N is a one-character edit. Use <code>RANK</code> instead if you want medal-style semantics, or
+        <code>ROW_NUMBER</code> if you truly want the 2nd <em>row</em> regardless of ties — the choice of ranking
+        function <em>is</em> the choice of meaning.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Way 3 · OFFSET…FETCH</h2></div>
+      <p class="sec-sub">The pagination-style approach: sort the distinct salaries, skip N−1, then take one.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Distinct salaries first, so we skip distinct VALUES (not tied rows)</span>
+<span class="kw">SELECT</span> Salary
+<span class="kw">FROM</span> (<span class="kw">SELECT DISTINCT</span> Salary <span class="kw">FROM</span> dbo.Employees) <span class="kw">AS</span> s
+<span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>
+<span class="kw">OFFSET</span> <span class="num">1</span> <span class="kw">ROWS</span>          <span class="cmt">-- skip N-1 = 1 value</span>
+<span class="kw">FETCH NEXT</span> <span class="num">1</span> <span class="kw">ROW ONLY</span>;  <span class="cmt">-- take just the next one</span></code></pre>
+      </div>
+
+      <p>After the <code>DISTINCT</code> subquery, the ordered values are 145,000 · 120,000 · 110,000 · 95,000;
+        skipping 1 lands on <strong>120,000</strong>, and we fetch that one row.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Two things to remember</span>
+        <p>First, <code>OFFSET…FETCH</code> <strong>requires</strong> an <code>ORDER BY</code> — it's meaningless
+        without a defined order. Second, the <code>DISTINCT</code> is essential: skipping over raw rows would skip a
+        tied duplicate instead of a distinct value, giving the wrong "Nth highest." <code>OFFSET…FETCH</code> is
+        available in SQL Server 2012 and later.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Comparing the Three</h2></div>
+      <p class="sec-sub">All three return 120,000. The differences are readability, performance, portability, and how
+        they extend.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Approach</th><th>Reads like the requirement?</th><th>Ties handled?</th><th>Portability</th><th>Scales well?</th></tr></thead>
+          <tbody>
+            <tr><td>Correlated subquery</td><td>Indirect ("count above")</td><td>✅ via COUNT DISTINCT</td><td>✅ Everywhere</td><td>❌ Weak on big tables</td></tr>
+            <tr><td><strong>DENSE_RANK</strong></td><td>✅ Very clearly</td><td>✅ By design</td><td>Modern SQL</td><td>✅ Good</td></tr>
+            <tr><td>OFFSET…FETCH</td><td>✅ "skip &amp; take"</td><td>Needs DISTINCT first</td><td>SQL Server 2012+</td><td>✅ Good (with index)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Which one should I pick? 🧭</h3>
+      <div class="flow">
+        <div class="flow-step highlight">
+          <span class="st-icon">🎖️</span>
+          <b>Want the clearest, tie-safe answer for "Nth distinct highest"?</b>
+          <small>Use <code>DENSE_RANK() = N</code> in a CTE — the default recommendation.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🌍</span>
+          <b>Need it to run on any database / very old SQL?</b>
+          <small>Use the correlated subquery with <code>COUNT(DISTINCT …)</code>.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">📄</span>
+          <b>Thinking in pagination terms (skip N, take M)?</b>
+          <small>Use <code>OFFSET N-1 ROWS FETCH NEXT 1</code> over a <code>DISTINCT</code> set.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🚫</span>
+          <b>Tempted by a quick <code>TOP</code>/<code>DISTINCT</code> trick?</b>
+          <small>Don't — it breaks on ties. See the next section.</small>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>The TOP/DISTINCT Trap</h2></div>
+      <p class="sec-sub">The "clever" one-liners people reach for under pressure — and exactly why they produce wrong
+        answers when values tie.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- The classic "TOP N then take the smallest" trick</span>
+<span class="kw">SELECT</span> <span class="fn">MIN</span>(Salary) <span class="kw">AS</span> SecondHighest
+<span class="kw">FROM</span> (
+    <span class="kw">SELECT</span> <span class="kw">TOP</span> <span class="num">2</span> Salary
+    <span class="kw">FROM</span> dbo.Employees
+    <span class="kw">ORDER BY</span> Salary <span class="kw">DESC</span>
+) <span class="kw">AS</span> t;</code></pre>
+      </div>
+
+      <p>On our data this happens to return 120,000 — but it's fragile. <strong>The trap:</strong> <code>TOP 2</code>
+        returns two <em>rows</em>, not two distinct <em>values</em>. Suppose the top salary were tied — say two people
+        both earned 145,000:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Salaries (desc)</th><th><code>TOP 2</code> returns</th><th><code>MIN</code> of those</th><th>Correct 2nd distinct</th></tr></thead>
+          <tbody>
+            <tr><td>145,000 · 145,000 · 120,000 · …</td><td class="drop">145,000 · 145,000</td><td class="drop">145,000 ❌</td><td class="keep">120,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Row-counting tricks can't see distinct values</span>
+        <p>Because the top value repeats, <code>TOP 2</code> grabs both copies of 145,000, and <code>MIN</code>
+        reports 145,000 as the "2nd highest" — wrong. The same flaw hits <code>OFFSET…FETCH</code> or
+        <code>ROW_NUMBER = 2</code> applied to raw rows: they skip a duplicate instead of a distinct value. The fixes
+        are to work on a <code>DISTINCT</code> set or, better, use <code>DENSE_RANK</code>, which is built to count
+        distinct values.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The rule to remember</span>
+        <p>"Nth highest <em>value</em>" is a question about distinct values, but <code>TOP</code>,
+        <code>ROW_NUMBER</code>, and a bare <code>OFFSET</code> all count <em>rows</em>. Whenever the two can differ
+        (i.e., whenever ties are possible), use <code>DENSE_RANK</code> or de-duplicate first. Don't rely on a trick
+        that only works because your sample data happened to have no ties at the top.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Puzzle B · Finding Duplicates</h2></div>
+      <p class="sec-sub">Group by the columns that define a duplicate, then keep only the groups that have more than
+        one row.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Which (Name, DeptId, Salary) combinations appear more than once?</span>
+<span class="kw">SELECT</span> Name, DeptId, Salary, <span class="fn">COUNT</span>(*) <span class="kw">AS</span> Copies
+<span class="kw">FROM</span> dbo.EmployeeStaging
+<span class="kw">GROUP BY</span> Name, DeptId, Salary
+<span class="kw">HAVING</span> <span class="fn">COUNT</span>(*) &gt; <span class="num">1</span>;</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>DeptId</th><th>Salary</th><th>Copies</th></tr></thead>
+          <tbody>
+            <tr><td>Alan</td><td>1</td><td>120,000</td><td class="hl">2</td></tr>
+            <tr><td>Grace</td><td>2</td><td>110,000</td><td class="hl">2</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 GROUP BY defines what "duplicate" means</span>
+        <p>The columns you list in <code>GROUP BY</code> <em>are</em> your definition of a duplicate.
+        <code>HAVING COUNT(*) &gt; 1</code> then keeps only the groups appearing more than once. (Recall from the
+        aggregation notes: <code>WHERE</code> filters rows before grouping, <code>HAVING</code> filters groups
+        after.) Choose the grouping columns to match the business rule for "the same record."</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Which Rows Repeat</h2></div>
+      <p class="sec-sub">Grouping tells you <em>which values</em> repeat; to act on the actual rows (to delete extras)
+        you need to label each copy. <code>ROW_NUMBER</code> does that.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">SELECT</span> StagingId, Name, DeptId, Salary,
+       <span class="fn">ROW_NUMBER</span>() <span class="kw">OVER</span> (
+           <span class="kw">PARTITION BY</span> Name, DeptId, Salary   <span class="cmt">-- one counter per duplicate group</span>
+           <span class="kw">ORDER BY</span> StagingId                  <span class="cmt">-- lowest id = the "keeper"</span>
+       ) <span class="kw">AS</span> rn
+<span class="kw">FROM</span> dbo.EmployeeStaging;</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>StagingId</th><th>Name</th><th>Salary</th><th>rn</th><th>Fate</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Ada</td><td>145,000</td><td>1</td><td class="keep">keep</td></tr>
+            <tr><td>2</td><td>Alan</td><td>120,000</td><td>1</td><td class="keep">keep</td></tr>
+            <tr><td>3</td><td>Alan</td><td>120,000</td><td>2</td><td class="drop">delete</td></tr>
+            <tr><td>4</td><td>Grace</td><td>110,000</td><td>1</td><td class="keep">keep</td></tr>
+            <tr><td>5</td><td>Grace</td><td>110,000</td><td>2</td><td class="drop">delete</td></tr>
+            <tr><td>6</td><td>Katherine</td><td>95,000</td><td>1</td><td class="keep">keep</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 rn = 1 is the survivor</span>
+        <p>Within each duplicate group, <code>ROW_NUMBER</code> stamps one row as <code>rn = 1</code> and any extras
+        as <code>rn = 2, 3, …</code>. That instantly separates the "keeper" (rn = 1) from the rows to remove
+        (rn &gt; 1). The <code>ORDER BY</code> decides <em>which</em> row becomes rn = 1 — which is the crux of the
+        next two sections.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Puzzle C · Deleting Duplicates</h2></div>
+      <p class="sec-sub">Wrap that numbering in a CTE and delete every row with <code>rn &gt; 1</code>. Deleting
+        <em>through</em> the CTE removes the rows from the real table.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">WITH</span> Dupes <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> StagingId,
+           <span class="fn">ROW_NUMBER</span>() <span class="kw">OVER</span> (
+               <span class="kw">PARTITION BY</span> Name, DeptId, Salary
+               <span class="kw">ORDER BY</span> StagingId          <span class="cmt">-- keep the lowest id</span>
+           ) <span class="kw">AS</span> rn
+    <span class="kw">FROM</span> dbo.EmployeeStaging
+)
+<span class="kw">DELETE FROM</span> Dupes
+<span class="kw">WHERE</span> rn &gt; <span class="num">1</span>;   <span class="cmt">-- removes StagingId 3 and 5</span></code></pre>
+      </div>
+
+      <h3>After the delete</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>StagingId</th><th>Name</th><th>DeptId</th><th>Salary</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Ada</td><td>1</td><td>145,000</td></tr>
+            <tr><td>2</td><td>Alan</td><td>1</td><td>120,000</td></tr>
+            <tr><td>4</td><td>Grace</td><td>2</td><td>110,000</td></tr>
+            <tr><td>6</td><td>Katherine</td><td>2</td><td>95,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 You can DELETE from a CTE</span>
+        <p>Because this CTE maps to a single underlying table, <code>DELETE FROM Dupes</code> deletes the matching
+        rows from <code>EmployeeStaging</code> itself. Rows 3 and 5 (the <code>rn &gt; 1</code> copies) are removed;
+        one Alan and one Grace remain. This <code>ROW_NUMBER</code>-in-a-CTE-then-<code>DELETE</code> pattern is the
+        standard, safe way to de-duplicate a table in SQL Server.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Preview before you delete</span>
+        <p>Run the query from section 10 (the <code>SELECT</code> with <code>rn</code>) first to eyeball exactly
+        which rows will go. Swapping the final <code>DELETE</code> back to a <code>SELECT *</code> is a cheap safety
+        check — especially in production, ideally inside a transaction you can roll back.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Which One to Keep</h2></div>
+      <p class="sec-sub">The most important detail in the whole dedup puzzle: the <code>ORDER BY</code> inside
+        <code>ROW_NUMBER</code> must be <em>deterministic</em>, or your delete becomes a coin flip.</p>
+
+      <p>If two rows tie on the <code>ORDER BY</code> columns, which one gets <code>rn = 1</code> is undefined — it
+        can differ run to run. When the duplicate rows are byte-for-byte identical, that doesn't matter (either copy
+        is fine). But when they differ in a column you care about, picking the wrong survivor is a real bug.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Keep the MOST RECENT record per business key (e.g., duplicate customers)</span>
+<span class="kw">WITH</span> Dupes <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> *,
+           <span class="fn">ROW_NUMBER</span>() <span class="kw">OVER</span> (
+               <span class="kw">PARTITION BY</span> Email                 <span class="cmt">-- the business key</span>
+               <span class="kw">ORDER BY</span> UpdatedAt <span class="kw">DESC</span>, CustomerId <span class="kw">DESC</span>  <span class="cmt">-- newest wins; id breaks ties</span>
+           ) <span class="kw">AS</span> rn
+    <span class="kw">FROM</span> dbo.Customers
+)
+<span class="kw">DELETE FROM</span> Dupes <span class="kw">WHERE</span> rn &gt; <span class="num">1</span>;</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Add a unique tie-breaker</span>
+        <p>Ordering only by <code>UpdatedAt DESC</code> is <strong>not</strong> deterministic if two rows share the
+        same timestamp — the survivor is arbitrary. Append a unique column (like the primary key:
+        <code>, CustomerId DESC</code>) so exactly one row is guaranteed <code>rn = 1</code> every time. A
+        deterministic keep-rule is the difference between a repeatable cleanup and a random one.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Decide the rule before you write the query</span>
+        <p>"Keep the earliest," "keep the most recent," "keep the one with the most complete data" — these are
+        business decisions, and they map directly to the <code>ORDER BY</code>. Always be able to state, in one
+        sentence, which duplicate survives and why. That sentence is what the interviewer is listening for.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Mistakes &amp; Best Practices</h2></div>
+      <p class="sec-sub">The habits that keep these puzzles correct under interview pressure and in production.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🎖️</span><h4>DENSE_RANK for Nth-highest</h4><p>It counts distinct values, so it's tie-safe and reads like the requirement. Default to it.</p></div>
+        <div class="card"><span class="glyph">🚫</span><h4>Distrust TOP/DISTINCT tricks</h4><p>They count rows, not values, and silently break when the top value is tied.</p></div>
+        <div class="card"><span class="glyph">❓</span><h4>Clarify "Nth highest"</h4><p>Distinct value vs Nth row vs medal-style — state your assumption before coding.</p></div>
+        <div class="card"><span class="glyph">🎯</span><h4>Deterministic keep-rule</h4><p>Include a unique tie-breaker in <code>ROW_NUMBER</code>'s <code>ORDER BY</code> so exactly one row survives.</p></div>
+        <div class="card"><span class="glyph">👀</span><h4>Preview before DELETE</h4><p>Run the <code>SELECT</code> with <code>rn</code> first; wrap the delete in a rollback-able transaction.</p></div>
+        <div class="card"><span class="glyph">🔑</span><h4>Group by the right key</h4><p>Match <code>GROUP BY</code> / <code>PARTITION BY</code> columns to the true definition of "the same record."</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ OFFSET/FETCH and ORDER BY nondeterminism</span>
+        <p>Both <code>OFFSET…FETCH</code> and <code>ROW_NUMBER</code> depend entirely on the <code>ORDER BY</code>.
+        If it isn't unique, "the Nth row" and "which duplicate to keep" are not stable. The single most common
+        interview slip is an <code>ORDER BY</code> that ties — always ensure it fully determines the order.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea, then a full cheat-sheet table.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🥈 Nth-highest</h4><p>Clarify "distinct value" first; expected answer here is 120,000.</p></div>
+        <div class="recap-card"><h4>🔢 Subquery way</h4><p>Salary with exactly N−1 distinct salaries above it; portable but slow.</p></div>
+        <div class="recap-card"><h4>🎖️ DENSE_RANK way</h4><p><code>DENSE_RANK() = N</code> in a CTE; clearest and tie-safe.</p></div>
+        <div class="recap-card"><h4>📄 OFFSET…FETCH way</h4><p>Skip N−1, fetch 1 — over a <code>DISTINCT</code> set, with <code>ORDER BY</code>.</p></div>
+        <div class="recap-card"><h4>⚠️ TOP trap</h4><p>Counts rows not values; wrong when the top value is tied.</p></div>
+        <div class="recap-card"><h4>🔎 Find dupes</h4><p><code>GROUP BY key HAVING COUNT(*) &gt; 1</code>.</p></div>
+        <div class="recap-card"><h4>🏷️ Label copies</h4><p><code>ROW_NUMBER</code> partitioned by the key; rn = 1 is the keeper.</p></div>
+        <div class="recap-card"><h4>🗑️ Delete dupes</h4><p><code>ROW_NUMBER</code> in a CTE, then <code>DELETE … WHERE rn &gt; 1</code>.</p></div>
+        <div class="recap-card"><h4>🎯 Keep-rule</h4><p>Deterministic <code>ORDER BY</code> with a unique tie-breaker decides the survivor.</p></div>
+        <div class="recap-card"><h4>👀 Safety</h4><p>Preview with <code>SELECT</code>; delete inside a transaction.</p></div>
+      </div>
+
+      <h3>Full summary table</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Puzzle</th><th>Go-to solution</th><th>Key caution</th></tr></thead>
+          <tbody>
+            <tr><td>Nth-highest (portable)</td><td>Correlated subquery, <code>COUNT(DISTINCT)</code> = N−1</td><td>Slow on large tables</td></tr>
+            <tr><td>Nth-highest (best)</td><td><code>DENSE_RANK() = N</code> in a CTE</td><td>Pick the ranking fn to match the meaning</td></tr>
+            <tr><td>Nth-highest (paging)</td><td><code>OFFSET N-1 FETCH NEXT 1</code> over DISTINCT</td><td>Needs ORDER BY; DISTINCT first</td></tr>
+            <tr><td>Find duplicates</td><td><code>GROUP BY key HAVING COUNT(*) &gt; 1</code></td><td>Group by the true business key</td></tr>
+            <tr><td>Delete duplicates</td><td><code>ROW_NUMBER</code> CTE + <code>DELETE WHERE rn &gt; 1</code></td><td>Deterministic ORDER BY = which to keep</td></tr>
+            <tr><td>Avoid</td><td>—</td><td><code>TOP</code>/<code>DISTINCT</code> tricks that break on ties</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What does "Nth highest salary" mean, and why is it ambiguous? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It usually means the Nth-largest <em>distinct</em> salary — ignoring duplicates. It's ambiguous
+        because ties muddy it: "2nd highest" could mean the 2nd distinct value, the 2nd row when sorted (which might
+        equal the 1st if the top is tied), or a medal-style 2nd place. Clarifying which you mean is the first move,
+        and here the 2nd distinct value is 120,000.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> How do you find the single highest salary? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The simplest way is <code>SELECT MAX(Salary) FROM dbo.Employees</code>. <code>MAX</code> returns
+        the top value directly, and it's unaffected by ties (if two people share the top salary, <code>MAX</code>
+        still returns that one value). The Nth-highest is the harder generalization of this.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> What does GROUP BY … HAVING COUNT(*) &gt; 1 find? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It finds duplicate groups. You group by the columns that define a duplicate, and
+        <code>HAVING COUNT(*) &gt; 1</code> keeps only the groups that occur more than once. On the staging table,
+        grouping by <code>(Name, DeptId, Salary)</code> reveals Alan and Grace each appear twice.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> What is a duplicate row? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A row that repeats an existing row on the columns you consider meaningful. It might be an exact
+        copy of every column, or a repeat of just a "business key" (like the same email or the same Name+Dept). You
+        decide which columns count — that decision is exactly what you put in <code>GROUP BY</code> or
+        <code>PARTITION BY</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> How do you get the 2nd highest salary with DENSE_RANK? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Rank salaries high-to-low with <code>DENSE_RANK() OVER (ORDER BY Salary DESC)</code> in a CTE,
+        then select the distinct salary where the rank equals 2. Because <code>DENSE_RANK</code> gives tied salaries
+        the same rank with no gaps, rank 2 is the 2nd distinct salary — 120,000 here.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What does OFFSET … FETCH do? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It skips a number of rows and then returns a limited number — the standard way to paginate.
+        <code>OFFSET 1 ROWS FETCH NEXT 1 ROW ONLY</code> skips the first row and returns the next one. It always
+        requires an <code>ORDER BY</code>, since "skip" and "take" only make sense in a defined order.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> Why do you often need DISTINCT when finding the Nth-highest? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Because "Nth highest" is about distinct <em>values</em>, but many techniques operate on
+        <em>rows</em>. If a value is tied (appears in multiple rows), skipping or counting rows would treat those
+        copies as separate steps and land on the wrong value. Using <code>DISTINCT</code> (or <code>DENSE_RANK</code>,
+        which is value-based) fixes that.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> What role does ROW_NUMBER play in removing duplicates? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It labels each row within a duplicate group with 1, 2, 3, … So the first copy is
+        <code>rn = 1</code> (the one to keep) and any extras are <code>rn &gt; 1</code> (the ones to delete). That
+        turns "remove duplicates" into the simple filter "delete where rn &gt; 1."</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q09</span> Name three ways to find the Nth-highest salary. <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>(1) A correlated subquery: the salary with exactly N−1 distinct salaries above it, via
+        <code>COUNT(DISTINCT)</code>. (2) <code>DENSE_RANK() OVER (ORDER BY Salary DESC)</code> in a CTE, filtered to
+        rank N. (3) <code>OFFSET N-1 ROWS FETCH NEXT 1 ROW ONLY</code> over a <code>DISTINCT</code>, ordered set. All
+        three give 120,000 for the 2nd highest here.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> DENSE_RANK vs ROW_NUMBER vs RANK for the Nth-highest — which and why? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Use <code>DENSE_RANK</code> for the Nth distinct value (ties share a rank, no gaps) — the usual
+        intent. Use <code>ROW_NUMBER</code> if you want the exact Nth <em>row</em> regardless of ties. Use
+        <code>RANK</code> for medal-style semantics where ties consume positions (creating gaps). The function choice
+        literally defines what "Nth" means.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> How do you delete duplicates while keeping one row? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Number the rows within each duplicate group using <code>ROW_NUMBER() OVER (PARTITION BY key
+        ORDER BY keeprule)</code> inside a CTE, then <code>DELETE FROM cte WHERE rn &gt; 1</code>. That keeps the
+        <code>rn = 1</code> row in each group and removes the rest, deleting straight from the underlying table.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> Why delete via a CTE with ROW_NUMBER rather than some other way? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Because it's precise and safe: <code>ROW_NUMBER</code> unambiguously marks exactly one keeper per
+        group, and you control which one via the <code>ORDER BY</code>. Alternatives (like matching on <code>MIN(id)</code>
+        with a self-join) work but are wordier and easier to get wrong, and older <code>SET ROWCOUNT</code> hacks are
+        obsolete. The CTE pattern is the clear, modern standard.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What is the "which one to keep" rule and why does it matter? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It's the rule that decides which duplicate survives, expressed as the <code>ORDER BY</code>
+        inside <code>ROW_NUMBER</code> — for example "keep the most recent" (<code>ORDER BY UpdatedAt DESC</code>) or
+        "keep the lowest id." It matters because duplicates often differ in some column; deleting the wrong one loses
+        data. State the rule explicitly.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> Why does OFFSET/FETCH require ORDER BY? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Because "skip N and take M" is only meaningful relative to a defined order — without one,
+        which rows are "first" is undefined, and results could vary between runs. SQL Server enforces this by requiring
+        an <code>ORDER BY</code> with <code>OFFSET…FETCH</code>. For stable results the order should also be unique.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> How does the correlated-subquery approach to Nth-highest work? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>For each candidate salary, it counts how many <em>distinct</em> salaries are strictly greater. A
+        salary is the Nth-highest when exactly N−1 distinct salaries sit above it. For the 2nd highest, you keep the
+        salary with exactly 1 distinct salary above it. <code>COUNT(DISTINCT)</code> is what makes it count values
+        rather than rows, so ties are handled.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> How do you find duplicates on a business key rather than the whole row? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Group by just the key columns that define "the same record" — say <code>GROUP BY Email</code> —
+        with <code>HAVING COUNT(*) &gt; 1</code>, ignoring columns that may legitimately differ. For deletion, partition
+        <code>ROW_NUMBER</code> by that same key. The whole-row case is just the special case where the key is every
+        column.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q17</span> Why exactly do TOP/DISTINCT tricks break on ties? Give an example. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Because <code>TOP</code> (and a bare <code>OFFSET</code> or <code>ROW_NUMBER</code>) counts
+        <em>rows</em>, not distinct values. If the top salary is tied — say two people earn 145,000 — then
+        <code>SELECT TOP 2 … ORDER BY Salary DESC</code> returns two 145,000 rows, and taking <code>MIN</code> reports
+        145,000 as the "2nd highest," which is wrong; the real 2nd distinct value is 120,000. The trick only works
+        when the top values happen not to tie. <code>DENSE_RANK</code> avoids it by counting distinct values.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> Compare the trade-offs of the three Nth-highest approaches. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The correlated subquery is the most portable (plain SQL, any version) but scales poorly — it's
+        effectively O(rows²) in the naive model. <code>DENSE_RANK</code> is the clearest and reads like the requirement,
+        handles ties by design, and performs well with a supporting index on the ordering column. <code>OFFSET…FETCH</code>
+        is concise and index-friendly but requires an explicit <code>ORDER BY</code>, a <code>DISTINCT</code> step for
+        value semantics, and SQL Server 2012+. For most work, <code>DENSE_RANK</code> is the best default.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> How do you deduplicate a table with no primary key? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>You can still delete through a <code>ROW_NUMBER</code> CTE, because the delete targets the
+        underlying rows even without a key. If duplicate rows are byte-for-byte identical, any survivor is fine, so an
+        arbitrary <code>ORDER BY (SELECT NULL)</code> works. If they differ, add a deterministic <code>ORDER BY</code>;
+        if there's genuinely no column to distinguish, you may need to add a temporary identity column (or use
+        <code>%%physloc%%</code>-style physical locators cautiously) to break ties. The <code>DELETE FROM cte WHERE rn
+        &gt; 1</code> pattern still applies.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> What makes an ORDER BY deterministic, and what happens if it isn't? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>An <code>ORDER BY</code> is deterministic when its columns uniquely order every row — typically
+        by including a unique key as the final tie-breaker. If it isn't, rows that tie on the ordering columns can be
+        arranged differently between executions, so <code>ROW_NUMBER</code> may crown a different "keeper" and
+        <code>OFFSET…FETCH</code> may return a different row each run. In a dedup delete that means an unpredictable
+        survivor — a subtle, data-losing bug.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> How do you keep the most recent duplicate instead of an arbitrary one? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Order the <code>ROW_NUMBER</code> so the newest row becomes <code>rn = 1</code>:
+        <code>PARTITION BY key ORDER BY UpdatedAt DESC, id DESC</code>. The <code>UpdatedAt DESC</code> puts the latest
+        first; the <code>id DESC</code> is a unique tie-breaker for rows with identical timestamps, guaranteeing a
+        single deterministic survivor. Then delete <code>rn &gt; 1</code> as usual.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> How would you extend Nth-highest to "per group" (e.g., per department)? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Add <code>PARTITION BY</code> to the ranking: <code>DENSE_RANK() OVER (PARTITION BY DeptId ORDER
+        BY Salary DESC)</code> in a CTE, then filter to rank N. That restarts the ranking within each department, giving
+        the Nth-highest salary per department in one pass — a direct extension of the single-group solution and a very
+        common follow-up.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> What indexing helps these queries perform? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>For Nth-highest via <code>DENSE_RANK</code> or <code>OFFSET…FETCH</code>, an index ordered on the
+        ranking/sort column (e.g., <code>Salary DESC</code>) lets the engine avoid a sort. For the dedup query, an index
+        on the <code>PARTITION BY</code> key (plus the <code>ORDER BY</code> tie-breaker) supports the windowing
+        efficiently. Check the plan for Sort operators; a matching index typically removes them.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> What edge cases should you consider? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>N larger than the number of distinct values (should return no rows, not an error); NULL salaries
+        (NULLs sort and compare specially — decide whether they're excluded); an empty table; all values identical (only
+        one distinct value exists); and, for dedup, groups of size one (untouched) versus large groups. Confirming these
+        behave sensibly — and saying so — signals senior-level care.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions establish the vocabulary and the single-step tools;
+        <strong>Mid</strong> questions test the three Nth-highest methods and the dedup pattern; <strong>Senior</strong>
+        questions probe the traps and edge cases (why ties break tricks, determinism, no-key tables, per-group,
+        indexing). Say each answer out loud in plain English — the ones you stumble on point straight to the section to
+        re-read.</p>
+      </div>
+
+      <p class="foot">Concepts verified against Microsoft Learn (Transact-SQL <code>DENSE_RANK</code>,
+        <code>ROW_NUMBER</code>, <code>OFFSET…FETCH</code> in the <code>ORDER BY</code> clause, and deleting via a CTE).
+        These techniques are stable across supported SQL Server versions; <code>OFFSET…FETCH</code> was introduced in
+        SQL Server 2012 (current line through 2025 / 17.x). This single <code>08-sql-query-puzzles.html</code> file is
+        fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

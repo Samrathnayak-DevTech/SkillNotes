@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL Server — Indexes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arr-cell.dim .val{opacity:.4;border-style:dashed;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- b-tree ---------- */
+.btree{display:flex;flex-direction:column;align-items:center;gap:0;margin:24px 0;}
+.btree .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);margin-bottom:16px;text-align:center;}
+.bt-node{background:#fff;border:1.5px solid var(--line);border-radius:9px;padding:8px 14px;
+  font-family:"JetBrains Mono",monospace;font-size:12.5px;text-align:center;}
+.bt-root{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:700;}
+.bt-mid{border-color:var(--blue);background:var(--blue-soft);color:var(--blue);}
+.bt-leaf{border-color:var(--green);background:var(--green-soft);color:var(--green);}
+.bt-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;}
+.bt-conn{width:2px;height:20px;background:var(--line);}
+.bt-label{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--ink-soft);
+  text-transform:uppercase;letter-spacing:.08em;align-self:center;margin-right:8px;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:580px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+td.good{background:var(--green-soft);font-weight:700;color:var(--green);}
+td.bad{background:var(--rose-soft);font-weight:700;color:var(--rose);}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">SQL Server: Indexes</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>Foundations</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> What an Index Is</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The Sample Schema</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> The B-Tree</a>
+      </div>
+      <div class="nav-group">
+        <h4>The Two Main Types</h4>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Heaps</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Clustered Index</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Non-Clustered Index</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> Seek vs Scan</a>
+      </div>
+      <div class="nav-group">
+        <h4>Designing Indexes</h4>
+        <a class="nav-link" href="#s08"><span class="n">08</span> Covering &amp; INCLUDE</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Composite &amp; Key Order</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> When They Help</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> When They Hurt</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Other Index Types</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Mistakes &amp; Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// SQL Server &nbsp;·&nbsp; making queries fast without changing them</p>
+      <h1>Indexes 📑</h1>
+      <p class="lede">
+        An <b>index</b> is a sorted lookup structure that lets SQL Server find rows without reading the whole table
+        — exactly like the index at the back of a book. The two big kinds are the <b>clustered</b> index (which
+        physically orders the table itself) and <b>non-clustered</b> indexes (separate structures that point back to
+        rows). Used well, indexes turn slow scans into instant <b>seeks</b>; overused, they quietly tax every write.
+        No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🌳 <b>B-tree</b></span>
+        <span class="chip">📍 <b>Clustered</b></span>
+        <span class="chip">🔗 <b>Non-clustered</b></span>
+        <span class="chip">🎯 <b>Seek vs Scan</b></span>
+        <span class="chip">🛡️ <b>Covering</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>What an Index Is</h2></div>
+      <p class="sec-sub">A pre-sorted structure that points to rows, so the engine can jump straight to what it needs
+        instead of reading every row.</p>
+
+      <p>Without an index, answering "find the employee named Grace" means checking every single row — a
+        <strong>table scan</strong>. With an index on <code>Name</code>, the rows are pre-sorted, so SQL Server can
+        home in on Grace almost instantly — an <strong>index seek</strong>. The trade is that the index takes extra
+        storage and must be kept up to date on every insert, update, and delete.</p>
+
+      <div class="callout analogy">
+        <span class="tag">📖 Analogy</span>
+        <p>A textbook's back-of-book index is the perfect mental model. To find every mention of "photosynthesis"
+        you don't read all 900 pages — you flip to the alphabetical index, find the word, and jump to the listed page
+        numbers. A database index works the same way: it's a sorted list of values, each pointing to where the full
+        row lives. The book's pages are the table; the index is the shortcut.</p>
+      </div>
+
+      <h3>The index landscape 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">📑 Indexes</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-accent">
+            <h5>📍 Types</h5>
+            <ul>
+              <li>Clustered (one per table)</li>
+              <li>Non-clustered (many)</li>
+              <li>Unique / filtered / columnstore</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-blue">
+            <h5>🌳 Structure</h5>
+            <ul>
+              <li>B-tree: root → intermediate → leaf</li>
+              <li>Heap = no clustered index</li>
+              <li>Sorted by the key</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🎯 Access</h5>
+            <ul>
+              <li>Seek (jump) vs Scan (read all)</li>
+              <li>Key / RID lookup</li>
+              <li>Covering index</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🛠️ Design</h5>
+            <ul>
+              <li>Composite key order</li>
+              <li><code>INCLUDE</code> columns</li>
+              <li>Selectivity</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>⚖️ Trade-offs</h5>
+            <ul>
+              <li>Faster reads</li>
+              <li>Slower writes</li>
+              <li>More storage</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The core trade-off, stated once</span>
+        <p>Indexes make <strong>reads</strong> faster and <strong>writes</strong> slower. Every index is another copy
+        of some columns that must be updated when data changes. So the art of indexing is adding just enough to speed
+        up the queries you actually run, without drowning your inserts and updates in maintenance. Keep this tension
+        in mind for the rest of the page.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>The Sample Schema</h2></div>
+      <p class="sec-sub">The same three tables. Note that each <code>PRIMARY KEY</code> already created a clustered
+        index — so these tables aren't heaps.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Table</th><th>Primary key (→ clustered index)</th><th>Good non-clustered candidates</th></tr></thead>
+          <tbody>
+            <tr><td>Departments</td><td><code>DeptId</code></td><td><code>Name</code> (lookups by name)</td></tr>
+            <tr><td>Employees</td><td><code>EmpId</code></td><td><code>DeptId</code> (joins/filters), <code>ManagerId</code></td></tr>
+            <tr><td>Orders</td><td><code>OrderId</code></td><td><code>(EmpId, OrderDate)</code> (per-employee history)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The primary key usually is the clustered index</span>
+        <p>By default in SQL Server, declaring a <code>PRIMARY KEY</code> creates a <strong>clustered</strong> index
+        on those columns (unless one already exists or you specify <code>NONCLUSTERED</code>). So <code>Employees</code>
+        is physically stored sorted by <code>EmpId</code>. The foreign-key columns (<code>DeptId</code>,
+        <code>EmpId</code> in Orders) are the natural spots for helpful non-clustered indexes, because that's what
+        joins and filters hit.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>The B-Tree</h2></div>
+      <p class="sec-sub">SQL Server indexes are balanced trees. A seek walks from the top down a few levels to reach
+        the row — a handful of steps even in a huge table.</p>
+
+      <div class="btree">
+        <div class="cap">seeking EmpId = 4 in a clustered B-tree</div>
+        <div class="bt-row"><span class="bt-label">root</span><span class="bt-node bt-root">1–100</span></div>
+        <div class="bt-conn"></div>
+        <div class="bt-row"><span class="bt-label">interm.</span>
+          <span class="bt-node bt-mid">1–3</span>
+          <span class="bt-node bt-mid bt-root" style="background:var(--accent-soft);border-color:var(--accent);color:var(--accent)">4–6</span>
+          <span class="bt-node bt-mid">7–100</span>
+        </div>
+        <div class="bt-conn"></div>
+        <div class="bt-row"><span class="bt-label">leaf</span>
+          <span class="bt-node bt-leaf">4: Edsger…</span>
+          <span class="bt-node bt-leaf">5: Katherine…</span>
+          <span class="bt-node bt-leaf">6: …</span>
+        </div>
+      </div>
+
+      <p>The <strong>root</strong> and <strong>intermediate</strong> levels hold ranges of key values that route the
+        search. The <strong>leaf</strong> level holds the data itself (for a clustered index) or the key plus a
+        pointer (for a non-clustered index). To find <code>EmpId = 4</code>, the engine reads the root, follows the
+        "4–6" branch, and lands on the leaf page — just a few page reads.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why seeks are so fast</span>
+        <p>Because the tree is <strong>balanced</strong> and each node points to a wide range, the number of levels
+        grows very slowly as the table grows — a table with millions of rows is typically only 3–4 levels deep. A
+        seek touches roughly one page per level, so it stays fast no matter how big the table gets. A scan, by
+        contrast, reads every leaf page.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Heaps</h2></div>
+      <p class="sec-sub">A table with <em>no</em> clustered index is a "heap" — rows sit in no particular order, like
+        an unsorted pile of papers.</p>
+
+      <p>If you create a table without a clustered index (and without a primary key that makes one), its rows are
+        stored as a <strong>heap</strong>: an unordered collection. Finding a specific row means scanning the whole
+        heap unless a non-clustered index helps. Rows in a heap are located by a physical address called a
+        <strong>RID</strong> (row identifier: file:page:slot).</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Heaps are usually not what you want</span>
+        <p>For most tables, a heap performs worse than a clustered table for typical queries: there's no order to
+        exploit, range scans are inefficient, and non-clustered indexes must store the bulkier RID pointer. The common
+        best practice is to give nearly every table a clustered index — very often on the primary key. Heaps have
+        niche uses (e.g., fast bulk-load staging), but they're the exception.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Clustered Index</h2></div>
+      <p class="sec-sub">The clustered index <em>is</em> the table, physically sorted by its key. There can be only
+        one, because a table can only be stored in one order.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- A PRIMARY KEY makes a clustered index by default...</span>
+<span class="kw">CREATE TABLE</span> dbo.Employees (
+    EmpId  <span class="ty">INT</span> <span class="kw">IDENTITY</span>(<span class="num">1</span>,<span class="num">1</span>) <span class="kw">PRIMARY KEY</span>,   <span class="cmt">-- clustered on EmpId</span>
+    Name   <span class="ty">NVARCHAR</span>(<span class="num">100</span>),
+    DeptId <span class="ty">INT</span>
+);
+
+<span class="cmt">-- ...or create one explicitly</span>
+<span class="kw">CREATE CLUSTERED INDEX</span> IX_Employees_EmpId
+<span class="kw">ON</span> dbo.Employees (EmpId);</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The leaf level of a clustered index holds the whole row</span>
+        <p>Because the table is physically ordered by the clustered key, the index's leaf pages <em>are</em> the data
+        pages — there's no separate "table" to jump to. A seek on the clustered key therefore returns the full row
+        directly. This is why range queries on the clustered key (e.g., <code>EmpId BETWEEN 10 AND 20</code>) are
+        very efficient: the matching rows are physically adjacent.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ What makes a good clustered key</span>
+        <p>Ideally narrow, unique, unchanging, and ever-increasing (an <code>IDENTITY</code> integer is the classic
+        choice). Narrow because every non-clustered index carries a copy of it; unchanging because updating the key
+        physically moves the row; ever-increasing to avoid page splits from inserting into the middle.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Non-Clustered Index</h2></div>
+      <p class="sec-sub">A separate, sorted structure on other columns. Its leaf level holds the key plus a pointer
+        back to the actual row. You can have many.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Speed up filtering/joining Employees by department</span>
+<span class="kw">CREATE NONCLUSTERED INDEX</span> IX_Employees_DeptId
+<span class="kw">ON</span> dbo.Employees (DeptId);</code></pre>
+      </div>
+
+      <p>Think of it as a second back-of-book index sorted by a different topic. It stores <code>DeptId</code> values
+        in order, and next to each one a <strong>row locator</strong> — the clustered key (if the table has one) or
+        the RID (if it's a heap) — telling SQL Server where to find the rest of the row.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 The row locator is the clustered key</span>
+        <p>In a clustered table, every non-clustered index uses the <strong>clustered key</strong> as its pointer
+        back to the row. That's the concrete reason a wide clustered key is costly: its bytes are duplicated inside
+        every non-clustered index. It's also why a seek on a non-clustered index that needs extra columns has to do a
+        second hop — a <em>key lookup</em> — back into the clustered index.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Seek vs Scan</h2></div>
+      <p class="sec-sub">The two ways the engine reads data. A <em>seek</em> jumps to the rows it needs; a
+        <em>scan</em> reads them all. Seeks are what indexes are for.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🎯</span><h4>Index Seek</h4><p>Navigates the B-tree to the matching rows. Fast; touches a few pages. Wants a selective, usable predicate.</p></div>
+        <div class="card"><span class="glyph">📃</span><h4>Index / Table Scan</h4><p>Reads every leaf page. Fine for small tables or when most rows match; slow on big tables for a few rows.</p></div>
+        <div class="card"><span class="glyph">🔁</span><h4>Key Lookup</h4><p>After a non-clustered seek, hops to the clustered index to fetch columns the index didn't have.</p></div>
+      </div>
+
+      <h3>How the engine decides 🧭</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <span class="st-icon">🔍</span>
+          <b>Is there an index whose key starts with the filter column?</b>
+          <small>No → it must scan (read every row).</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🧩</span>
+          <b>Is the predicate usable for a seek (SARGable)?</b>
+          <small>A function wrapping the column (e.g., <code>YEAR(col)=…</code>) disables the seek → scan.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <span class="st-icon">🛡️</span>
+          <b>Does the index contain every column the query needs?</b>
+          <small>Yes → a clean index seek. Fastest path — nothing else to fetch.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🔁</span>
+          <b>No — needs more columns?</b>
+          <small>Seek + a key lookup per row. If too many rows match, the optimizer may just scan instead.</small>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ A seek isn't always chosen — the "tipping point"</span>
+        <p>If a non-clustered seek would match a large fraction of the table, each row also needs a key lookup, and
+        thousands of lookups can cost more than simply scanning the whole table. Past a certain threshold the
+        optimizer rationally prefers a scan. This is why a <strong>covering</strong> index (next section), which
+        removes the lookups, matters so much.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>Covering &amp; INCLUDE</h2></div>
+      <p class="sec-sub">An index that contains every column a query needs "covers" it — the query is answered from
+        the index alone, with no lookup back to the table.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Target query:  SELECT Name, Salary FROM dbo.Employees WHERE DeptId = 1;</span>
+
+<span class="cmt">-- Plain index on DeptId: seeks, then does a key lookup for Name &amp; Salary</span>
+<span class="kw">CREATE NONCLUSTERED INDEX</span> IX_Emp_Dept <span class="kw">ON</span> dbo.Employees (DeptId);
+
+<span class="cmt">-- Covering index: keeps Name &amp; Salary IN the index -- no lookup needed</span>
+<span class="kw">CREATE NONCLUSTERED INDEX</span> IX_Emp_Dept_Covering
+<span class="kw">ON</span> dbo.Employees (DeptId)
+<span class="kw">INCLUDE</span> (Name, Salary);</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Key columns vs INCLUDE columns</span>
+        <p><strong>Key</strong> columns (in the parentheses) are what the index is sorted by — use them for
+        filtering, joining, and ordering. <strong>INCLUDE</strong> columns ride along only in the leaf level; they're
+        not sorted, but they're available to be returned. Put columns you <em>search/sort by</em> in the key, and
+        columns you merely <em>select</em> in <code>INCLUDE</code>. That covers the query while keeping the key
+        narrow.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Covering kills key lookups</span>
+        <p>Once the index has <code>DeptId</code> (to seek) plus <code>Name</code> and <code>Salary</code> (to
+        return), the query is satisfied entirely from the index — no trips back to the clustered index. Eliminating
+        those per-row lookups is one of the biggest, easiest performance wins, and it also raises the tipping point
+        before the optimizer abandons the seek.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Composite &amp; Key Order</h2></div>
+      <p class="sec-sub">A composite index has multiple key columns, and their <em>order</em> is everything. An index
+        is only seekable from its leftmost column onward.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">CREATE NONCLUSTERED INDEX</span> IX_Orders_Emp_Date
+<span class="kw">ON</span> dbo.Orders (EmpId, OrderDate);   <span class="cmt">-- sorted by EmpId, then OrderDate</span></code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Query predicate</th><th>Can it seek this index?</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td><code>WHERE EmpId = 2 AND OrderDate &gt;= '2024-01-01'</code></td><td class="good">Yes — ideal</td><td>Uses both key columns, left to right</td></tr>
+            <tr><td><code>WHERE EmpId = 2</code></td><td class="good">Yes</td><td>Uses the leftmost column</td></tr>
+            <tr><td><code>WHERE OrderDate &gt;= '2024-01-01'</code></td><td class="bad">No seek</td><td><code>OrderDate</code> isn't the leftmost key → scan</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The leftmost-prefix rule</span>
+        <p>Think of a phone book sorted by (LastName, FirstName). You can find everyone named "Lovelace," or
+        "Lovelace, Ada" — but you <em>can't</em> efficiently find everyone whose first name is "Ada," because the book
+        isn't sorted by first name. Same with a composite index: it supports seeks on the first key column, the first
+        two, the first three, and so on — never a middle or trailing column on its own.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Ordering the key columns</span>
+        <p>Put the column used with <strong>equality</strong> filters first, then columns used for ranges or ordering.
+        Also favour the more <strong>selective</strong> column early (the one that narrows results most). Column order
+        is the single most common composite-index mistake — design it around the queries you actually run.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>When They Help</h2></div>
+      <p class="sec-sub">Indexes speed up any operation that benefits from finding or ordering rows quickly.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔎</span><h4>WHERE filters</h4><p>Selective predicates seek straight to matching rows instead of scanning.</p></div>
+        <div class="card"><span class="glyph">🔗</span><h4>JOINs</h4><p>An index on the join column lets each match be found by seek — crucial for large joins.</p></div>
+        <div class="card"><span class="glyph">🔀</span><h4>ORDER BY / GROUP BY</h4><p>If the index is already in the needed order, SQL Server can skip an expensive sort.</p></div>
+        <div class="card"><span class="glyph">🥇</span><h4>MIN / MAX / TOP</h4><p>The extreme value sits at one end of the index — found instantly.</p></div>
+        <div class="card"><span class="glyph">🚦</span><h4>Uniqueness checks</h4><p>A unique index enforces and rapidly verifies "no duplicates."</p></div>
+        <div class="card"><span class="glyph">🛡️</span><h4>Covering queries</h4><p>Answer entirely from the index — no table access at all.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Selectivity is the deciding factor</span>
+        <p>An index helps most when the filter is <strong>selective</strong> — it narrows to a small fraction of rows.
+        Indexing a column with few distinct values (like a yes/no flag) rarely helps, because a seek would still
+        return half the table, and the optimizer will just scan. High-selectivity columns (ids, emails, dates in a
+        narrow range) are where non-clustered indexes shine.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>When They Hurt</h2></div>
+      <p class="sec-sub">Every index is a liability as well as an asset. Too many, or the wrong ones, degrade writes
+        and waste space.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">✍️</span><h4>Slower writes</h4><p>Every <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code> must maintain every affected index.</p></div>
+        <div class="card"><span class="glyph">💾</span><h4>Storage</h4><p>Indexes are extra copies of data; wide or numerous indexes bloat the database and backups.</p></div>
+        <div class="card"><span class="glyph">🗑️</span><h4>Unused indexes</h4><p>An index no query uses is pure cost — maintained forever, benefiting no one.</p></div>
+        <div class="card"><span class="glyph">👯</span><h4>Duplicates &amp; overlap</h4><p>Redundant indexes (same leading columns) double the write cost for no read gain.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The write tax is real</span>
+        <p>On a write-heavy table, each extra index makes every modifying statement do more work — updating the index
+        tree, splitting pages, and updating statistics. A table with a dozen indexes can spend more effort maintaining
+        them than doing the actual insert. Index the queries that matter; drop indexes that no query uses (SQL Server's
+        DMVs can show usage stats).</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The balancing question</span>
+        <p>For each candidate index, ask: which real queries will it speed up, and how much will it slow down my
+        writes and grow my storage? If you can't name a query it helps, don't create it. Indexing is always a bet that
+        the read savings outweigh the write cost — make that bet deliberately.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Other Index Types</h2></div>
+      <p class="sec-sub">Beyond clustered and non-clustered, a few specialized index types solve specific problems.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- UNIQUE index: enforces no duplicates AND speeds lookups</span>
+<span class="kw">CREATE UNIQUE NONCLUSTERED INDEX</span> UX_Dept_Name <span class="kw">ON</span> dbo.Departments (Name);
+
+<span class="cmt">-- FILTERED index: indexes only a subset of rows (smaller, cheaper)</span>
+<span class="kw">CREATE NONCLUSTERED INDEX</span> IX_Emp_TopBrass
+<span class="kw">ON</span> dbo.Employees (Name)
+<span class="kw">WHERE</span> ManagerId <span class="kw">IS NULL</span>;   <span class="cmt">-- only the handful of top-level people</span></code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Type</th><th>What it does</th><th>Use when</th></tr></thead>
+          <tbody>
+            <tr><td>Unique</td><td>Enforces uniqueness &amp; speeds lookups</td><td>A column/combination must have no duplicates</td></tr>
+            <tr><td>Filtered</td><td>Indexes only rows matching a <code>WHERE</code></td><td>Queries target a small, well-defined subset (e.g., active rows)</td></tr>
+            <tr><td>Columnstore</td><td>Stores data by column, compressed</td><td>Analytics/reporting scans over huge tables (data warehousing)</td></tr>
+            <tr><td>Included-column (covering)</td><td>Non-key columns in the leaf</td><td>You need to cover a query without widening the key</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Rowstore vs columnstore in one line</span>
+        <p>Traditional (rowstore) B-tree indexes are ideal for <strong>OLTP</strong> — finding and modifying
+        individual rows. <strong>Columnstore</strong> indexes store each column together, highly compressed, and are
+        built for <strong>analytics</strong> — scanning and aggregating millions of rows. Use rowstore for
+        transactional apps, columnstore for large reporting/warehouse workloads.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Mistakes &amp; Best Practices</h2></div>
+      <p class="sec-sub">The habits that keep indexes an asset rather than a tax.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📍</span><h4>Clustered on nearly every table</h4><p>Usually the PK — narrow, unique, increasing. Avoid leaving big tables as heaps.</p></div>
+        <div class="card"><span class="glyph">🧩</span><h4>Keep predicates SARGable</h4><p>Don't wrap the indexed column in a function; it forces a scan (deep dive in the next topic).</p></div>
+        <div class="card"><span class="glyph">🛡️</span><h4>Cover hot queries</h4><p>Use <code>INCLUDE</code> to eliminate key lookups on frequently run queries.</p></div>
+        <div class="card"><span class="glyph">🔢</span><h4>Order composite keys well</h4><p>Equality columns first, then range/sort columns; more selective columns earlier.</p></div>
+        <div class="card"><span class="glyph">🗑️</span><h4>Drop unused/duplicate indexes</h4><p>They only cost writes and space. Check usage DMVs before keeping them.</p></div>
+        <div class="card"><span class="glyph">📈</span><h4>Keep statistics fresh</h4><p>The optimizer relies on statistics to choose seek vs scan; stale stats cause bad plans.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Don't index blindly from "missing index" hints</span>
+        <p>SQL Server suggests missing indexes, but those hints are per-query and ignore write cost and existing
+        indexes. Blindly creating every suggestion leads to overlapping, redundant indexes that hammer writes. Treat
+        the hints as input, consolidate them, and weigh them against the table's full workload before creating
+        anything.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea, then a full cheat-sheet table.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>📑 Index</h4><p>A sorted structure that lets the engine find rows without scanning the whole table.</p></div>
+        <div class="recap-card"><h4>🌳 B-tree</h4><p>Root → intermediate → leaf; a seek is a few page reads regardless of table size.</p></div>
+        <div class="recap-card"><h4>📍 Clustered</h4><p>The table sorted by its key; one per table; leaf holds the whole row.</p></div>
+        <div class="recap-card"><h4>🔗 Non-clustered</h4><p>Separate structure; leaf holds key + pointer; many allowed.</p></div>
+        <div class="recap-card"><h4>🧱 Heap</h4><p>A table with no clustered index; rows unordered, located by RID.</p></div>
+        <div class="recap-card"><h4>🎯 Seek vs Scan</h4><p>Seek jumps to matching rows; scan reads them all.</p></div>
+        <div class="recap-card"><h4>🔁 Key lookup</h4><p>Extra hop to the clustered index for columns the NC index lacks.</p></div>
+        <div class="recap-card"><h4>🛡️ Covering / INCLUDE</h4><p>Index holds all needed columns → no lookup.</p></div>
+        <div class="recap-card"><h4>🔢 Composite order</h4><p>Seekable only from the leftmost key column onward.</p></div>
+        <div class="recap-card"><h4>⚖️ Trade-off</h4><p>Faster reads, slower writes, more storage — index deliberately.</p></div>
+      </div>
+
+      <h3>Full summary table</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it is</th><th>Key point</th></tr></thead>
+          <tbody>
+            <tr><td>Clustered index</td><td>Table stored sorted by key</td><td>One per table; PK by default; leaf = data</td></tr>
+            <tr><td>Non-clustered index</td><td>Separate sorted structure</td><td>Leaf = key + row locator; many per table</td></tr>
+            <tr><td>Heap</td><td>No clustered index</td><td>Unordered; located by RID; usually avoid</td></tr>
+            <tr><td>Index seek</td><td>Navigate tree to rows</td><td>Fast; wants a selective, SARGable predicate</td></tr>
+            <tr><td>Index/table scan</td><td>Read all leaf pages</td><td>OK for small tables or low selectivity</td></tr>
+            <tr><td>Key lookup</td><td>NC seek → clustered fetch</td><td>Many lookups → optimizer may scan instead</td></tr>
+            <tr><td>Covering index</td><td>Has all query columns (<code>INCLUDE</code>)</td><td>Removes lookups; big, cheap win</td></tr>
+            <tr><td>Composite index</td><td>Multiple key columns</td><td>Leftmost-prefix rule; order matters</td></tr>
+            <tr><td>Filtered / unique / columnstore</td><td>Specialized indexes</td><td>Subset / no-duplicates / analytics scans</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What is an index? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A sorted lookup structure that lets the database find rows quickly without reading the whole
+        table — like the index at the back of a book. Instead of scanning every page, you look up the value in the
+        sorted index and jump straight to the matching rows.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> Why use an index? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>To make reads faster. Filtering, joining, sorting, and finding min/max values can all use an
+        index to avoid scanning the entire table. The cost is extra storage and slower writes, since the index must be
+        kept up to date — so you add indexes for the queries that matter.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> What is a clustered index? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>An index that determines the physical order of the table — the rows are actually stored sorted
+        by the clustered key. Because a table can only be stored in one order, there's just one clustered index, and its
+        leaf level holds the full rows themselves.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> How many clustered indexes can a table have? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Exactly one, because the clustered index defines how the rows are physically ordered, and data
+        can only be stored in a single order. A table can have many non-clustered indexes, but only one clustered
+        index.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> What is a non-clustered index? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A separate sorted structure on one or more columns, kept apart from the table. Its leaf level
+        stores the indexed key values plus a pointer (the row locator) back to the actual row. A table can have several
+        non-clustered indexes for different query patterns.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What's the difference between an index seek and an index scan? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A <strong>seek</strong> navigates the index tree directly to the matching rows — fast, touching
+        only a few pages. A <strong>scan</strong> reads every row (or every leaf page) and checks each one. Seeks are
+        efficient for selective queries; scans are fine for small tables or when most rows match anyway.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> Does the primary key create an index? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Yes. In SQL Server, declaring a <code>PRIMARY KEY</code> automatically creates a unique index on
+        those columns — clustered by default (unless a clustered index already exists or you specify
+        <code>NONCLUSTERED</code>). So the primary key is usually also the table's clustered index.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> What's the downside of indexes? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>They slow down writes and use extra storage. Every insert, update, or delete must also update
+        each affected index, and each index is another copy of some data taking up space. Too many indexes can make a
+        write-heavy table noticeably slower, so they should be added deliberately.</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q09</span> Clustered vs non-clustered — what are the key differences? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A clustered index <em>is</em> the table, physically ordered by its key, with full rows at the
+        leaf; there's one per table. A non-clustered index is a separate structure whose leaf holds the key plus a
+        pointer to the row; you can have many. A clustered-key seek returns the row directly, while a non-clustered seek
+        may need a key lookup to fetch extra columns.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> What is a heap? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A table with no clustered index, so its rows are stored in no particular order. Rows are located
+        by a physical RID (file:page:slot), and non-clustered indexes on a heap store that RID as their pointer. Heaps
+        are usually slower for typical queries and are generally avoided except for niche cases like bulk-load
+        staging.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> What is a covering index, and what does INCLUDE do? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A covering index contains every column a query needs, so the query is answered from the index
+        alone — no lookup back to the table. <code>INCLUDE</code> adds non-key columns to the index's leaf level: they're
+        not part of the sort key (so they don't bloat it) but are available to be returned. You seek/sort on key columns
+        and <code>INCLUDE</code> the extra columns you only select.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> What is a key lookup and why should you care? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>After seeking a non-clustered index, if the query needs columns the index doesn't have, the
+        engine hops back to the clustered index once per matching row to fetch them — that hop is a key lookup (a RID
+        lookup on a heap). It's fine for a few rows, but many lookups get expensive and can push the optimizer to scan
+        instead. A covering index removes them.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> In a composite index, does column order matter? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Very much. A composite index is sorted by its columns left to right, so it's seekable only on a
+        leftmost prefix: the first column, the first two, and so on. An index on <code>(EmpId, OrderDate)</code> helps
+        queries filtering on <code>EmpId</code> (or both), but not a query filtering on <code>OrderDate</code> alone.
+        Order equality columns first, then range/sort columns, more selective ones earlier.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> Which query operations benefit from indexes? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>WHERE</code> filters (seek to matching rows), <code>JOIN</code>s (find matches by seek),
+        <code>ORDER BY</code>/<code>GROUP BY</code> (reuse the index's order to skip a sort), <code>MIN</code>/<code>MAX</code>/<code>TOP</code>
+        (grab the value at one end), and uniqueness checks. Covering indexes can answer a query entirely from the index.
+        The benefit depends on the filter being selective.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> What's the difference between a unique index and a unique constraint? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Functionally they're almost the same — a unique constraint is implemented <em>by</em> a unique
+        index under the hood, and both prevent duplicate values and speed up lookups. The difference is intent and
+        metadata: a constraint expresses a business rule and can be referenced by foreign keys, while a unique index is
+        described as a performance/uniqueness structure. Creating either one gives you the same enforcing index.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> What is a filtered index and when would you use one? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A non-clustered index with a <code>WHERE</code> clause, so it indexes only the rows matching that
+        condition. It's smaller and cheaper to maintain than a full index. Use it when queries repeatedly target a
+        well-defined subset — e.g., only active records, only rows where a status is 'Open', or only the few rows where
+        a nullable column is set.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain the B-tree structure and how a seek traverses it. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>An index is a balanced tree with a root page, intermediate levels, and a leaf level. The root and
+        intermediate pages hold key ranges that route the search; the leaf holds the data (clustered) or key-plus-locator
+        (non-clustered). A seek starts at the root, follows the branch whose range covers the target value, descends one
+        level at a time, and lands on the leaf — roughly one page read per level. Because the tree stays shallow (a few
+        levels even for millions of rows), seeks remain fast as the table grows.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> What makes a predicate SARGable, and why does it matter? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>SARGable ("Search ARGument able") means the predicate can use an index seek because the indexed
+        column is left untouched — e.g., <code>OrderDate &gt;= '2024-01-01' AND OrderDate &lt; '2025-01-01'</code>. Wrapping
+        the column in a function or expression (<code>YEAR(OrderDate) = 2024</code>, <code>col + 0</code>, leading-wildcard
+        <code>LIKE '%x'</code>) makes it non-SARGable: the engine must compute the expression for every row and can't seek,
+        forcing a scan. Rewriting to leave the column bare restores the seek. (The next topic covers this in depth.)</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> How do you decide which columns go in the key versus INCLUDE? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Put columns you filter, join, or order by in the <strong>key</strong>, ordered by how they're used
+        (equality first, then ranges) and by selectivity. Put columns you only <em>return</em> in <strong>INCLUDE</strong>,
+        so the index covers the query without enlarging the sort key (which would bloat every level and slow maintenance).
+        The goal is a narrow, seekable key plus just enough included columns to avoid key lookups on your hot queries.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> What is index selectivity and how does it affect index use? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Selectivity is how well a column's values distinguish rows — high selectivity means many distinct
+        values / few rows per value (like an id or email); low selectivity means few distinct values (like a boolean flag).
+        The optimizer uses statistics on selectivity to estimate how many rows a predicate returns. A highly selective
+        predicate favours a seek; a low-selectivity one returns so many rows that a scan (or a different plan) is cheaper,
+        so an index on a low-selectivity column often goes unused.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> What ongoing maintenance do indexes need? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Over time, inserts/updates/deletes cause <strong>fragmentation</strong> (logical order diverging from
+        physical order, plus partially empty pages), which you address by reorganizing or rebuilding indexes.
+        <strong>Fill factor</strong> leaves free space on pages to reduce page splits from inserts. And
+        <strong>statistics</strong> must stay current so the optimizer estimates row counts correctly — stale stats are a
+        common cause of bad plans. Modern SQL Server updates stats automatically, but heavy workloads may need scheduled
+        maintenance.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> When would the optimizer ignore an existing index? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>When a scan is estimated to be cheaper. Common cases: the predicate is non-SARGable (function on
+        the column); the query returns a large fraction of rows, so a non-clustered seek plus many key lookups costs more
+        than a scan (the "tipping point"); the column is low-selectivity; statistics are stale and misestimate row counts;
+        or an implicit type conversion prevents the seek. A covering index or a rewrite often gets the seek back.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> Columnstore vs rowstore indexes — when do you use each? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Rowstore (traditional B-tree) indexes store whole rows together and excel at OLTP: quickly finding
+        and modifying individual rows and small ranges. Columnstore indexes store each column separately and highly
+        compressed, and excel at analytics: scanning and aggregating millions of rows for reporting/data-warehouse queries.
+        Use rowstore for transactional systems; use columnstore for large analytic workloads — some systems combine both on
+        the same table.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> How does the clustered key affect non-clustered indexes? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Every non-clustered index uses the clustered key as its row locator — it's stored in the
+        non-clustered leaf (and, for uniqueness, in the upper levels too). So a <strong>wide</strong> clustered key inflates
+        every non-clustered index, increasing their size and maintenance cost. It also means a non-clustered seek that needs
+        more columns does a key lookup <em>via</em> that clustered key. This is the core reason to keep the clustered key
+        narrow, unique, static, and ever-increasing.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions establish what indexes are and clustered vs
+        non-clustered; <strong>Mid</strong> questions test the practical toolkit (heaps, covering/INCLUDE, key lookups,
+        composite order, filtered/unique); <strong>Senior</strong> questions probe internals and judgment (B-tree
+        traversal, SARGability, selectivity, maintenance, tipping point, columnstore). Say each answer out loud in plain
+        English — the ones you stumble on point straight to the section to re-read.</p>
+      </div>
+
+      <p class="foot">Concepts verified against Microsoft Learn (clustered and non-clustered index design guides, the
+        <code>CREATE INDEX</code> reference, included columns, filtered indexes, and columnstore indexes). Index
+        architecture is stable across supported SQL Server versions (through 2025 / 17.x). This single
+        <code>09-sql-indexes.html</code> file is fully self-contained and works offline (only Google Fonts load from the
+        web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

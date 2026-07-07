@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SQL Server — Subqueries, Correlated Subqueries &amp; EXISTS vs IN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arr-cell.dim .val{opacity:.4;border-style:dashed;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+td.nullcell{color:var(--rose);font-family:"JetBrains Mono",monospace;font-size:.82rem;}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">SQL Server: Subqueries</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>Foundations</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> What a Subquery Is</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The Sample Schema</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Where They Live</a>
+      </div>
+      <div class="nav-group">
+        <h4>Core Patterns</h4>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Scalar Subqueries</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Subqueries with IN</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Correlated Subqueries</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> Correlated vs Not</a>
+      </div>
+      <div class="nav-group">
+        <h4>Existence &amp; Choice</h4>
+        <a class="nav-link" href="#s08"><span class="n">08</span> EXISTS &amp; NOT EXISTS</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> EXISTS vs IN</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> ANY, ALL, SOME</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Derived Tables &amp; CTEs</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Subquery vs JOIN</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Mistakes &amp; Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// SQL Server &nbsp;·&nbsp; a query inside a query</p>
+      <h1>Subqueries &amp; EXISTS vs IN 🔍</h1>
+      <p class="lede">
+        A <b>subquery</b> is a query nested inside another query — a small question you answer first, then use in
+        the bigger one. They power "employees earning above their department's average," "customers who have
+        placed an order," and countless reports. This page covers scalar subqueries, the tricky
+        <b>correlated</b> kind that reruns per row, and the classic <b>EXISTS vs IN</b> comparison — including the
+        <b>NOT IN + NULL trap</b> that silently returns nothing. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🔢 <b>Scalar</b></span>
+        <span class="chip">📋 <b>IN</b></span>
+        <span class="chip">🔗 <b>Correlated</b></span>
+        <span class="chip">✅ <b>EXISTS</b></span>
+        <span class="chip">⚠️ <b>NOT IN + NULL</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>What a Subquery Is</h2></div>
+      <p class="sec-sub">A query tucked inside another query. You answer the small question first, and its result
+        feeds the bigger one.</p>
+
+      <p>Say you want "employees who earn more than the company average." That's really two questions: first,
+        <em>what is the average salary?</em> — then, <em>who earns more than that?</em> A <strong>subquery</strong>
+        lets you write the first question inside parentheses, right where the second question needs its answer:
+        <code>WHERE Salary &gt; (SELECT AVG(Salary) FROM Employees)</code>. The inner query is the
+        <strong>subquery</strong> (or inner query); the outer one is the <strong>outer query</strong>.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🧠 Analogy</span>
+        <p>A subquery is a <strong>parenthetical thought</strong> in a sentence. "Invite everyone who scored above
+        (the class average)." You compute the parenthetical first, then use it to finish the main idea. SQL does
+        exactly this: it resolves the inner query, then hands the result to the outer query.</p>
+      </div>
+
+      <h3>The landscape of subqueries 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">🔍 Subqueries</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>📍 In WHERE</h5>
+            <ul>
+              <li>Filter rows</li>
+              <li><code>IN</code>, <code>EXISTS</code></li>
+              <li>Comparisons</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🎯 In SELECT</h5>
+            <ul>
+              <li>Scalar (one value)</li>
+              <li>One value per row</li>
+              <li>e.g. a running average</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>📦 In FROM</h5>
+            <ul>
+              <li>Derived table</li>
+              <li>Acts like a table</li>
+              <li>Sibling of a CTE</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>🔗 Correlated</h5>
+            <ul>
+              <li>References outer row</li>
+              <li>Runs once per row</li>
+              <li>Powers EXISTS</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🎚️ Shapes</h5>
+            <ul>
+              <li>Scalar → 1 value</li>
+              <li>List → 1 column</li>
+              <li>Table → rows</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Two ways to slice subqueries</span>
+        <p>By <strong>where they sit</strong> (in <code>SELECT</code>, <code>FROM</code>, or <code>WHERE</code>),
+        and by <strong>what shape they return</strong> (one value, one column of values, or a whole table of rows).
+        And crucially, by whether they're <strong>correlated</strong> — depending on the outer query's current row —
+        or <strong>self-contained</strong>. Those distinctions organize the entire topic.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>The Sample Schema</h2></div>
+      <p class="sec-sub">The same company database from the earlier notes, so every subquery result maps to rows you
+        can picture.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Departments</th><th>Employees (Dept · Manager · Salary)</th><th>Orders (Emp · Amount)</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>1 · Engineering<br>2 · Sales<br>3 · Support</td>
+              <td>1 · Ada · D1 · Mgr — · 145,000<br>2 · Alan · D1 · Mgr 1 · 98,000<br>3 · Grace · D2 · Mgr — · 120,000</td>
+              <td>101 · Emp 2 · 499.99<br>102 · Emp 3 · 1250.00<br>103 · Emp 2 · 75.50</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Numbers to keep handy</span>
+        <p>Company average salary = <strong>121,000</strong>. Engineering average = <strong>121,500</strong>; Sales
+        average = <strong>120,000</strong>. Employees who have handled an order: <strong>Alan</strong> and
+        <strong>Grace</strong>. Employee with no orders: <strong>Ada</strong>. These recur in every example below.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Where They Live</h2></div>
+      <p class="sec-sub">The same subquery idea shows up in three positions, each doing a slightly different job.</p>
+
+      <div class="cards-grid">
+        <div class="card">
+          <span class="glyph">🎯</span>
+          <h4>In SELECT</h4>
+          <p>Returns <strong>one value</strong> to display as a column — e.g., show each employee next to the
+            company average. Must be <em>scalar</em> (exactly one value).</p>
+        </div>
+        <div class="card">
+          <span class="glyph">📦</span>
+          <h4>In FROM</h4>
+          <p>Returns <strong>a set of rows</strong> that the outer query treats as a temporary table (a "derived
+            table"). Needs an alias.</p>
+        </div>
+        <div class="card">
+          <span class="glyph">📍</span>
+          <h4>In WHERE / HAVING</h4>
+          <p>Used to <strong>filter</strong>: compare against a scalar, test membership with <code>IN</code>, or
+            test existence with <code>EXISTS</code>.</p>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Shape must match the position</span>
+        <p>A subquery in <code>SELECT</code> or compared with <code>=</code> must return <strong>one value</strong>.
+        A subquery after <code>IN</code> returns <strong>one column</strong> of values. A subquery in
+        <code>FROM</code> returns <strong>a full table</strong>. Use the wrong shape and SQL Server errors — for
+        example, a scalar comparison that gets back many rows throws "Subquery returned more than 1 value."</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Scalar Subqueries</h2></div>
+      <p class="sec-sub">A subquery that returns exactly one value — usable anywhere a single value is expected.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Show each employee's salary next to the company average (one value)</span>
+<span class="kw">SELECT</span> Name, Salary,
+       (<span class="kw">SELECT</span> <span class="fn">AVG</span>(Salary) <span class="kw">FROM</span> dbo.Employees) <span class="kw">AS</span> CompanyAvg
+<span class="kw">FROM</span> dbo.Employees;
+
+<span class="cmt">-- Or use it to filter: who earns above the company average?</span>
+<span class="kw">SELECT</span> Name, Salary
+<span class="kw">FROM</span> dbo.Employees
+<span class="kw">WHERE</span> Salary &gt; (<span class="kw">SELECT</span> <span class="fn">AVG</span>(Salary) <span class="kw">FROM</span> dbo.Employees);</code></pre>
+      </div>
+
+      <h3>Result of the filter</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Salary</th></tr></thead>
+          <tbody><tr><td>Ada</td><td>145,000</td></tr></tbody>
+        </table>
+      </div>
+
+      <p>The inner query computes the company average (121,000) once. Only Ada's 145,000 clears it; Alan (98,000)
+        and Grace (120,000) don't.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Exactly one value</span>
+        <p>A scalar subquery <strong>must</strong> return a single value. If it returns several rows (say you forgot
+        a filter), SQL Server errors with "Subquery returned more than 1 value." If it returns <em>no</em> rows, the
+        result is <code>NULL</code>, which can quietly make comparisons false.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Subqueries with IN</h2></div>
+      <p class="sec-sub">When the subquery returns a <em>list</em> of values, <code>IN</code> checks whether a
+        column's value is somewhere in that list.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Employees who have handled at least one order</span>
+<span class="cmt">-- The subquery returns the list of EmpIds that appear in Orders: (2, 3)</span>
+<span class="kw">SELECT</span> Name
+<span class="kw">FROM</span> dbo.Employees
+<span class="kw">WHERE</span> EmpId <span class="kw">IN</span> (<span class="kw">SELECT</span> EmpId <span class="kw">FROM</span> dbo.Orders);</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Name</th></tr></thead>
+          <tbody><tr><td>Alan</td></tr><tr><td>Grace</td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Orders were placed by employees 2 (Alan, twice) and 3 (Grace). The subquery yields the list
+        <code>(2, 3)</code>; each employee whose <code>EmpId</code> is in that list is kept. Ada (1) isn't, so she's
+        excluded.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 IN is "is it one of these?"</span>
+        <p><code>IN (list)</code> is shorthand for a chain of "equals" checks joined by OR:
+        <code>EmpId = 2 OR EmpId = 3</code>. The list can be written out by hand — <code>IN (2, 3)</code> — or
+        produced by a subquery, as here. Either way, it tests membership.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Correlated Subqueries</h2></div>
+      <p class="sec-sub">A subquery that <em>refers back</em> to the outer query's current row. It can't run on its
+        own — it re-runs for each outer row, with that row's values plugged in.</p>
+
+      <p>The classic example: "employees earning above <strong>their own department's</strong> average." The inner
+        query must know <em>which</em> department — and that changes with each outer employee. So the inner query
+        references the outer row (<code>e.DeptId</code>). That reference is the <strong>correlation</strong>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">SELECT</span> e.Name, e.Salary
+<span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e
+<span class="kw">WHERE</span> e.Salary &gt; (
+    <span class="kw">SELECT</span> <span class="fn">AVG</span>(inner_e.Salary)
+    <span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> inner_e
+    <span class="kw">WHERE</span> inner_e.DeptId = e.DeptId   <span class="cmt">-- correlation: e is the OUTER row</span>
+);</code></pre>
+      </div>
+
+      <h3>Result</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Salary</th></tr></thead>
+          <tbody><tr><td>Ada</td><td>145,000</td></tr></tbody>
+        </table>
+      </div>
+
+      <p>Walk it through: for Ada (Dept 1), the inner query averages Dept 1 salaries → 121,500; 145,000 &gt; 121,500
+        ✅. For Alan (Dept 1), same average 121,500; 98,000 &gt; 121,500 ❌. For Grace (Dept 2), the average is
+        120,000; 120,000 &gt; 120,000 ❌. Only Ada survives.</p>
+
+      <div class="diagram-box">
+        <div class="cap">a correlated subquery runs once per outer row</div>
+        <div class="arr-row">
+          <div class="arr-cell highlight-green"><div class="val">Outer row:<br>Ada (D1)</div><div class="idx">plug in e</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">Inner runs:<br>avg D1 = 121,500</div><div class="idx">uses e.DeptId</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight"><div class="val">145,000 &gt;<br>121,500 ✅</div><div class="idx">keep row</div></div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 How to spot a correlated subquery</span>
+        <p>If the inner query mentions a table (or alias) from the <strong>outer</strong> query, it's correlated —
+        it cannot be run by itself. A <strong>non-correlated</strong> subquery is self-contained: you could copy it
+        out, run it alone, and get an answer.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Correlated vs Not</h2></div>
+      <p class="sec-sub">The difference isn't just academic — it changes how (and how often) the subquery runs.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>Non-correlated</th><th>Correlated</th></tr></thead>
+          <tbody>
+            <tr><td>References outer row?</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Can run standalone?</td><td>Yes</td><td>No</td></tr>
+            <tr><td>Runs how often (logically)?</td><td>Once</td><td>Once per outer row</td></tr>
+            <tr><td>Typical use</td><td>"vs the company average"</td><td>"vs their own group's average"</td></tr>
+            <tr><td>Powers</td><td><code>IN</code>, scalar compares</td><td><code>EXISTS</code>, per-row tests</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ "Runs per row" is the logical model</span>
+        <p>Conceptually a correlated subquery executes once for every outer row, which sounds slow. In practice the
+        query optimizer often rewrites it into something far more efficient (like a join or a single grouped pass).
+        Reason about correctness with the "per row" model, but don't assume it's automatically slow — measure.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>EXISTS &amp; NOT EXISTS</h2></div>
+      <p class="sec-sub"><code>EXISTS</code> asks a yes/no question: "does the subquery find at least one matching
+        row?" It's the cleanest way to test for presence or absence.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Employees who have handled at least one order (presence)</span>
+<span class="kw">SELECT</span> e.Name
+<span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e
+<span class="kw">WHERE</span> <span class="kw">EXISTS</span> (
+    <span class="kw">SELECT</span> <span class="num">1</span> <span class="kw">FROM</span> dbo.Orders <span class="kw">AS</span> o <span class="kw">WHERE</span> o.EmpId = e.EmpId
+);
+
+<span class="cmt">-- Employees who have NEVER handled an order (absence / anti-join)</span>
+<span class="kw">SELECT</span> e.Name
+<span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e
+<span class="kw">WHERE</span> <span class="kw">NOT EXISTS</span> (
+    <span class="kw">SELECT</span> <span class="num">1</span> <span class="kw">FROM</span> dbo.Orders <span class="kw">AS</span> o <span class="kw">WHERE</span> o.EmpId = e.EmpId
+);</code></pre>
+      </div>
+
+      <h3>Results</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th><code>EXISTS</code> → has orders</th><th><code>NOT EXISTS</code> → no orders</th></tr></thead>
+          <tbody><tr><td>Alan, Grace</td><td>Ada</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 SELECT 1 vs SELECT *</span>
+        <p>Inside <code>EXISTS</code>, <strong>what you select doesn't matter</strong> — the engine only checks
+        whether any row comes back, not the values. <code>SELECT 1</code>, <code>SELECT *</code>, and
+        <code>SELECT NULL</code> behave identically. <code>SELECT 1</code> is a common convention that signals "I
+        only care about existence." <code>EXISTS</code> also <strong>short-circuits</strong>: it stops at the first
+        matching row.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>EXISTS vs IN</h2></div>
+      <p class="sec-sub">Both test membership/existence, and often return the same rows — but they handle NULLs very
+        differently, and that difference is the headline of this whole topic.</p>
+
+      <p>For the positive case (<code>IN</code> vs <code>EXISTS</code>), results usually match. The danger is in the
+        <strong>negative</strong> case: <code>NOT IN</code> and <code>NOT EXISTS</code> can disagree the moment a
+        <code>NULL</code> appears in the list.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Suppose Orders.EmpId is nullable and one order has EmpId = NULL.</span>
+<span class="cmt">-- The subquery then returns the list (2, 3, NULL).</span>
+
+<span class="cmt">-- ❌ NOT IN breaks: "x NOT IN (2, 3, NULL)" is UNKNOWN for EVERY x,</span>
+<span class="cmt">-- so the whole query returns ZERO rows -- silently wrong.</span>
+<span class="kw">SELECT</span> Name <span class="kw">FROM</span> dbo.Employees
+<span class="kw">WHERE</span> EmpId <span class="kw">NOT IN</span> (<span class="kw">SELECT</span> EmpId <span class="kw">FROM</span> dbo.Orders);
+
+<span class="cmt">-- ✅ NOT EXISTS is NULL-safe and returns the correct answer (Ada)</span>
+<span class="kw">SELECT</span> e.Name <span class="kw">FROM</span> dbo.Employees <span class="kw">AS</span> e
+<span class="kw">WHERE</span> <span class="kw">NOT EXISTS</span> (
+    <span class="kw">SELECT</span> <span class="num">1</span> <span class="kw">FROM</span> dbo.Orders <span class="kw">AS</span> o <span class="kw">WHERE</span> o.EmpId = e.EmpId
+);</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The NOT IN + NULL trap</span>
+        <p>Why does <code>NOT IN</code> break? "Is <code>x</code> NOT equal to 2 AND NOT equal to 3 AND NOT equal to
+        <code>NULL</code>?" The comparison to <code>NULL</code> is <strong>UNKNOWN</strong>, and "true AND UNKNOWN"
+        is UNKNOWN — never true — so <em>no</em> row passes. A single stray NULL turns a correct-looking query into
+        one that silently returns nothing. This is one of the most infamous SQL bugs, and a favorite senior
+        interview question.</p>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th><code>IN</code> / <code>NOT IN</code></th><th><code>EXISTS</code> / <code>NOT EXISTS</code></th></tr></thead>
+          <tbody>
+            <tr><td>Tests</td><td>Value in a list</td><td>Whether any row exists</td></tr>
+            <tr><td>Correlated?</td><td>Usually not</td><td>Usually yes</td></tr>
+            <tr><td>NULL-safe negation?</td><td>❌ No (<code>NOT IN</code> trap)</td><td>✅ Yes</td></tr>
+            <tr><td>Returns columns?</td><td>Compares one column</td><td>Ignores selected columns</td></tr>
+            <tr><td>Best for</td><td>Small, known, non-NULL lists</td><td>Existence, especially negation</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Rule of thumb</span>
+        <p>For "does a related row exist?" prefer <code>EXISTS</code>; for "does <em>not</em> exist?" strongly prefer
+        <code>NOT EXISTS</code> over <code>NOT IN</code> (it's NULL-safe). Reserve <code>IN</code> for short, literal,
+        guaranteed-non-NULL lists like <code>Status IN ('Active','OnLeave')</code>.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>ANY, ALL, SOME</h2></div>
+      <p class="sec-sub">Comparison operators that pair a value against <em>every</em> value a subquery returns.
+        Less common, but they show up in interviews.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Employees paid more than EVERY Sales-department salary</span>
+<span class="cmt">-- Sales salaries = (120,000); "> ALL" means "> the maximum" = > 120,000</span>
+<span class="kw">SELECT</span> Name, Salary
+<span class="kw">FROM</span> dbo.Employees
+<span class="kw">WHERE</span> Salary &gt; <span class="kw">ALL</span> (<span class="kw">SELECT</span> Salary <span class="kw">FROM</span> dbo.Employees <span class="kw">WHERE</span> DeptId = <span class="num">2</span>);</code></pre>
+      </div>
+
+      <p>Result: only <strong>Ada</strong> (145,000 &gt; 120,000). Alan (98,000) and Grace (120,000) don't clear
+        the bar.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 The mental shortcuts</span>
+        <p><code>&gt; ALL (list)</code> means "bigger than the <strong>maximum</strong>." <code>&gt; ANY (list)</code>
+        (same as <code>&gt; SOME</code>) means "bigger than the <strong>minimum</strong>" — i.e., bigger than at
+        least one. In fact <code>= ANY</code> is exactly <code>IN</code>, and <code>&lt;&gt; ALL</code> is exactly
+        <code>NOT IN</code>. Most people use <code>IN</code>/<code>EXISTS</code> and aggregates instead, but knowing
+        the equivalences is handy.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Derived Tables &amp; CTEs</h2></div>
+      <p class="sec-sub">A subquery in the <code>FROM</code> clause becomes a temporary table you can query further.
+        A CTE is the same idea, written more readably.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">sql</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Derived table: summarize first, then filter the summary</span>
+<span class="kw">SELECT</span> DeptId, MaxSalary
+<span class="kw">FROM</span> (
+    <span class="kw">SELECT</span> DeptId, <span class="fn">MAX</span>(Salary) <span class="kw">AS</span> MaxSalary
+    <span class="kw">FROM</span> dbo.Employees
+    <span class="kw">GROUP BY</span> DeptId
+) <span class="kw">AS</span> dept_max            <span class="cmt">-- a derived table MUST have an alias</span>
+<span class="kw">WHERE</span> MaxSalary &gt; <span class="num">100000</span>;
+
+<span class="cmt">-- Same logic as a CTE (Common Table Expression) -- often easier to read</span>
+<span class="kw">WITH</span> dept_max <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> DeptId, <span class="fn">MAX</span>(Salary) <span class="kw">AS</span> MaxSalary
+    <span class="kw">FROM</span> dbo.Employees
+    <span class="kw">GROUP BY</span> DeptId
+)
+<span class="kw">SELECT</span> DeptId, MaxSalary <span class="kw">FROM</span> dept_max <span class="kw">WHERE</span> MaxSalary &gt; <span class="num">100000</span>;</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Derived table vs CTE</span>
+        <p>They do the same job: give a subquery a name so you can select from it. A <strong>derived table</strong>
+        lives inline in <code>FROM</code> and needs an alias. A <strong>CTE</strong> (written with <code>WITH</code>
+        at the top) is named up front, reads top-to-bottom, can be referenced multiple times, and supports
+        recursion. For anything beyond a trivial nesting, CTEs are usually clearer — they're a full topic later in
+        the course.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Subquery vs JOIN</h2></div>
+      <p class="sec-sub">Often you can solve the same problem either way. Here's how to choose — and a quick decision
+        guide.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <span class="st-icon">🧩</span>
+          <b>Need columns from both tables in the output?</b>
+          <small>Use a <code>JOIN</code> — subqueries can't easily return the other table's columns.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <span class="st-icon">✅</span>
+          <b>Only checking whether a related row exists?</b>
+          <small>Use <code>EXISTS</code> — no duplicate rows, short-circuits, reads clearly.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🚫</span>
+          <b>Checking that a related row does NOT exist?</b>
+          <small>Use <code>NOT EXISTS</code> (NULL-safe) — avoid <code>NOT IN</code> with a subquery.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">📋</span>
+          <b>Filtering against a short, fixed, non-NULL list?</b>
+          <small>Use <code>IN (…)</code> — simple and readable.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">📊</span>
+          <b>Need a per-row summary alongside the detail?</b>
+          <small>Consider a window function or a derived table instead of a correlated subquery.</small>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ JOIN can duplicate rows; EXISTS can't</span>
+        <p>If you use an <code>INNER JOIN</code> just to check existence and the other table has multiple matches,
+        each outer row is <strong>duplicated</strong> once per match — so you'd need <code>DISTINCT</code> to fix it.
+        <code>EXISTS</code> sidesteps this entirely: it returns each outer row at most once, because it only asks
+        "is there any match?"</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Mistakes &amp; Best Practices</h2></div>
+      <p class="sec-sub">The handful of habits that keep subqueries correct and readable.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🚫</span><h4>Avoid NOT IN with subqueries</h4><p>Use <code>NOT EXISTS</code> instead — it's immune to the NULL trap that makes <code>NOT IN</code> return nothing.</p></div>
+        <div class="card"><span class="glyph">🎯</span><h4>Keep scalar subqueries scalar</h4><p>Make sure a subquery used with <code>=</code> or in <code>SELECT</code> returns exactly one value, or it errors.</p></div>
+        <div class="card"><span class="glyph">🏷️</span><h4>Alias derived tables</h4><p>A subquery in <code>FROM</code> must be given an alias, and qualify columns to avoid ambiguity.</p></div>
+        <div class="card"><span class="glyph">📖</span><h4>Prefer CTEs when nesting deepens</h4><p>Two or three levels of nested subqueries become unreadable; a named CTE reads top-to-bottom.</p></div>
+        <div class="card"><span class="glyph">✅</span><h4>Use EXISTS for existence</h4><p>It short-circuits, never duplicates rows, and ignores the columns you select inside it.</p></div>
+        <div class="card"><span class="glyph">📊</span><h4>Don't fear correlation — but measure</h4><p>Correlated subqueries are fine; if one is slow on big data, try a join or window-function rewrite and compare.</p></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Readability beats cleverness</span>
+        <p>A subquery that's correct but hard to read is a maintenance risk. If you find yourself nesting three
+        levels deep, stop and rewrite with CTEs or joins. The clearest version that produces the right answer is
+        almost always the best one.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea, then a full cheat-sheet table.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🔍 Subquery</h4><p>A query nested inside another; the inner result feeds the outer query.</p></div>
+        <div class="recap-card"><h4>🎯 Scalar</h4><p>Returns exactly one value; usable in SELECT or a comparison.</p></div>
+        <div class="recap-card"><h4>📋 IN</h4><p>Tests whether a value is in a list the subquery returns.</p></div>
+        <div class="recap-card"><h4>🔗 Correlated</h4><p>References the outer row; logically runs once per outer row.</p></div>
+        <div class="recap-card"><h4>✅ EXISTS</h4><p>Yes/no test for whether any matching row exists; short-circuits.</p></div>
+        <div class="recap-card"><h4>🚫 NOT EXISTS</h4><p>NULL-safe way to find rows with no match; prefer over NOT IN.</p></div>
+        <div class="recap-card"><h4>⚠️ NOT IN + NULL</h4><p>A NULL in the list makes NOT IN return zero rows — silently.</p></div>
+        <div class="recap-card"><h4>📦 Derived table</h4><p>A subquery in FROM, aliased and queried like a table.</p></div>
+        <div class="recap-card"><h4>🎚️ ANY / ALL</h4><p><code>&gt; ALL</code> = above the max; <code>&gt; ANY</code> = above the min.</p></div>
+        <div class="recap-card"><h4>🆚 vs JOIN</h4><p>JOIN to get columns from both; EXISTS to just check existence.</p></div>
+      </div>
+
+      <h3>Full summary table</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Tool</th><th>Returns / tests</th><th>Key point</th></tr></thead>
+          <tbody>
+            <tr><td>Scalar subquery</td><td>One value</td><td>Errors if it returns more than one row</td></tr>
+            <tr><td><code>IN (subquery)</code></td><td>Membership in a list</td><td>Fine for values; watch NULLs with <code>NOT IN</code></td></tr>
+            <tr><td>Correlated subquery</td><td>Depends on outer row</td><td>Can't run standalone; logically per-row</td></tr>
+            <tr><td><code>EXISTS</code></td><td>Any matching row?</td><td>Short-circuits; ignores selected columns; no duplicates</td></tr>
+            <tr><td><code>NOT EXISTS</code></td><td>No matching row?</td><td>NULL-safe — the go-to anti-join</td></tr>
+            <tr><td><code>NOT IN</code></td><td>Not in a list</td><td>Breaks if the list contains a NULL</td></tr>
+            <tr><td><code>&gt; ALL / &gt; ANY</code></td><td>Compare to all/any values</td><td>ALL = vs max; ANY = vs min</td></tr>
+            <tr><td>Derived table / CTE</td><td>A named row set</td><td>Query it like a table; CTEs read more clearly</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What is a subquery? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A subquery is a query written inside another query, usually in parentheses. You answer the
+        small inner question first, and its result is used by the outer query — for example, computing the average
+        salary in an inner query and then filtering employees who earn above it in the outer query.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> Where can a subquery appear? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Most commonly in three places: in the <code>SELECT</code> list (to produce a value as a
+        column), in the <code>FROM</code> clause (as a temporary "derived table"), and in the <code>WHERE</code> or
+        <code>HAVING</code> clause (to filter, via <code>IN</code>, <code>EXISTS</code>, or a comparison).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> What is a scalar subquery? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A subquery that returns exactly <strong>one value</strong> — one row, one column. Because it
+        boils down to a single value, you can use it anywhere a value is expected, like in a <code>SELECT</code>
+        column or a comparison such as <code>WHERE Salary &gt; (SELECT AVG(Salary) FROM Employees)</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> What does IN do with a subquery? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>IN</code> checks whether a value matches any value in a list. When the list comes from a
+        subquery, it keeps rows whose column value appears in the subquery's results — e.g., "employees whose
+        <code>EmpId</code> is in the list of <code>EmpId</code>s found in the Orders table" gives employees who have
+        placed at least one order.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> What does EXISTS check? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>EXISTS</code> answers a yes/no question: does the subquery return at least one row?
+        It doesn't care about the values, only about presence. It's the natural way to ask "does this customer have
+        any orders?" — and <code>NOT EXISTS</code> asks the opposite, "does this customer have none?"</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What is a derived table? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A subquery placed in the <code>FROM</code> clause and treated like a temporary table by the
+        outer query. You give it an alias and then select from it as if it were a real table. It's handy for
+        "summarize first, then filter or join the summary."</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> What happens if a scalar subquery returns more than one row? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>SQL Server raises an error: "Subquery returned more than 1 value." A scalar context (like
+        <code>=</code> or a <code>SELECT</code> column) expects a single value, so returning several is invalid. You
+        either add a filter so it returns one row, or switch to <code>IN</code>/<code>EXISTS</code> if a set is what
+        you actually mean.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> What's the difference between IN and =? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>=</code> compares to exactly <strong>one</strong> value; <code>IN</code> compares to a
+        <strong>list</strong> of values and is true if it matches any of them. <code>x = 5</code> checks one thing;
+        <code>x IN (5, 7, 9)</code> checks membership in a set. <code>= ANY(list)</code> is actually the same as
+        <code>IN(list)</code>.</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q09</span> What is a correlated subquery? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A subquery that references a column from the outer query, so it can't run on its own — it
+        depends on the current outer row. Conceptually it runs once per outer row, plugging that row's values in. The
+        classic example is "employees earning above <em>their own department's</em> average," where the inner query
+        filters by the outer employee's department.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> How do correlated and non-correlated subqueries differ? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A <strong>non-correlated</strong> subquery is self-contained — you could copy it out and run
+        it alone; it's evaluated once. A <strong>correlated</strong> subquery references the outer query's row, can't
+        run standalone, and logically re-evaluates for each outer row. The tell is whether the inner query mentions an
+        outer table/alias.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> What are the differences between EXISTS and IN? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>IN</code> compares a value against a list of values; <code>EXISTS</code> checks whether a
+        (usually correlated) subquery returns any row. For positive checks they often match. The big difference is
+        NULLs: <code>NOT EXISTS</code> is NULL-safe, while <code>NOT IN</code> returns zero rows if the list contains
+        a NULL. <code>EXISTS</code> also ignores the columns you select inside it and never duplicates outer rows.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> How do you find rows with no matching related row? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Use <code>NOT EXISTS</code> with a correlated subquery: <code>WHERE NOT EXISTS (SELECT 1 FROM
+        Orders o WHERE o.EmpId = e.EmpId)</code> finds employees with no orders. It's the NULL-safe anti-join. The
+        LEFT-JOIN-then-<code>IS NULL</code> pattern works too, but <code>NOT EXISTS</code> is usually clearest and
+        avoids duplicate-row issues.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> Subquery vs JOIN — when do you use each? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Use a <code>JOIN</code> when you need to <em>return columns</em> from both tables. Use a
+        subquery (especially <code>EXISTS</code>) when you only need to <em>test</em> something — existence,
+        membership, or a computed value. A join used purely to check existence can duplicate rows if there are
+        multiple matches (needing <code>DISTINCT</code>), which <code>EXISTS</code> avoids.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> What do ANY and ALL do? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>They compare a value against every value a subquery returns. <code>&gt; ALL</code> is true if
+        the value beats <em>every</em> one (i.e., it's greater than the maximum). <code>&gt; ANY</code> (same as
+        <code>&gt; SOME</code>) is true if it beats <em>at least one</em> (greater than the minimum). Useful
+        equivalences: <code>= ANY</code> equals <code>IN</code>, and <code>&lt;&gt; ALL</code> equals <code>NOT
+        IN</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> Why might NOT IN return no rows unexpectedly? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>If the subquery's list contains a <code>NULL</code>. <code>NOT IN (2, 3, NULL)</code> is
+        evaluated as "not equal to 2 AND not equal to 3 AND not equal to NULL," and the comparison to NULL is
+        UNKNOWN, which makes the whole condition never true — so <em>every</em> row is filtered out. Switching to
+        <code>NOT EXISTS</code> fixes it because it handles NULLs correctly.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> Does it matter what you SELECT inside EXISTS? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>No. <code>EXISTS</code> only checks whether any row comes back, not the values, so
+        <code>SELECT 1</code>, <code>SELECT *</code>, and <code>SELECT NULL</code> are equivalent. Writing
+        <code>SELECT 1</code> is a convention that signals "I only care about existence." The engine also
+        short-circuits at the first matching row.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain the NOT IN + NULL trap in detail. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>x NOT IN (a, b, c)</code> is logically <code>x &lt;&gt; a AND x &lt;&gt; b AND x &lt;&gt;
+        c</code>. If any list value is <code>NULL</code>, that comparison yields UNKNOWN (three-valued logic), and
+        "true AND UNKNOWN" is UNKNOWN — which is not true — so the row is excluded. Since this happens for every row,
+        the query returns nothing. It's silent and easy to miss. The fixes: use <code>NOT EXISTS</code>, or filter
+        NULLs out of the subquery, or add <code>WHERE col IS NOT NULL</code> inside it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> How does a correlated subquery execute, and what are the performance implications? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Logically it runs once per outer row, substituting that row's values into the inner query.
+        Naively that's O(rows × inner-cost), which can be slow on large tables. In practice SQL Server's optimizer
+        frequently rewrites correlated subqueries into joins, semi-joins, or a single grouped pass, so the physical
+        plan is often much cheaper. The guidance: write it clearly, then check the execution plan; if it's slow,
+        consider a join or window-function rewrite and compare.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> Is EXISTS always faster than IN (or vice versa)? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>No — there's no universal winner. On modern SQL Server the optimizer often produces the
+        same or similar plans for equivalent <code>EXISTS</code> and <code>IN</code> queries (both become semi-joins).
+        Differences show up with NULLs (where <code>NOT EXISTS</code> is safer), data distribution, and indexing. The
+        real reasons to prefer <code>EXISTS</code> are correctness (NULL handling) and clarity, not a blanket speed
+        claim. Always measure on your data rather than assuming.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> When would you rewrite a correlated subquery as a JOIN or window function? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>When you need the related data as columns, a <code>JOIN</code> is clearer than a correlated
+        scalar subquery repeated per column. When you need a per-group aggregate <em>alongside</em> each detail row
+        (like "each salary next to its department average"), a <strong>window function</strong>
+        (<code>AVG(Salary) OVER (PARTITION BY DeptId)</code>) computes it in one pass and is usually both cleaner and
+        faster than a correlated subquery that recomputes the average for every row.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> Express semi-join and anti-join using EXISTS. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A <strong>semi-join</strong> returns outer rows that have at least one match, without
+        duplicating them — that's <code>WHERE EXISTS (…)</code>. An <strong>anti-join</strong> returns outer rows with
+        no match — that's <code>WHERE NOT EXISTS (…)</code>. Both are "existence" operations rather than
+        "combine-columns" operations, which is exactly why <code>EXISTS</code> fits them better than a plain join
+        (which would multiply rows on multiple matches).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> Can subqueries be nested arbitrarily, and what are the readability trade-offs? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Yes, subqueries can nest many levels deep, but readability collapses quickly — deeply nested
+        parentheses are hard to follow and maintain. The practical fix is <strong>CTEs</strong> (<code>WITH</code>),
+        which name each step so the query reads top-to-bottom like a pipeline, can be reused, and support recursion.
+        Beyond one or two levels of nesting, refactoring to CTEs (or joins) is almost always the better choice.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> What's the performance concern with a scalar subquery in the SELECT list? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>If it's correlated, it can be evaluated for every row of the outer query, which is
+        expensive when that per-row query is itself costly. For example, a scalar subquery computing each row's
+        department average recomputes that average repeatedly. A window function or a join to a pre-aggregated derived
+        table typically computes it once and is far cheaper. Again, verify with the execution plan — the optimizer
+        sometimes handles it well on its own.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> How do derived tables and CTEs differ, and when do you use each? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Both name a result set you can query. A <strong>derived table</strong> is inline in
+        <code>FROM</code> with an alias — fine for a single, local use. A <strong>CTE</strong> is declared up front
+        with <code>WITH</code>, reads sequentially, can be referenced multiple times in the same query, and uniquely
+        supports <strong>recursion</strong> (for hierarchies). Neither is inherently faster — they're mostly a
+        readability and reuse choice; pick the CTE when the query has several steps or needs recursion.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions establish what subqueries are and the three
+        positions; <strong>Mid</strong> questions test the real decisions (correlated vs not, EXISTS vs IN, the NOT
+        IN trap, subquery vs join); <strong>Senior</strong> questions probe the model and performance (three-valued
+        logic, optimizer rewrites, window-function alternatives, CTEs). Say each answer out loud in plain English —
+        the ones you stumble on point straight to the section to re-read.</p>
+      </div>
+
+      <p class="foot">Concepts verified against Microsoft Learn (Transact-SQL subqueries, the <code>EXISTS</code> and
+        <code>IN</code> predicates, and three-valued logic for NULL comparisons) and standard relational references.
+        This behavior is stable across supported SQL Server versions (2016 through 2025 / 17.x). This single
+        <code>04-sql-subqueries.html</code> file is fully self-contained and works offline (only Google Fonts load
+        from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>
