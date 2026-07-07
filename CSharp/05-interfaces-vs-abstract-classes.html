@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Interfaces vs Abstract Classes (C#)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0; --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea; --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3; --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink); font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;}
+#progress{position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .08s linear;}
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+:not(pre) > code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--accent);
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;}
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;
+  background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;background:transparent;
+  border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;color:var(--code-ink);
+  background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent);font-weight:700;}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:24px 22px;margin:24px 0;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+/* combining tree */
+.tree{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.tree-node{background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:10px 18px;
+  font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:600;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.tree-node.base{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.tree-node.iface{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+.tree-node.leaf{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.tree-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:center;}
+.tree-conn{width:2px;height:22px;background:var(--accent);}
+/* decision flow */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:580px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.q{background:var(--bg-soft);}
+.flow-step.ans-iface{background:var(--blue-soft);border-color:var(--blue);}
+.flow-step.ans-abs{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+.mindmap{display:flex;flex-direction:column;align-items:center;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;font-size:1.1rem;
+  padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);transition:transform .28s ease;
+    box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">Interfaces vs Abstract Classes</div>
+    <nav>
+      <div class="nav-group">
+        <h4>Setup</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> Why It Matters</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> Interfaces</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Abstract Classes</a>
+      </div>
+      <div class="nav-group">
+        <h4>The Comparison</h4>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Core Differences</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Only Abstract Classes</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Only Interfaces</a>
+      </div>
+      <div class="nav-group">
+        <h4>Modern C#</h4>
+        <a class="nav-link" href="#s07"><span class="n">07</span> Default Methods (C# 8)</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> Static Abstract (C# 11)</a>
+      </div>
+      <div class="nav-group">
+        <h4>Applying It</h4>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Decision Guide</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Combining Both</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Pitfalls</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Quick Recap</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// C# &nbsp;·&nbsp; the classic design decision</p>
+      <h1>Interfaces vs Abstract Classes ⚖️</h1>
+      <p class="lede">
+        Both let you program against an <b>abstraction</b> instead of a concrete type, and both support
+        <b>polymorphism</b> — so beginners (and interviewers) constantly ask which to use. The honest answer is
+        "it depends," but the dependency is learnable. This page lays out exactly what each can and can't do, how
+        modern C# (default methods, static abstract members) blurred the line, and a clear decision guide so you'll
+        never have to guess. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">📜 <b>Interface = contract</b></span>
+        <span class="chip">📋 <b>Abstract = partial base</b></span>
+        <span class="chip">🧬 <b>1 base, many interfaces</b></span>
+        <span class="chip">🆕 <b>Default methods</b></span>
+        <span class="chip">🧭 <b>Decision guide</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- 01 -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>Why It Matters</h2></div>
+      <p class="sec-sub">Two tools for the same goal — defining an abstraction that many types fulfill. Picking wrong leads to
+        rigid or duplicated code.</p>
+
+      <p>An <strong>interface</strong> and an <strong>abstract class</strong> both let you say "here is a shape that
+        several concrete types will take," and let you write code against that shape. So why have both? Because they make
+        <em>different promises</em>: one is a pure <strong>contract</strong>, the other a <strong>partial implementation</strong>
+        you build on. Choosing the right one shapes how flexible — and how maintainable — your design will be.</p>
+
+      <div class="mindmap">
+        <div class="mm-core">⚖️ Abstraction tools</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>📜 Interface</h5>
+            <ul>
+              <li>Pure contract</li>
+              <li>No state, no constructor</li>
+              <li>Implement <em>many</em></li>
+              <li>Works for structs</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>📋 Abstract class</h5>
+            <ul>
+              <li>Partial base class</li>
+              <li>State + constructors</li>
+              <li>Inherit only <em>one</em></li>
+              <li>Shared code</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🆕 The blur</h5>
+            <ul>
+              <li>Default methods (C# 8)</li>
+              <li>Static abstract (C# 11)</li>
+              <li>Lines now overlap</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🧭 The choice</h5>
+            <ul>
+              <li>Shared code/state? → abstract</li>
+              <li>Many/unrelated types? → interface</li>
+              <li>Often: use both</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 One-line summary</span>
+        <p>Use an <strong>interface</strong> to describe <em>what a type can do</em> (a capability). Use an
+        <strong>abstract class</strong> to provide <em>what related types share</em> (common code + state). When a type
+        needs both, give it one abstract base <em>and</em> several interfaces.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🔌 Analogy</span>
+        <p>An <strong>interface</strong> is like a power socket standard: anything with the right plug works, no matter who
+        made it — phones, lamps, laptops (unrelated devices, one contract). An <strong>abstract class</strong> is like a
+        half-built house from a developer: the foundation and plumbing are already there (shared implementation), and you
+        only finish the rooms — but you can only build on <em>one</em> foundation.</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>Interfaces</h2></div>
+      <p class="sec-sub">A contract: a list of members an implementing type must provide. It says <em>what</em>, never (classically) <em>how</em>.</p>
+
+      <p>An <strong>interface</strong> declares members — methods, properties, events, indexers — with no implementation
+        (in the classic model). Any class or struct that implements it must supply every member. Members are
+        <code>public</code> by default. A type can implement <strong>any number</strong> of interfaces.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// the contract -- by convention interface names start with 'I'</span>
+<span class="kw">interface</span> <span class="ty">IShape</span>
+{
+    <span class="kw">double</span> <span class="fn">Area</span>();       <span class="cmt">// no body -- just the promise</span>
+    <span class="kw">string</span> Name { <span class="kw">get</span>; }
+}
+
+<span class="kw">class</span> <span class="ty">Circle</span> : <span class="ty">IShape</span>
+{
+    <span class="kw">public double</span> R { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public double</span> <span class="fn">Area</span>() =&gt; <span class="ty">Math</span>.PI * R * R;   <span class="cmt">// must implement</span>
+    <span class="kw">public string</span> Name =&gt; <span class="str">"Circle"</span>;             <span class="cmt">// must implement</span>
+}
+
+<span class="cmt">// program to the contract -- works for any IShape</span>
+<span class="ty">IShape</span> s = <span class="kw">new</span> <span class="ty">Circle</span> { R = <span class="num">2</span> };
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(s.<span class="fn">Area</span>());</code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📜</span><h4>Contract only</h4><p>Lists members without state. No instance fields, no constructors — it carries no data of its own.</p></div>
+        <div class="card"><span class="glyph">➕</span><h4>Multiple allowed</h4><p>One type can implement many interfaces — C#'s way to mix in capabilities from several sources.</p></div>
+        <div class="card"><span class="glyph">🧊</span><h4>Works for structs</h4><p>Structs can't inherit a class but <em>can</em> implement interfaces — often the only way to give them a shared contract.</p></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The .NET interfaces you already use</span>
+        <p><code>IDisposable</code> (cleanup), <code>IComparable</code> (ordering), <code>IEnumerable</code> (iteration),
+        <code>IEquatable&lt;T&gt;</code> (equality) — these are all interfaces precisely because <em>unrelated</em> types
+        need those capabilities. A <code>FileStream</code> and a database connection share nothing but both are
+        <code>IDisposable</code>.</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Abstract Classes</h2></div>
+      <p class="sec-sub">A partial base class: some real code and state, plus blanks the children must fill. Can't be instantiated.</p>
+
+      <p>An <strong>abstract class</strong> is a base class you can't create with <code>new</code>. It mixes
+        <strong>concrete members</strong> (real shared code, fields, constructors) with <strong>abstract members</strong>
+        (no body, which subclasses must implement). It's "inheritance with required homework."</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">abstract class</span> <span class="ty">Shape</span>
+{
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; }            <span class="cmt">// STATE -- interfaces can't hold this</span>
+    <span class="kw">protected</span> <span class="fn">Shape</span>(<span class="kw">string</span> name) =&gt; Name = name;  <span class="cmt">// CONSTRUCTOR -- interfaces can't have one</span>
+
+    <span class="kw">public abstract double</span> <span class="fn">Area</span>();         <span class="cmt">// blank -- subclasses must fill</span>
+
+    <span class="cmt">// SHARED concrete method that reuses the abstract one</span>
+    <span class="kw">public void</span> <span class="fn">Describe</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"{Name}: {Area():F2}"</span>);
+}
+
+<span class="kw">class</span> <span class="ty">Circle</span> : <span class="ty">Shape</span>
+{
+    <span class="kw">public double</span> R { <span class="kw">get</span>; }
+    <span class="kw">public</span> <span class="fn">Circle</span>(<span class="kw">double</span> r) : <span class="kw">base</span>(<span class="str">"Circle"</span>) =&gt; R = r;  <span class="cmt">// calls base constructor</span>
+    <span class="kw">public override double</span> <span class="fn">Area</span>() =&gt; <span class="ty">Math</span>.PI * R * R;
+}
+
+<span class="cmt">// var s = new Shape("x");  // ❌ can't instantiate an abstract class</span></code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🗄️</span><h4>Holds state</h4><p>Can have instance fields and properties with backing data — real per-object state the subclasses inherit.</p></div>
+        <div class="card"><span class="glyph">🏗️</span><h4>Has constructors</h4><p>Can run setup logic and require subclasses to pass data up via <code>: base(...)</code>.</p></div>
+        <div class="card"><span class="glyph">♻️</span><h4>Shares code</h4><p>Provides ready-made method bodies all subclasses reuse — write once, inherit everywhere.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The cost: single inheritance</span>
+        <p>A class can inherit from only <strong>one</strong> base class. Spend that single "inheritance slot" on an
+        abstract class and you've used it up — the type can't also inherit a different base. This is the central trade-off
+        against interfaces, of which you can have many.</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Core Differences</h2></div>
+      <p class="sec-sub">The side-by-side that answers most interview questions. Read it twice.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Aspect</th><th>📜 Interface</th><th>📋 Abstract class</th></tr></thead>
+          <tbody>
+            <tr><td>How many per type?</td><td><strong>Many</strong></td><td><strong>One</strong> (single inheritance)</td></tr>
+            <tr><td>Instance fields / state</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Constructors</td><td>No</td><td>Yes</td></tr>
+            <tr><td>Implemented members</td><td>Default impls since C# 8</td><td>Yes (concrete + virtual)</td></tr>
+            <tr><td>Access modifiers on members</td><td>Public by default (modifiers since C# 8)</td><td>Any (public, protected, private…)</td></tr>
+            <tr><td>Can a <code>struct</code> use it?</td><td>Yes (implements)</td><td>No (structs can't inherit)</td></tr>
+            <tr><td>Relationship it models</td><td>"can-do" (a capability)</td><td>"is-a" (shared identity + code)</td></tr>
+            <tr><td>Add a member without breaking implementers?</td><td>Yes, via a default implementation</td><td>Yes, if it's concrete (non-abstract)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The two differences that matter most</span>
+        <p>Strip away the details and it comes down to: <strong>(1)</strong> you can implement <em>many</em> interfaces but
+        inherit only <em>one</em> abstract class, and <strong>(2)</strong> only an abstract class can hold <em>state</em>
+        (fields) and have a <em>constructor</em>. Almost every "which should I use?" answer flows from these two facts.</p>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Only Abstract Classes Can…</h2></div>
+      <p class="sec-sub">The unique powers that pull you toward an abstract class.</p>
+
+      <ul>
+        <li><strong>Hold instance state.</strong> Fields and full properties backed by data that every subclass inherits.</li>
+        <li><strong>Have constructors.</strong> Run initialization logic and require subclasses to supply values via <code>: base(...)</code>.</li>
+        <li><strong>Use any access modifier</strong> on members — including <code>protected</code> members meant only for subclasses.</li>
+        <li><strong>Share rich implementation</strong> with private helper methods and template-method patterns.</li>
+      </ul>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">abstract class</span> <span class="ty">Repository</span>&lt;<span class="ty">T</span>&gt;
+{
+    <span class="kw">private readonly</span> <span class="ty">List</span>&lt;<span class="ty">T</span>&gt; _items = <span class="kw">new</span>();   <span class="cmt">// STATE: shared backing store</span>
+    <span class="kw">protected int</span> Count =&gt; _items.Count;          <span class="cmt">// PROTECTED: for subclasses only</span>
+
+    <span class="kw">public void</span> <span class="fn">Add</span>(<span class="ty">T</span> item)                      <span class="cmt">// SHARED concrete logic</span>
+    {
+        <span class="fn">Validate</span>(item);     <span class="cmt">// calls the subclass's rule</span>
+        _items.<span class="fn">Add</span>(item);
+    }
+
+    <span class="kw">protected abstract void</span> <span class="fn">Validate</span>(<span class="ty">T</span> item);  <span class="cmt">// subclass fills this blank</span>
+}</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Reach for an abstract class when…</span>
+        <p>…your related types share real implementation and data, and you want to define a common workflow once (the
+        <em>template method</em> pattern above). An interface can't store <code>_items</code> or run that shared
+        <code>Add</code> logic — it has no state and (classically) no bodies to inherit.</p>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Only Interfaces Can…</h2></div>
+      <p class="sec-sub">The unique powers that pull you toward an interface.</p>
+
+      <ul>
+        <li><strong>Be implemented in multiples.</strong> A type can take on many interfaces at once — capabilities mix freely.</li>
+        <li><strong>Span unrelated types.</strong> Types with nothing else in common can share one contract.</li>
+        <li><strong>Be implemented by structs</strong>, which can't inherit from a class.</li>
+        <li><strong>Decouple contracts from implementations</strong>, the foundation of testing and dependency injection.</li>
+      </ul>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">interface</span> <span class="ty">IFlyable</span>  { <span class="kw">void</span> <span class="fn">Fly</span>(); }
+<span class="kw">interface</span> <span class="ty">ISwimmable</span> { <span class="kw">void</span> <span class="fn">Swim</span>(); }
+
+<span class="cmt">// a Duck mixes in BOTH capabilities -- impossible with single inheritance</span>
+<span class="kw">class</span> <span class="ty">Duck</span> : <span class="ty">IFlyable</span>, <span class="ty">ISwimmable</span>
+{
+    <span class="kw">public void</span> <span class="fn">Fly</span>()  =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"flap flap"</span>);
+    <span class="kw">public void</span> <span class="fn">Swim</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"paddle paddle"</span>);
+}
+
+<span class="cmt">// even a struct can implement an interface</span>
+<span class="kw">struct</span> <span class="ty">Point</span> : <span class="ty">IComparable</span>&lt;<span class="ty">Point</span>&gt;
+{
+    <span class="kw">public int</span> X;
+    <span class="kw">public int</span> <span class="fn">CompareTo</span>(<span class="ty">Point</span> other) =&gt; X.<span class="fn">CompareTo</span>(other.X);
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The "mix-in" superpower</span>
+        <p>Interfaces let unrelated capabilities combine on one type: a <code>Duck</code> can be <code>IFlyable</code> and
+        <code>ISwimmable</code>; a <code>FileStream</code> can be <code>IDisposable</code>, <code>IComparable</code>, and more.
+        No single base class could capture all those orthogonal abilities at once — this is why C# has both tools.</p>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Default Methods (C# 8)</h2></div>
+      <p class="sec-sub">Interfaces can now carry implementation. Did this make abstract classes obsolete? No — but the line did blur.</p>
+
+      <p>Before C# 8, interfaces were pure contracts: signatures only. Since <strong>C# 8</strong>, an interface member can
+        ship with a <strong>default implementation</strong>. Existing implementers inherit it for free; they only override it
+        if they want different behavior. Interfaces can also now have <code>static</code> members, <code>private</code> helper
+        members, and access modifiers.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">interface</span> <span class="ty">ILogger</span>
+{
+    <span class="kw">void</span> <span class="fn">Log</span>(<span class="kw">string</span> message);                 <span class="cmt">// still abstract -- must implement</span>
+
+    <span class="cmt">// DEFAULT body: implementers get this unless they override it</span>
+    <span class="kw">void</span> <span class="fn">LogError</span>(<span class="kw">string</span> msg) =&gt; <span class="fn">Log</span>($<span class="str">"ERROR: {msg}"</span>);
+}
+
+<span class="kw">class</span> <span class="ty">ConsoleLogger</span> : <span class="ty">ILogger</span>
+{
+    <span class="kw">public void</span> <span class="fn">Log</span>(<span class="kw">string</span> m) =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(m);
+    <span class="cmt">// LogError inherited for free -- no need to write it</span>
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why this feature exists</span>
+        <p>The main motivation is <strong>versioning</strong>: a library author can add a new member to a widely-used
+        interface without breaking the thousands of classes that already implement it (they pick up the default). It is
+        <em>not</em> meant as a general replacement for abstract classes.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Why abstract classes still win for shared code</span>
+        <p>Default interface methods have real limits: you must call them <strong>through the interface type</strong> (not
+        the concrete class), and interfaces still <strong>can't hold instance state</strong> — so a default method can't
+        read or write per-object fields. When your shared logic needs state, an abstract class remains the right tool. The
+        line blurred; it didn't disappear.</p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>Static Abstract Members (C# 11)</h2></div>
+      <p class="sec-sub">Interfaces can now require <em>static</em> members — including operators — unlocking "generic math." Abstract classes can't do this.</p>
+
+      <p>Since <strong>C# 11 (.NET 7)</strong>, an interface can declare <code>static abstract</code> (and
+        <code>static virtual</code>) members that implementing types must provide. This enables <strong>compile-time
+        polymorphism over static APIs and operators</strong> — the foundation of .NET's <em>generic math</em>, where one
+        generic algorithm works across <code>int</code>, <code>double</code>, <code>decimal</code>, and your own numeric types.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// 'TSelf' is the implementing type itself (self-referencing constraint)</span>
+<span class="kw">interface</span> <span class="ty">IAddable</span>&lt;<span class="ty">TSelf</span>&gt; <span class="kw">where</span> <span class="ty">TSelf</span> : <span class="ty">IAddable</span>&lt;<span class="ty">TSelf</span>&gt;
+{
+    <span class="kw">static abstract</span> <span class="ty">TSelf</span> Zero { <span class="kw">get</span>; }
+    <span class="kw">static abstract</span> <span class="ty">TSelf</span> <span class="kw">operator</span> +(<span class="ty">TSelf</span> a, <span class="ty">TSelf</span> b);
+}
+
+<span class="cmt">// one generic method now works for ANY type implementing IAddable</span>
+<span class="kw">static</span> <span class="ty">T</span> <span class="fn">Sum</span>&lt;<span class="ty">T</span>&gt;(<span class="ty">T</span>[] items) <span class="kw">where</span> <span class="ty">T</span> : <span class="ty">IAddable</span>&lt;<span class="ty">T</span>&gt;
+{
+    <span class="ty">T</span> result = <span class="ty">T</span>.Zero;            <span class="cmt">// call a static member on the type parameter!</span>
+    <span class="kw">foreach</span> (<span class="ty">T</span> x <span class="kw">in</span> items) result += x;
+    <span class="kw">return</span> result;
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Real-world payoff</span>
+        <p>.NET 7+ ships <code>INumber&lt;T&gt;</code> and friends in <code>System.Numerics</code>, so a single
+        <code>Sum&lt;T&gt;</code> or <code>Average&lt;T&gt;</code> works across all numeric types with no boxing and no
+        per-type overloads. The .NET team used this to delete hundreds of lines of duplicate code. An abstract class
+        <strong>cannot</strong> express "every implementer must provide this static operator" — this is interface-only territory.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Note on access</span>
+        <p>Static abstract members aren't called through an instance or interface variable; you call them on the
+        <em>type parameter</em> (<code>T.Zero</code>) inside generic code constrained by the interface. The actual
+        implementation used is the one on the real type supplied as <code>T</code>.</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Decision Guide</h2></div>
+      <p class="sec-sub">Walk the questions top to bottom. The first "yes" usually settles it.</p>
+
+      <div class="flow">
+        <div class="flow-step q"><b><span class="st-icon">❓</span>Do the types share real implementation <u>and</u> state (fields)?</b><small>Common backing data, a shared workflow, protected helpers?</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step ans-abs"><b><span class="st-icon">📋</span>Yes → Abstract class</b><small>Only it can hold state, run a constructor, and share concrete code with subclasses.</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step q"><b><span class="st-icon">❓</span>Do <u>unrelated</u> types need this capability, or does one type need <u>several</u> capabilities?</b><small>Or must a struct participate?</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step ans-iface"><b><span class="st-icon">📜</span>Yes → Interface</b><small>Many per type, spans unrelated types, works for structs, decouples for testing.</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step q"><b><span class="st-icon">❓</span>Need static operators / generic-math style contracts?</b></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step ans-iface"><b><span class="st-icon">📜</span>Interface with static abstract members (C# 11)</b></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Rules of thumb</span>
+        <p>Default to an <strong>interface</strong> — it's more flexible and keeps the single-inheritance slot free.
+        Upgrade to an <strong>abstract class</strong> when you find yourself wanting to <em>share real code and state</em>
+        among related types. If you need both shared code and multiple capabilities, do both: one abstract base plus
+        interfaces (next section).</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Microsoft's own guidance, summarized</span>
+        <p>"Use an interface if you expect <em>unrelated</em> types to implement it, or to specify behavior from multiple
+        sources. Use an abstract class if you want to share <em>code</em> among several closely related types, or need to
+        declare non-public members or fields." The two are complementary, not competitors.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Combining Both</h2></div>
+      <p class="sec-sub">The real-world answer is usually "both." One abstract base for the shared identity, interfaces for assorted capabilities.</p>
+
+      <p>A class can inherit <strong>one</strong> abstract class <em>and</em> implement <strong>many</strong> interfaces at
+        once. This is the common production shape: the base supplies shared state and code; the interfaces declare the extra
+        abilities.</p>
+
+      <div class="tree">
+        <div class="tree-row">
+          <div class="tree-node base">Bird (abstract)</div>
+          <div class="tree-node iface">IFlyable</div>
+          <div class="tree-node iface">ISwimmable</div>
+        </div>
+        <div class="tree-conn"></div>
+        <div class="tree-node leaf">Duck : Bird, IFlyable, ISwimmable</div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">abstract class</span> <span class="ty">Bird</span>
+{
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; }   <span class="cmt">// shared state from the base</span>
+    <span class="kw">public void</span> <span class="fn">Eat</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"{Name} eats"</span>);  <span class="cmt">// shared code</span>
+}
+
+<span class="kw">interface</span> <span class="ty">IFlyable</span>  { <span class="kw">void</span> <span class="fn">Fly</span>(); }
+<span class="kw">interface</span> <span class="ty">ISwimmable</span> { <span class="kw">void</span> <span class="fn">Swim</span>(); }
+
+<span class="cmt">// one base class (identity + shared code) + many interfaces (capabilities)</span>
+<span class="kw">class</span> <span class="ty">Duck</span> : <span class="ty">Bird</span>, <span class="ty">IFlyable</span>, <span class="ty">ISwimmable</span>
+{
+    <span class="kw">public void</span> <span class="fn">Fly</span>()  =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"{Name} flies"</span>);
+    <span class="kw">public void</span> <span class="fn">Swim</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"{Name} swims"</span>);
+}</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The mental model</span>
+        <p>Abstract base = "what this thing fundamentally <em>is</em> and shares." Interfaces = "what this thing
+        <em>can do</em>." A <code>Duck</code> <em>is a</em> <code>Bird</code> (base) that <em>can</em> fly and swim
+        (interfaces). That phrasing usually tells you instantly which member goes where.</p>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Pitfalls</h2></div>
+      <p class="sec-sub">The traps that bite people choosing or using these.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔒</span><h4>Burning your one base</h4><p>Putting shared code in an abstract base when an interface would do "spends" the single inheritance slot — now the type can't inherit anything else.</p></div>
+        <div class="card"><span class="glyph">🧩</span><h4>Fat interfaces</h4><p>Cramming unrelated members into one interface forces implementers to write methods they don't need. Prefer small, focused interfaces (Interface Segregation).</p></div>
+        <div class="card"><span class="glyph">👻</span><h4>Default-method surprise</h4><p>Forgetting that a default interface method is only reachable through the interface type — calling it on the concrete class won't compile.</p></div>
+        <div class="card"><span class="glyph">💥</span><h4>Breaking changes</h4><p>Adding an abstract member to a published interface breaks every implementer. Add a <em>default</em> member instead, or a new interface.</p></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">interface</span> <span class="ty">ILogger</span> { <span class="kw">void</span> <span class="fn">Log</span>(<span class="kw">string</span> m); <span class="kw">void</span> <span class="fn">Warn</span>(<span class="kw">string</span> m) =&gt; <span class="fn">Log</span>($<span class="str">"WARN: {m}"</span>); }
+
+<span class="kw">var</span> logger = <span class="kw">new</span> <span class="ty">ConsoleLogger</span>();
+<span class="cmt">// logger.Warn("hi");        // ❌ won't compile -- Warn is a default interface member</span>
+((<span class="ty">ILogger</span>)logger).<span class="fn">Warn</span>(<span class="str">"hi"</span>);   <span class="cmt">// ✅ must call through the interface type</span></code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Don't over-abstract</span>
+        <p>Not everything needs an interface or abstract base. Introducing one for a type that will only ever have a single
+        implementation adds indirection with no payoff. Add the abstraction when you actually have (or clearly foresee)
+        multiple implementations or a need to decouple for testing.</p>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea. If you can explain each card aloud, you can defend any choice in a code review.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>📜 Interface</h4><p>A pure contract of members a type promises to provide; no state, no constructor; implement many.</p></div>
+        <div class="recap-card"><h4>📋 Abstract class</h4><p>A non-instantiable partial base with shared code, state, and constructors; inherit only one.</p></div>
+        <div class="recap-card"><h4>1️⃣ vs ➕</h4><p>One abstract base per type, but any number of interfaces — the single biggest practical difference.</p></div>
+        <div class="recap-card"><h4>🗄️ State</h4><p>Only abstract classes hold instance fields and run constructors; interfaces carry no per-object data.</p></div>
+        <div class="recap-card"><h4>🧊 Structs</h4><p>Structs can't inherit a class but can implement interfaces — sometimes the only option.</p></div>
+        <div class="recap-card"><h4>🆕 Default methods</h4><p>Since C# 8 interfaces can carry method bodies (for versioning); callable only via the interface type.</p></div>
+        <div class="recap-card"><h4>➗ Static abstract</h4><p>Since C# 11 interfaces can require static members/operators — powers generic math; abstract classes can't.</p></div>
+        <div class="recap-card"><h4>🧭 Choosing</h4><p>Shared code + state + one hierarchy → abstract class; capability across many/unrelated types → interface.</p></div>
+        <div class="recap-card"><h4>🤝 Combine</h4><p>The common answer: one abstract base for identity + several interfaces for capabilities.</p></div>
+        <div class="recap-card"><h4>🪶 Don't over-abstract</h4><p>Skip the abstraction entirely if there's only ever one implementation and no need to decouple.</p></div>
+      </div>
+
+      <h3>The cheat sheet 📊</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>If you need…</th><th>Use</th></tr></thead>
+          <tbody>
+            <tr><td>Shared implementation <em>and</em> state across related types</td><td>📋 Abstract class</td></tr>
+            <tr><td>A capability across unrelated types</td><td>📜 Interface</td></tr>
+            <tr><td>One type to support several independent capabilities</td><td>📜 Interfaces (multiple)</td></tr>
+            <tr><td>A struct to honor a contract</td><td>📜 Interface</td></tr>
+            <tr><td>Static operators / generic math contracts</td><td>📜 Interface (static abstract, C# 11)</td></tr>
+            <tr><td>To add a member to a shipped contract without breaking implementers</td><td>📜 Interface default method (C# 8)</td></tr>
+            <tr><td>Both shared code <em>and</em> multiple capabilities</td><td>🤝 Abstract base + interfaces</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 13 -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a clear answer. Tagged by level — Junior (0–2 yrs),
+        Mid (2–5 yrs), Senior (5–7 yrs). Written for someone with no prior coding background.</p>
+
+      <h3>🌱 Junior — fundamentals (0–2 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q1</span> What is the difference between an interface and an abstract class? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>An <strong>interface</strong> is a pure contract — a list of members a type must provide, with no state and (classically)
+        no implementation; a type can implement many. An <strong>abstract class</strong> is a partial base class that can include
+        real code, fields, and a constructor, but a type can inherit only one. Interface = "can-do" capability; abstract class =
+        "is-a" with shared code.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span> Can you create an instance of an interface or an abstract class? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>No, neither can be instantiated directly with <code>new</code>. Both exist to be implemented or inherited by
+        concrete types. You create an instance of a concrete class and can then refer to it through the interface or abstract base
+        type.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span> How many interfaces and abstract classes can a single class use? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A class can inherit from <strong>one</strong> abstract class (single inheritance) but implement <strong>any
+        number</strong> of interfaces. It can also do both at once: <code>class Duck : Bird, IFlyable, ISwimmable</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span> Can an interface have fields? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>No — interfaces can't have instance fields and hold no per-object state. They can declare properties (which are
+        accessor methods, not data), and since C# 8 they can have <code>static</code> fields, but not instance fields. Abstract classes
+        <em>can</em> have instance fields.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span> Can a struct use an interface or an abstract class? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A struct can <strong>implement an interface</strong> but cannot inherit from an abstract class — structs don't
+        support inheritance. So if you need a struct to honor a shared contract, an interface is your only option.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span> Give a real example of when you'd use each. <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><strong>Interface:</strong> <code>IDisposable</code> — unrelated types (files, connections) all need a
+        <code>Dispose()</code> capability. <strong>Abstract class:</strong> a <code>Shape</code> base with a stored <code>Name</code>
+        and a shared <code>Describe()</code> method, where <code>Circle</code> and <code>Square</code> just fill in <code>Area()</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span> Why does C# have both instead of just one? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Because they solve different problems. Interfaces let a type mix in many capabilities and let unrelated types share a
+        contract (and work with structs). Abstract classes let related types share real code and state through single inheritance. Neither
+        fully replaces the other, so C# provides both.</p></div></details>
+
+      <h3>🟠 Mid-level — going deeper (2–5 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q8</span> What can an abstract class do that an interface cannot? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Hold <strong>instance state</strong> (fields), have <strong>constructors</strong>, use <strong>any access modifier</strong>
+        (including <code>protected</code> members for subclasses), and provide rich shared implementation including private helpers. Even with
+        C# 8 default methods, interfaces still can't store per-object state, which is the key thing abstract classes uniquely offer.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q9</span> What are default interface methods and why were they added? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Since C# 8, an interface member can have a default body that implementers inherit unless they override it. The
+        primary motivation is <strong>versioning</strong>: a library can add a member to a popular interface without breaking the many existing
+        classes that implement it. They're a compatibility tool, not a general replacement for abstract classes — and you must call them through
+        the interface type.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> Did default interface methods make abstract classes obsolete? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>No. Interfaces still can't hold <strong>instance state</strong> or have constructors, so default methods can't read or
+        write per-object fields the way an abstract class's shared methods can. They also can't define <code>protected</code> instance members in a
+        usable inheritance sense, and default members are only callable through the interface type. For shared code that needs state, abstract classes
+        remain the right tool. The line blurred; it didn't vanish.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> When should you prefer an interface over an abstract class? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>When the abstraction is a <strong>capability</strong> that <em>unrelated</em> types should support, when a type needs
+        <strong>several</strong> independent capabilities at once, when <strong>structs</strong> must participate, or when you want maximum flexibility
+        and to keep the single inheritance slot free for something else. Interfaces also decouple consumers from implementations, which is ideal for
+        testing and dependency injection.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> Can an interface inherit from another interface? Can it require properties or events? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Yes to both. An interface can extend one or more other interfaces, and an implementer must satisfy all of them. Interfaces
+        can declare methods, <strong>properties</strong>, <strong>events</strong>, and indexers (not instance fields). Members are public by default,
+        and since C# 8 you can also add static, private, and default members.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> How do interfaces support unit testing and dependency injection? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>By depending on an interface rather than a concrete class, you can swap implementations freely. In tests you inject a
+        <strong>mock or fake</strong> that implements the interface, isolating the unit under test from real databases, networks, or clocks. In
+        production, a composition root supplies the real implementation. This decoupling — "program to an interface" — is the backbone of testable,
+        loosely-coupled design.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> You need to add a new method to an interface used by 50 classes. How do you avoid breaking them? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Add it as a <strong>default interface method</strong> (C# 8) so all 50 classes inherit a working implementation and keep
+        compiling; classes that need custom behavior override it. Alternatively, declare a <strong>new interface</strong> that extends the old one and
+        have only the relevant types implement it. Adding a plain abstract member would force all 50 classes to implement it immediately — a breaking change.</p></div></details>
+
+      <h3>🔴 Senior — synthesis &amp; judgment (5–7 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> What are static abstract interface members and what problem do they solve? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Introduced in C# 11 (.NET 7), they let an interface require <strong>static</strong> members — including operators —
+        that implementing types must provide, and let generic code call them on the type parameter (<code>T.Zero</code>). They solve the long-standing
+        inability to abstract over static APIs and operators, enabling <strong>generic math</strong>: one generic algorithm works over <code>int</code>,
+        <code>double</code>, custom numerics, etc., resolved at compile time with no boxing. An abstract class cannot express "every implementer must
+        define this static operator," so this is interface-only.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> Default interface methods reintroduce a form of multiple inheritance. What problems does that create? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>If a class implements two interfaces that each supply a <em>conflicting</em> default for the same member, there's a
+        diamond-style ambiguity the implementer must resolve explicitly. Default members are also only callable via the interface type, so the same object
+        behaves differently depending on the static type of the reference — echoing the <code>override</code>-vs-<code>new</code> surprise. And because
+        interfaces lack instance state, defaults can't build truly stateful behavior. Net: use them for compatibility, not as a general code-sharing
+        mechanism; prefer abstract classes when shared stateful implementation is the goal.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> How does the Interface Segregation Principle inform your choice? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The ISP (the "I" in SOLID) says clients shouldn't be forced to depend on members they don't use. It pushes you toward
+        <strong>small, focused interfaces</strong> (e.g. <code>IReadable</code>, <code>IWritable</code>) rather than one fat interface, so implementers
+        only take on what's relevant and consumers depend on the minimum. Abstract classes don't segregate as cleanly because a subclass inherits the whole
+        base. ISP is a strong argument for preferring multiple narrow interfaces for capabilities, reserving abstract classes for genuine shared
+        implementation.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> "Favor composition over inheritance." How does that affect the interface-vs-abstract-class decision? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>It cautions against deep abstract-class hierarchies, which create tight coupling and fragile base classes. The modern lean
+        is: depend on <strong>interfaces</strong> for contracts and <strong>compose</strong> behavior by injecting collaborators (objects that implement those
+        interfaces) rather than inheriting it. Abstract classes still earn their place for genuinely shared implementation among closely related types, but
+        you reach for them deliberately, not by default. Interfaces + composition keep designs flexible and testable; inheritance is the heavier commitment.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> When is explicit interface implementation the right call, and how does it interact with this choice? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Use explicit implementation (<code>void IFoo.Method()</code>) when a type implements two interfaces with the <em>same</em>
+        member signature and each needs its own behavior, or when you want to keep an interface member off the class's public surface (accessible only by
+        casting to the interface). It's unique to interfaces — abstract classes don't have this mechanism. It's also handy to implement a contract a type must
+        satisfy without cluttering its everyday API. The trade-off is reduced discoverability, since the member isn't visible on the concrete type.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> A type needs shared stateful logic AND must work polymorphically across an unrelated hierarchy. How do you design it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Split the concerns. Define an <strong>interface</strong> for the cross-cutting capability so unrelated types (and structs) can
+        participate polymorphically. Provide the shared stateful logic in an <strong>abstract base class</strong> that implements that interface, so the related
+        types inheriting it get the implementation for free — while unrelated types still implement the interface their own way. This "interface for the contract,
+        abstract base for the common implementation" pairing is exactly how much of the .NET BCL is structured (e.g. <code>IList&lt;T&gt;</code> alongside
+        helper base classes).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> Are there performance differences between calling through an interface vs an abstract base class? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Both involve indirection. Virtual calls through an <strong>abstract base</strong> go through the type's v-table.
+        <strong>Interface</strong> dispatch historically used an interface map / dispatch stub, which can be marginally costlier than a class v-table call,
+        though the runtime optimizes common cases (and devirtualization can eliminate it entirely when the concrete type is known). In the vast majority of code
+        the difference is negligible and shouldn't drive the design decision — correctness and flexibility should. For hot paths, the static-abstract/generic approach
+        can avoid virtual dispatch altogether by resolving at compile time. Measure before optimizing.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> How would you evolve a public API that currently exposes an abstract base class but now needs to support unrelated implementers? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Introduce an <strong>interface</strong> capturing the public contract and have the existing abstract base <em>implement</em> it,
+        so current subclasses keep working unchanged while new, unrelated types can implement just the interface. Change public API signatures to accept the interface
+        type where feasible. This preserves backward compatibility (existing inheritors are unaffected) while opening the contract to types that can't or shouldn't
+        inherit the base — a common, low-risk way to loosen an over-committed inheritance-based API.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Master the <strong>Junior</strong> definitions and the "one base, many interfaces" / "only abstract classes hold state" facts — they answer most
+        questions. <strong>Mid</strong> adds the modern features (default methods and their limits) and the practical "when to prefer which" judgment.
+        <strong>Senior</strong> is design reasoning: static abstract members, SOLID principles (ISP, composition-over-inheritance), explicit implementation, and
+        evolving APIs safely. Answer each aloud without peeking; stumbles point back to the relevant section.</p>
+      </div>
+
+      <p class="foot">All technical details verified against Microsoft Learn (access modifiers, interface and abstract-class guidance, static abstract members in
+        interfaces) and supporting references. Version notes: default interface methods, interface static/private members → C# 8; static abstract members
+        (generic math) → C# 11 / .NET 7. This single <code>05-interfaces-vs-abstract-classes.html</code> file is fully self-contained and works offline (only
+        Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+function updateProgress(){const h=document.documentElement;const max=h.scrollHeight-h.clientHeight;
+  progress.style.width=(max>0?(h.scrollTop/max)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});
+window.addEventListener('resize',updateProgress);updateProgress();
+
+const sidebar=document.getElementById('sidebar');const backdrop=document.getElementById('backdrop');
+function closeSidebar(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(link.getAttribute('href'));
+    if(target){const y=target.getBoundingClientRect().top+window.pageYOffset-24;window.scrollTo({top:y,behavior:'smooth'});}
+    if(window.innerWidth<=920) closeSidebar();
+  });
+});
+
+const sections=[...document.querySelectorAll('.section')];
+const navLinks=[...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on=l.getAttribute('href')==='#'+id;
+    l.classList.toggle('active',on);
+    if(on){const lr=l.getBoundingClientRect(),sr=sidebar.getBoundingClientRect();
+      if(lr.top<sr.top+60||lr.bottom>sr.bottom-60){sidebar.scrollTop+=(lr.top-sr.top)-sidebar.clientHeight/2+lr.height/2;}}
+  });
+}
+const spy=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting) setActive(en.target.id);});},
+  {rootMargin:'-20% 0px -70% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+const reveal=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');reveal.unobserve(en.target);}});},{threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.closest('.code').querySelector('pre code').innerText;
+    const done=()=>{btn.textContent='Copied!';btn.classList.add('done');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done');},2000);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code,done));
+    } else {fallback(code,done);}
+  });
+});
+function fallback(text,cb){const ta=document.createElement('textarea');ta.value=text;
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
+
+document.getElementById('fab').addEventListener('click',()=>{
+  const open=sidebar.classList.toggle('open');backdrop.classList.toggle('show',open);});
+backdrop.addEventListener('click',closeSidebar);
+</script>
+</body>
+</html>

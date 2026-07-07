@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>List Endpoints — Pagination, Filtering &amp; Sorting — Day 9</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:14px 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 09 · ASP.NET Core</div>
+    <div class="brand-title">List Endpoints 📃</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>Why List Endpoints Are Hard</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>Async &amp; IQueryable</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Shaping the Query</div>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Filtering</span></a>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>Sorting</span></a>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>Pagination (Offset)</span></a>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>Keyset Pagination</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">The Response</div>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>Shaping Result Sets</span></a>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>The Full Endpoint</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Practice</div>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>Query Build Order</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 9 — never return the whole table</div>
+      <h1>List Endpoints 📃</h1>
+      <p class="lede">"Get all products" sounds harmless — until the table has two million rows and your API tries to serialize every one into a single response. Real list endpoints hand the client control: show me <em>page 2</em>, only the products <em>under $20</em>, <em>sorted by price</em>. Today we build a listing that's async, filterable, sortable, and paged — pushing all that work down to SQL Server via <code>IQueryable</code> so the database does the heavy lifting, not your server's memory.</p>
+      <div class="chips">
+        <span class="chip">⚡ Async actions</span>
+        <span class="chip">📄 Pagination</span>
+        <span class="chip">🔍 Filtering</span>
+        <span class="chip">↕️ Sorting</span>
+        <span class="chip">🧮 IQueryable</span>
+        <span class="chip">📦 Result shaping</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>Why List Endpoints Are Hard 🪨</h2></div>
+      <p>A "read one" endpoint returns a single row — easy. A "read all" endpoint is deceptively dangerous, because <em>all</em> can mean millions of rows. Return them unbounded and you overload the database, saturate the network, and can crash the client's browser. A production list endpoint never returns everything; it returns a controlled <strong>slice</strong>, shaped by what the client asked for.</p>
+
+      <p>Four levers give the client that control, and they combine into one query:</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔍</span><h4>Filtering</h4><p>Narrow <em>which</em> rows come back — "only active products under $20."</p></div>
+        <div class="card"><span class="glyph">↕️</span><h4>Sorting</h4><p>Decide the <em>order</em> — "newest first," "cheapest first."</p></div>
+        <div class="card"><span class="glyph">📄</span><h4>Pagination</h4><p>Return one <em>page</em> at a time — "rows 21–40," not all of them.</p></div>
+        <div class="card"><span class="glyph">📦</span><h4>Shaping</h4><p>Trim the <em>columns</em> to a DTO and wrap them with page metadata.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The golden rule</span>
+        <p>Do all four <strong>at the database</strong>, not in memory. If you load every row and then filter/sort/page in C#, you've already paid the cost you were trying to avoid. The whole game today is building one <code>IQueryable</code> that translates into a single efficient SQL query.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">📚 Analogy — a library request desk</span>
+        <p>You don't ask the librarian to wheel out every book in the building. You say: "cookbooks (filter), alphabetical by author (sort), just the first shelf-full (page)." They fetch exactly that. A good list endpoint is that request desk — the client describes the slice, the database delivers only it.</p>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">List Endpoints</div>
+          <div class="s">controlled slices, not dumps</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch b-blue">
+            <h4>⚡ Async + IQueryable</h4>
+            <ul>
+              <li>Non-blocking actions</li>
+              <li>Deferred execution</li>
+              <li>Composed in memory, run once</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>🔍 Filter</h4>
+            <ul>
+              <li><code>Where</code> clauses</li>
+              <li>Optional query params</li>
+              <li>Only build if provided</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>↕️ Sort</h4>
+            <ul>
+              <li><code>OrderBy</code> / <code>ThenBy</code></li>
+              <li>Whitelist columns</li>
+              <li>Always fully unique</li>
+            </ul>
+          </div>
+          <div class="mm-branch">
+            <h4>📄 Page</h4>
+            <ul>
+              <li>Offset: <code>Skip</code>/<code>Take</code></li>
+              <li>Keyset for big data</li>
+              <li>Cap the page size</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h4>📦 Shape</h4>
+            <ul>
+              <li>Project to a DTO</li>
+              <li>Return page metadata</li>
+              <li>Total count (offset)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>Async Actions &amp; the Magic of IQueryable ⚡</h2></div>
+      <p>Two ideas make efficient list endpoints possible. First, <strong>async</strong>: database calls are I/O, so awaiting them (with <code>ToListAsync</code>, etc.) frees the thread to serve other requests instead of blocking — essential for scalability. Second, and more subtly: <code>IQueryable&lt;T&gt;</code> uses <strong>deferred execution</strong>.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Deferred execution, explained</span>
+        <p>When you write <code>db.Products.Where(...).OrderBy(...).Skip(...).Take(...)</code>, <em>nothing runs yet</em>. You're building up a description of a query. EF Core only translates it to SQL and hits the database when you <em>materialize</em> it — calling <code>ToListAsync()</code>, <code>FirstOrDefaultAsync()</code>, <code>CountAsync()</code>, and so on. That's why you can add filtering, sorting, and paging step by step, and still get <strong>one</strong> optimized SQL query at the end.</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — building a query without running it</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Each line refines the query — no database call happens here.</span>
+<span class="ty">IQueryable</span>&lt;<span class="ty">Product</span>&gt; query = db.Products.<span class="fn">AsNoTracking</span>();
+
+query = query.<span class="fn">Where</span>(p =&gt; p.Price &lt; <span class="num">20</span>);          <span class="cmt">// filter</span>
+query = query.<span class="fn">OrderBy</span>(p =&gt; p.Name);                <span class="cmt">// sort</span>
+query = query.<span class="fn">Skip</span>(<span class="num">20</span>).<span class="fn">Take</span>(<span class="num">10</span>);                    <span class="cmt">// page</span>
+
+<span class="cmt">// NOW it runs — one SQL query with WHERE + ORDER BY + OFFSET/FETCH.</span>
+<span class="kw">var</span> results = <span class="kw">await</span> query.<span class="fn">ToListAsync</span>();</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Materialize too early and you lose everything</span>
+        <p>The classic bug: calling <code>ToListAsync()</code> (or <code>ToList()</code>) <em>before</em> filtering/paging. Once you do, the entire table is pulled into memory and every later <code>Where</code>/<code>Skip</code> runs in C# on the full set — the exact inefficiency you were avoiding. Keep it <code>IQueryable</code> until the very last step. As a signal: if you see <code>.ToList()</code> followed by more <code>.Where()</code>, that's a red flag.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ AsNoTracking for lists</span>
+        <p>List endpoints are read-only, so start the query with <code>.AsNoTracking()</code> (Day 8). EF Core skips change-tracking setup for the returned rows — less memory, faster reads. You're returning DTOs, not editing entities, so there's nothing to track.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Filtering — Narrowing the Rows 🔍</h2></div>
+      <p>Filtering means adding <code>Where</code> clauses based on optional query-string parameters. The trick: only apply a filter when the client actually supplied it. You conditionally compose the <code>IQueryable</code>, and unsupplied filters simply aren't added.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — conditional filtering</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="ty">IQueryable</span>&lt;<span class="ty">Product</span>&gt; query = db.Products.<span class="fn">AsNoTracking</span>();
+
+<span class="cmt">// Only add each Where if the parameter was provided.</span>
+<span class="kw">if</span> (!<span class="ty">string</span>.<span class="fn">IsNullOrWhiteSpace</span>(request.Search))
+    query = query.<span class="fn">Where</span>(p =&gt; p.Name.<span class="fn">Contains</span>(request.Search));
+
+<span class="kw">if</span> (request.MinPrice <span class="kw">is not null</span>)
+    query = query.<span class="fn">Where</span>(p =&gt; p.Price &gt;= request.MinPrice);
+
+<span class="kw">if</span> (request.MaxPrice <span class="kw">is not null</span>)
+    query = query.<span class="fn">Where</span>(p =&gt; p.Price &lt;= request.MaxPrice);
+
+<span class="kw">if</span> (request.InStockOnly == <span class="kw">true</span>)
+    query = query.<span class="fn">Where</span>(p =&gt; p.Stock &gt; <span class="num">0</span>);</code></pre>
+      </div>
+
+      <p>A request like <code>GET /api/products?search=note&amp;maxPrice=20&amp;inStockOnly=true</code> composes three <code>Where</code> clauses; EF Core folds them into one SQL <code>WHERE</code>. The parameters ride in on a bound DTO:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the query parameters as a DTO</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">ProductQuery</span>
+{
+    <span class="kw">public string</span>? Search { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public decimal</span>? MinPrice { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public decimal</span>? MaxPrice { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public bool</span>? InStockOnly { <span class="kw">get</span>; <span class="kw">set</span>; }
+
+    <span class="kw">public string</span>? SortBy { <span class="kw">get</span>; <span class="kw">set</span>; }        <span class="cmt">// used in §04</span>
+    <span class="kw">public bool</span> Desc { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public int</span> Page { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="num">1</span>;         <span class="cmt">// used in §05</span>
+    <span class="kw">public int</span> PageSize { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="num">20</span>;
+}</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Contains vs. real search</span>
+        <p><code>Contains</code> translates to SQL <code>LIKE '%term%'</code>. It works, but a leading wildcard can't use a normal index, so it scans — fine for modest tables, slow for huge ones. For serious text search, reach for full-text search or a search engine. Also validate/whitelist filter inputs; blindly trusting client-supplied filter fields can leak data or hurt performance.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Nullable params = "optional"</span>
+        <p>Making filter parameters nullable (<code>decimal?</code>, <code>bool?</code>) is what lets you distinguish "not supplied" from "supplied as zero/false." That distinction is the whole basis of conditional filtering.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>Sorting — Choosing the Order ↕️</h2></div>
+      <p>Sorting adds <code>OrderBy</code> / <code>OrderByDescending</code> (and <code>ThenBy</code> for tie-breakers). The danger here is security and stability: you must <strong>never</strong> pass a raw client string into a dynamic sort blindly, and your order must be <strong>fully unique</strong>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — safe, whitelisted sorting</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Whitelist the allowed sort fields — never trust a raw column name.</span>
+query = (request.SortBy?.<span class="fn">ToLower</span>()) <span class="kw">switch</span>
+{
+    <span class="str">"price"</span> =&gt; request.Desc
+        ? query.<span class="fn">OrderByDescending</span>(p =&gt; p.Price)
+        : query.<span class="fn">OrderBy</span>(p =&gt; p.Price),
+    <span class="str">"name"</span>  =&gt; request.Desc
+        ? query.<span class="fn">OrderByDescending</span>(p =&gt; p.Name)
+        : query.<span class="fn">OrderBy</span>(p =&gt; p.Name),
+    _       =&gt; query.<span class="fn">OrderBy</span>(p =&gt; p.Name)      <span class="cmt">// safe default</span>
+};
+
+<span class="cmt">// Tie-breaker on the unique key guarantees a STABLE order.</span>
+query = ((<span class="ty">IOrderedQueryable</span>&lt;<span class="ty">Product</span>&gt;)query).<span class="fn">ThenBy</span>(p =&gt; p.Id);</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Ordering must be fully unique — this bites everyone</span>
+        <p>Microsoft is explicit: whatever pagination method you use, <strong>always make the ordering fully unique</strong>. If you sort only by <code>Price</code> and several products share a price, the database is free to return those tied rows in a different order on each query — so paging can silently <em>skip</em> or <em>duplicate</em> rows across pages. Fix it by adding a unique tie-breaker like <code>.ThenBy(p =&gt; p.Id)</code>.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why the whitelist matters</span>
+        <p>Accepting an arbitrary property name to sort by (via string-based dynamic LINQ) opens the door to errors and abuse — clients could sort by expensive un-indexed columns or probe your schema. A <code>switch</code> over known fields keeps sorting safe, predictable, and index-friendly. Add a database index on the columns you actually sort by; it's the single biggest performance win.</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>Pagination — Offset (Skip/Take) 📄</h2></div>
+      <p>Offset pagination is the familiar "page number + page size" model. You <code>Skip</code> past earlier pages and <code>Take</code> the current one. In SQL these become <code>OFFSET</code> and <code>FETCH</code>/<code>LIMIT</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — offset pagination</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Clamp the page size so a client can't ask for a million rows.</span>
+<span class="kw">int</span> pageSize = <span class="ty">Math</span>.<span class="fn">Clamp</span>(request.PageSize, <span class="num">1</span>, <span class="num">100</span>);
+<span class="kw">int</span> page = <span class="ty">Math</span>.<span class="fn">Max</span>(request.Page, <span class="num">1</span>);
+
+<span class="cmt">// Total count runs BEFORE Skip/Take, on the filtered query.</span>
+<span class="kw">int</span> total = <span class="kw">await</span> query.<span class="fn">CountAsync</span>();
+
+<span class="kw">var</span> items = <span class="kw">await</span> query
+    .<span class="fn">Skip</span>((page - <span class="num">1</span>) * pageSize)   <span class="cmt">// jump past earlier pages</span>
+    .<span class="fn">Take</span>(pageSize)                <span class="cmt">// take just this page</span>
+    .<span class="fn">Select</span>(p =&gt; <span class="kw">new</span> <span class="ty">ProductDto</span>(p.Id, p.Name, p.Price))
+    .<span class="fn">ToListAsync</span>();</code></pre>
+      </div>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val">row 1</div><div class="idx">page 1</div></div>
+          <div class="arr-cell"><div class="val">…</div><div class="idx">skipped</div></div>
+          <div class="arr-cell"><div class="val">row 20</div><div class="idx">page 1</div></div>
+          <div class="arr-cell"><div class="val highlight">row 21</div><div class="idx">Skip(20)→</div></div>
+          <div class="arr-cell"><div class="val highlight-green">row 21–40</div><div class="idx">Take(20) ✓</div></div>
+          <div class="arr-cell"><div class="val">row 41+</div><div class="idx">not fetched</div></div>
+        </div>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">👍</span><h4>Pros</h4><p>Dead simple, and supports jumping to <em>any</em> page number — great for classic "page 1 2 3 … 50" UIs and admin dashboards.</p></div>
+        <div class="card"><span class="glyph">👎</span><h4>Cons</h4><p>The database must still scan and discard every skipped row — page 1,000 processes ~10,000 rows to return 10. And concurrent inserts/deletes can shift rows, causing skips or duplicates between pages.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Count on the filtered query, before paging</span>
+        <p>Call <code>CountAsync()</code> on the query <em>after</em> filtering but <em>before</em> <code>Skip</code>/<code>Take</code>, so the total reflects the whole filtered set (that's how the client knows how many pages exist). It's a second SQL query — the cost of showing "page 3 of 27." Keyset pagination (next) skips this cost entirely.</p>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>Keyset Pagination — For Large Data 🚀</h2></div>
+      <p>Microsoft's docs recommend <strong>keyset pagination</strong> (also called seek or cursor pagination) as the alternative to offset for large datasets. Instead of skipping <em>N</em> rows, you use a <code>WHERE</code> clause to start right after the last row the client already saw. No skipping means no scanning discarded rows.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — keyset pagination (single key)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// The client sends the last Id it saw; we fetch the next page after it.</span>
+<span class="kw">var</span> nextPage = <span class="kw">await</span> db.Products
+    .<span class="fn">AsNoTracking</span>()
+    .<span class="fn">OrderBy</span>(p =&gt; p.Id)
+    .<span class="fn">Where</span>(p =&gt; p.Id &gt; request.AfterId)   <span class="cmt">// seek, don't skip</span>
+    .<span class="fn">Take</span>(pageSize)
+    .<span class="fn">ToListAsync</span>();</code></pre>
+      </div>
+
+      <p>When you order by a non-unique column, you need a composite comparison to keep the seek deterministic — the exact pattern from the EF Core docs:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — keyset with two keys (date, then id)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> nextPage = <span class="kw">await</span> db.Products
+    .<span class="fn">AsNoTracking</span>()
+    .<span class="fn">OrderBy</span>(p =&gt; p.CreatedOn).<span class="fn">ThenBy</span>(p =&gt; p.Id)
+    .<span class="fn">Where</span>(p =&gt; p.CreatedOn &gt; lastDate
+             || (p.CreatedOn == lastDate &amp;&amp; p.Id &gt; lastId))
+    .<span class="fn">Take</span>(pageSize)
+    .<span class="fn">ToListAsync</span>();</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>Offset (Skip/Take)</th><th>Keyset (seek)</th></tr></thead>
+          <tbody>
+            <tr><td>Jump to any page?</td><td>✅ Yes</td><td>❌ Next/prev only</td></tr>
+            <tr><td>Performance at deep pages</td><td>❌ Degrades (scans skipped rows)</td><td>✅ Stays fast (uses index)</td></tr>
+            <tr><td>Stable under inserts/deletes?</td><td>❌ Can skip/duplicate</td><td>✅ Stable</td></tr>
+            <tr><td>Needs total count?</td><td>Usually (extra query)</td><td>No</td></tr>
+            <tr><td>Best for</td><td>Admin UIs, small/medium data</td><td>Infinite scroll, feeds, huge data</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Which to pick</span>
+        <p>Use <strong>offset</strong> for most APIs and admin screens where users jump to specific page numbers on small-to-medium data. Use <strong>keyset</strong> for large datasets and infinite-scroll feeds where performance and consistency matter more than random page access. Either way, <strong>index the columns you order by</strong> — for a composite keyset, use a composite index in the same direction as your sort.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 SQL row-value note</span>
+        <p>Most databases support a tidy form — <code>WHERE (CreatedOn, Id) &gt; (@lastDate, @lastId)</code> — but EF Core doesn't yet express that in LINQ, so you write the expanded <code>OR</code> condition shown above. It produces the same correct result.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>Shaping the Result Set 📦</h2></div>
+      <p>Two more shaping steps make the response client-friendly. First, <strong>project to a DTO</strong> inside the query (Day 5) so SQL selects only needed columns. Second, <strong>wrap the page</strong> in an envelope that carries metadata — the client needs to know there are more pages.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — a paged-result envelope</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public record</span> <span class="ty">PagedResult</span>&lt;<span class="ty">T</span>&gt;(
+    <span class="ty">IReadOnlyList</span>&lt;<span class="ty">T</span>&gt; Items,
+    <span class="kw">int</span> Page,
+    <span class="kw">int</span> PageSize,
+    <span class="kw">int</span> TotalCount)
+{
+    <span class="kw">public int</span> TotalPages =&gt; (<span class="kw">int</span>)<span class="ty">Math</span>.<span class="fn">Ceiling</span>(TotalCount / (<span class="kw">double</span>)PageSize);
+    <span class="kw">public bool</span> HasNext =&gt; Page &lt; TotalPages;
+    <span class="kw">public bool</span> HasPrevious =&gt; Page &gt; <span class="num">1</span>;
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">JSON — what the client receives</span><button class="copy-btn">Copy</button></div>
+        <pre><code>{
+  <span class="str">"items"</span>: [
+    { <span class="str">"id"</span>: <span class="num">21</span>, <span class="str">"name"</span>: <span class="str">"Notebook"</span>, <span class="str">"price"</span>: <span class="num">4.99</span> },
+    { <span class="str">"id"</span>: <span class="num">22</span>, <span class="str">"name"</span>: <span class="str">"Pen"</span>,      <span class="str">"price"</span>: <span class="num">1.20</span> }
+  ],
+  <span class="str">"page"</span>: <span class="num">2</span>,
+  <span class="str">"pageSize"</span>: <span class="num">20</span>,
+  <span class="str">"totalCount"</span>: <span class="num">137</span>,
+  <span class="str">"totalPages"</span>: <span class="num">7</span>,
+  <span class="str">"hasNext"</span>: <span class="kw">true</span>,
+  <span class="str">"hasPrevious"</span>: <span class="kw">true</span>
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Where should the metadata live?</span>
+        <p>Two common conventions: an <strong>envelope</strong> in the body (shown above — easy to consume, self-describing), or the raw array in the body with pagination info in a response <strong>header</strong> (e.g. a custom <code>X-Pagination</code> header or the standard <code>Link</code> header). Envelopes are the most common in typical JSON APIs. Pick one and apply it consistently across every list endpoint.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Always cap the page size</span>
+        <p>Never let the client dictate an unbounded <code>pageSize</code>. Clamp it to a sane maximum (e.g. 100) as shown in §05 — otherwise <code>?pageSize=1000000</code> reintroduces the exact problem pagination exists to solve. Provide sensible defaults (page 1, size 20) so a bare <code>GET /api/products</code> still behaves.</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>The Full Endpoint 🧩</h2></div>
+      <p>Here's today's "Do," assembled: a paged, filterable, sortable list endpoint. The controller binds the query DTO and delegates; the service composes one <code>IQueryable</code> and materializes it once.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the controller action</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpGet</span>]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">PagedResult</span>&lt;<span class="ty">ProductDto</span>&gt;&gt;&gt; <span class="fn">GetAll</span>(
+    [<span class="ty">FromQuery</span>] <span class="ty">ProductQuery</span> request) =&gt;
+    <span class="kw">await</span> service.<span class="fn">ListAsync</span>(request);</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the service: compose, count, page, shape</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">PagedResult</span>&lt;<span class="ty">ProductDto</span>&gt;&gt; <span class="fn">ListAsync</span>(<span class="ty">ProductQuery</span> q)
+{
+    <span class="kw">int</span> pageSize = <span class="ty">Math</span>.<span class="fn">Clamp</span>(q.PageSize, <span class="num">1</span>, <span class="num">100</span>);
+    <span class="kw">int</span> page = <span class="ty">Math</span>.<span class="fn">Max</span>(q.Page, <span class="num">1</span>);
+
+    <span class="cmt">// 1) BASE — read-only</span>
+    <span class="ty">IQueryable</span>&lt;<span class="ty">Product</span>&gt; query = db.Products.<span class="fn">AsNoTracking</span>();
+
+    <span class="cmt">// 2) FILTER — only what was supplied</span>
+    <span class="kw">if</span> (!<span class="ty">string</span>.<span class="fn">IsNullOrWhiteSpace</span>(q.Search))
+        query = query.<span class="fn">Where</span>(p =&gt; p.Name.<span class="fn">Contains</span>(q.Search));
+    <span class="kw">if</span> (q.MinPrice <span class="kw">is not null</span>) query = query.<span class="fn">Where</span>(p =&gt; p.Price &gt;= q.MinPrice);
+    <span class="kw">if</span> (q.MaxPrice <span class="kw">is not null</span>) query = query.<span class="fn">Where</span>(p =&gt; p.Price &lt;= q.MaxPrice);
+
+    <span class="cmt">// 3) SORT — whitelist + unique tie-breaker</span>
+    query = q.SortBy?.<span class="fn">ToLower</span>() <span class="kw">switch</span>
+    {
+        <span class="str">"price"</span> =&gt; q.Desc ? query.<span class="fn">OrderByDescending</span>(p =&gt; p.Price)
+                          : query.<span class="fn">OrderBy</span>(p =&gt; p.Price),
+        _       =&gt; q.Desc ? query.<span class="fn">OrderByDescending</span>(p =&gt; p.Name)
+                          : query.<span class="fn">OrderBy</span>(p =&gt; p.Name)
+    };
+    query = ((<span class="ty">IOrderedQueryable</span>&lt;<span class="ty">Product</span>&gt;)query).<span class="fn">ThenBy</span>(p =&gt; p.Id);
+
+    <span class="cmt">// 4) COUNT — filtered total, before paging</span>
+    <span class="kw">int</span> total = <span class="kw">await</span> query.<span class="fn">CountAsync</span>();
+
+    <span class="cmt">// 5) PAGE + SHAPE — skip/take, project to DTO, run once</span>
+    <span class="kw">var</span> items = <span class="kw">await</span> query
+        .<span class="fn">Skip</span>((page - <span class="num">1</span>) * pageSize)
+        .<span class="fn">Take</span>(pageSize)
+        .<span class="fn">Select</span>(p =&gt; <span class="kw">new</span> <span class="ty">ProductDto</span>(p.Id, p.Name, p.Price))
+        .<span class="fn">ToListAsync</span>();
+
+    <span class="kw">return new</span> <span class="ty">PagedResult</span>&lt;<span class="ty">ProductDto</span>&gt;(items, page, pageSize, total);
+}</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Try it</span>
+        <p><code>GET /api/products?search=note&amp;maxPrice=20&amp;sortBy=price&amp;desc=true&amp;page=2&amp;pageSize=10</code> → returns page 2 of in-name-"note", ≤ $20 products, most expensive first, ten per page, wrapped with total-count metadata. One request, one SQL query, bounded response.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>Query Build Order — Filter → Sort → Page → Shape 🔄</h2></div>
+      <p>The order you compose the query in isn't arbitrary — each step depends on the last. Follow this sequence every time.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · 🧱 base query</div>
+          <div class="sh">Start IQueryable, AsNoTracking</div>
+          <p>Begin from the <code>DbSet</code>; nothing executes yet. Read-only, so no change tracking.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 2 · 🔍 filter</div>
+          <div class="sh">Add Where clauses</div>
+          <p>Conditionally, per supplied parameter. Filtering first means everything after works on the smaller set.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 3 · ↕️ sort</div>
+          <div class="sh">OrderBy + unique ThenBy</div>
+          <p>Whitelist the field; add a unique tie-breaker so paging is stable. Order must exist <em>before</em> Skip/Take.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 4 · 🔢 count</div>
+          <div class="sh">CountAsync on the filtered query</div>
+          <p>Offset only. Run before Skip/Take so the total reflects all filtered rows (for page metadata).</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 5 · 📄📦 page + shape</div>
+          <div class="sh">Skip/Take → Select DTO → ToListAsync</div>
+          <p>Page the ordered set, project to a DTO, then materialize. This is the single database round-trip for the items.</p>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Order matters</span>
+        <p>Sorting must come before paging — <code>Skip</code>/<code>Take</code> without a stable <code>OrderBy</code> gives arbitrary, shifting results. And counting must come before <code>Skip</code>/<code>Take</code> (it counts the filtered set, not one page). Get the sequence wrong and you get wrong data, not just slow data.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🪨 Never dump the table</h4><p>List endpoints return a controlled slice, not every row.</p></div>
+        <div class="recap-card"><h4>🧮 IQueryable defers</h4><p>The query builds in memory and runs once, at materialization.</p></div>
+        <div class="recap-card"><h4>⚡ Async + AsNoTracking</h4><p>Await DB calls; skip tracking on read-only lists.</p></div>
+        <div class="recap-card"><h4>🔍 Filter conditionally</h4><p>Add a <code>Where</code> only when the parameter is supplied.</p></div>
+        <div class="recap-card"><h4>↕️ Whitelist sorts</h4><p>Map known fields via a <code>switch</code>; never trust raw column names.</p></div>
+        <div class="recap-card"><h4>🔑 Unique ordering</h4><p>Add a tie-breaker (<code>ThenBy(Id)</code>) or paging skips/duplicates rows.</p></div>
+        <div class="recap-card"><h4>📄 Offset = Skip/Take</h4><p>Simple, any-page, but scans skipped rows and can shift.</p></div>
+        <div class="recap-card"><h4>🚀 Keyset = seek</h4><p>WHERE past the last row; fast &amp; stable for big data, next/prev only.</p></div>
+        <div class="recap-card"><h4>🔢 Count before paging</h4><p>CountAsync on the filtered query for total-page metadata.</p></div>
+        <div class="recap-card"><h4>📦 Project + envelope</h4><p>Select into a DTO; wrap items with page metadata.</p></div>
+        <div class="recap-card"><h4>🧢 Cap page size</h4><p>Clamp pageSize; give sensible defaults.</p></div>
+        <div class="recap-card"><h4>🗂️ Index what you touch</h4><p>Index the columns you filter and sort on — the biggest win.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concern</th><th>Tool</th><th>Key detail</th></tr></thead>
+          <tbody>
+            <tr><td>Async</td><td><code>ToListAsync</code>, <code>CountAsync</code></td><td>Non-blocking; frees threads for scalability</td></tr>
+            <tr><td>Deferred query</td><td><code>IQueryable&lt;T&gt;</code></td><td>Compose freely; runs once when materialized</td></tr>
+            <tr><td>Filtering</td><td><code>Where</code></td><td>Conditional; nullable params = optional</td></tr>
+            <tr><td>Sorting</td><td><code>OrderBy</code>/<code>ThenBy</code></td><td>Whitelist + unique tie-breaker</td></tr>
+            <tr><td>Offset paging</td><td><code>Skip</code>/<code>Take</code></td><td>Any page; scans skipped rows; needs count</td></tr>
+            <tr><td>Keyset paging</td><td><code>Where(k &gt; last)</code></td><td>Fast &amp; stable; next/prev only; index required</td></tr>
+            <tr><td>Total count</td><td><code>CountAsync</code></td><td>On filtered query, before Skip/Take</td></tr>
+            <tr><td>Shaping</td><td><code>Select</code> → DTO + envelope</td><td>Fewer columns; page metadata in body/header</td></tr>
+            <tr><td>Safety</td><td><code>Math.Clamp</code> page size</td><td>Cap max; sensible defaults</td></tr>
+            <tr><td>Performance</td><td>Indexes</td><td>Index filtered/sorted columns</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">Why not just return every row from a list endpoint?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Because a table can have millions of rows. Returning them all overloads the database, saturates the network, and can crash the client. A real list endpoint returns a controlled slice — filtered, sorted, and paged — so the response stays small and fast no matter how big the table grows.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is pagination?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Returning data in pages instead of all at once. The client asks for a page number and page size; the server returns just that subset. In EF Core the common approach uses <code>Skip()</code> and <code>Take()</code>, which become SQL <code>OFFSET</code> and <code>FETCH</code>/<code>LIMIT</code>, so only the requested rows come back.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">How do you filter a list based on query parameters?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Add <code>Where</code> clauses to the query, but only when the parameter is supplied. You bind the query-string values to a DTO with nullable properties, then check each one — e.g. <code>if (maxPrice is not null) query = query.Where(p =&gt; p.Price &lt;= maxPrice)</code>. Unsupplied filters simply aren't added.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">How do you sort results by a column?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Use <code>OrderBy</code> (ascending) or <code>OrderByDescending</code> (descending), with <code>ThenBy</code> for tie-breakers. In an API you map the client's requested field to a known column — usually with a <code>switch</code> over allowed values — rather than trusting a raw column name.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">Why should list actions be async?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Database calls are I/O operations. Awaiting them (<code>ToListAsync</code>, <code>CountAsync</code>) frees the request thread to serve other requests instead of blocking while waiting on the database. That lets the server handle many more concurrent requests — it's important for scalability.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What do Skip and Take do?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p><code>Skip(n)</code> bypasses the first <em>n</em> rows; <code>Take(n)</code> returns the next <em>n</em>. Together they select one page: for page <em>p</em> of size <em>s</em>, <code>Skip((p-1)*s).Take(s)</code>. EF Core translates them to SQL <code>OFFSET</code> and <code>FETCH</code>, so the paging happens in the database.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">Why cap the page size?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>So a client can't request an unbounded number of rows (<code>?pageSize=1000000</code>), which would reintroduce the exact overload pagination is meant to prevent. You clamp the incoming value to a safe maximum (e.g. 100) and provide sensible defaults so a bare request still works.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What extra info should a paged response include?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Beyond the items, metadata that lets the client navigate: the current page, page size, total count (and thus total pages), and often flags like <code>hasNext</code>/<code>hasPrevious</code>. This is usually wrapped in an envelope object in the response body, or placed in a response header.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">What is IQueryable's deferred execution and why does it matter here?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>An <code>IQueryable</code> doesn't run when you build it — adding <code>Where</code>, <code>OrderBy</code>, <code>Skip</code>, <code>Take</code> just describes the query. It executes only when you materialize it (<code>ToListAsync</code>, <code>CountAsync</code>, etc.). That's what lets you compose filtering, sorting, and paging step by step and still get one efficient SQL query that does all the work in the database.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">What's the danger of calling ToList too early?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>It materializes the query immediately, pulling the whole (unfiltered, unpaged) result into memory. Any <code>Where</code>/<code>OrderBy</code>/<code>Skip</code> after that runs in C# on the full set — client-side evaluation — defeating the purpose. Keep the query as <code>IQueryable</code> until the final materialization so filtering and paging happen in SQL.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">Why must the ordering be fully unique when paginating?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>If the sort isn't unique — say you order only by price and several rows share a price — the database can return those tied rows in a different order on each query. Across pages, that means rows can be skipped or shown twice. Adding a unique tie-breaker like <code>ThenBy(p =&gt; p.Id)</code> guarantees a stable, deterministic order.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">Offset vs. keyset pagination — what's the difference?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Offset uses <code>Skip</code>/<code>Take</code> to jump past N rows — simple and supports any page number, but the database still scans all skipped rows (slow at deep pages) and can skip/duplicate rows if data changes. Keyset uses a <code>WHERE</code> clause to start right after the last row seen — fast and stable even on huge datasets, but only supports next/previous navigation, not jumping to arbitrary pages.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">Where do you compute the total count, and why there?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>On the filtered query, <em>before</em> <code>Skip</code>/<code>Take</code>. You want the total of all rows matching the filters (not just the current page) so the client can compute how many pages exist. It's a separate <code>CountAsync</code> query — the cost of showing "page 3 of 27." Keyset pagination avoids this count entirely.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">How do you sort safely by a client-provided field?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Whitelist the allowed fields — map the incoming string to a known column with a <code>switch</code>, with a safe default. Never feed a raw client string into dynamic LINQ, which could let callers sort by expensive un-indexed columns or probe the schema. And index the columns you actually allow sorting on.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">How does Contains translate to SQL, and what's the catch?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p><code>Name.Contains(term)</code> becomes <code>LIKE '%term%'</code>. It works, but the leading wildcard prevents the database from using a normal index, so it scans the table — fine for small data, slow for large. For serious text search, use full-text search or a dedicated search engine rather than <code>Contains</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">In what order should you compose filter, sort, and page?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Filter → sort → count → page (then shape). Filter first so everything works on a smaller set; sort before paging because <code>Skip</code>/<code>Take</code> needs a stable order; count the filtered set before paging for metadata; then <code>Skip</code>/<code>Take</code>, project to a DTO, and materialize. Because it's all one <code>IQueryable</code>, the sequence you write becomes one SQL query.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Why does offset pagination degrade at deep pages?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Because <code>OFFSET</code> still requires the database to locate and discard every skipped row before returning the page. Page 1,000 with size 10 means processing ~10,000 rows to hand back 10. The cost grows linearly with the offset. Keyset pagination avoids it by seeking directly to the starting point via an indexed <code>WHERE</code>, so performance stays flat regardless of how deep you go.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">How do you implement keyset pagination with a non-unique sort column?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Add a unique tie-breaker to both the ordering and the seek condition. Ordering by date then id, the WHERE becomes: <code>date &gt; lastDate OR (date == lastDate &amp;&amp; id &gt; lastId)</code>. This picks up exactly where the previous page ended. Most databases support the tidy row-value form <code>(date, id) &gt; (@lastDate, @lastId)</code>, but EF Core doesn't express that in LINQ yet, so you write the expanded OR condition. Back it with a composite index matching the sort order.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">What indexing strategy supports filtering and sorting?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Index the columns you filter and order by — it's the single biggest performance lever. For multi-column ordering (or composite keyset), use a composite index in the same direction as the sort (EF Core supports specifying sort order in composite indexes since EF Core 7). Watch the trade-off: indexes speed reads but slow writes and use space, so index the columns you actually query, not every column.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How can a count query become a bottleneck, and what can you do?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>On large tables, <code>COUNT</code> over a heavily-filtered set can be as expensive as the page query itself, doubling the work per request. Options: switch to keyset pagination (no count needed), return an approximate/cached count, omit the exact total and just expose <code>hasNext</code> (fetch pageSize+1 and check for overflow), or cache counts for common filter combinations. Exact "page X of Y" is a feature with a real cost.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">How do you keep pagination consistent when data changes between requests?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Offset pagination is inherently vulnerable — an insert or delete in earlier rows shifts the whole result set, so page 3 might repeat or skip a row seen on page 2. Keyset pagination fixes this because it anchors on the last-seen key value rather than a positional offset, so concurrent changes to other rows don't shift your window. For infinite-scroll feeds especially, keyset is the consistent choice.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">How should filtering and sorting be exposed and validated on the API surface?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Bind a strongly-typed query DTO with <code>[FromQuery]</code>, validate it (ranges on page/size, allowed sort values), and whitelist filterable/sortable fields explicitly. Avoid generic "filter by any field/operator" surfaces unless you deliberately build a safe query language — they invite injection-like abuse, expensive scans, and schema leakage. Document the supported params and enforce sane defaults and caps server-side.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">When would you avoid returning a total count at all?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>When the extra count query is too costly or the UI doesn't need exact page numbers — e.g. infinite scroll or "load more" feeds. There you use keyset pagination and expose only a "next cursor"/<code>hasNext</code>, often by fetching one extra row (pageSize + 1) and checking whether it came back. This gives smooth forward navigation with no count overhead, trading away the "page X of Y" display that users of a feed don't need anyway.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Anchor on <strong>why unbounded lists are dangerous</strong> and how <strong>IQueryable defers</strong> (Q1, Q9–Q10) — that mental model makes everything else obvious. Then learn the four levers in build order: <strong>filter, sort, page, shape</strong> (Q3–Q4, Q6, Q16), being able to explain the <strong>unique-ordering</strong> rule cold (Q11) since it's the most-missed detail. Finish with the <strong>offset-vs-keyset trade-off and its performance/consistency implications</strong> (Q12, Q17–Q21), which is where senior interviews go. If you can build the endpoint in section 08 from memory and justify the query order in section 09, you own this topic.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

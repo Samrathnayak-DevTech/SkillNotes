@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inheritance &amp; Polymorphism — Session 04</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* hierarchy node */
+.hier-node{border:1.5px solid var(--ink);border-radius:4px;padding:.35rem .85rem;font-family:'JetBrains Mono',monospace;font-size:.75rem;background:var(--bg);text-align:center;white-space:nowrap;display:inline-block}
+/* runtime dispatch demo */
+.dispatch-row{display:flex;gap:1rem;align-items:center;margin:.4rem 0;font-family:'JetBrains Mono',monospace;font-size:.78rem;flex-wrap:wrap}
+.dispatch-ref{background:var(--bg-soft);border:1.5px solid var(--line);border-radius:4px;padding:.3rem .7rem}
+.dispatch-obj{border-radius:4px;padding:.3rem .7rem}
+.dispatch-obj.a{background:var(--blue-soft);border:1.5px solid var(--blue)}
+.dispatch-obj.b{background:var(--green-soft);border:1.5px solid var(--green)}
+.dispatch-obj.c{background:var(--purple-soft);border:1.5px solid var(--purple)}
+.dispatch-out{color:var(--accent);font-weight:600}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 04</div>
+  <div class="nav-group"><span class="nav-group-label">Getting Started</span><a class="nav-link" href="#hero">Overview</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">Inheritance</span>
+    <a class="nav-link" href="#s01">01 Inheritance &amp; IS-A</a>
+    <a class="nav-link" href="#s02">02 extends Keyword</a>
+    <a class="nav-link" href="#s03">03 Constructor Chaining</a>
+    <a class="nav-link" href="#s04">04 Reference vs Object Type</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Polymorphism</span>
+    <a class="nav-link" href="#s05">05 What is Polymorphism?</a>
+    <a class="nav-link" href="#s06">06 Method Overloading (Compile-Time)</a>
+    <a class="nav-link" href="#s07">07 Method Signature</a>
+    <a class="nav-link" href="#s08">08 Method Overriding (Runtime)</a>
+    <a class="nav-link" href="#s09">09 Dynamic Dispatch</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 04 · 14th Nov</p>
+  <h1>Inheritance &amp; Polymorphism</h1>
+  <p class="hero-lede">How child classes build on parent classes, how constructor calls chain up the hierarchy, and how the same method call can produce different results depending on the runtime object.</p>
+  <div class="agenda-chips">
+    <span class="chip">Inheritance</span><span class="chip">IS-A Relationship</span><span class="chip">Constructor Chaining</span><span class="chip">Polymorphism</span><span class="chip">Overloading</span><span class="chip">Overriding</span><span class="chip">Dynamic Dispatch</span>
+  </div>
+</section>
+
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>Inheritance &amp; the IS-A Relationship</h2></div>
+  <p>Inheritance lets a child class automatically acquire all attributes and behaviours of its parent class. This eliminates code duplication for entities that share common characteristics. The test for when to use inheritance is the <strong>IS-A check</strong>: if you can say "a Mentor IS-A User" or "a Dog IS-AN Animal" and it makes semantic sense, inheritance is appropriate.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:.5rem;">
+      <div class="hier-node" style="background:var(--accent-soft); border-color:var(--accent);">User (common)</div>
+      <div style="color:var(--ink-soft); font-family:'JetBrains Mono',monospace; font-size:.75rem;">▲ IS-A</div>
+      <div style="display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center;">
+        <div class="hier-node">Student</div><div class="hier-node">Mentor</div><div class="hier-node">TA</div><div class="hier-node">Instructor</div>
+      </div>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; gap:.5rem; margin-top:1.5rem;">
+      <div class="hier-node" style="background:var(--blue-soft); border-color:var(--blue);">Animal</div>
+      <div style="color:var(--ink-soft); font-family:'JetBrains Mono',monospace; font-size:.75rem;">▲ IS-A</div>
+      <div style="display:flex; gap:.8rem; flex-wrap:wrap; justify-content:center;">
+        <div class="hier-node">Mammals</div><div class="hier-node">Reptiles</div><div class="hier-node">Aquatic</div>
+      </div>
+      <div style="color:var(--ink-soft); font-family:'JetBrains Mono',monospace; font-size:.75rem;">▲ (Mammals)</div>
+      <div style="display:flex; gap:.8rem; justify-content:center;">
+        <div class="hier-node">Dog</div><div class="hier-node">Cat</div>
+      </div>
+    </div>
+  </div>
+
+  <p>A child class inherits ALL attributes and behaviours from its parent — as if all those fields and methods had been written inside the child class itself. But the child can also add its own unique attributes and methods on top.</p>
+</section>
+
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>The <code>extends</code> Keyword</h2></div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">User</span> {
+    <span class="ty">String</span> name, email, password;
+
+    <span class="kw">void</span> <span class="fn">login</span>()  { <span class="cmt">/* ... */</span> }
+    <span class="kw">void</span> <span class="fn">signUp</span>() { <span class="cmt">/* ... */</span> }
+}
+
+<span class="kw">class</span> <span class="ty">Mentor</span> <span class="kw">extends</span> <span class="ty">User</span> {
+    <span class="ty">String</span> company;       <span class="cmt">// Mentor-specific fields</span>
+    <span class="kw">double</span> avgRating;
+    <span class="cmt">// name, email, password, login(), signUp() all inherited from User</span>
+}
+
+<span class="ty">Mentor</span> m = <span class="kw">new</span> <span class="ty">Mentor</span>();
+m.name      = <span class="str">"Deepak"</span>;  <span class="cmt">// ✓ inherited from User</span>
+m.<span class="fn">login</span>();               <span class="cmt">// ✓ inherited from User</span>
+m.company   = <span class="str">"Scaler"</span>; <span class="cmt">// ✓ Mentor's own field</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Java Rule</span>
+    <p>Java supports only <strong>single inheritance</strong> for classes — a class can extend only one parent. This avoids the Diamond Problem (covered in Session 05). Multiple interface implementation is allowed as a workaround.</p>
+  </div>
+</section>
+
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Constructor Chaining</h2></div>
+  <p>When you create an object of a child class, Java automatically calls the <strong>parent's default constructor first</strong>, before the child's own constructor body executes. This cascade up the hierarchy is called <strong>constructor chaining</strong>.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:0; font-family:'JetBrains Mono',monospace; font-size:.78rem;">
+      <div style="display:flex; flex-direction:column; gap:0; width:fit-content;">
+        <div class="hier-node">A</div><div style="width:2px;height:20px;background:var(--line);margin:0 auto;"></div>
+        <div class="hier-node">B</div><div style="width:2px;height:20px;background:var(--line);margin:0 auto;"></div>
+        <div class="hier-node">C</div><div style="width:2px;height:20px;background:var(--line);margin:0 auto;"></div>
+        <div class="hier-node" style="background:var(--accent-soft);border-color:var(--accent);">D</div>
+      </div>
+      <p style="font-size:.78rem; color:var(--ink-soft); margin-top:.8rem;"><code>D d = new D()</code> → A's constructor runs first, then B, then C, then D.</p>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">A</span> { <span class="ty">A</span>() { <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"A constructor"</span>); } }
+<span class="kw">class</span> <span class="ty">B</span> <span class="kw">extends</span> <span class="ty">A</span> { <span class="ty">B</span>() { <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"B constructor"</span>); } }
+<span class="kw">class</span> <span class="ty">C</span> <span class="kw">extends</span> <span class="ty">B</span> { <span class="ty">C</span>() { <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"C constructor"</span>); } }
+<span class="kw">class</span> <span class="ty">D</span> <span class="kw">extends</span> <span class="ty">C</span> { <span class="ty">D</span>() { <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"D constructor"</span>); } }
+
+<span class="ty">D</span> d = <span class="kw">new</span> <span class="ty">D</span>();
+<span class="cmt">// Output:
+// A constructor
+// B constructor
+// C constructor
+// D constructor</span></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Tip</span>
+    <p>Java inserts an implicit <code>super()</code> call as the first statement of every constructor. If you want to call a specific parameterized parent constructor, use <code>super(arg1, arg2)</code> explicitly as the very first line of your constructor.</p>
+  </div>
+</section>
+
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Reference Type vs Object Type</h2></div>
+  <p>In Java, the <em>reference type</em> (the declared type of the variable) and the <em>object type</em> (the actual class of the instantiated object) can differ. A parent reference can hold any child object.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">A</span> { <span class="ty">String</span> name; <span class="kw">int</span> age; }
+<span class="kw">class</span> <span class="ty">B</span> <span class="kw">extends</span> <span class="ty">A</span> { <span class="ty">String</span> college; }
+<span class="kw">class</span> <span class="ty">C</span> <span class="kw">extends</span> <span class="ty">A</span> { <span class="ty">String</span> company; }
+
+<span class="cmt">// ✗  C c = new A() — parent object can't fill a child reference</span>
+<span class="ty">A</span> a = <span class="kw">new</span> <span class="ty">C</span>();         <span class="cmt">// ✓ reference=A, object=C</span>
+
+a.name    = <span class="str">"Amit"</span>;   <span class="cmt">// ✓ name is in A — accessible via A reference</span>
+a.age     = <span class="num">25</span>;       <span class="cmt">// ✓ age is in A</span>
+<span class="cmt">// a.company = "Scaler"; ✗ Compile error — 'company' is not in A</span>
+<span class="cmt">//   Even though the runtime object IS a C, the compiler only knows about A</span></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Compile vs Runtime</span>
+    <p><strong>Compile time:</strong> the compiler checks field/method access against the <em>reference type</em>. <strong>Runtime:</strong> the JVM determines which overridden method to execute based on the <em>actual object type</em>. This is what makes polymorphism work.</p>
+  </div>
+</section>
+
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>What is Polymorphism?</h2></div>
+  <p>Polymorphism (from Greek: "many forms") means that the same method call can behave differently depending on the object it is invoked on. In Java, polymorphism comes in two flavours:</p>
+
+  <table>
+    <thead><tr><th>Type</th><th>Mechanism</th><th>Resolved At</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Compile-Time Polymorphism</strong></td><td>Method Overloading — same name, different parameter lists</td><td>Compile time</td></tr>
+      <tr><td><strong>Runtime Polymorphism</strong></td><td>Method Overriding — child redefines a parent method with the same signature</td><td>Runtime (JVM)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>Method Overloading (Compile-Time)</h2></div>
+  <p>Overloading means defining multiple methods with the <strong>same name</strong> but <strong>different parameter lists</strong> in the same class. The compiler picks the correct version based on the argument types and count at the call site.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Calculator</span> {
+    <span class="kw">int</span> <span class="fn">sum</span>(<span class="kw">int</span> a, <span class="kw">int</span> b)               { <span class="kw">return</span> a+b; }
+    <span class="kw">int</span> <span class="fn">sum</span>(<span class="kw">int</span> a, <span class="kw">int</span> b, <span class="kw">int</span> c)          { <span class="kw">return</span> a+b+c; }
+    <span class="kw">int</span> <span class="fn">sum</span>(<span class="kw">int</span> a, <span class="kw">int</span> b, <span class="kw">int</span> c, <span class="kw">int</span> d) { <span class="kw">return</span> a+b+c+d; }
+}
+
+<span class="ty">Calculator</span> calc = <span class="kw">new</span> <span class="ty">Calculator</span>();
+calc.<span class="fn">sum</span>(<span class="num">1</span>, <span class="num">2</span>);          <span class="cmt">// calls first overload</span>
+calc.<span class="fn">sum</span>(<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>);       <span class="cmt">// calls second overload</span>
+calc.<span class="fn">sum</span>(<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>);    <span class="cmt">// calls third overload</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Overloading vs Returning Different Types</span>
+    <p>Two methods that differ <em>only</em> by return type (e.g., <code>void fun(String s)</code> and <code>int fun(String s)</code>) have <strong>identical signatures</strong> and are <strong>not valid overloads</strong> — the compiler can't distinguish them at a call site like <code>a.fun("hello")</code>. The method signature is defined as: name + parameter types only (not return type).</p>
+  </div>
+</section>
+
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>Method Signature</h2></div>
+  <p>The <strong>method signature</strong> in Java is the combination of the method's name and the data types of its parameters (in order). The <em>return type</em> is NOT part of the signature. Two methods are considered to have different signatures — and can therefore coexist as overloads — if they have different parameter types, different parameter counts, or different parameter order.</p>
+
+  <table>
+    <thead><tr><th>Methods</th><th>Different Signature?</th><th>Valid Overloads?</th></tr></thead>
+    <tbody>
+      <tr><td><code>fun(String s)</code> vs <code>fun(int x)</code></td><td>Yes — different param types</td><td>✓</td></tr>
+      <tr><td><code>fun(String s, int x)</code> vs <code>fun(int x, String s)</code></td><td>Yes — different param order</td><td>✓</td></tr>
+      <tr><td><code>int fun()</code> vs <code>void fun(int x)</code></td><td>Yes — different params</td><td>✓</td></tr>
+      <tr><td><code>void fun(String s)</code> vs <code>int fun(String s)</code></td><td>No — only return type differs</td><td>✗ Compile error</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s08" class="section">
+  <div class="section-header"><span class="section-num">08</span><h2>Method Overriding (Runtime)</h2></div>
+  <p>Overriding means a child class provides its own implementation of a method that already exists in the parent, with the <strong>exact same signature</strong> (same name, same parameter types). The child's version replaces the parent's version for any object of the child class.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Overriding Rules</span>
+    <p>The overriding method must have: the same name, the same parameter list, and the same (or covariant) return type. It cannot reduce the access level (e.g., you cannot override a <code>public</code> method with <code>private</code>). The <code>@Override</code> annotation is strongly recommended — it catches mistakes at compile time.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">A</span> {
+    <span class="kw">void</span> <span class="fn">fun</span>() { <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Hello from A"</span>); }
+}
+
+<span class="kw">class</span> <span class="ty">B</span> <span class="kw">extends</span> <span class="ty">A</span> {
+    <span class="kw">@Override</span>
+    <span class="kw">void</span> <span class="fn">fun</span>() { <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Hey from B"</span>); }
+    <span class="cmt">// Note: changing return type to int would NOT be a valid override
+    // (int fun() with no params would be a compile error — same signature, different return)</span>
+}</pre>
+  </div>
+</section>
+
+<section id="s09" class="section">
+  <div class="section-header"><span class="section-num">09</span><h2>Dynamic Dispatch (Runtime Polymorphism)</h2></div>
+  <p>When you call an overridden method through a parent reference, the JVM decides at <em>runtime</em> which version to execute based on the <em>actual object stored</em> — not the declared type of the reference. This is called <strong>dynamic method dispatch</strong>.</p>
+
+  <div class="diagram-box">
+    <div class="dispatch-row">
+      <div class="dispatch-ref">A a</div>
+      <span>= new</span>
+      <div class="dispatch-obj a">A()</div>
+      <span>→ a.fun() → </span><span class="dispatch-out">"Hello"</span>
+    </div>
+    <div class="dispatch-row">
+      <div class="dispatch-ref">A a</div>
+      <span>= new</span>
+      <div class="dispatch-obj b">B()</div>
+      <span>→ a.fun() → </span><span class="dispatch-out">"Hey"</span>
+    </div>
+    <p style="font-size:.8rem; color:var(--ink-soft); margin-top:.8rem;">Same reference type (<code>A</code>), same method call (<code>a.fun()</code>), different output — because the actual stored object differs.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// A has fun() → "Hello"
+// B extends A, overrides fun() → "Hey"
+// C extends B, overrides fun() → "Hi"</span>
+
+<span class="ty">A</span> a = <span class="kw">new</span> <span class="ty">A</span>();  a.<span class="fn">fun</span>();  <span class="cmt">// "Hello"</span>
+   a = <span class="kw">new</span> <span class="ty">B</span>();  a.<span class="fn">fun</span>();  <span class="cmt">// "Hey"  — B's override runs</span>
+
+<span class="ty">B</span> b = <span class="kw">new</span> <span class="ty">C</span>();  b.<span class="fn">fun</span>();  <span class="cmt">// "Hi"   — C's override runs (actual object is C)</span>
+   b = <span class="kw">new</span> <span class="ty">B</span>();  b.<span class="fn">fun</span>();  <span class="cmt">// "Hello" — wait, B doesn't override → walks up to A</span>
+
+<span class="cmt">// The rule: walk up the inheritance chain from the actual object type
+// until you find an implementation of the method.</span></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Rule</span>
+    <p><strong>Which method executes depends on the object stored, not the reference type.</strong> The JVM looks at the actual class of the object, checks if that class overrides the method, and if not, walks up to the parent — continuing until it finds an implementation.</p>
+  </div>
+</section>
+
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Inheritance</div><p>Child inherits all parent attributes and behaviours. Use <code>extends</code>. Models IS-A relationships. Single parent only in Java.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Constructor Chaining</div><p>Creating a child object triggers the parent's constructor first (via implicit <code>super()</code>). Propagates up the entire chain.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Reference vs Object</div><p>Parent reference can hold child object. Compile-time access governed by reference type; runtime method dispatch governed by object type.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Method Overloading</div><p>Same name, different parameter signature. Resolved at compile time. Return type alone does NOT constitute a different signature.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Method Signature</div><p>Name + parameter types (order matters). Return type is NOT part of the signature in Java.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Method Overriding</div><p>Same name + same signature in child class. Replaces parent behaviour. Use <code>@Override</code>. Resolved at runtime.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Dynamic Dispatch</div><p>JVM looks at the actual object at runtime to decide which overridden method to run. Walks up the chain if no override is found.</p></div>
+  </div>
+</section>
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

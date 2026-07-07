@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cross-Cutting API Concerns — Versioning, CORS, Caching — Day 14</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:14px 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 14 · ASP.NET Core</div>
+    <div class="brand-title">Cross-Cutting Concerns 🧵</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>What "Cross-Cutting" Means</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Versioning</div>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>Why Version an API</span></a>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Adding v1 &amp; v2</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">CORS</div>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>The Same-Origin Policy</span></a>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>Configuring CORS</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Negotiation &amp; Caching</div>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>Content Negotiation</span></a>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>Caching Headers</span></a>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>Output Caching</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Practice</div>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>Pipeline Order</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 14 — the concerns that touch every endpoint</div>
+      <h1>Cross-Cutting API Concerns 🧵</h1>
+      <p class="lede">Some concerns don't belong to any one endpoint — they thread through the whole API. How do you evolve it without breaking existing clients? How do you let a browser app on another domain call it? How do you serve the format each client wants, and avoid recomputing responses that never changed? Today we cover the four classics — <strong>versioning</strong>, <strong>CORS</strong>, <strong>content negotiation</strong>, and <strong>caching</strong> — and stand up v1 and v2 of an endpoint with a working CORS policy.</p>
+      <div class="chips">
+        <span class="chip">🔢 Versioning</span>
+        <span class="chip">🌐 CORS</span>
+        <span class="chip">🤝 Content negotiation</span>
+        <span class="chip">⏱️ Caching headers</span>
+        <span class="chip">📦 Output caching</span>
+        <span class="chip">🧵 Middleware order</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>What "Cross-Cutting" Means 🧵</h2></div>
+      <p>A <strong>cross-cutting concern</strong> is a capability that applies broadly across an application rather than to a single feature. Logging, error handling (Day 11), and authentication (Day 12) are cross-cutting — and so are today's four. They share a trait: you configure them <em>once</em>, centrally (usually in <code>Program.cs</code> and the middleware pipeline), and they shape the behavior of many or all endpoints.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🏗️ Analogy — a building's utilities</span>
+        <p>Individual rooms are your endpoints. But plumbing, wiring, and climate control run through <em>every</em> room — you don't install a separate furnace per office. Cross-cutting concerns are the building's shared systems: designed once at the infrastructure level, benefiting the whole structure. Today's four are the API's utilities.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The through-line</span>
+        <p>Each of today's concerns answers a "how does the API behave as a whole?" question: <strong>versioning</strong> — how it evolves over time; <strong>CORS</strong> — who may call it from a browser; <strong>content negotiation</strong> — what format it returns; <strong>caching</strong> — how it avoids redundant work. All four are configured centrally and felt everywhere.</p>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">Cross-Cutting Concerns</div>
+          <div class="s">configured once, felt everywhere</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch b-blue">
+            <h4>🔢 Versioning</h4>
+            <ul>
+              <li>Evolve without breaking</li>
+              <li><code>Asp.Versioning</code></li>
+              <li>URL / query / header</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>🌐 CORS</h4>
+            <ul>
+              <li>Cross-origin browser calls</li>
+              <li><code>AddCors</code> / <code>UseCors</code></li>
+              <li>Relaxes same-origin</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>🤝 Negotiation</h4>
+            <ul>
+              <li><code>Accept</code> header</li>
+              <li>Formatters pick output</li>
+              <li>JSON by default</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h4>⏱️ Caching</h4>
+            <ul>
+              <li><code>Cache-Control</code>, <code>ETag</code></li>
+              <li>Output caching (.NET 7+)</li>
+              <li>Skip redundant work</li>
+            </ul>
+          </div>
+          <div class="mm-branch">
+            <h4>🧵 Pipeline</h4>
+            <ul>
+              <li>Order matters</li>
+              <li>CORS before caching</li>
+              <li>Central config</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>Why Version an API 🔢</h2></div>
+      <p>Your API is a contract (Day 10). Once clients depend on it, you can't freely change it — removing a field, renaming a property, or changing a type is a <strong>breaking change</strong> that shatters existing consumers you may not control. Versioning is the escape hatch: run multiple versions side by side, so legacy clients keep using v1 while new clients adopt v2.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 What counts as breaking?</span>
+        <p><em>Adding</em> a new optional field is usually safe — well-written clients ignore unknowns. <em>Removing</em> or renaming fields, changing a type, or altering behavior are breaking. When you must make a breaking change, that's when you cut a new version rather than mutating the old one.</p>
+      </div>
+
+      <p>There are several ways for a client to say which version it wants; you pick one (or combine them):</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Strategy</th><th>Example</th><th>Trade-off</th></tr></thead>
+          <tbody>
+            <tr><td>URL segment</td><td><code>/api/v2/products</code></td><td>Explicit, easy to see/test; most common for public APIs</td></tr>
+            <tr><td>Query string</td><td><code>/api/products?api-version=2.0</code></td><td>Keeps one path; less visible</td></tr>
+            <tr><td>Header</td><td><code>X-Version: 2.0</code></td><td>Clean URLs; requires setting a header</td></tr>
+            <tr><td>Media type</td><td><code>Accept: …;v=2.0</code></td><td>Ties version to content negotiation</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The package moved — know the name</span>
+        <p>Versioning isn't built in. The current library is <strong><code>Asp.Versioning</code></strong> (e.g. <code>Asp.Versioning.Mvc</code> for controllers, <code>Asp.Versioning.Http</code> for Minimal APIs) — it was formerly <code>Microsoft.AspNetCore.Mvc.Versioning</code>. On .NET 10 you use the 10.0 packages, and <code>Asp.Versioning.Mvc.ApiExplorer</code> integrates versioning with OpenAPI (Day 10).</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Adding v1 &amp; v2 of an Endpoint 🚀</h2></div>
+      <p>Today's first "Do." Install the packages, register versioning, and expose two versions of a products endpoint. First, the setup:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs (register versioning)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// dotnet add package Asp.Versioning.Mvc</span>
+<span class="cmt">// dotnet add package Asp.Versioning.Mvc.ApiExplorer</span>
+<span class="kw">using</span> Asp.Versioning;
+
+builder.Services.<span class="fn">AddControllers</span>();
+builder.Services.<span class="fn">AddApiVersioning</span>(options =&gt;
+{
+    options.DefaultApiVersion = <span class="kw">new</span> <span class="ty">ApiVersion</span>(<span class="num">1</span>, <span class="num">0</span>);
+    options.AssumeDefaultVersionWhenUnspecified = <span class="kw">true</span>;   <span class="cmt">// legacy clients get v1</span>
+    options.ReportApiVersions = <span class="kw">true</span>;                    <span class="cmt">// advertise versions in headers</span>
+    options.ApiVersionReader = <span class="kw">new</span> <span class="ty">UrlSegmentApiVersionReader</span>();
+})
+.<span class="fn">AddMvc</span>()                                              <span class="cmt">// controllers support</span>
+.<span class="fn">AddApiExplorer</span>(options =&gt;
+{
+    options.GroupNameFormat = <span class="str">"'v'VVV"</span>;                  <span class="cmt">// e.g. "v1", "v2"</span>
+    options.SubstituteApiVersionInUrl = <span class="kw">true</span>;
+});</code></pre>
+      </div>
+
+      <p>Now expose both versions. Two clean patterns: <strong>one controller</strong> declaring both versions with <code>[MapToApiVersion]</code> per action, or <strong>separate controllers</strong> per version. Here's the single-controller approach:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — one controller, two versions</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/v{version:apiVersion}/products"</span>)]
+[<span class="ty">ApiVersion</span>(<span class="str">"1.0"</span>)]
+[<span class="ty">ApiVersion</span>(<span class="str">"2.0"</span>)]
+<span class="kw">public class</span> <span class="ty">ProductsController</span> : <span class="ty">ControllerBase</span>
+{
+    <span class="cmt">// GET /api/v1/products — simple shape</span>
+    [<span class="ty">HttpGet</span>, <span class="ty">MapToApiVersion</span>(<span class="str">"1.0"</span>)]
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetV1</span>() =&gt;
+        <span class="fn">Ok</span>(<span class="kw">new</span> { Id = <span class="num">1</span>, Name = <span class="str">"Notebook"</span>, Price = <span class="num">4.99</span> });
+
+    <span class="cmt">// GET /api/v2/products — richer shape (a breaking change)</span>
+    [<span class="ty">HttpGet</span>, <span class="ty">MapToApiVersion</span>(<span class="str">"2.0"</span>)]
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetV2</span>() =&gt;
+        <span class="fn">Ok</span>(<span class="kw">new</span>
+        {
+            Id = <span class="num">1</span>,
+            Name = <span class="str">"Notebook"</span>,
+            Pricing = <span class="kw">new</span> { Amount = <span class="num">4.99</span>, Currency = <span class="str">"USD"</span> }   <span class="cmt">// changed shape</span>
+        });
+}</code></pre>
+      </div>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-blue">GET /api/v1/products</div><div class="idx">→ GetV1</div></div>
+          <div class="arr-arrow">·</div>
+          <div class="arr-cell"><div class="val">{ price: 4.99 }</div><div class="idx">simple</div></div>
+        </div>
+        <div class="arr-row" style="margin-top:12px;">
+          <div class="arr-cell"><div class="val highlight-green">GET /api/v2/products</div><div class="idx">→ GetV2</div></div>
+          <div class="arr-arrow">·</div>
+          <div class="arr-cell"><div class="val">{ pricing: {…} }</div><div class="idx">richer</div></div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Deprecating a version gracefully</span>
+        <p>When it's time to retire v1, mark it <code>[ApiVersion("1.0", Deprecated = true)]</code>. Because you set <code>ReportApiVersions = true</code>, responses then include an <code>api-deprecated-versions: 1.0</code> header — a signal to clients to migrate, without breaking them yet. Later, once traffic drains, you remove it.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Ties into OpenAPI</span>
+        <p>With <code>AddApiExplorer</code> registered, each version can get its own OpenAPI document (Day 10) — on .NET 10 the <code>Asp.Versioning.OpenApi</code> package plus <code>MapOpenApi().WithDocumentPerVersion()</code> produces <code>/openapi/v1.json</code> and <code>/openapi/v2.json</code> automatically, so your docs and versions stay in sync.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>CORS &amp; the Same-Origin Policy 🌐</h2></div>
+      <p>Browsers enforce the <strong>same-origin policy</strong>: a page served from <code>https://app.example.com</code> can't, by default, make JavaScript requests to a <em>different</em> origin like <code>https://api.other.com</code>. An "origin" is the scheme + host + port. This stops a malicious page from quietly reading another site's data using your logged-in session.</p>
+
+      <p><strong>CORS</strong> (Cross-Origin Resource Sharing) is the W3C standard by which a server can <em>relax</em> that restriction — telling the browser "requests from these specific origins are OK." Your API opts in per policy.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ CORS relaxes security — it isn't a security feature</span>
+        <p>Microsoft is explicit about this: CORS <em>loosens</em> the same-origin policy; it does not make your API safer. It's enforced by the <strong>browser</strong>, not the server — the server just returns headers, and the browser decides whether to expose the response to the page. So CORS is not a substitute for authentication or authorization (Days 12–13); a non-browser client (curl, a server) ignores CORS entirely.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🚪 Analogy — the guest list</span>
+        <p>Same-origin policy is a club that only admits its own members. CORS is the bouncer holding a guest list: origins on the list get in, others are turned away. But the guest list is checked by the <em>browser</em> (the bouncer works for the visitor, not the club) — which is why CORS protects users, not your server, and why anything that isn't a browser walks right past it.</p>
+      </div>
+
+      <h3>How a cross-origin call works 🔎</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · ✈️ preflight (sometimes)</div>
+          <div class="sh">Browser sends OPTIONS</div>
+          <p>For "complex" requests (custom headers, PUT/DELETE), the browser first asks permission with an <code>OPTIONS</code> request naming the method and headers it wants to use.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 2 · 📋 server answers</div>
+          <div class="sh">Access-Control-Allow-* headers</div>
+          <p>If the origin is allowed, the API returns headers like <code>Access-Control-Allow-Origin</code> listing what's permitted.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 3 · 📨 real request</div>
+          <div class="sh">Browser proceeds — or blocks</div>
+          <p>If the headers allow it, the browser sends the actual request and exposes the response. If not, it blocks the response and raises a CORS error.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>Configuring CORS ⚙️</h2></div>
+      <p>Today's second "Do." Two steps as always: register a policy with <code>AddCors</code>, then enable it with <code>UseCors</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — a named CORS policy</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">const string</span> FrontendPolicy = <span class="str">"FrontendPolicy"</span>;
+
+builder.Services.<span class="fn">AddCors</span>(options =&gt;
+{
+    options.<span class="fn">AddPolicy</span>(FrontendPolicy, policy =&gt;
+        policy.<span class="fn">WithOrigins</span>(<span class="str">"https://app.example.com"</span>, <span class="str">"http://localhost:3000"</span>)
+              .<span class="fn">WithMethods</span>(<span class="str">"GET"</span>, <span class="str">"POST"</span>, <span class="str">"PUT"</span>, <span class="str">"DELETE"</span>)
+              .<span class="fn">WithHeaders</span>(<span class="str">"Authorization"</span>, <span class="str">"Content-Type"</span>)
+              .<span class="fn">WithExposedHeaders</span>(<span class="str">"X-Pagination-TotalCount"</span>)  <span class="cmt">// let JS read it (Day 9)</span>
+              .<span class="fn">SetPreflightMaxAge</span>(<span class="ty">TimeSpan</span>.<span class="fn">FromMinutes</span>(<span class="num">10</span>)));  <span class="cmt">// cache preflight</span>
+});</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — enable it in the pipeline (order matters!)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+app.<span class="fn">UseRouting</span>();
+app.<span class="fn">UseCors</span>(FrontendPolicy);   <span class="cmt">// AFTER UseRouting, BEFORE auth</span>
+app.<span class="fn">UseAuthentication</span>();
+app.<span class="fn">UseAuthorization</span>();
+app.<span class="fn">MapControllers</span>();</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Builder method</th><th>Effect</th></tr></thead>
+          <tbody>
+            <tr><td><code>WithOrigins("…")</code></td><td>Allow specific origins (no trailing slash!)</td></tr>
+            <tr><td><code>AllowAnyOrigin()</code></td><td>Allow all origins (can't combine with credentials)</td></tr>
+            <tr><td><code>WithMethods(…)</code> / <code>AllowAnyMethod()</code></td><td>Permit specific / all HTTP verbs</td></tr>
+            <tr><td><code>WithHeaders(…)</code> / <code>AllowAnyHeader()</code></td><td>Permit specific / all request headers</td></tr>
+            <tr><td><code>AllowCredentials()</code></td><td>Allow cookies/auth headers (needs explicit origins)</td></tr>
+            <tr><td><code>WithExposedHeaders(…)</code></td><td>Let JS read custom response headers</td></tr>
+            <tr><td><code>SetPreflightMaxAge(…)</code></td><td>Cache the preflight response</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Two traps that bite everyone</span>
+        <p><strong>1.</strong> You <em>cannot</em> combine <code>AllowAnyOrigin()</code> with <code>AllowCredentials()</code> — the CORS spec forbids wildcards on credentialed requests, and it'll throw. Use explicit <code>WithOrigins</code> when you need credentials. <strong>2.</strong> Origins in <code>WithOrigins</code> must have <em>no trailing slash</em> — <code>"https://app.example.com/"</code> silently fails to match. Small detail, hours of debugging.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Per-endpoint CORS</span>
+        <p>Beyond a global <code>UseCors("policy")</code>, you can apply policies per endpoint: <code>[EnableCors("policy")]</code> on a controller/action, or <code>.RequireCors("policy")</code> on a Minimal API endpoint. Handy when different endpoints serve different client origins.</p>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>Content Negotiation 🤝</h2></div>
+      <p><strong>Content negotiation</strong> is how the client and server agree on the response <em>format</em>. The client sends an <code>Accept</code> header stating what it can handle; the server picks a matching <strong>formatter</strong> to serialize the response. In ASP.NET Core the default is JSON, but the mechanism is general.</p>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-blue">Accept:<br>application/json</div><div class="idx">client asks</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val">JSON formatter</div><div class="idx">server picks</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val highlight-green">Content-Type:<br>application/json</div><div class="idx">server answers</div></div>
+        </div>
+      </div>
+
+      <p>Recall from Day 6 that returning an object (via <code>Ok(dto)</code> or <code>ActionResult&lt;T&gt;</code>) runs it through the output formatters, which honor content negotiation. By default only JSON is configured; to also serve XML, add the XML formatter:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — enabling XML alongside JSON</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">AddControllers</span>()
+    .<span class="fn">AddXmlSerializerFormatters</span>();   <span class="cmt">// now honors Accept: application/xml</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The Day 6 connection — and a caveat</span>
+        <p>Content negotiation is exactly why the <code>TypedResults</code>/<code>Results</code> distinction from Day 6 mattered: the <code>HttpResults</code> types (like <code>TypedResults.Ok</code>) write the response directly and <strong>don't run through the formatters</strong>, so they skip content negotiation. Traditional controller results (<code>Ok(obj)</code>, <code>ActionResult&lt;T&gt;</code>) <em>do</em> negotiate. If a client's <code>Accept</code> header seems ignored on a Minimal API, that's usually why.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Force or restrict formats</span>
+        <p>You can constrain what an endpoint produces or consumes with <code>[Produces("application/json")]</code> and <code>[Consumes(...)]</code> (Day 10 — these also document the API). Setting <code>options.ReturnHttpNotAcceptable = true</code> makes the server return <code>406 Not Acceptable</code> when it can't satisfy the <code>Accept</code> header, instead of silently falling back to JSON.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>Caching Headers ⏱️</h2></div>
+      <p>The fastest response is the one you never compute. HTTP caching lets clients and intermediaries reuse a response instead of re-fetching it, and it's driven by response <strong>headers</strong> that follow standard HTTP semantics.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Header</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>Cache-Control</code></td><td>The main control: <code>max-age=60</code> (cache 60s), <code>no-cache</code>, <code>private</code>/<code>public</code></td></tr>
+            <tr><td><code>Expires</code></td><td>Older absolute expiry time (superseded by <code>Cache-Control</code>)</td></tr>
+            <tr><td><code>ETag</code></td><td>A version fingerprint; client sends it back via <code>If-None-Match</code></td></tr>
+            <tr><td><code>Last-Modified</code></td><td>Timestamp; client revalidates via <code>If-Modified-Since</code></td></tr>
+            <tr><td><code>Vary</code></td><td>Which request headers produce different cached responses (e.g. <code>Accept-Encoding</code>)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The 304 round-trip saver</span>
+        <p>With an <code>ETag</code>, the client re-requests with <code>If-None-Match: "abc"</code>. If nothing changed, the server replies <code>304 Not Modified</code> with an empty body — the client reuses its cached copy. You still make a request, but skip re-sending (and often re-computing) the payload. This <em>conditional</em> caching is ideal for data that changes occasionally.</p>
+      </div>
+
+      <p>In controllers, the <code>[ResponseCache]</code> attribute sets these headers declaratively:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — setting cache headers with [ResponseCache]</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpGet</span>]
+[<span class="ty">ResponseCache</span>(Duration = <span class="num">60</span>,                    <span class="cmt">// Cache-Control: max-age=60</span>
+               Location = <span class="ty">ResponseCacheLocation</span>.Any, <span class="cmt">// public</span>
+               VaryByQueryKeys = [<span class="str">"page"</span>])]          <span class="cmt">// separate cache per page</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetProducts</span>(<span class="kw">int</span> page) =&gt; <span class="fn">Ok</span>(<span class="cmt">/* … */</span>);</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Headers ask; they don't guarantee</span>
+        <p><code>[ResponseCache]</code> only <em>sets headers</em> — it tells clients and proxies how they <em>may</em> cache. It doesn't store anything on your server, and browsers often override caching on refresh (sending <code>Cache-Control: no-cache</code>). For caching that actually lives on the server, you need caching middleware (next).</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>Output Caching — Server-Side ⚙️</h2></div>
+      <p>Two middleware options actually store responses on the server. <strong>Response Caching</strong> (older) respects HTTP cache headers like a proxy. <strong>Output Caching</strong> (added in .NET 7) is the newer, more capable option — <em>you</em> control what's cached regardless of client headers, which is exactly what an API wants.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — output caching setup</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">AddOutputCache</span>(options =&gt;
+{
+    <span class="cmt">// a reusable named policy</span>
+    options.<span class="fn">AddPolicy</span>(<span class="str">"Products60"</span>, b =&gt; b.<span class="fn">Expire</span>(<span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">60</span>)));
+});
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+app.<span class="fn">UseOutputCache</span>();   <span class="cmt">// after UseCors, UseAuth* (see §09)</span></code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — apply per endpoint</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Controllers: attribute</span>
+[<span class="ty">HttpGet</span>, <span class="ty">OutputCache</span>(PolicyName = <span class="str">"Products60"</span>)]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetProducts</span>() =&gt; <span class="fn">Ok</span>(<span class="cmt">/* … */</span>);
+
+<span class="cmt">// Minimal API: fluent — vary the cache by a query param</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/products"</span>, <span class="fn">GetProducts</span>)
+   .<span class="fn">CacheOutput</span>(b =&gt; b.<span class="fn">Expire</span>(<span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">60</span>)).<span class="fn">SetVaryByQuery</span>(<span class="str">"page"</span>));</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>Response Caching</th><th>Output Caching</th></tr></thead>
+          <tbody>
+            <tr><td>Since</td><td>Early ASP.NET Core</td><td>.NET 7+</td></tr>
+            <tr><td>Driven by</td><td>Client HTTP headers</td><td>Server-side policies</td></tr>
+            <tr><td>Cache location</td><td>In-memory (per server)</td><td>Pluggable (memory, Redis, …)</td></tr>
+            <tr><td>Control</td><td>Limited; client can prevent it</td><td>Full server control</td></tr>
+            <tr><td>Best for</td><td>Simple proxy-style caching</td><td>APIs &amp; UI apps — the modern pick</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Never cache personalized or authorized data carelessly</span>
+        <p>If a response depends on the user (auth'd data from Days 12–13), caching it globally can leak one user's data to another. That's exactly why <code>UseOutputCache</code> must come <em>after</em> <code>UseAuthentication</code>/<code>UseAuthorization</code> (§09), and why you vary the cache key by the relevant dimensions — or simply don't cache per-user responses.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>Pipeline Order — the Part People Break 🧵</h2></div>
+      <p>These concerns are middleware, and middleware order is <em>behavioral</em>, not cosmetic. Here's a correct ordering that satisfies all the documented constraints.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · 🧭 UseRouting</div>
+          <div class="sh">Match the endpoint</div>
+          <p>Routing runs first so later middleware knows which endpoint (and its metadata, like CORS or cache policies) was selected.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 2 · 🌐 UseCors</div>
+          <div class="sh">After routing, before caching &amp; auth</div>
+          <p>CORS must run before output/response caching — otherwise the cache can store a response <em>without</em> CORS headers and later serve it to a browser, causing intermittent CORS errors.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 3 · 🔐 UseAuthentication → UseAuthorization</div>
+          <div class="sh">Establish &amp; check identity</div>
+          <p>Auth (Days 12–13) runs before caching so the cache never serves protected content to the wrong user.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 4 · ⏱️ UseOutputCache</div>
+          <div class="sh">After CORS + auth</div>
+          <p>Now caching sees fully-formed, correctly-authorized, CORS-headed responses — safe to store and replay.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 5 · 🎯 MapControllers</div>
+          <div class="sh">Execute the endpoint</div>
+          <p>Finally the versioned, negotiated, cacheable response is produced by your action.</p>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The rules to memorize</span>
+        <p><code>UseCors</code> goes <strong>after</strong> <code>UseRouting</code> and <strong>before</strong> caching and <code>UseAuthorization</code>. <code>UseOutputCache</code>/<code>UseResponseCaching</code> go <strong>after</strong> <code>UseCors</code> and <strong>after</strong> auth. Get this wrong and the bugs are nasty and intermittent — a cached response missing CORS headers, or worse, one user seeing another's cached data. Order is correctness, not style.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🧵 Cross-cutting</h4><p>Configured once, centrally; felt across every endpoint.</p></div>
+        <div class="recap-card"><h4>🔢 Version to evolve</h4><p>Run v1 &amp; v2 side by side so breaking changes don't break clients.</p></div>
+        <div class="recap-card"><h4>📦 Asp.Versioning</h4><p>The current package (was <code>Microsoft.AspNetCore.Mvc.Versioning</code>).</p></div>
+        <div class="recap-card"><h4>🏷️ Version readers</h4><p>URL segment, query string, header, or media type.</p></div>
+        <div class="recap-card"><h4>⚰️ Deprecate first</h4><p><code>Deprecated = true</code> + <code>ReportApiVersions</code> signals migration.</p></div>
+        <div class="recap-card"><h4>🌐 CORS relaxes</h4><p>Loosens same-origin; browser-enforced; not a security feature.</p></div>
+        <div class="recap-card"><h4>⚙️ AddCors + UseCors</h4><p>Named or default policy; <code>WithOrigins</code> has no trailing slash.</p></div>
+        <div class="recap-card"><h4>🚫 Wildcard + creds</h4><p>Can't mix <code>AllowAnyOrigin</code> with <code>AllowCredentials</code>.</p></div>
+        <div class="recap-card"><h4>🤝 Negotiation</h4><p><code>Accept</code> → formatter → <code>Content-Type</code>; JSON by default.</p></div>
+        <div class="recap-card"><h4>⏱️ Cache headers</h4><p><code>Cache-Control</code>, <code>ETag</code>→<code>304</code>, <code>Vary</code>; headers only ask.</p></div>
+        <div class="recap-card"><h4>📦 Output caching</h4><p>.NET 7+ server-side, policy-driven; the modern pick.</p></div>
+        <div class="recap-card"><h4>🧵 Order matters</h4><p>CORS after routing, before caching &amp; auth; caching after auth.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concern</th><th>Setup</th><th>Key detail</th></tr></thead>
+          <tbody>
+            <tr><td>Versioning</td><td><code>AddApiVersioning().AddMvc().AddApiExplorer()</code></td><td><code>[ApiVersion]</code> + <code>[MapToApiVersion]</code>; <code>Asp.Versioning</code></td></tr>
+            <tr><td>Version in URL</td><td><code>Route("api/v{version:apiVersion}/…")</code></td><td>Most common, most explicit strategy</td></tr>
+            <tr><td>CORS</td><td><code>AddCors</code> + <code>UseCors("policy")</code></td><td>Browser-enforced; after routing, before auth</td></tr>
+            <tr><td>CORS per endpoint</td><td><code>[EnableCors]</code> / <code>RequireCors</code></td><td>Different origins per endpoint</td></tr>
+            <tr><td>Negotiation</td><td><code>Accept</code> header + formatters</td><td>JSON default; add <code>AddXmlSerializerFormatters</code></td></tr>
+            <tr><td>Force format</td><td><code>[Produces]</code>, <code>ReturnHttpNotAcceptable</code></td><td>406 when unsatisfiable</td></tr>
+            <tr><td>Cache headers</td><td><code>[ResponseCache]</code></td><td>Sets headers only; doesn't store server-side</td></tr>
+            <tr><td>Server caching</td><td><code>AddOutputCache</code> + <code>UseOutputCache</code></td><td>.NET 7+; <code>[OutputCache]</code> / <code>CacheOutput</code></td></tr>
+            <tr><td>Conditional</td><td><code>ETag</code> + <code>If-None-Match</code></td><td>304 Not Modified saves the payload</td></tr>
+            <tr><td>Ordering</td><td>routing → CORS → auth → caching</td><td>Wrong order = intermittent, data-leak bugs</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">Why do APIs need versioning?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Because an API is a contract that clients depend on. Once you can't control every client, breaking changes — removing or renaming fields, changing types or behavior — would break them. Versioning lets you run multiple versions side by side, so existing clients keep using v1 while new ones adopt v2, and you can evolve the API without a flag day.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What are the common ways to specify an API version?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>URL segment (<code>/api/v2/products</code>), query string (<code>?api-version=2.0</code>), a custom header (<code>X-Version: 2.0</code>), or the media type in the <code>Accept</code> header. URL versioning is the most common and most explicit; header versioning keeps URLs clean but requires clients to set a header. You choose a strategy via the <code>ApiVersionReader</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What is CORS?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Cross-Origin Resource Sharing — a standard that lets a server tell browsers which other origins (scheme+host+port) are allowed to make JavaScript requests to it. Browsers block cross-origin requests by default (the same-origin policy); CORS is how a server opts in to relaxing that for specific origins.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">How do you enable CORS in ASP.NET Core?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Two steps: register a policy with <code>builder.Services.AddCors(options =&gt; options.AddPolicy("Name", p =&gt; p.WithOrigins("https://app.example.com").AllowAnyHeader().AllowAnyMethod()))</code>, then enable it in the pipeline with <code>app.UseCors("Name")</code>. You can also apply policies per endpoint with <code>[EnableCors]</code> or <code>RequireCors</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What is content negotiation?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>The process where the client and server agree on the response format. The client sends an <code>Accept</code> header (e.g. <code>application/json</code>); the server picks a matching formatter and sets the <code>Content-Type</code> accordingly. ASP.NET Core returns JSON by default; you can add other formatters like XML.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What does the Cache-Control header do?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>It's the main HTTP header for controlling caching. Values like <code>max-age=60</code> say a response can be reused for 60 seconds, <code>no-cache</code> forces revalidation, and <code>public</code>/<code>private</code> say whether shared caches (proxies) may store it. It tells clients and intermediaries how they may cache the response.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What's a breaking change vs. a non-breaking change?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Adding a new optional field is generally non-breaking — well-written clients ignore fields they don't recognize. Removing or renaming a field, changing a field's type, or changing behavior are breaking, because existing clients rely on the old shape. Breaking changes are what justify a new API version.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What is an ETag?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A response header carrying a version fingerprint of the content. The client stores it and sends it back on the next request via <code>If-None-Match</code>. If the content hasn't changed, the server responds <code>304 Not Modified</code> with no body, and the client reuses its cached copy — saving bandwidth and often computation.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">Which package provides API versioning, and how do you register it?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>The <code>Asp.Versioning</code> family — <code>Asp.Versioning.Mvc</code> for controllers, <code>Asp.Versioning.Http</code> for Minimal APIs, plus <code>Asp.Versioning.Mvc.ApiExplorer</code> for OpenAPI integration (it was formerly <code>Microsoft.AspNetCore.Mvc.Versioning</code>). You register with <code>AddApiVersioning(options =&gt; …).AddMvc().AddApiExplorer(…)</code>, setting things like <code>DefaultApiVersion</code>, <code>AssumeDefaultVersionWhenUnspecified</code>, and the <code>ApiVersionReader</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">How do you expose two versions of the same endpoint?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Either put both versions on one controller — annotate it with <code>[ApiVersion("1.0")]</code> and <code>[ApiVersion("2.0")]</code> and mark each action with <code>[MapToApiVersion("…")]</code> — or use separate controllers per version. With a URL-segment route like <code>api/v{version:apiVersion}/products</code>, requests to <code>/api/v1/products</code> and <code>/api/v2/products</code> reach the right action.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">Why is CORS enforced by the browser and not the server?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Because the same-origin policy it relaxes is a browser security model protecting the <em>user</em>. The server just returns <code>Access-Control-Allow-*</code> headers stating what's permitted; the browser reads them and decides whether to expose the response to the page. This is why CORS isn't a server security feature — a non-browser client like curl or another server ignores it entirely, so CORS never replaces authentication/authorization.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">Why can't you combine AllowAnyOrigin with AllowCredentials?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>The CORS spec prohibits wildcards on credentialed requests for security — allowing <em>any</em> origin to send cookies/auth headers would let any site make authenticated requests on the user's behalf. ASP.NET Core throws if you configure both. When you need credentials, you must list explicit origins with <code>WithOrigins</code> and call <code>AllowCredentials()</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">What's a preflight request?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>For "complex" cross-origin requests (custom headers, or methods like PUT/DELETE), the browser first sends an <code>OPTIONS</code> request asking permission — naming the intended method and headers via <code>Access-Control-Request-*</code>. The server responds with the allowed methods/headers; only if they permit the real request does the browser send it. You can cache preflight responses with <code>SetPreflightMaxAge</code> to cut this overhead.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">Response caching vs. output caching — what's the difference?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Response caching (older) works like a proxy — it caches based on the client's HTTP cache headers, and the client can prevent caching. Output caching (added in .NET 7) is server-controlled: <em>you</em> decide via policies what gets cached, independent of client headers, with pluggable stores (memory, Redis). For APIs, output caching is the modern, more capable choice because you keep control.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">Does [ResponseCache] cache anything on the server?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>No — it only <em>sets response headers</em> (<code>Cache-Control</code>, <code>Vary</code>, etc.) that tell clients and proxies how they may cache. Nothing is stored on your server, and clients can ignore or override it (browsers often do on refresh). To actually store responses server-side you add caching middleware — output caching or response caching.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">How does content negotiation relate to TypedResults from Minimal APIs?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Traditional controller results (<code>Ok(obj)</code>, <code>ActionResult&lt;T&gt;</code>) run through the output formatters, which honor the <code>Accept</code> header — so they negotiate content. The <code>HttpResults</code> types from Minimal APIs (<code>TypedResults.Ok</code>, etc.) write the response directly and bypass the formatters, so they don't do content negotiation. If an <code>Accept</code> header seems ignored on a Minimal API endpoint, that's usually the reason.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Why does middleware order matter for CORS and caching?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p><code>UseCors</code> must run after <code>UseRouting</code> (so the selected endpoint's policy is known) and before caching. If caching ran before CORS, the cache could store a response <em>without</em> the CORS headers and later replay it to a browser, producing intermittent CORS failures for some users. Caching must also run after authentication/authorization, or it could serve one user's protected, cached response to another. Order here is correctness, and the resulting bugs are intermittent and hard to trace.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">How do you deprecate an API version gracefully?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Mark it with <code>[ApiVersion("1.0", Deprecated = true)]</code> and set <code>ReportApiVersions = true</code>, so responses carry an <code>api-deprecated-versions</code> header telling clients to migrate — without removing the version yet. Communicate a sunset timeline (often via a <code>Sunset</code> header or docs), monitor traffic to the deprecated version, and only remove it once usage drains. This gives consumers time to adapt instead of a hard break.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">What are the risks of caching authenticated responses, and how do you handle them?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>The big risk is cross-user data leakage — caching a user-specific response and serving it to someone else. Mitigations: place caching after authentication/authorization in the pipeline; mark per-user responses <code>Cache-Control: private</code> (or don't cache them at all); vary the cache key by the relevant dimension (user, tenant, role) if you must cache; and be conservative — cache public, non-personalized GETs, not authorized data. Getting this wrong is a serious security bug, not just a performance one.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How does API versioning integrate with OpenAPI documentation?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>The <code>Asp.Versioning.Mvc.ApiExplorer</code> package feeds version info into ASP.NET Core's API Explorer, letting you generate a separate OpenAPI document per version. On .NET 10, <code>Asp.Versioning.OpenApi</code> bridges into the built-in <code>Microsoft.AspNetCore.OpenApi</code> pipeline, and <code>MapOpenApi().WithDocumentPerVersion()</code> produces <code>/openapi/v1.json</code>, <code>/openapi/v2.json</code>, etc. — each containing only that version's operations, so docs and versions stay in sync automatically.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">When would you choose URL versioning vs. header versioning?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>URL versioning (<code>/api/v2/…</code>) is explicit, visible, easy to test in a browser, cache-friendly (distinct URLs), and dominant for public APIs — at the cost of "polluting" the URL and implying the resource identity changes. Header/media-type versioning keeps a single canonical URL (arguably more RESTful) and suits internal or content-negotiated APIs, but is invisible, harder to test, and easy for clients to forget. Many teams combine readers with a sensible default. The choice is about your consumers and tooling, not correctness.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">How would you invalidate or vary an output cache correctly?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Vary the cache key by the inputs that change the response — query params (<code>SetVaryByQuery</code>), headers (<code>SetVaryByHeader</code>), or a custom value (<code>VaryByValue</code>) — so different inputs get different cached entries. For invalidation on writes, use cache <em>tags</em>: tag entries when caching and evict them via <code>IOutputCacheStore.EvictByTagAsync</code> when the underlying data changes. Combined with a short expiry as a safety net, tag-based eviction keeps cached list/detail endpoints fresh after mutations.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">Is enabling CORS enough to secure a cross-origin API? Explain.</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>No — CORS <em>relaxes</em> security, it doesn't provide it. It only governs whether a <em>browser</em> exposes a response to a page; it does nothing against non-browser clients, and it's not authentication or authorization. A cross-origin API still needs real auth (Day 12), authorization (Day 13), HTTPS, input validation, and rate limiting. CORS just decides which browser origins may <em>attempt</em> requests — the server must still independently verify every request is permitted. Treating a permissive CORS policy as "security" is a classic misconception.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Start with <strong>why each concern exists</strong> (Q1, Q3, Q5, Q7) — the motivations are the most common openers. Nail <strong>versioning mechanics</strong> (Q2, Q9–Q10) and <strong>CORS setup + the browser-enforced insight</strong> (Q4, Q11–Q13), which together are the day's "Do." Understand <strong>caching layers</strong> — headers vs. middleware, response vs. output (Q6, Q8, Q14–Q15). Then the <strong>senior material that separates candidates</strong>: pipeline ordering, caching authenticated data safely, graceful deprecation, and the "CORS isn't security" point (Q17–Q23). If you can stand up v1/v2 of an endpoint and a working CORS policy with correct middleware order from memory, you own this — and the whole API series.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

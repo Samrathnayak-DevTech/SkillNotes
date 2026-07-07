@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Authentication — JWT Bearer &amp; ASP.NET Core Identity — Day 12</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:14px 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 12 · ASP.NET Core</div>
+    <div class="brand-title">Authentication 🔐</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>AuthN vs. AuthZ</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>What Is a JWT?</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Validating Tokens</div>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Configuring JWT Bearer</span></a>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>Middleware Order</span></a>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>Protecting Endpoints</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Issuing Tokens</div>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>The Login Endpoint</span></a>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>ASP.NET Core Identity</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Practice</div>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>Login-to-Access Flow</span></a>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>Security Practices</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 12 — prove who you are, on every request</div>
+      <h1>Authentication 🔐</h1>
+      <p class="lede">APIs are stateless — there's no session on the server remembering who you are, so <em>every single request</em> must prove its identity. The dominant way to do that in ASP.NET Core is a <strong>JWT</strong>: the user logs in once, receives a signed token, and sends it on every request thereafter. Today we validate those tokens with JWT bearer authentication, issue one from a login endpoint, protect routes with <code>[Authorize]</code>, and meet ASP.NET Core Identity for managing users.</p>
+      <div class="chips">
+        <span class="chip">🎟️ JWT</span>
+        <span class="chip">✍️ Issue tokens</span>
+        <span class="chip">✅ Validate tokens</span>
+        <span class="chip">🚧 [Authorize]</span>
+        <span class="chip">🆔 Identity</span>
+        <span class="chip">🔑 Claims</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>Authentication vs. Authorization 🪪</h2></div>
+      <p>Two words that sound alike and get muddled constantly. <strong>Authentication</strong> (AuthN) answers "<em>who are you?</em>" — proving identity. <strong>Authorization</strong> (AuthZ) answers "<em>what are you allowed to do?</em>" — granting or denying access based on that identity. You authenticate first, then authorize. Today is mostly about authentication, with a taste of authorization via <code>[Authorize]</code>.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🎫 Analogy — the concert</span>
+        <p><strong>Authentication</strong> is showing your ID at the door to prove you're really you. <strong>Authorization</strong> is the wristband that says whether you can enter the general floor or the VIP area. The bouncer checks who you are once; the wristband (your claims) decides where you can go all night.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why APIs need this on every request</span>
+        <p>A traditional web app can keep a server-side session. A REST API is <strong>stateless</strong> — it deliberately keeps no memory between requests. So each request must independently carry proof of identity. A JWT is that portable proof: self-contained, signed, and verifiable without a database lookup.</p>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">API Authentication</div>
+          <div class="s">log in once, prove it each request</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch b-rose">
+            <h4>🎟️ JWT</h4>
+            <ul>
+              <li>Header · payload · signature</li>
+              <li>Self-contained claims</li>
+              <li>Signed, not encrypted</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>✍️ Issue</h4>
+            <ul>
+              <li>Login verifies credentials</li>
+              <li>Build &amp; sign token</li>
+              <li><code>JsonWebTokenHandler</code></li>
+            </ul>
+          </div>
+          <div class="mm-branch b-blue">
+            <h4>✅ Validate</h4>
+            <ul>
+              <li><code>AddJwtBearer</code></li>
+              <li><code>TokenValidationParameters</code></li>
+              <li>Signature, issuer, lifetime</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>🚧 Protect</h4>
+            <ul>
+              <li><code>[Authorize]</code></li>
+              <li><code>RequireAuthorization()</code></li>
+              <li>Roles &amp; policies</li>
+            </ul>
+          </div>
+          <div class="mm-branch">
+            <h4>🆔 Identity</h4>
+            <ul>
+              <li>UserManager / SignInManager</li>
+              <li>Password hashing</li>
+              <li>User store</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>What Is a JWT? 🎟️</h2></div>
+      <p>A <strong>JWT</strong> (JSON Web Token, pronounced "jot") is a compact, signed string carrying information about the user. It has three parts, separated by dots: <code>header.payload.signature</code>.</p>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-blue">Header</div><div class="idx">alg + type</div></div>
+          <div class="arr-arrow">.</div>
+          <div class="arr-cell"><div class="val highlight-green">Payload</div><div class="idx">claims</div></div>
+          <div class="arr-arrow">.</div>
+          <div class="arr-cell"><div class="val highlight">Signature</div><div class="idx">verifies integrity</div></div>
+        </div>
+      </div>
+
+      <p>The <strong>payload</strong> holds <em>claims</em> — statements about the user, like their id, name, and roles, plus standard fields such as <code>iss</code> (issuer), <code>aud</code> (audience), and <code>exp</code> (expiry). The <strong>signature</strong> is computed from the header, payload, and a secret key, so the server can verify the token wasn't tampered with.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Signed ≠ encrypted</span>
+        <p>A standard JWT is <strong>signed, not encrypted</strong>. The payload is only Base64-encoded — anyone can decode and read it (paste one into jwt.io and see). The signature proves it wasn't <em>altered</em>, but it doesn't hide the contents. So <strong>never put secrets</strong> (passwords, sensitive data) in a JWT payload, and always transmit tokens over HTTPS.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why JWTs scale</span>
+        <p>The server never stores the token — it only needs the secret key to verify the signature. That makes JWT <strong>stateless</strong>: any server in a farm can validate a request without a shared session store or database lookup. Log in on server A, make a request to server B — both trust the same signed token.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The client sends it in a header</span>
+        <p>On every protected request, the client puts the token in the <code>Authorization</code> header with the <code>Bearer</code> scheme: <code>Authorization: Bearer eyJhbGci...</code>. "Bearer" means "whoever bears (holds) this token gets access" — which is exactly why keeping it secret matters.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Configuring JWT Bearer Validation ✅</h2></div>
+      <p>The <code>Microsoft.AspNetCore.Authentication.JwtBearer</code> package lets your API <em>validate</em> incoming tokens. You register the scheme and tell it exactly how to check each token via <code>TokenValidationParameters</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs (validating tokens)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer</span>
+<span class="kw">var</span> key = <span class="kw">new</span> <span class="ty">SymmetricSecurityKey</span>(
+    <span class="ty">Encoding</span>.UTF8.<span class="fn">GetBytes</span>(builder.Configuration[<span class="str">"Jwt:Key"</span>]!));
+
+builder.Services
+    .<span class="fn">AddAuthentication</span>(<span class="ty">JwtBearerDefaults</span>.AuthenticationScheme)
+    .<span class="fn">AddJwtBearer</span>(options =&gt;
+    {
+        options.TokenValidationParameters = <span class="kw">new</span> <span class="ty">TokenValidationParameters</span>
+        {
+            ValidateIssuer           = <span class="kw">true</span>,
+            ValidIssuer              = builder.Configuration[<span class="str">"Jwt:Issuer"</span>],
+            ValidateAudience         = <span class="kw">true</span>,
+            ValidAudience            = builder.Configuration[<span class="str">"Jwt:Audience"</span>],
+            ValidateLifetime         = <span class="kw">true</span>,   <span class="cmt">// reject expired tokens</span>
+            ValidateIssuerSigningKey = <span class="kw">true</span>,   <span class="cmt">// verify the signature</span>
+            IssuerSigningKey         = key
+        };
+    });
+
+builder.Services.<span class="fn">AddAuthorization</span>();</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Parameter</th><th>Checks…</th><th>Why it matters</th></tr></thead>
+          <tbody>
+            <tr><td><code>ValidateIssuerSigningKey</code></td><td>The signature</td><td>Proves the token was signed by <em>you</em> and not forged — always <code>true</code></td></tr>
+            <tr><td><code>ValidateIssuer</code></td><td>The <code>iss</code> claim</td><td>Confirms the token came from the expected issuer</td></tr>
+            <tr><td><code>ValidateAudience</code></td><td>The <code>aud</code> claim</td><td>Confirms the token was meant for <em>this</em> API</td></tr>
+            <tr><td><code>ValidateLifetime</code></td><td><code>exp</code> / <code>nbf</code></td><td>Rejects expired or not-yet-valid tokens</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The #1 cause of surprise 401s</span>
+        <p>If a valid-looking token is rejected, the culprit is almost always a mismatch: the signing key differs between issuer and validator, or the token's <code>iss</code>/<code>aud</code> don't match your <code>ValidIssuer</code>/<code>ValidAudience</code>. There's also a default <strong>5-minute clock skew</strong> tolerance for expiry — if your servers' clocks drift more than that, lifetime validation fails. Enable <code>Microsoft.AspNetCore.Authentication</code> logging at <code>Information</code> to see the exact reason.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ In real systems, prefer an identity provider</span>
+        <p>Signing your own tokens with a symmetric key is fine for learning and closed systems. For production, Microsoft recommends using an OpenID Connect / OAuth identity provider (Entra ID, Auth0, Keycloak, Duende IdentityServer). Then you set <code>options.Authority</code> to the provider's URL and it fetches the signing keys automatically — no shared secret to manage.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>Middleware Order — the Silent Trap 🔀</h2></div>
+      <p>Registering the services isn't enough; you must add two middleware components to the pipeline, <strong>in the right order</strong>. This is one of the most common "why is my auth not working?" mistakes.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs (pipeline)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+app.<span class="fn">UseAuthentication</span>();   <span class="cmt">// 1) WHO are you? (reads &amp; validates the token)</span>
+app.<span class="fn">UseAuthorization</span>();    <span class="cmt">// 2) are you ALLOWED? (checks [Authorize])</span>
+
+app.<span class="fn">MapControllers</span>();
+app.<span class="fn">Run</span>();</code></pre>
+      </div>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val">Request</div><div class="idx">Bearer token</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val highlight-blue">UseAuthentication</div><div class="idx">build ClaimsPrincipal</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val highlight-green">UseAuthorization</div><div class="idx">enforce [Authorize]</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val">Endpoint</div><div class="idx">runs if allowed</div></div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Authentication must come before Authorization</span>
+        <p><code>UseAuthentication()</code> reads the token and builds the user's <code>ClaimsPrincipal</code>; <code>UseAuthorization()</code> then checks whether that user satisfies each endpoint's rules. Reverse them and authorization runs against an empty user, so every protected endpoint returns 401 even with a valid token. Both must also sit <em>after</em> <code>UseRouting</code> (which the minimal hosting model wires up for you) and before your endpoints.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 What authentication actually produces</span>
+        <p>When a valid token arrives, the JWT bearer handler validates it and builds a <code>ClaimsPrincipal</code> from its claims, setting it as <code>HttpContext.User</code>. From then on, your code can read <code>User.Identity.Name</code>, check <code>User.IsInRole("Admin")</code>, or pull a claim with <code>User.FindFirst(...)</code> — all populated straight from the token.</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>Protecting Endpoints 🚧</h2></div>
+      <p>With validation wired up, protecting a route is one attribute. <code>[Authorize]</code> requires a valid authenticated user; without a good token, the request gets <code>401 Unauthorized</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — controller protection</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/[controller]"</span>)]
+[<span class="ty">Authorize</span>]                        <span class="cmt">// whole controller requires auth</span>
+<span class="kw">public class</span> <span class="ty">ProductsController</span> : <span class="ty">ControllerBase</span>
+{
+    [<span class="ty">HttpGet</span>]
+    [<span class="ty">AllowAnonymous</span>]              <span class="cmt">// ...but this one is public</span>
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">List</span>() =&gt; <span class="fn">Ok</span>();
+
+    [<span class="ty">HttpDelete</span>(<span class="str">"{id}"</span>)]
+    [<span class="ty">Authorize</span>(Roles = <span class="str">"Admin"</span>)]   <span class="cmt">// only users with the Admin role</span>
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Delete</span>(<span class="kw">int</span> id) =&gt; <span class="fn">NoContent</span>();
+}</code></pre>
+      </div>
+
+      <p>Minimal APIs use the fluent equivalent, <code>RequireAuthorization()</code>:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Minimal API protection</span><button class="copy-btn">Copy</button></div>
+        <pre><code>app.<span class="fn">MapGet</span>(<span class="str">"/api/profile"</span>, (<span class="ty">ClaimsPrincipal</span> user) =&gt;
+    <span class="ty">Results</span>.<span class="fn">Ok</span>(<span class="kw">new</span> { name = user.Identity!.Name }))
+   .<span class="fn">RequireAuthorization</span>();                       <span class="cmt">// any authenticated user</span>
+
+app.<span class="fn">MapDelete</span>(<span class="str">"/api/products/{id}"</span>, (<span class="kw">int</span> id) =&gt; <span class="ty">Results</span>.<span class="fn">NoContent</span>())
+   .<span class="fn">RequireAuthorization</span>(p =&gt; p.<span class="fn">RequireRole</span>(<span class="str">"Admin"</span>));   <span class="cmt">// role-gated</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 401 vs. 403 — know the difference</span>
+        <p><strong>401 Unauthorized</strong> means "I don't know who you are" — no token or an invalid one (an authentication failure). <strong>403 Forbidden</strong> means "I know who you are, but you're not allowed" — a valid token that lacks the required role or policy (an authorization failure). Getting a 403 is actually a sign your token is valid.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Roles vs. policies</span>
+        <p><code>[Authorize(Roles = "Admin")]</code> is the simple case. For anything richer — "must be over 18," "must own this resource," "must have a specific claim" — define a <strong>policy</strong> with <code>AddAuthorization(o =&gt; o.AddPolicy(...))</code> and apply it with <code>[Authorize(Policy = "...")]</code>. Policies scale far better than sprinkling role names everywhere.</p>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>Issuing a Token — the Login Endpoint ✍️</h2></div>
+      <p>Now the other half: <em>issuing</em> a token when someone logs in. The login endpoint verifies credentials, builds a set of claims, signs a token, and returns it. Note this endpoint is <code>[AllowAnonymous]</code> — you can't require a token to get a token.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — building &amp; signing a JWT (JsonWebTokenHandler)</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpPost</span>(<span class="str">"login"</span>)]
+[<span class="ty">AllowAnonymous</span>]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Login</span>(<span class="ty">LoginRequest</span> request)
+{
+    <span class="cmt">// 1) verify credentials (here simplified; use Identity in §07)</span>
+    <span class="kw">if</span> (!<span class="fn">CredentialsAreValid</span>(request))
+        <span class="kw">return</span> <span class="fn">Unauthorized</span>();
+
+    <span class="cmt">// 2) build the claims that describe the user</span>
+    <span class="kw">var</span> claims = <span class="kw">new</span>[]
+    {
+        <span class="kw">new</span> <span class="ty">Claim</span>(<span class="ty">JwtRegisteredClaimNames</span>.Sub, request.Username),
+        <span class="kw">new</span> <span class="ty">Claim</span>(<span class="ty">ClaimTypes</span>.Role, <span class="str">"Admin"</span>)
+    };
+
+    <span class="cmt">// 3) describe &amp; sign the token</span>
+    <span class="kw">var</span> key = <span class="kw">new</span> <span class="ty">SymmetricSecurityKey</span>(<span class="ty">Encoding</span>.UTF8.<span class="fn">GetBytes</span>(_config[<span class="str">"Jwt:Key"</span>]!));
+    <span class="kw">var</span> descriptor = <span class="kw">new</span> <span class="ty">SecurityTokenDescriptor</span>
+    {
+        Subject            = <span class="kw">new</span> <span class="ty">ClaimsIdentity</span>(claims),
+        Issuer             = _config[<span class="str">"Jwt:Issuer"</span>],
+        Audience           = _config[<span class="str">"Jwt:Audience"</span>],
+        Expires            = <span class="ty">DateTime</span>.UtcNow.<span class="fn">AddHours</span>(<span class="num">1</span>),
+        SigningCredentials = <span class="kw">new</span> <span class="ty">SigningCredentials</span>(key, <span class="ty">SecurityAlgorithms</span>.HmacSha256)
+    };
+
+    <span class="cmt">// 4) JsonWebTokenHandler is the modern token creator</span>
+    <span class="kw">var</span> token = <span class="kw">new</span> <span class="ty">JsonWebTokenHandler</span>().<span class="fn">CreateToken</span>(descriptor);
+    <span class="kw">return</span> <span class="fn">Ok</span>(<span class="kw">new</span> { accessToken = token });
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 JsonWebTokenHandler is the modern API</span>
+        <p><code>JsonWebTokenHandler</code> is the current, recommended way to create and read tokens — it replaces the older <code>JwtSecurityTokenHandler</code> and is faster. The <strong>same signing key</strong> used here to <em>create</em> the token must match the <code>IssuerSigningKey</code> used in §03 to <em>validate</em> it — that shared secret is the whole basis of trust.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Test it without writing a login</span>
+        <p>For local development you don't even need a login endpoint to try protected routes. The <code>dotnet user-jwts</code> CLI tool mints valid development tokens for your API — handy for testing <code>[Authorize]</code> in Swagger UI, Scalar, or a <code>.http</code> file (Day 8) before the real auth flow exists.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>ASP.NET Core Identity 🆔</h2></div>
+      <p>So far we hand-waved "verify credentials." You could hash passwords and manage users yourself — but that's exactly the wheel you shouldn't reinvent. <strong>ASP.NET Core Identity</strong> is the built-in, battle-tested membership system: user registration, secure password hashing, lockout, roles, claims, and more.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — registering Identity with EF Core</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">AddDbContext</span>&lt;<span class="ty">AppDbContext</span>&gt;(opt =&gt;
+    opt.<span class="fn">UseSqlServer</span>(connectionString));
+
+builder.Services
+    .<span class="fn">AddIdentityCore</span>&lt;<span class="ty">IdentityUser</span>&gt;()
+    .<span class="fn">AddRoles</span>&lt;<span class="ty">IdentityRole</span>&gt;()
+    .<span class="fn">AddEntityFrameworkStores</span>&lt;<span class="ty">AppDbContext</span>&gt;();</code></pre>
+      </div>
+
+      <p>Its two workhorse services get injected into your endpoints: <code>UserManager</code> creates/finds users and checks passwords; <code>SignInManager</code> handles sign-in. A real login uses them, then issues your JWT:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — register &amp; login with Identity, then issue a JWT</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// REGISTER — UserManager hashes the password &amp; stores the user</span>
+[<span class="ty">HttpPost</span>(<span class="str">"register"</span>), <span class="ty">AllowAnonymous</span>]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Register</span>(<span class="ty">RegisterRequest</span> req)
+{
+    <span class="kw">var</span> user = <span class="kw">new</span> <span class="ty">IdentityUser</span> { UserName = req.Email, Email = req.Email };
+    <span class="kw">var</span> result = <span class="kw">await</span> _userManager.<span class="fn">CreateAsync</span>(user, req.Password);
+    <span class="kw">return</span> result.Succeeded ? <span class="fn">Ok</span>() : <span class="fn">BadRequest</span>(result.Errors);
+}
+
+<span class="cmt">// LOGIN — verify the password, then mint a JWT (from §06)</span>
+[<span class="ty">HttpPost</span>(<span class="str">"login"</span>), <span class="ty">AllowAnonymous</span>]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Login</span>(<span class="ty">LoginRequest</span> req)
+{
+    <span class="kw">var</span> user = <span class="kw">await</span> _userManager.<span class="fn">FindByEmailAsync</span>(req.Email);
+    <span class="kw">if</span> (user <span class="kw">is null</span> ||
+        !<span class="kw">await</span> _userManager.<span class="fn">CheckPasswordAsync</span>(user, req.Password))
+        <span class="kw">return</span> <span class="fn">Unauthorized</span>();
+
+    <span class="kw">var</span> roles = <span class="kw">await</span> _userManager.<span class="fn">GetRolesAsync</span>(user);
+    <span class="kw">return</span> <span class="fn">Ok</span>(<span class="kw">new</span> { accessToken = <span class="fn">CreateJwt</span>(user, roles) });
+}</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Big gotcha — Identity's built-in tokens are NOT JWTs</span>
+        <p>.NET 8+ added a built-in Identity API (<code>MapIdentityApi</code>) with token-based endpoints. But the tokens it issues are a <strong>proprietary format, not standard JWTs</strong> — the built-in API is meant for simple first-party scenarios. If you specifically need JWTs (e.g. for a mobile app or to share identity across services), use Identity for <em>user management</em> (as above) and issue the JWT <em>yourself</em>, or use a full identity provider. Don't assume "Identity token" means "JWT."</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Cookies vs. tokens — Microsoft's actual guidance</span>
+        <p>For a browser-based SPA on your own domain, Microsoft recommends <strong>cookie</strong> authentication (the browser manages it safely, out of reach of JavaScript). Reach for <strong>JWT bearer tokens</strong> when the client can't use cookies well — native mobile/desktop apps, or when a third party issues the identity. JWT isn't automatically "more modern"; it's the right tool for stateless, cross-service, non-browser scenarios.</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>Login-to-Access Flow 🧩</h2></div>
+      <p>Here's the full round trip — today's "Do": log in to receive a JWT, then use it to reach a protected endpoint.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · 🔑 client logs in</div>
+          <div class="sh">POST /login with credentials</div>
+          <p>An anonymous endpoint. The server checks the username/password (via <code>UserManager.CheckPasswordAsync</code>).</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 2 · ✍️ server issues a token</div>
+          <div class="sh">Build claims, sign, return JWT</div>
+          <p>The server assembles the user's claims and roles, signs a token with the secret key, and returns <code>{ accessToken }</code>.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 3 · 💾 client stores it</div>
+          <div class="sh">Keeps the token</div>
+          <p>The client holds the token (in memory, or secure storage) and attaches it to future requests.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 4 · 📨 request with Bearer</div>
+          <div class="sh">Authorization: Bearer &lt;token&gt;</div>
+          <p>Calling a protected route, the client sends the token in the header. <code>UseAuthentication</code> validates it and builds the user.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 5 · ✅ access granted</div>
+          <div class="sh">[Authorize] passes → 200</div>
+          <p>Authorization confirms the user meets the rule; the endpoint runs. No token → 401; wrong role → 403.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Verify it end-to-end</span>
+        <p>Call a protected route with no token → expect <code>401</code>. <code>POST /login</code> with good credentials → get a token back. Re-call the route with <code>Authorization: Bearer &lt;token&gt;</code> → expect <code>200</code>. Try an <code>Admin</code>-only route as a non-admin → expect <code>403</code>. That sequence proves issuing, validating, and authorizing all work.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>Security Practices That Matter 🔒</h2></div>
+      <p>Auth is where mistakes are most costly. A short list of non-negotiables:</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔐</span><h4>HTTPS always</h4><p>Bearer tokens are like cash — anyone holding one is trusted. Only ever transmit them over HTTPS so they can't be sniffed.</p></div>
+        <div class="card"><span class="glyph">🗝️</span><h4>Guard the signing key</h4><p>Keep it out of source control — use user-secrets in dev, a secrets vault in prod. Anyone with the key can forge tokens.</p></div>
+        <div class="card"><span class="glyph">⏱️</span><h4>Short-lived tokens</h4><p>Give access tokens a short expiry (minutes to an hour). Use refresh tokens to get new ones without re-login.</p></div>
+        <div class="card"><span class="glyph">🙈</span><h4>No secrets in the payload</h4><p>The payload is readable by anyone. Put only non-sensitive claims (id, roles) in it — never passwords or private data.</p></div>
+        <div class="card"><span class="glyph">🔁</span><h4>Don't roll your own crypto</h4><p>Use Identity for password hashing and a standard provider for tokens. Home-grown auth is where breaches happen.</p></div>
+        <div class="card"><span class="glyph">📉</span><h4>Least privilege</h4><p>Give tokens only the claims/roles they need. Broad "god" tokens turn one leak into a total compromise.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Revocation is JWT's weak spot</span>
+        <p>Because JWTs are stateless and self-validating, you can't easily "log someone out" server-side before the token expires — there's no session to kill. That's why short lifetimes plus refresh tokens matter: the short expiry <em>is</em> your revocation window. For hard revocation you need extra machinery (a denylist, or reference tokens checked against a store), which trades away some of JWT's stateless benefit.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The whole series, secured</span>
+        <p>Authentication layers cleanly onto everything you've built: protected controllers still return the right status codes (Day 6), throw domain exceptions caught by your global handler (Day 11), and document their <code>401</code>/<code>403</code> responses in OpenAPI (Day 10). Security isn't a separate app — it's a cross-cutting concern threaded through the API you already have.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🪪 AuthN vs. AuthZ</h4><p>Authentication = who you are; authorization = what you may do.</p></div>
+        <div class="recap-card"><h4>🎟️ JWT parts</h4><p>header.payload.signature; claims live in the payload.</p></div>
+        <div class="recap-card"><h4>👀 Signed, not encrypted</h4><p>Payload is readable; never put secrets in it; use HTTPS.</p></div>
+        <div class="recap-card"><h4>📈 Stateless</h4><p>Server stores no token — just verifies the signature with a key.</p></div>
+        <div class="recap-card"><h4>✅ AddJwtBearer</h4><p>Validate via <code>TokenValidationParameters</code>.</p></div>
+        <div class="recap-card"><h4>🔀 Middleware order</h4><p><code>UseAuthentication()</code> before <code>UseAuthorization()</code>.</p></div>
+        <div class="recap-card"><h4>🚧 Protect</h4><p><code>[Authorize]</code> / <code>RequireAuthorization()</code>; <code>[AllowAnonymous]</code> opts out.</p></div>
+        <div class="recap-card"><h4>🔢 401 vs 403</h4><p>401 = unknown identity; 403 = known but not allowed.</p></div>
+        <div class="recap-card"><h4>✍️ Issue tokens</h4><p><code>JsonWebTokenHandler</code> signs with the same key you validate with.</p></div>
+        <div class="recap-card"><h4>🆔 Identity</h4><p><code>UserManager</code>/<code>SignInManager</code> for users &amp; password hashing.</p></div>
+        <div class="recap-card"><h4>⚠️ Identity ≠ JWT</h4><p>Built-in Identity API tokens are proprietary, not JWTs.</p></div>
+        <div class="recap-card"><h4>🍪 Cookies for SPAs</h4><p>Same-domain browser apps → cookies; JWT for native/cross-service.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>Syntax / type</th><th>Key detail</th></tr></thead>
+          <tbody>
+            <tr><td>Register scheme</td><td><code>AddAuthentication().AddJwtBearer(...)</code></td><td>Set <code>TokenValidationParameters</code></td></tr>
+            <tr><td>Validate signature</td><td><code>ValidateIssuerSigningKey = true</code></td><td>Always on; proves the token is genuine</td></tr>
+            <tr><td>Middleware</td><td><code>UseAuthentication</code> → <code>UseAuthorization</code></td><td>Order matters; auth before authz</td></tr>
+            <tr><td>Protect route</td><td><code>[Authorize]</code> / <code>RequireAuthorization()</code></td><td><code>[AllowAnonymous]</code> to exempt</td></tr>
+            <tr><td>Role gate</td><td><code>[Authorize(Roles = "Admin")]</code></td><td>Policies for richer rules</td></tr>
+            <tr><td>Issue token</td><td><code>JsonWebTokenHandler().CreateToken(...)</code></td><td>Replaces <code>JwtSecurityTokenHandler</code></td></tr>
+            <tr><td>User store</td><td><code>UserManager</code> / <code>SignInManager</code></td><td>Registration, hashing, sign-in</td></tr>
+            <tr><td>Read the user</td><td><code>HttpContext.User</code> (<code>ClaimsPrincipal</code>)</td><td>Built from the token's claims</td></tr>
+            <tr><td>Dev tokens</td><td><code>dotnet user-jwts</code></td><td>Mint test tokens without a login</td></tr>
+            <tr><td>Errors</td><td>401 vs 403</td><td>Unauthenticated vs. forbidden</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What's the difference between authentication and authorization?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Authentication (AuthN) is proving <em>who you are</em> — verifying identity, e.g. by validating a token or password. Authorization (AuthZ) is deciding <em>what you're allowed to do</em> — checking whether that identity has permission for an action, e.g. via roles or policies. You authenticate first, then authorize.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is a JWT and what are its three parts?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A JSON Web Token — a compact, signed string proving a user's identity. It has three dot-separated parts: the <strong>header</strong> (algorithm and type), the <strong>payload</strong> (claims about the user, like id and roles), and the <strong>signature</strong> (computed from header, payload, and a secret key to prove the token wasn't tampered with).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">Where does the client put the token on a request?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>In the <code>Authorization</code> HTTP header using the Bearer scheme: <code>Authorization: Bearer &lt;token&gt;</code>. The API's JWT bearer handler reads that header, validates the token, and builds the user from its claims. "Bearer" means whoever holds the token is granted access.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">How do you protect an endpoint?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Add the <code>[Authorize]</code> attribute to a controller or action (or <code>.RequireAuthorization()</code> on a Minimal API endpoint). It requires a valid authenticated user; requests without a good token get a 401. Use <code>[AllowAnonymous]</code> to exempt specific endpoints like login.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">Why must APIs authenticate every request?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>REST APIs are stateless — they keep no server-side session remembering who you are between requests. So each request must independently carry proof of identity. A JWT provides that: the client logs in once, gets a token, and sends it on every subsequent request.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What's the correct middleware order for auth?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p><code>app.UseAuthentication()</code> before <code>app.UseAuthorization()</code>. Authentication reads and validates the token and builds the user; authorization then checks whether that user is allowed. If you reverse them, authorization runs against an empty user and everything returns 401.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What is ASP.NET Core Identity?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A built-in membership system that handles user registration, secure password hashing, sign-in, roles, claims, and lockout. Its main services are <code>UserManager</code> (create/find users, check passwords) and <code>SignInManager</code> (sign users in/out). It saves you from writing — and getting wrong — your own auth plumbing.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What's the difference between a 401 and a 403?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p><strong>401 Unauthorized</strong> means the request isn't authenticated — no token or an invalid one. <strong>403 Forbidden</strong> means the request <em>is</em> authenticated but the user lacks permission for that action (e.g. wrong role). A 403 actually tells you the token is valid.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">What does TokenValidationParameters check?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>It controls how each incoming token is validated: <code>ValidateIssuerSigningKey</code> verifies the signature (proving the token is genuine — always on), <code>ValidateIssuer</code>/<code>ValidateAudience</code> confirm the <code>iss</code>/<code>aud</code> claims match this API, and <code>ValidateLifetime</code> rejects expired or not-yet-valid tokens. Mismatches here are the usual cause of unexpected 401s.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">Is a JWT encrypted? What does that mean for its contents?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>No — a standard JWT is signed, not encrypted. The payload is only Base64-encoded, so anyone can decode and read it. The signature guarantees it wasn't <em>altered</em>, not that it's <em>secret</em>. So never put sensitive data in the payload, and always send tokens over HTTPS to prevent interception.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">How do you issue a JWT on login?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>In an anonymous login endpoint: verify credentials (e.g. <code>UserManager.CheckPasswordAsync</code>), build a list of claims (subject, roles), then create a <code>SecurityTokenDescriptor</code> with the issuer, audience, expiry, and signing credentials, and call <code>JsonWebTokenHandler().CreateToken(descriptor)</code>. Return the token to the client. The signing key must match the one the API validates with.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">Why is JWT considered stateless, and why does that help scaling?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>The server doesn't store the token or a session; it only needs the secret key to verify the signature and read the claims. So any server in a farm can validate any request independently — no shared session store, no sticky sessions, no database lookup per request. That makes horizontal scaling and load balancing simple.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">What's the difference between role-based and policy-based authorization?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Role-based is the simple case: <code>[Authorize(Roles = "Admin")]</code> checks the user has a named role. Policy-based is richer — you define a named policy with requirements (a specific claim, a minimum age, resource ownership) via <code>AddAuthorization</code>, then apply <code>[Authorize(Policy = "...")]</code>. Policies centralize complex rules and scale better than scattering role strings across the codebase.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">Are the tokens from ASP.NET Core Identity's built-in API JWTs?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>No — a common misconception. The built-in Identity API (<code>MapIdentityApi</code>, added in .NET 8) issues tokens in a proprietary format, not standard JWTs, and it's aimed at simple first-party scenarios. If you specifically need JWTs, use Identity for user management and issue the JWT yourself, or use a full OpenID Connect/OAuth provider.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">When should you use cookies instead of JWT bearer tokens?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>For browser-based apps (SPAs) served on your own domain, Microsoft recommends cookies — the browser manages them automatically and keeps them out of JavaScript's reach, which is safer. Use JWT bearer tokens when the client can't handle cookies well (native mobile/desktop apps) or when a third party issues the identity across services. JWT isn't inherently "better" — it fits stateless, cross-service, non-browser cases.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">A valid-looking token gets a 401. How do you debug it?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Check the usual mismatches: the signing key differs between issuer and validator (most common), the token's <code>iss</code>/<code>aud</code> don't match <code>ValidIssuer</code>/<code>ValidAudience</code>, or the token is expired (mind the default 5-minute clock-skew tolerance and any clock drift). Decode the token at jwt.io to inspect its claims, and enable <code>Microsoft.AspNetCore.Authentication</code> logging at Information level to see the exact validation failure.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">What are refresh tokens and why are they needed?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Access tokens should be short-lived to limit damage if leaked, but forcing a re-login every few minutes is bad UX. A refresh token is a longer-lived credential the client exchanges for a new access token when the old one expires, without re-entering credentials. Refresh tokens are typically stored server-side (or as reference tokens) so they <em>can</em> be revoked — recovering some of the control that stateless access tokens give up.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">How do you revoke a JWT before it expires?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>You can't easily — that's JWT's core trade-off. Because validation is stateless and signature-based, there's no session to kill. Practical mitigations: keep access tokens short-lived so the expiry window <em>is</em> the revocation window; maintain a denylist of revoked token ids (jti) checked on each request; rotate/revoke refresh tokens; or switch to reference tokens validated against a store. Each of these reintroduces some state, trading away pure statelessness for control.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">Symmetric vs. asymmetric signing — when would you use each?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Symmetric (e.g. HMAC-SHA256) uses one shared secret to both sign and validate — simple, fine when the same party does both. Asymmetric (e.g. RSA/ECDSA) signs with a private key and validates with a public key — essential when the issuer and validators are separate parties, since validators only need the public key and can't forge tokens. Identity providers use asymmetric keys and publish the public keys via a JWKS endpoint that the API fetches automatically when you set <code>Authority</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">Why prefer an identity provider over signing your own tokens?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Microsoft explicitly discourages hand-rolling tokens outside testing/closed systems. A provider (Entra ID, Auth0, Keycloak, Duende IdentityServer) gives you standards-compliant OpenID Connect/OAuth flows, key rotation, MFA, consent, federation, and battle-tested security you won't reproduce correctly yourself. You just set <code>options.Authority</code> and the API fetches signing keys automatically. Self-signed tokens are fine to learn on, risky in production.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">How does the JWT bearer handler turn a token into HttpContext.User?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>During <code>UseAuthentication</code>, the handler reads the Bearer token, validates it against <code>TokenValidationParameters</code> (signature, issuer, audience, lifetime), and if valid, constructs a <code>ClaimsPrincipal</code> from the token's claims and assigns it to <code>HttpContext.User</code>. Downstream, authorization and your code read that principal — <code>User.IsInRole(...)</code>, <code>User.FindFirst(...)</code> — all sourced from the token, with no database hit.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">Why is JsonWebTokenHandler preferred over JwtSecurityTokenHandler?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p><code>JsonWebTokenHandler</code> is the modern successor in the Microsoft.IdentityModel libraries — it's faster, more memory-efficient, and works directly with the newer <code>JsonWebToken</code> type. <code>JwtSecurityTokenHandler</code> is the older API (and does some claim-type remapping by default that surprises people). New code should use <code>JsonWebTokenHandler</code> for both creating and validating tokens.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">What are the main security pitfalls when implementing JWT auth?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Transmitting tokens over plain HTTP; storing the signing key in source control; long-lived access tokens with no revocation strategy; putting sensitive data in the readable payload; over-broad claims that make one leak catastrophic; accepting the <code>alg: none</code> algorithm or not validating the signature; and skipping issuer/audience validation. The defenses: HTTPS everywhere, secrets in a vault, short lifetimes plus refresh tokens, minimal claims, and always validating signature, issuer, audience, and lifetime.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Start with the <strong>AuthN/AuthZ distinction and JWT anatomy</strong> (Q1–Q2, Q8, Q10) — the "signed not encrypted" and "401 vs 403" points come up constantly. Then the mechanics: <strong>validating</strong> (<code>TokenValidationParameters</code>, middleware order, protecting routes — Q4, Q6, Q9) and <strong>issuing</strong> (Q11), which together are the day's "Do." Cover the <strong>Identity nuances</strong> (Q7, Q14–Q15) — the "Identity tokens aren't JWTs" and "cookies for SPAs" facts trip people up. Finish with <strong>senior depth</strong>: refresh tokens, revocation, symmetric vs. asymmetric, identity providers, and pitfalls (Q17–Q23). If you can log in to get a JWT and use it to pass an <code>[Authorize]</code> check from memory, you own this topic.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

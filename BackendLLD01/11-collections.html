@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Collections Framework — Session 11</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* hierarchy tree */
+.tree{font-family:'JetBrains Mono',monospace;font-size:.73rem;line-height:1.9}
+.tree-i{display:inline-block;padding:.15rem .5rem;border-radius:4px;margin:.1rem}
+.tree-i.iface{background:var(--blue-soft);border:1px solid var(--blue);color:var(--blue)}
+.tree-i.cls{background:var(--purple-soft);border:1px solid var(--purple);color:var(--purple)}
+.tree-indent{margin-left:1.5rem;display:block}
+/* ArrayList resize visual */
+.arr-resize{display:flex;gap:.3rem;flex-wrap:wrap;margin:.5rem 0;align-items:center}
+.arr-cell-sm{width:26px;height:26px;border:1.5px solid var(--blue);background:var(--blue-soft);border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--blue);font-weight:600}
+.arr-cell-sm.empty{border-color:var(--line);background:var(--bg-soft);color:var(--ink-soft)}
+/* hashset bucket */
+.hs-row{display:flex;gap:.3rem;align-items:flex-start;margin:.5rem 0;font-family:'JetBrains Mono',monospace;font-size:.68rem}
+.hs-idx{width:20px;text-align:right;color:var(--accent);flex-shrink:0;padding-top:.2rem}
+.hs-bucket{border:1px solid var(--line);border-radius:4px;padding:.2rem .4rem;min-width:32px;text-align:center;background:var(--bg-soft)}
+.hs-bucket.filled{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 11</div>
+  <div class="nav-group"><span class="nav-group-label">Getting Started</span><a class="nav-link" href="#hero">Overview</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">Framework Overview</span>
+    <a class="nav-link" href="#s01">01 Collection Hierarchy</a>
+    <a class="nav-link" href="#s02">02 Map Hierarchy</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">List</span>
+    <a class="nav-link" href="#s03">03 ArrayList</a>
+    <a class="nav-link" href="#s04">04 LinkedList &amp; Vector</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Set</span>
+    <a class="nav-link" href="#s05">05 HashSet — How It Works</a>
+    <a class="nav-link" href="#s06">06 LinkedHashSet &amp; TreeSet</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Queue &amp; Map</span>
+    <a class="nav-link" href="#s07">07 Queue, PriorityQueue &amp; Deque</a>
+    <a class="nav-link" href="#s08">08 Map Implementations</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap &amp; Cheat Sheet</a></div>
+</nav>
+<main>
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 11 · 1st Dec</p>
+  <h1>Java Collections Framework</h1>
+  <p class="hero-lede">Java's built-in data structures — the full hierarchy, the internals of ArrayList and HashSet, and a cheat sheet for choosing the right collection every time.</p>
+  <div class="agenda-chips">
+    <span class="chip">ArrayList</span><span class="chip">LinkedList</span><span class="chip">HashSet</span><span class="chip">TreeSet</span><span class="chip">HashMap</span><span class="chip">PriorityQueue</span><span class="chip">Deque</span>
+  </div>
+</section>
+
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>The Collection Hierarchy</h2></div>
+  <p>The Java Collections Framework provides a unified set of interfaces and implementations for storing and manipulating groups of objects. <strong>Note:</strong> <code>Map</code> is a separate hierarchy — it is NOT part of the <code>Collection</code> interface tree.</p>
+
+  <div class="diagram-box">
+    <div class="tree">
+      <span class="tree-i iface">Iterable</span>
+      <span class="tree-indent"><span class="tree-i iface">Collection</span>
+        <span class="tree-indent">
+          <span class="tree-i iface">List</span>
+          <span class="tree-indent">
+            <span class="tree-i cls">ArrayList</span> &nbsp;
+            <span class="tree-i cls">LinkedList</span> &nbsp;
+            <span class="tree-i cls">Vector</span>
+            <span class="tree-indent"><span class="tree-i cls">Stack</span></span>
+          </span>
+          <span class="tree-i iface">Queue</span>
+          <span class="tree-indent">
+            <span class="tree-i iface">Deque</span>
+            <span class="tree-indent"><span class="tree-i cls">ArrayDeque</span> &nbsp; <span class="tree-i cls">LinkedList</span></span>
+            <span class="tree-i cls">PriorityQueue</span>
+          </span>
+          <span class="tree-i iface">Set</span>
+          <span class="tree-indent">
+            <span class="tree-i cls">HashSet</span> &nbsp;
+            <span class="tree-i cls">LinkedHashSet</span>
+            <span class="tree-indent"><span class="tree-i iface">SortedSet</span>
+              <span class="tree-indent"><span class="tree-i cls">TreeSet</span></span>
+            </span>
+          </span>
+        </span>
+      </span>
+    </div>
+    <p style="font-size:.72rem; color:var(--ink-soft); margin-top:.8rem;"><span class="tree-i iface" style="font-size:.65rem;">i = interface</span> &nbsp; <span class="tree-i cls" style="font-size:.65rem;">c = concrete class</span></p>
+  </div>
+</section>
+
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>The Map Hierarchy</h2></div>
+  <p><code>Map</code> stores key-value pairs. It does NOT extend <code>Collection</code> — it is its own separate interface hierarchy.</p>
+
+  <div class="diagram-box">
+    <div class="tree">
+      <span class="tree-i iface">Map</span>
+      <span class="tree-indent">
+        <span class="tree-i cls">HashMap</span> &nbsp;
+        <span class="tree-i cls">LinkedHashMap</span> &nbsp;
+        <span class="tree-i cls">Hashtable</span>
+        <span class="tree-indent"><span class="tree-i iface">SortedMap</span>
+          <span class="tree-indent"><span class="tree-i cls">TreeMap</span></span>
+        </span>
+      </span>
+    </div>
+  </div>
+</section>
+
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>ArrayList — Dynamic Array</h2></div>
+  <p><code>ArrayList</code> is backed by a contiguous array in memory. When the array fills up, Java allocates a new array of roughly double the size and copies all elements over. This is transparent to you, but it has complexity implications.</p>
+
+  <div class="diagram-box">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:.72rem; margin-bottom:.4rem; color:var(--ink-soft);">Initial capacity = 10. After adding element 11, Java resizes to ~20:</div>
+    <div style="margin:.4rem 0; font-size:.72rem; font-family:'JetBrains Mono',monospace;"><span style="color:var(--blue);">size=10</span> →</div>
+    <div class="arr-resize">
+      <div class="arr-cell-sm">1</div><div class="arr-cell-sm">2</div><div class="arr-cell-sm">3</div><div class="arr-cell-sm">4</div><div class="arr-cell-sm">40</div><div class="arr-cell-sm">31</div><div class="arr-cell-sm">17</div><div class="arr-cell-sm">7</div><div class="arr-cell-sm">8</div><div class="arr-cell-sm">6</div>
+    </div>
+    <div style="margin:.4rem 0; font-size:.72rem; font-family:'JetBrains Mono',monospace; color:var(--green);">→ Resize to 20, copy all elements:</div>
+    <div class="arr-resize">
+      <div class="arr-cell-sm">1</div><div class="arr-cell-sm">2</div><div class="arr-cell-sm">3</div><div class="arr-cell-sm">4</div><div class="arr-cell-sm">40</div><div class="arr-cell-sm">31</div><div class="arr-cell-sm">17</div><div class="arr-cell-sm">7</div><div class="arr-cell-sm">8</div><div class="arr-cell-sm">6</div><div class="arr-cell-sm" style="border-color:var(--green);background:var(--green-soft);color:var(--green);">10</div><div class="arr-cell-sm empty"></div><div class="arr-cell-sm empty"></div><div class="arr-cell-sm empty"></div><div class="arr-cell-sm empty"></div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Operation</th><th>Time Complexity</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>add(element) at end</td><td>O(1) amortized</td><td>Occasional O(n) resize, but amortized over many ops</td></tr>
+      <tr><td>add(index, element)</td><td>O(n)</td><td>Must shift all subsequent elements right</td></tr>
+      <tr><td>get(index)</td><td>O(1)</td><td>Direct array access by index</td></tr>
+      <tr><td>remove(index)</td><td>O(n)</td><td>Must shift subsequent elements left</td></tr>
+      <tr><td>contains(element)</td><td>O(n)</td><td>Linear scan</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>LinkedList &amp; Vector</h2></div>
+  <h3>LinkedList</h3>
+  <p><code>LinkedList</code> is a doubly-linked list — each node stores a value and pointers to the previous and next nodes. Memory is <em>not</em> contiguous. Fast insertion/deletion anywhere (O(1) if you have the node), but O(n) random access since you must traverse from the head.</p>
+
+  <h3>Vector</h3>
+  <p><code>Vector</code> is essentially a thread-safe version of <code>ArrayList</code>. Every method is <code>synchronized</code>, which makes it safe for concurrent access but slower than <code>ArrayList</code> for single-threaded use. Prefer <code>ArrayList</code> for single-threaded code, and <code>Collections.synchronizedList</code> or <code>CopyOnWriteArrayList</code> for concurrent access.</p>
+
+  <div class="callout tip">
+    <span class="callout-tag">When to Choose</span>
+    <p>Use <code>ArrayList</code> when you need fast random access (get by index). Use <code>LinkedList</code> when you frequently insert/delete in the middle or use it as a queue/deque. Avoid <code>Vector</code> in modern code — it's a legacy class.</p>
+  </div>
+</section>
+
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>HashSet — How It Works Internally</h2></div>
+  <p><code>HashSet</code> stores unique elements with O(1) average time for add and contains. Internally it is backed by a <code>HashMap</code> where each element is stored as a key. The implementation uses an array of buckets:</p>
+
+  <div class="diagram-box">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:.72rem;">
+      <div style="display:flex; gap:.3rem; margin-bottom:.3rem;">
+        <span style="width:20px; text-align:right; color:var(--accent);">idx</span>
+        <span style="flex:1; color:var(--ink-soft);">bucket (linked list of nodes with same hash)</span>
+      </div>
+      <div class="hs-row"><span class="hs-idx">0</span><div class="hs-bucket">—</div></div>
+      <div class="hs-row"><span class="hs-idx">1</span><div class="hs-bucket filled">100</div></div>
+      <div class="hs-row"><span class="hs-idx">2</span><div class="hs-bucket filled">40</div></div>
+      <div class="hs-row"><span class="hs-idx">3</span><div class="hs-bucket filled">10 → 110</div></div>
+      <div class="hs-row"><span class="hs-idx">4</span><div class="hs-bucket filled">60</div></div>
+      <div class="hs-row"><span class="hs-idx">5</span><div class="hs-bucket filled">30 → 70</div></div>
+      <div class="hs-row"><span class="hs-idx">6</span><div class="hs-bucket filled">80</div></div>
+      <div class="hs-row"><span class="hs-idx">7</span><div class="hs-bucket filled">20</div></div>
+      <div class="hs-row"><span class="hs-idx">8</span><div class="hs-bucket filled">50 → 90</div></div>
+    </div>
+    <p style="font-size:.78rem; color:var(--ink-soft); margin-top:.8rem;">bucket = hash(x) % array_length. Collisions resolved by chaining (linked list per bucket). The load factor λ = avg elements per bucket. When λ &gt; 0.75, the array is rehashed (doubled in size).</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — HashSet add() logic</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">add</span>(<span class="ty">T</span> x) {
+    <span class="kw">int</span> bucket = x.<span class="fn">hashCode</span>() % A.length;
+    <span class="kw">boolean</span> found = <span class="kw">false</span>;
+    <span class="kw">for</span> (<span class="ty">Node</span> node : A[bucket]) {
+        <span class="kw">if</span> (node.val.<span class="fn">equals</span>(x)) { found = <span class="kw">true</span>; <span class="kw">break</span>; }
+    }
+    <span class="kw">if</span> (!found) A[bucket].<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">Node</span>(x));  <span class="cmt">// only add if not already present</span>
+}
+<span class="cmt">// TC: O(λ) ≈ O(1) average. When λ > 0.75: rehash → O(n) but amortized O(1).</span></pre>
+  </div>
+</section>
+
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>LinkedHashSet &amp; TreeSet</h2></div>
+  <h3>LinkedHashSet</h3>
+  <p><code>LinkedHashSet</code> extends <code>HashSet</code> with an additional doubly-linked list threading through all nodes in insertion order. It gives you O(1) add/contains like <code>HashSet</code>, but iteration is in the order elements were inserted.</p>
+
+  <h3>TreeSet</h3>
+  <p><code>TreeSet</code> is backed by a self-balancing binary search tree (Red-Black tree). All elements are kept in sorted order at all times. Operations are O(log n) instead of O(1), but you get sorted traversal for free.</p>
+
+  <table>
+    <thead><tr><th>Set</th><th>Ordering</th><th>add / contains</th><th>Null?</th></tr></thead>
+    <tbody>
+      <tr><td><code>HashSet</code></td><td>No guaranteed order</td><td>O(1) avg</td><td>One null allowed</td></tr>
+      <tr><td><code>LinkedHashSet</code></td><td>Insertion order</td><td>O(1) avg</td><td>One null allowed</td></tr>
+      <tr><td><code>TreeSet</code></td><td>Sorted (natural or Comparator)</td><td>O(log n)</td><td>No nulls</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>Queue, PriorityQueue &amp; Deque</h2></div>
+  <h3>PriorityQueue</h3>
+  <p><code>PriorityQueue</code> is a heap-based queue. By default it is a <strong>min-heap</strong> — <code>poll()</code> always returns the smallest element. Use <code>Collections.reverseOrder()</code> to make it a max-heap.</p>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Min-heap (default)</span>
+<span class="ty">PriorityQueue</span>&lt;<span class="ty">Integer</span>&gt; minPQ = <span class="kw">new</span> <span class="ty">PriorityQueue</span>&lt;&gt;();
+
+<span class="cmt">// Max-heap</span>
+<span class="ty">PriorityQueue</span>&lt;<span class="ty">Integer</span>&gt; maxPQ = <span class="kw">new</span> <span class="ty">PriorityQueue</span>&lt;&gt;(<span class="ty">Collections</span>.<span class="fn">reverseOrder</span>());
+
+minPQ.<span class="fn">offer</span>(<span class="num">5</span>); minPQ.<span class="fn">offer</span>(<span class="num">1</span>); minPQ.<span class="fn">offer</span>(<span class="num">3</span>);
+minPQ.<span class="fn">poll</span>();   <span class="cmt">// returns 1 (smallest)  — O(log n)</span>
+minPQ.<span class="fn">peek</span>();   <span class="cmt">// returns next min without removing  — O(1)</span></pre>
+  </div>
+
+  <h3>Deque (Double-Ended Queue)</h3>
+  <p>A <code>Deque</code> supports O(1) insertion and removal at <em>both</em> ends — it can act as a stack (LIFO) or a queue (FIFO). <code>ArrayDeque</code> is the preferred concrete implementation (faster than <code>LinkedList</code> for most use cases).</p>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">Deque</span>&lt;<span class="ty">Integer</span>&gt; deque = <span class="kw">new</span> <span class="ty">ArrayDeque</span>&lt;&gt;();
+deque.<span class="fn">addFirst</span>(<span class="num">1</span>);   <span class="cmt">// front</span>
+deque.<span class="fn">addLast</span>(<span class="num">2</span>);    <span class="cmt">// back</span>
+deque.<span class="fn">pollFirst</span>();   <span class="cmt">// remove from front</span>
+deque.<span class="fn">pollLast</span>();    <span class="cmt">// remove from back</span>
+
+<span class="cmt">// Use as Stack (LIFO):</span>
+deque.<span class="fn">push</span>(<span class="num">5</span>);  <span class="cmt">// same as addFirst</span>
+deque.<span class="fn">pop</span>();   <span class="cmt">// same as removeFirst</span></pre>
+  </div>
+</section>
+
+<section id="s08" class="section">
+  <div class="section-header"><span class="section-num">08</span><h2>Map Implementations</h2></div>
+  <table>
+    <thead><tr><th>Map</th><th>Ordering</th><th>get / put</th><th>Thread-Safe?</th></tr></thead>
+    <tbody>
+      <tr><td><code>HashMap</code></td><td>No order</td><td>O(1) avg</td><td>No</td></tr>
+      <tr><td><code>LinkedHashMap</code></td><td>Insertion order</td><td>O(1) avg</td><td>No</td></tr>
+      <tr><td><code>TreeMap</code></td><td>Sorted by key</td><td>O(log n)</td><td>No</td></tr>
+      <tr><td><code>Hashtable</code></td><td>No order</td><td>O(1) avg</td><td>Yes (legacy)</td></tr>
+      <tr><td><code>ConcurrentHashMap</code></td><td>No order</td><td>O(1) avg</td><td>Yes (modern)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap &amp; Cheat Sheet</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">ArrayList</div><p>Dynamic array. O(1) get by index. O(1) amortized add-at-end. O(n) insert/delete in middle. Default capacity 10, doubles on resize.</p></div>
+    <div class="recap-card"><div class="recap-card-title">LinkedList</div><p>Doubly-linked list. O(1) add/remove at head/tail. O(n) get by index. Implements both List and Deque.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Vector</div><p>Thread-safe ArrayList (legacy). Every method synchronized. Prefer CopyOnWriteArrayList for modern concurrent code.</p></div>
+    <div class="recap-card"><div class="recap-card-title">HashSet</div><p>Hash table backed. O(1) avg add/contains/remove. No order. No duplicates. Rehashes when load factor &gt; 0.75.</p></div>
+    <div class="recap-card"><div class="recap-card-title">LinkedHashSet</div><p>HashSet + insertion-order doubly-linked list. O(1) operations + predictable iteration order.</p></div>
+    <div class="recap-card"><div class="recap-card-title">TreeSet</div><p>Red-Black BST. Always sorted. O(log n) operations. No nulls allowed. Use when you need sorted unique elements.</p></div>
+    <div class="recap-card"><div class="recap-card-title">PriorityQueue</div><p>Min-heap by default. O(log n) offer/poll, O(1) peek. Use for k-th smallest/largest problems.</p></div>
+    <div class="recap-card"><div class="recap-card-title">ArrayDeque</div><p>Double-ended queue. O(1) at both ends. Preferred stack/queue implementation over Stack and LinkedList.</p></div>
+    <div class="recap-card"><div class="recap-card-title">HashMap</div><p>Hash table for key-value pairs. O(1) avg get/put. No order. Allows one null key. Not thread-safe.</p></div>
+    <div class="recap-card"><div class="recap-card-title">TreeMap</div><p>Red-Black BST map. Keys always sorted. O(log n) operations. Useful for range queries: firstKey(), subMap().</p></div>
+  </div>
+</section>
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

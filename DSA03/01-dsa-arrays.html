@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Arrays I — One-Dimensional Arrays</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+
+<style>
+/* ─────────────────────────────────────────────
+   DESIGN TOKENS
+───────────────────────────────────────────── */
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+/* ─────────────────────────────────────────────
+   RESET & BASE
+───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: radial-gradient(ellipse 120% 80% at 15% 20%, #f5ede8 0%, transparent 60%),
+              radial-gradient(ellipse 80% 60% at 90% 80%, #e8e4f2 0%, transparent 55%),
+              var(--bg);
+  color: var(--ink);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  min-height: 100vh;
+}
+
+/* ─────────────────────────────────────────────
+   LAYOUT
+───────────────────────────────────────────── */
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ─── READING PROGRESS BAR ─── */
+#progress-bar {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000;
+  transition: width .1s linear;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ─── MOBILE TOGGLE ─── */
+.nav-toggle {
+  display: none;
+  position: fixed;
+  bottom: 1.4rem;
+  right: 1.4rem;
+  z-index: 500;
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 1.3rem;
+  box-shadow: 0 4px 16px rgba(181,101,29,.35);
+  align-items: center;
+  justify-content: center;
+  transition: transform .2s;
+}
+.nav-toggle:hover { transform: scale(1.08); }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--bg-soft);
+  border-right: 1px solid var(--line);
+  padding: 2rem 0 4rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+  transition: transform .3s ease;
+}
+.sidebar-logo {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 0 1.4rem 1.4rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1.2rem;
+}
+.sidebar-logo strong {
+  display: block;
+  font-family: "Fraunces", serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--ink);
+  margin-top: .25rem;
+}
+.nav-group { margin-bottom: .2rem; }
+.nav-group-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: .7rem 1.4rem .25rem;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .42rem 1.4rem;
+  font-family: "Newsreader", serif;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: color .15s, background .15s, border-color .15s;
+}
+.nav-link:hover { color: var(--ink); background: var(--accent-soft); }
+.nav-link.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 500;
+}
+.nav-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  color: var(--accent);
+  opacity: .7;
+  flex-shrink: 0;
+}
+
+/* ─── MAIN ─── */
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 0 3rem 6rem;
+  max-width: 860px;
+}
+
+/* ─────────────────────────────────────────────
+   HERO
+───────────────────────────────────────────── */
+.hero {
+  padding: 5rem 0 3.5rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 4rem;
+}
+.hero-eyebrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+.hero h1 {
+  font-family: "Fraunces", serif;
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--ink);
+  margin-bottom: 1rem;
+}
+.hero-lede {
+  font-size: 1.1rem;
+  color: var(--ink-soft);
+  max-width: 560px;
+  margin-bottom: 1.8rem;
+}
+.chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.chip {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.7rem;
+  letter-spacing: .04em;
+  padding: .3rem .75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink-soft);
+}
+
+/* ─────────────────────────────────────────────
+   SECTIONS
+───────────────────────────────────────────── */
+.section { margin-bottom: 5rem; scroll-margin-top: 2rem; }
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--line);
+}
+.section-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: .2rem .55rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.section-header h2 {
+  font-family: "Fraunces", serif;
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+h3 {
+  font-family: "Fraunces", serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 2rem 0 .6rem;
+}
+h4 {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .8rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 1.6rem 0 .5rem;
+}
+p { margin-bottom: 1rem; }
+
+/* ─────────────────────────────────────────────
+   CALLOUT BOXES
+───────────────────────────────────────────── */
+.callout {
+  border-radius: 8px;
+  padding: 1.1rem 1.3rem;
+  margin: 1.5rem 0;
+  border-left: 4px solid;
+  position: relative;
+}
+.callout-tag {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-weight: 600;
+  display: block;
+  margin-bottom: .4rem;
+}
+.callout.tip   { background: var(--green-soft);  border-color: var(--green);  }
+.callout.tip   .callout-tag { color: var(--green); }
+.callout.key   { background: var(--blue-soft);   border-color: var(--blue);   }
+.callout.key   .callout-tag { color: var(--blue); }
+.callout.analogy { background: var(--rose-soft); border-color: var(--rose);   }
+.callout.analogy .callout-tag { color: var(--rose); }
+.callout.warn  { background: var(--accent-soft); border-color: var(--accent); }
+.callout.warn  .callout-tag { color: var(--accent); }
+
+/* ─────────────────────────────────────────────
+   INLINE CODE
+───────────────────────────────────────────── */
+:not(pre) > code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.82em;
+  color: var(--accent);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: .1em .38em;
+}
+
+/* ─────────────────────────────────────────────
+   CODE BLOCKS
+───────────────────────────────────────────── */
+.code-block {
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  background: var(--code-bg);
+  font-size: 0.85rem;
+}
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1e1d26;
+  padding: .55rem 1rem;
+}
+.code-lang {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #9896a0;
+}
+.copy-btn {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: .06em;
+  color: #9896a0;
+  background: transparent;
+  border: 1px solid #3f3d4a;
+  border-radius: 4px;
+  padding: .2rem .55rem;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.copy-btn:hover { color: var(--code-ink); border-color: #6c6980; }
+.copy-btn.copied { color: #89d185; border-color: #89d185; }
+pre {
+  padding: 1.2rem 1.3rem;
+  overflow-x: auto;
+  font-family: "JetBrains Mono", monospace;
+  line-height: 1.65;
+  color: var(--code-ink);
+}
+
+/* Syntax spans */
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ─────────────────────────────────────────────
+   TABLES
+───────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; margin: 1.5rem 0; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+thead th {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--bg-soft);
+  padding: .65rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: .6rem 1rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--bg-soft); }
+
+/* ─────────────────────────────────────────────
+   DIAGRAMS / MEMORY BOXES
+───────────────────────────────────────────── */
+.diagram {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: flex-end;
+  margin: 1.5rem 0;
+  padding: 1.2rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow-x: auto;
+}
+.arr-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .2rem;
+  min-width: 42px;
+}
+.arr-cell .val {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .85rem;
+  font-weight: 600;
+  background: var(--bg);
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  transition: background .2s;
+}
+.arr-cell.highlight .val { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.arr-cell.highlight-blue .val { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+.arr-cell.highlight-green .val { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+.arr-cell.neg .val { background: var(--rose-soft); border-color: var(--rose); color: var(--rose); }
+.arr-cell .idx {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .65rem;
+  color: var(--blue);
+}
+.arr-cell .label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .6rem;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* building / bar chart diagrams */
+.bar-diagram {
+  display: flex;
+  align-items: flex-end;
+  gap: 5px;
+  padding: 2.5rem 1.4rem 0.8rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  min-height: 180px;
+  position: relative;
+}
+.bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+/* value label sits ABOVE each column */
+.bar-col .bar-val {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .62rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 3px;
+  min-height: 14px;
+  line-height: 1;
+}
+.bar {
+  width: 44px;
+  background: var(--accent-soft);
+  border: 2px solid var(--accent);
+  border-radius: 4px 4px 0 0;
+  display: block;            /* no text inside bar */
+  transition: background .2s, border-color .2s;
+}
+.bar.water {
+  background: linear-gradient(180deg, #bfe7f3 0%, #7bb8cc 100%);
+  border-color: #4a90a4;
+  border-bottom: none;      /* merges visually with building bar below */
+  border-radius: 3px 3px 0 0;
+}
+/* water label centred inside water bar — only rendered when tall enough */
+.bar.water .water-lbl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: "JetBrains Mono", monospace;
+  font-size: .6rem;
+  font-weight: 600;
+  color: #1a5a6e;
+  white-space: nowrap;
+}
+.bar.plain { background: var(--bg-soft); border-color: var(--line); }
+.bar-idx {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .62rem;
+  color: var(--blue);
+  margin-top: 4px;
+  line-height: 1;
+}
+
+/* Complexity badge */
+.complexity-row { display: flex; gap: .7rem; flex-wrap: wrap; margin: 1rem 0; }
+.complexity-badge {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  padding: .3rem .7rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+}
+.complexity-badge .label { color: var(--ink-soft); }
+.complexity-badge .val   { color: var(--accent); font-weight: 600; }
+
+/* ─────────────────────────────────────────────
+   CARDS GRID
+───────────────────────────────────────────── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.2rem 1.3rem;
+  transition: box-shadow .2s, transform .2s;
+}
+.card:hover { box-shadow: 0 4px 16px rgba(45,42,38,.07); transform: translateY(-2px); }
+.card-glyph {
+  font-family: "Fraunces", serif;
+  font-size: 1.6rem;
+  margin-bottom: .4rem;
+  display: block;
+}
+.card h4 {
+  font-family: "Fraunces", serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  margin: 0 0 .35rem;
+}
+.card p {
+  font-size: .88rem;
+  color: var(--ink-soft);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ─────────────────────────────────────────────
+   APPROACH FLOWCHART
+───────────────────────────────────────────── */
+.flow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  margin: 1.5rem 0;
+}
+.flow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: .8rem 1rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 540px;
+  position: relative;
+}
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 2px;
+  height: 22px;
+  background: var(--line);
+  margin-left: calc(1rem + 12px);
+}
+.flow-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: .1rem;
+}
+.flow-text {
+  font-size: .9rem;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.flow-text strong { color: var(--accent); }
+
+/* ─────────────────────────────────────────────
+   QUICK RECAP SECTION
+───────────────────────────────────────────── */
+.recap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.recap-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.1rem 1.2rem;
+  border-top: 3px solid var(--accent);
+}
+.recap-card h4 {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: .95rem;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+  margin: 0 0 .4rem;
+}
+.recap-card p {
+  font-size: .84rem;
+  color: var(--ink-soft);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* LeetCode problems */
+.lc-list { list-style: none; padding: 0; margin: 1rem 0; }
+.lc-list li {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--line);
+  font-size: .9rem;
+}
+.lc-list li:last-child { border-bottom: none; }
+.lc-diff {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .65rem;
+  padding: .15rem .45rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.lc-diff.easy   { background: var(--green-soft);  color: var(--green);  }
+.lc-diff.medium { background: var(--accent-soft); color: var(--accent); }
+.lc-diff.hard   { background: var(--rose-soft);   color: var(--rose);   }
+.lc-name { color: var(--blue); font-weight: 500; }
+.lc-why  { color: var(--ink-soft); font-size: .82rem; }
+a.lc-name {
+  color: var(--blue);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color .15s, color .15s;
+}
+a.lc-name:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ─────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 100vh;
+    z-index: 400;
+    transform: translateX(-100%);
+    box-shadow: 4px 0 24px rgba(45,42,38,.12);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .nav-toggle   { display: flex; }
+  .main { padding: 0 1.2rem 4rem; }
+  .sidebar-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(45,42,38,.25);
+    z-index: 300;
+    backdrop-filter: blur(2px);
+  }
+  .sidebar-overlay.open { display: block; }
+}
+
+/* Scroll-reveal: fade in sections */
+.section { opacity: 0; transform: translateY(16px); transition: opacity .5s ease, transform .5s ease; }
+.section.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+
+<div class="layout">
+
+<!-- ─────────────── SIDEBAR ─────────────── -->
+<nav class="sidebar" aria-label="Page navigation">
+  <div class="sidebar-logo">
+    DSA Notes · Series 1
+    <strong>Arrays I</strong>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Introduction</div>
+    <a class="nav-link" href="#approach"><span class="nav-num">00</span>How to Approach</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Max Subarray Sum</div>
+    <a class="nav-link" href="#problem1"><span class="nav-num">01</span>Problem Statement</a>
+    <a class="nav-link" href="#brute-force"><span class="nav-num">02</span>Brute Force O(N³)</a>
+    <a class="nav-link" href="#prefix-sum"><span class="nav-num">03</span>Prefix Sum O(N²)</a>
+    <a class="nav-link" href="#carry-forward"><span class="nav-num">04</span>Carry Forward O(N²)</a>
+    <a class="nav-link" href="#kadane"><span class="nav-num">05</span>Kadane's Algorithm O(N)</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Prefix Sum Queries</div>
+    <a class="nav-link" href="#cont-suffix"><span class="nav-num">06</span>Suffix Increment Query</a>
+    <a class="nav-link" href="#range-query"><span class="nav-num">07</span>Range Increment Query</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Rain Water</div>
+    <a class="nav-link" href="#rain"><span class="nav-num">08</span>Trapping Rain Water</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">09</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">10</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<!-- ─────────────── MAIN ─────────────── -->
+<main class="main">
+
+<!-- HERO -->
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 1</p>
+  <h1>One-Dimensional<br>Arrays</h1>
+  <p class="hero-lede">Master the three essential 1-D array problems: maximum subarray sum, prefix-sum–based queries, and trapping rainwater — from brute force all the way to optimal.</p>
+  <div class="chips">
+    <span class="chip">Max Subarray Sum</span>
+    <span class="chip">Prefix Sum</span>
+    <span class="chip">Kadane's Algorithm</span>
+    <span class="chip">Range Queries</span>
+    <span class="chip">Trapping Rain Water</span>
+  </div>
+</header>
+
+<!-- ─── SECTION 00: HOW TO APPROACH ─── -->
+<section class="section" id="approach">
+  <div class="section-header">
+    <span class="section-num">00</span>
+    <h2>How to Approach a Problem</h2>
+  </div>
+
+  <p>Before diving into data structures, internalize a repeatable problem-solving loop. Every competitive programmer and software engineer uses some version of this — here is the one practiced in class:</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="flow-icon">⏱️</span>
+      <div class="flow-text"><strong>Start a 35-minute timer.</strong> Time-boxing forces focused effort instead of passive reading.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">📖</span>
+      <div class="flow-text"><strong>Read carefully.</strong> Read the problem statement, all examples, and verify the expected inputs and outputs.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">💡</span>
+      <div class="flow-text"><strong>Think brute force first.</strong> The simplest solution that is obviously correct — never skip this step.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">📐</span>
+      <div class="flow-text"><strong>Check constraints and optimize.</strong> If N ≤ 10<sup>5</sup>, you typically need O(N log N) or better. Use constraints to rule out approaches.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="flow-icon">✏️</span>
+      <div class="flow-text"><strong>Dry-run on paper</strong> — this is the most critical step. Trace through your algorithm by hand on a small example before writing a single line of code.</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="flow-icon">✅</span>
+      <div class="flow-text">If solved in 35 minutes → move to the next question. If not → bookmark, take hints (left to right), watch the video explanation, or raise a TA request.</div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Tip</span>
+    After failing a problem, ask yourself: <em>"What concept, if I had known it, would have let me solve this?"</em> Then go revise that concept specifically. Targeted review beats re-reading everything.
+  </div>
+</section>
+
+
+<!-- ─── SECTION 01: PROBLEM STATEMENT ─── -->
+<section class="section" id="problem1">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>Maximum Subarray Sum</h2>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given an array <code>arr[N]</code> of integers (positive and negative), find the <strong>maximum sum among all contiguous subarrays</strong>.
+    Constraint: 1 ≤ N ≤ 10<sup>5</sup>.
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Real-World Framing</span>
+    Imagine you are a cryptocurrency trader. Each element of the array is the <em>daily price change</em> for a coin. You want to choose a consecutive holding period (buy day → sell day) that <strong>maximizes your total profit</strong>. Because profit/loss is the <em>sum</em> of daily changes in that period, this is exactly the maximum subarray sum problem.
+  </div>
+
+  <h3>Examples</h3>
+
+  <p><strong>Example 1:</strong> All mixed — answer is 8 (subarray [2, 4, −1, 3])</p>
+  <div class="diagram">
+    <div class="arr-cell neg"><div class="val">−3</div><div class="idx">0</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">2</div><div class="idx">1</div><div class="label">start</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">4</div><div class="idx">2</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">−1</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">3</div><div class="idx">4</div><div class="label">end</div></div>
+    <div class="arr-cell neg"><div class="val">−4</div><div class="idx">5</div></div>
+    <div class="arr-cell"><div class="val">3</div><div class="idx">6</div></div>
+  </div>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--accent)">ans = 2 + 4 + (−1) + 3 = 8</p>
+
+  <p style="margin-top:1.2rem"><strong>Example 2:</strong> All positive — answer is 18 (entire array)</p>
+  <div class="diagram">
+    <div class="arr-cell highlight-green"><div class="val">4</div><div class="idx">0</div></div>
+    <div class="arr-cell highlight-green"><div class="val">5</div><div class="idx">1</div></div>
+    <div class="arr-cell highlight-green"><div class="val">2</div><div class="idx">2</div></div>
+    <div class="arr-cell highlight-green"><div class="val">1</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight-green"><div class="val">6</div><div class="idx">4</div></div>
+  </div>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--green)">ans = 4 + 5 + 2 + 1 + 6 = 18</p>
+
+  <p style="margin-top:1.2rem"><strong>Example 3:</strong> All negative — answer is −2 (the least-negative single element)</p>
+  <div class="diagram">
+    <div class="arr-cell neg"><div class="val">−4</div><div class="idx">0</div></div>
+    <div class="arr-cell neg"><div class="val">−3</div><div class="idx">1</div></div>
+    <div class="arr-cell neg"><div class="val">−6</div><div class="idx">2</div></div>
+    <div class="arr-cell neg"><div class="val">−9</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight"><div class="val">−2</div><div class="idx">4</div><div class="label">max</div></div>
+  </div>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--rose)">ans = −2 (single element; can't do better)</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Watch Out</span>
+    Always initialize <code>ans = INT_MIN</code> (not 0), because the array may be all-negative and the answer itself could be negative. Initializing to 0 would incorrectly return 0 for an all-negative array.
+  </div>
+</section>
+
+
+<!-- ─── SECTION 02: BRUTE FORCE ─── -->
+<section class="section" id="brute-force">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>Approach 1 — Brute Force O(N³)</h2>
+  </div>
+
+  <p><strong>Idea:</strong> Enumerate every possible pair of start index <code>i</code> and end index <code>j</code>, then iterate from <code>i</code> to <code>j</code> to compute that subarray's sum. Track the maximum.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">java / pseudo-code</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="ty">int</span> <span class="fn">maxSubarraySum</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="ty">int</span> ans = <span class="ty">Integer</span>.MIN_VALUE;
+
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {           <span class="cmt">// start index</span>
+        <span class="kw">for</span> (<span class="ty">int</span> j = i; j &lt; n; j++) {        <span class="cmt">// end index</span>
+            <span class="ty">int</span> sum = <span class="num">0</span>;
+            <span class="kw">for</span> (<span class="ty">int</span> k = i; k &lt;= j; k++) {   <span class="cmt">// sum subarray [i..j]</span>
+                sum += arr[k];
+            }
+            ans = Math.<span class="fn">max</span>(ans, sum);
+        }
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N³)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <p>For N = 10<sup>5</sup>, O(N³) = 10<sup>15</sup> operations — this <strong>will time out</strong>. We need to optimize.</p>
+</section>
+
+
+<!-- ─── SECTION 03: PREFIX SUM ─── -->
+<section class="section" id="prefix-sum">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>Approach 2 — Prefix Sum O(N²)</h2>
+  </div>
+
+  <p>The inner loop in the brute force computes the same partial sums repeatedly. We can precompute a <strong>prefix sum array</strong> to answer any subarray-sum query in O(1).</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Insight — Prefix Sum</span>
+    Define <code>psum[i]</code> = <code>arr[0] + arr[1] + … + arr[i]</code>.<br/>
+    Then <code>sum(i, j) = psum[j] − psum[i−1]</code> for i &gt; 0, or simply <code>psum[j]</code> when i = 0.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">java / pseudo-code</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="cmt">// Step 1 — build prefix sum array</span>
+<span class="ty">int</span>[] psum = <span class="kw">new</span> <span class="ty">int</span>[n];
+psum[<span class="num">0</span>] = arr[<span class="num">0</span>];
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">1</span>; i &lt; n; i++) {
+    psum[i] = psum[i - <span class="num">1</span>] + arr[i];
+}
+
+<span class="cmt">// Step 2 — use prefix sum for O(1) range queries</span>
+<span class="ty">int</span> ans = <span class="ty">Integer</span>.MIN_VALUE;
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+    <span class="kw">for</span> (<span class="ty">int</span> j = i; j &lt; n; j++) {
+        <span class="ty">int</span> sum = (i == <span class="num">0</span>) ? psum[j] : psum[j] - psum[i - <span class="num">1</span>];
+        ans = Math.<span class="fn">max</span>(ans, sum);
+    }
+}
+<span class="kw">return</span> ans;</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N²)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+
+  <p>Still O(N²) — better, but still too slow for N = 10<sup>5</sup>. The prefix sum technique is, however, used directly in Sections 06 and 07.</p>
+</section>
+
+
+<!-- ─── SECTION 04: CARRY FORWARD ─── -->
+<section class="section" id="carry-forward">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2>Approach 3 — Carry Forward O(N²)</h2>
+  </div>
+
+  <p>Instead of building a separate prefix array, we can compute the subarray sum incrementally by <em>carrying it forward</em> as we extend the right boundary <code>j</code>.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">java / pseudo-code</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="ty">int</span> ans = <span class="ty">Integer</span>.MIN_VALUE;
+
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {       <span class="cmt">// fix start</span>
+    <span class="ty">int</span> sum = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> j = i; j &lt; n; j++) {    <span class="cmt">// extend end</span>
+        sum += arr[j];              <span class="cmt">// carry sum forward</span>
+        ans = Math.<span class="fn">max</span>(ans, sum);
+    }
+}
+<span class="kw">return</span> ans;</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N²)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <p>Same time complexity as the prefix-sum approach but uses O(1) space. The key observation that drives Kadane's Algorithm next is: <em>when should we reset the sum to zero?</em></p>
+
+  <h3>Observations That Lead to Kadane's</h3>
+
+  <div class="cards-grid">
+    <div class="card">
+      <span class="card-glyph">➕</span>
+      <h4>All Positive</h4>
+      <p>Take the entire array — sum of all elements is always optimal.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">➖</span>
+      <h4>All Negative</h4>
+      <p>The best subarray is a single element — the maximum (least negative) one.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">〰️</span>
+      <h4>Mixed Signs</h4>
+      <p>A negative prefix only drags down any subarray that includes it. <strong>Carry the running sum forward only when it is positive.</strong></p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── SECTION 05: KADANE'S ─── -->
+<section class="section" id="kadane">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2>Approach 4 — Kadane's Algorithm O(N)</h2>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Core Insight</span>
+    If the running sum becomes negative, it is <em>always better</em> to start a fresh subarray from the next element rather than carry a negative sum into the future. A negative prefix only lowers any subarray sum it joins.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">java — Kadane's Algorithm</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="ty">int</span> <span class="fn">kadane</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="ty">int</span> ans = <span class="ty">Integer</span>.MIN_VALUE;
+    <span class="ty">int</span> sum = <span class="num">0</span>;
+
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        sum += arr[i];
+        ans = Math.<span class="fn">max</span>(ans, sum);
+        <span class="kw">if</span> (sum &lt; <span class="num">0</span>) sum = <span class="num">0</span>;   <span class="cmt">// discard negative prefix</span>
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <h3>Dry Run — Trace Through Example</h3>
+  <p>Array: <code>[5, 6, 7, −3, 2, −10, −12, 8, 12, −4, 7, −2]</code></p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>i</th><th>arr[i]</th><th>sum</th><th>ans</th><th>reset?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>0</td><td>5</td><td>5</td><td>5</td><td>—</td></tr>
+        <tr><td>1</td><td>6</td><td>11</td><td>11</td><td>—</td></tr>
+        <tr><td>2</td><td>7</td><td>18</td><td>18</td><td>—</td></tr>
+        <tr><td>3</td><td>−3</td><td>15</td><td>18</td><td>—</td></tr>
+        <tr><td>4</td><td>2</td><td>17</td><td>18</td><td>—</td></tr>
+        <tr><td>5</td><td>−10</td><td>7</td><td>18</td><td>—</td></tr>
+        <tr><td>6</td><td>−12</td><td>−5</td><td>18</td><td><strong>reset → 0</strong></td></tr>
+        <tr><td>7</td><td>8</td><td>8</td><td>18</td><td>—</td></tr>
+        <tr><td>8</td><td>12</td><td>20</td><td>20</td><td>—</td></tr>
+        <tr><td>9</td><td>−4</td><td>16</td><td>20</td><td>—</td></tr>
+        <tr><td>10</td><td>7</td><td>23</td><td>23</td><td>—</td></tr>
+        <tr><td>11</td><td>−2</td><td>21</td><td><strong>23</strong></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Final answer: <strong>23</strong>, contributed by the subarray <code>[8, 12, −4, 7]</code> (indices 7–10).</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Order Matters</span>
+    Update <code>ans</code> <em>before</em> resetting <code>sum</code> to zero. Otherwise, you might miss the case where the maximum is a single negative element (all-negative array).
+  </div>
+</section>
+
+
+<!-- ─── SECTION 06: SUFFIX INCREMENT QUERY ─── -->
+<section class="section" id="cont-suffix">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <h2>Continuous Sum Query — Suffix Increment</h2>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given <code>arr[N]</code> (initially all zeros) and Q queries. Each query specifies an index <code>idx</code> and a value <code>val</code>. Increment every element from index <code>idx</code> to the last index by <code>val</code>. Return the final array. (1 ≤ N, Q ≤ 10<sup>5</sup>)
+  </div>
+
+  <h3>Example</h3>
+  <p>N = 7, queries: (3, +4), (1, +3), (4, −2)</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>idx</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>after (3,+4)</td><td>0</td><td>0</td><td>0</td><td>+4</td><td>+4</td><td>+4</td><td>+4</td></tr>
+        <tr><td>after (1,+3)</td><td>0</td><td>+3</td><td>+3</td><td>+7</td><td>+7</td><td>+7</td><td>+7</td></tr>
+        <tr><td>after (4,−2)</td><td>0</td><td>+3</td><td>+3</td><td>+7</td><td>+5</td><td>+5</td><td>+5</td></tr>
+        <tr><td><strong>Final</strong></td><td><strong>0</strong></td><td><strong>3</strong></td><td><strong>3</strong></td><td><strong>7</strong></td><td><strong>5</strong></td><td><strong>5</strong></td><td><strong>5</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Naive Approach — O(Q × N)</h3>
+  <p>For each query, iterate from <code>idx</code> to <code>N−1</code> and add <code>val</code>. This is O(Q × N) = 10<sup>10</sup> for maximum inputs — too slow.</p>
+
+  <h3>Optimal Approach — Difference Array + Prefix Sum</h3>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Insight</span>
+    Instead of updating a range of elements, record only the <em>start of the change</em> in a difference array. A single prefix-sum pass at the end reconstructs the full result.
+  </div>
+
+  <p>For a suffix increment starting at <code>idx</code> by <code>val</code>: set <code>arr[idx] += val</code>. Then take the prefix sum of <code>arr</code> to get final values.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">java — suffix increment via difference array</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="ty">int</span>[] <span class="fn">suffixIncrementQuery</span>(<span class="ty">int</span> n, <span class="ty">int</span>[][] queries) {
+    <span class="ty">int</span>[] arr = <span class="kw">new</span> <span class="ty">int</span>[n];   <span class="cmt">// all zeros initially</span>
+
+    <span class="cmt">// Step 1 — mark the start of each change</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; queries.length; i++) {
+        <span class="ty">int</span> idx = queries[i][<span class="num">0</span>];
+        <span class="ty">int</span> val = queries[i][<span class="num">1</span>];
+        arr[idx] += val;
+    }
+
+    <span class="cmt">// Step 2 — prefix sum to propagate changes rightward</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">1</span>; i &lt; n; i++) {
+        arr[i] = arr[i - <span class="num">1</span>] + arr[i];
+    }
+
+    <span class="kw">return</span> arr;
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N + Q)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1) extra</span></div>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    Think of each query as dropping a colored dye at position <code>idx</code>. The prefix-sum pass is like water flowing right — the dye spreads from its starting point to the end of the array.
+  </div>
+</section>
+
+
+<!-- ─── SECTION 07: RANGE QUERY ─── -->
+<section class="section" id="range-query">
+  <div class="section-header">
+    <span class="section-num">07</span>
+    <h2>Range Increment Query</h2>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given <code>arr[N]</code> (initially all zeros) and Q queries. Each query specifies <code>[s, e, val]</code>. Increment elements from index <code>s</code> through <code>e</code> (inclusive) by <code>val</code>. Return the final array. (1 ≤ N, Q ≤ 10<sup>5</sup>)
+  </div>
+
+  <h3>Example</h3>
+  <p>N = 10, queries: (3,6,+3), (2,7,−3), (1,9,+4)</p>
+
+  <div class="diagram">
+    <div class="arr-cell"><div class="val">0</div><div class="idx">0</div></div>
+    <div class="arr-cell highlight-green"><div class="val">4</div><div class="idx">1</div></div>
+    <div class="arr-cell highlight"><div class="val">1</div><div class="idx">2</div></div>
+    <div class="arr-cell highlight"><div class="val">4</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight"><div class="val">4</div><div class="idx">4</div></div>
+    <div class="arr-cell highlight"><div class="val">4</div><div class="idx">5</div></div>
+    <div class="arr-cell highlight"><div class="val">4</div><div class="idx">6</div></div>
+    <div class="arr-cell highlight"><div class="val">1</div><div class="idx">7</div></div>
+    <div class="arr-cell highlight-green"><div class="val">4</div><div class="idx">8</div></div>
+    <div class="arr-cell highlight-green"><div class="val">4</div><div class="idx">9</div></div>
+  </div>
+
+  <h3>Naive Approach — O(Q × N)</h3>
+  <p>For each query, loop from <code>s</code> to <code>e</code> and add <code>val</code>. Too slow for large inputs.</p>
+
+  <h3>Optimal Approach — Difference Array Trick</h3>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Insight — Difference Array</span>
+    To represent "add <code>val</code> to the range [s, e]", store:
+    <ul style="margin:.4rem 0 0 1rem">
+      <li><code>arr[s] += val</code> — marks the start of the increment</li>
+      <li><code>arr[e+1] -= val</code> — marks the end of the increment (if e+1 &lt; N)</li>
+    </ul>
+    After processing all queries, a single prefix-sum pass reconstructs the final array.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">java — range increment via difference array</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="ty">int</span>[] <span class="fn">rangeIncrementQuery</span>(<span class="ty">int</span> n, <span class="ty">int</span>[][] queries) {
+    <span class="ty">int</span>[] arr = <span class="kw">new</span> <span class="ty">int</span>[n];
+
+    <span class="cmt">// Step 1 — apply difference array updates</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; queries.length; i++) {
+        <span class="ty">int</span> s   = queries[i][<span class="num">0</span>];
+        <span class="ty">int</span> e   = queries[i][<span class="num">1</span>];
+        <span class="ty">int</span> val = queries[i][<span class="num">2</span>];
+
+        arr[s] += val;
+        <span class="kw">if</span> (e + <span class="num">1</span> &lt; n) arr[e + <span class="num">1</span>] -= val;  <span class="cmt">// stop propagation</span>
+    }
+
+    <span class="cmt">// Step 2 — prefix sum to restore actual values</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">1</span>; i &lt; n; i++) {
+        arr[i] = arr[i - <span class="num">1</span>] + arr[i];
+    }
+
+    <span class="kw">return</span> arr;
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N + Q)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1) extra</span></div>
+  </div>
+
+  <h3>Quiz — Trace This</h3>
+  <p>N = 8, queries: (1,4,+3), (0,5,−1), (2,2,+4), (4,6,+3). Expected final array:</p>
+  <div class="diagram">
+    <div class="arr-cell neg"><div class="val">−1</div><div class="idx">0</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">2</div><div class="idx">1</div></div>
+    <div class="arr-cell highlight-green"><div class="val">6</div><div class="idx">2</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">2</div><div class="idx">3</div></div>
+    <div class="arr-cell highlight"><div class="val">5</div><div class="idx">4</div></div>
+    <div class="arr-cell highlight-blue"><div class="val">2</div><div class="idx">5</div></div>
+    <div class="arr-cell highlight"><div class="val">3</div><div class="idx">6</div></div>
+    <div class="arr-cell"><div class="val">0</div><div class="idx">7</div></div>
+  </div>
+  <p style="font-size:.88rem;color:var(--ink-soft)">Try tracing it yourself using the difference array, then apply the prefix sum. The intermediate difference array before the prefix pass is: <code>[−1, 3, 4, −4, 3, −3, 1, −3]</code>.</p>
+</section>
+
+
+<!-- ─── SECTION 08: RAIN WATER ─── -->
+<section class="section" id="rain">
+  <div class="section-header">
+    <span class="section-num">08</span>
+    <h2>Trapping Rain Water</h2>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given <code>arr[N]</code> where <code>arr[i]</code> is the height of the i-th building, return the total amount of rainwater trapped across all buildings. (1 ≤ N ≤ 10<sup>5</sup>)
+  </div>
+
+  <h3>Visualizing the Problem</h3>
+  <div class="bar-diagram" id="rain-viz">
+    <!-- bars drawn by JS below -->
+  </div>
+  <p style="font-size:.85rem;color:var(--ink-soft);margin-top:-.5rem">Array: [2, 1, 3, 2, 1, 2, 4, 3, 2, 1, 3, 1] — total trapped water = <strong>8 units</strong></p>
+
+  <h3>Core Observation</h3>
+
+  <div class="callout key">
+    <span class="callout-tag">Formula</span>
+    Water trapped <em>on top of building i</em> is:<br/>
+    <code>water[i] = min(left_max[i], right_max[i]) − arr[i]</code><br/><br/>
+    where <code>left_max[i]</code> = maximum height in <code>arr[0..i]</code> and <code>right_max[i]</code> = maximum height in <code>arr[i..N−1]</code>.
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    Imagine pouring water into the landscape. Each building is like a pillar. Water can only be held at position <code>i</code> if there are taller (or equal) pillars on <em>both</em> sides. The water level is capped by the <em>shorter</em> of the two boundary pillars — any water above that level spills over.
+  </div>
+
+  <p>If <code>left_max[i]</code> or <code>right_max[i]</code> equals <code>arr[i]</code> itself (i.e., position <code>i</code> is the tallest on one side), then no water sits on top of it. The formula yields 0 or less, so we add <code>max(0, water[i])</code> — although precomputing left/right max correctly already ensures non-negative values.</p>
+
+  <h3>Brute Force — O(N²)</h3>
+  <p>For every element, iterate left to find <code>left_max</code> and iterate right to find <code>right_max</code>, then apply the formula.</p>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N²)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <h3>Optimal — Precomputed Left/Right Max Arrays — O(N)</h3>
+  <p>Precompute <code>lmax[]</code> in one left-to-right pass and <code>rmax[]</code> in one right-to-left pass. Then a final pass sums up all the trapped water.</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">java — trapping rain water O(N)</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="ty">int</span> <span class="fn">trapRainWater</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="cmt">// Step 1 — left-max for every index</span>
+    <span class="ty">int</span>[] lmax = <span class="kw">new</span> <span class="ty">int</span>[n];
+    lmax[<span class="num">0</span>] = arr[<span class="num">0</span>];
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">1</span>; i &lt; n; i++) {
+        lmax[i] = Math.<span class="fn">max</span>(lmax[i - <span class="num">1</span>], arr[i]);
+    }
+
+    <span class="cmt">// Step 2 — right-max for every index</span>
+    <span class="ty">int</span>[] rmax = <span class="kw">new</span> <span class="ty">int</span>[n];
+    rmax[n - <span class="num">1</span>] = arr[n - <span class="num">1</span>];
+    <span class="kw">for</span> (<span class="ty">int</span> i = n - <span class="num">2</span>; i &gt;= <span class="num">0</span>; i--) {
+        rmax[i] = Math.<span class="fn">max</span>(rmax[i + <span class="num">1</span>], arr[i]);
+    }
+
+    <span class="cmt">// Step 3 — accumulate trapped water</span>
+    <span class="ty">int</span> ans = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        ans += Math.<span class="fn">min</span>(lmax[i], rmax[i]) - arr[i];
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(N)</span></div>
+  </div>
+
+  <h3>Dry Run — [4, 2, 5, 7, 4, 2, 3, 6, 8, 2, 3]</h3>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>i</th><th>arr[i]</th><th>lmax[i]</th><th>rmax[i]</th><th>min(l,r)</th><th>water</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0</td><td>4</td><td>4</td><td>8</td><td>4</td><td>0</td></tr>
+        <tr><td>1</td><td>2</td><td>4</td><td>8</td><td>4</td><td>2</td></tr>
+        <tr><td>2</td><td>5</td><td>5</td><td>8</td><td>5</td><td>0</td></tr>
+        <tr><td>3</td><td>7</td><td>7</td><td>8</td><td>7</td><td>0</td></tr>
+        <tr><td>4</td><td>4</td><td>7</td><td>8</td><td>7</td><td>3</td></tr>
+        <tr><td>5</td><td>2</td><td>7</td><td>8</td><td>7</td><td>5</td></tr>
+        <tr><td>6</td><td>3</td><td>7</td><td>8</td><td>7</td><td>4</td></tr>
+        <tr><td>7</td><td>6</td><td>7</td><td>8</td><td>7</td><td>1</td></tr>
+        <tr><td>8</td><td>8</td><td>8</td><td>8</td><td>8</td><td>0</td></tr>
+        <tr><td>9</td><td>2</td><td>8</td><td>3</td><td>3</td><td>1</td></tr>
+        <tr><td>10</td><td>3</td><td>8</td><td>3</td><td>3</td><td>0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--accent)">Total = 0+2+0+0+3+5+4+1+0+1+0 = 16</p>
+
+  <div class="callout tip">
+    <span class="callout-tag">Further Optimization</span>
+    You can reduce space to O(1) using the <strong>Two-Pointer technique</strong>: maintain two pointers from each end and decide which side to advance based on which side has the smaller maximum. This avoids storing the full <code>lmax</code> and <code>rmax</code> arrays — same O(N) time.
+  </div>
+</section>
+
+
+<!-- ─── SECTION 09: QUICK RECAP ─── -->
+<section class="section" id="recap">
+  <div class="section-header">
+    <span class="section-num">09</span>
+    <h2>Quick Recap</h2>
+  </div>
+
+  <div class="recap-grid">
+    <div class="recap-card">
+      <h4>Brute Force Subarray Sum</h4>
+      <p>Three nested loops — enumerate every (i, j) pair and sum the subarray [i..j]. O(N³) time, O(1) space.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Prefix Sum Optimization</h4>
+      <p>Precompute <code>psum[i]</code> so any range sum is O(1). Reduces subarray enumeration to O(N²).</p>
+    </div>
+    <div class="recap-card">
+      <h4>Carry Forward</h4>
+      <p>Incrementally extend the subarray sum as <code>j</code> grows. O(N²) time, O(1) space — no extra array needed.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Kadane's Algorithm</h4>
+      <p>Keep a running sum; reset it to 0 whenever it goes negative. O(N) time, O(1) space — optimal.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Suffix Increment Query</h4>
+      <p>Mark the start of each change with <code>arr[idx] += val</code>, then a single prefix-sum pass gives the result. O(N + Q).</p>
+    </div>
+    <div class="recap-card">
+      <h4>Range Increment Query</h4>
+      <p>Difference array trick: <code>arr[s] += val</code> and <code>arr[e+1] -= val</code>, then prefix sum. O(N + Q).</p>
+    </div>
+    <div class="recap-card">
+      <h4>Trapping Rain Water</h4>
+      <p>At each index: <code>water = min(lmax, rmax) − height</code>. Precompute both arrays in O(N), then sum. Total O(N) time and O(N) space.</p>
+    </div>
+    <div class="recap-card">
+      <h4>init = INT_MIN</h4>
+      <p>Always initialize <code>ans = Integer.MIN_VALUE</code> for max subarray problems — the answer can be negative.</p>
+    </div>
+  </div>
+
+  <h3>Complexity Summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Algorithm</th><th>Time</th><th>Space</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Brute Force Subarray</td><td>O(N³)</td><td>O(1)</td><td>Triple loop</td></tr>
+        <tr><td>Prefix Sum Subarray</td><td>O(N²)</td><td>O(N)</td><td>Precompute prefix</td></tr>
+        <tr><td>Carry Forward</td><td>O(N²)</td><td>O(1)</td><td>Incremental sum</td></tr>
+        <tr><td><strong>Kadane's</strong></td><td><strong>O(N)</strong></td><td><strong>O(1)</strong></td><td>Reset on negative</td></tr>
+        <tr><td>Suffix Query</td><td>O(N+Q)</td><td>O(1)</td><td>Mark + prefix pass</td></tr>
+        <tr><td>Range Query</td><td>O(N+Q)</td><td>O(1)</td><td>Difference array</td></tr>
+        <tr><td>Trap Rain Water (BF)</td><td>O(N²)</td><td>O(1)</td><td>Per-element search</td></tr>
+        <tr><td><strong>Trap Rain Water</strong></td><td><strong>O(N)</strong></td><td><strong>O(N)</strong></td><td>lmax[] + rmax[]</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+<!-- ─── SECTION 10: LEETCODE ─── -->
+<section class="section" id="leetcode">
+  <div class="section-header">
+    <span class="section-num">10</span>
+    <h2>Related LeetCode Problems</h2>
+  </div>
+
+  <p>The following problems use the same core ideas covered in these notes. Solving them in order reinforces each concept progressively.</p>
+
+  <h3>Maximum Subarray / Kadane's</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/maximum-subarray/" target="_blank" rel="noopener">#53 — Maximum Subarray ↗</a><br/>
+        <span class="lc-why">The canonical Kadane's problem. Direct application.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/maximum-product-subarray/" target="_blank" rel="noopener">#152 — Maximum Product Subarray ↗</a><br/>
+        <span class="lc-why">Kadane's variant; track both max and min (negative × negative = positive).</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/maximum-sum-circular-subarray/" target="_blank" rel="noopener">#918 — Maximum Sum Circular Subarray ↗</a><br/>
+        <span class="lc-why">Combines Kadane's with the "total sum minus minimum subarray" trick for the circular case.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff hard">Hard</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/k-concatenation-maximum-sum/" target="_blank" rel="noopener">#1191 — K-Concatenation Maximum Sum ↗</a><br/>
+        <span class="lc-why">Kadane's + prefix/suffix sums on a repeated array.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/best-time-to-buy-and-sell-stock/" target="_blank" rel="noopener">#121 — Best Time to Buy and Sell Stock ↗</a><br/>
+        <span class="lc-why">Equivalent to max subarray sum on daily differences — the crypto-trader framing from these notes.</span>
+      </span>
+    </li>
+  </ul>
+
+  <h3>Prefix Sum &amp; Range Queries</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/range-sum-query-immutable/" target="_blank" rel="noopener">#303 — Range Sum Query — Immutable ↗</a><br/>
+        <span class="lc-why">Direct prefix sum application; query <code>sum(i,j)</code> in O(1).</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/range-addition/" target="_blank" rel="noopener">#370 — Range Addition ↗</a><br/>
+        <span class="lc-why">Exactly the range-increment query (difference array trick) from Section 07.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/car-pooling/" target="_blank" rel="noopener">#1094 — Car Pooling ↗</a><br/>
+        <span class="lc-why">Range addition / difference array on a fixed-size capacity array.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/subarray-sum-equals-k/" target="_blank" rel="noopener">#560 — Subarray Sum Equals K ↗</a><br/>
+        <span class="lc-why">Uses prefix sums + a hash map to count subarrays with a target sum.</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/product-of-array-except-self/" target="_blank" rel="noopener">#238 — Product of Array Except Self ↗</a><br/>
+        <span class="lc-why">Prefix and suffix product arrays — same left/right precomputation pattern as trapping water.</span>
+      </span>
+    </li>
+  </ul>
+
+  <h3>Trapping Rain Water</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff hard">Hard</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/trapping-rain-water/" target="_blank" rel="noopener">#42 — Trapping Rain Water ↗</a><br/>
+        <span class="lc-why">The exact problem from Section 08. Solve with lmax/rmax arrays (O(N) space) or two pointers (O(1) space).</span>
+      </span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <span>
+        <a class="lc-name" href="https://leetcode.com/problems/container-with-most-water/" target="_blank" rel="noopener">#11 — Container with Most Water ↗</a><br/>
+        <span class="lc-why">Related two-pointer problem: maximize area instead of summing trapped water.</span>
+      </span>
+    </li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Study Order Suggestion</span>
+    53 → 121 → 303 → 238 → 560 → 370 → 42 → 11 → 152 → 918. Start with direct applications, then move to variants.
+  </div>
+</section>
+
+</main>
+</div><!-- /layout -->
+
+<script>
+/* ── Copy Button ── */
+function copyCode(btn) {
+  const pre = btn.closest('.code-block').querySelector('pre');
+  const text = pre.innerText;
+  const finish = () => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  };
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(finish);
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    finish();
+  }
+}
+
+/* ── Reading Progress Bar ── */
+const bar = document.getElementById('progress-bar');
+function updateProgress() {
+  const scrollTop = window.scrollY;
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  bar.style.width = (docH > 0 ? (scrollTop / docH) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, { passive: true });
+updateProgress();
+
+/* ── Smooth-scroll for nav links (respects offset) ── */
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', e => {
+    const href = link.getAttribute('href');
+    if (!href || !href.startsWith('#')) return;
+    e.preventDefault();
+    const target = document.querySelector(href);
+    if (!target) return;
+    const top = target.getBoundingClientRect().top + window.scrollY - 24;
+    window.scrollTo({ top, behavior: 'smooth' });
+    // close mobile sidebar if open
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    navToggle.textContent = '☰';
+  });
+});
+
+/* ── Mobile Sidebar Toggle ── */
+const sidebar    = document.querySelector('.sidebar');
+const overlay    = document.getElementById('nav-overlay');
+const navToggle  = document.getElementById('nav-toggle');
+
+navToggle.addEventListener('click', () => {
+  const open = sidebar.classList.toggle('open');
+  overlay.classList.toggle('open', open);
+  navToggle.textContent = open ? '✕' : '☰';
+});
+overlay.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+  navToggle.textContent = '☰';
+});
+
+/* ── Scroll Spy (reliable: pick topmost visible section) ── */
+const navLinks = document.querySelectorAll('.nav-link');
+const sections = document.querySelectorAll('.section');
+
+function setActive(id) {
+  navLinks.forEach(l => l.classList.remove('active'));
+  const a = document.querySelector(`.nav-link[href="#${id}"]`);
+  if (a) {
+    a.classList.add('active');
+    // auto-scroll sidebar so active link stays visible
+    const sb = document.querySelector('.sidebar');
+    const linkTop = a.offsetTop;
+    const sbH = sb.clientHeight;
+    if (linkTop < sb.scrollTop + 60 || linkTop > sb.scrollTop + sbH - 60) {
+      sb.scrollTo({ top: linkTop - sbH / 2, behavior: 'smooth' });
+    }
+  }
+}
+
+const spyObserver = new IntersectionObserver((entries) => {
+  // find the topmost intersecting section
+  const visible = [];
+  entries.forEach(e => { if (e.isIntersecting) visible.push(e.target); });
+  if (visible.length === 0) return;
+  // pick the one closest to the top of the viewport
+  visible.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+  setActive(visible[0].id);
+}, { rootMargin: '-10% 0px -55% 0px', threshold: 0 });
+
+sections.forEach(s => spyObserver.observe(s));
+
+/* ── Scroll Reveal ── */
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.06 });
+
+sections.forEach(s => revealObserver.observe(s));
+
+/* ── Bar Chart for Rain Water ── */
+(function buildRainViz() {
+  const arr = [2,1,3,2,1,2,4,3,2,1,3,1];
+  const n   = arr.length;
+  const lmax = [], rmax = [];
+  lmax[0] = arr[0];
+  for (let i = 1; i < n; i++) lmax[i] = Math.max(lmax[i-1], arr[i]);
+  rmax[n-1] = arr[n-1];
+  for (let i = n-2; i >= 0; i--) rmax[i] = Math.max(rmax[i+1], arr[i]);
+
+  const water = arr.map((v,i) => Math.max(0, Math.min(lmax[i], rmax[i]) - v));
+  const SCALE  = 26;   // px per unit height
+  const MIN_LABEL_H = 18; // px — only show label inside water bar if >= this
+
+  const container = document.getElementById('rain-viz');
+  if (!container) return;
+
+  for (let i = 0; i < n; i++) {
+    const waterH = water[i];
+    const buildH = arr[i];
+    const col = document.createElement('div');
+    col.className = 'bar-col';
+
+    // ── top label: total height (building + water) ──
+    const topLbl = document.createElement('div');
+    topLbl.className = 'bar-val';
+    topLbl.textContent = waterH > 0 ? (buildH + waterH) : '';
+    col.appendChild(topLbl);
+
+    // ── water bar (optional) ──
+    if (waterH > 0) {
+      const wb = document.createElement('div');
+      wb.className = 'bar water';
+      const wPx = waterH * SCALE;
+      wb.style.height = wPx + 'px';
+      // only put a "+N" label inside if there's room
+      if (wPx >= MIN_LABEL_H) {
+        const wLbl = document.createElement('div');
+        wLbl.className = 'water-lbl';
+        wLbl.textContent = '+' + waterH;
+        wb.appendChild(wLbl);
+      }
+      col.appendChild(wb);
+    }
+
+    // ── building bar ──
+    const bb = document.createElement('div');
+    bb.className = 'bar';
+    bb.style.height = (buildH * SCALE) + 'px';
+    col.appendChild(bb);
+
+    // ── height label sits between building bar and index ──
+    const hLbl = document.createElement('div');
+    hLbl.className = 'bar-val';
+    hLbl.style.color = 'var(--accent)';
+    hLbl.style.marginTop = '3px';
+    hLbl.style.marginBottom = '0';
+    hLbl.textContent = buildH;
+    col.appendChild(hLbl);
+
+    // ── index ──
+    const idx = document.createElement('div');
+    idx.className = 'bar-idx';
+    idx.textContent = i;
+    col.appendChild(idx);
+
+    container.appendChild(col);
+  }
+})();
+</script>
+</body>
+</html>

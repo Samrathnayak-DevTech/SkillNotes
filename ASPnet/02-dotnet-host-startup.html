@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>.NET — Host &amp; App Startup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;} .cmd{color:#c3e88d;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arr-cell.dim .val{opacity:.4;border-style:dashed;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- tree diagram ---------- */
+.tree{background:var(--code-bg);border-radius:12px;padding:20px 22px;margin:22px 0;overflow-x:auto;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.tree pre{padding:0;color:var(--code-ink);font-family:"JetBrains Mono",monospace;font-size:13px;line-height:1.7;}
+.tree .dir{color:#82aaff;font-weight:700;} .tree .file{color:#e8e6e3;} .tree .note{color:#697098;font-style:italic;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:600px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step code{font-size:.82em;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.card code{font-size:.82em;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+td.good{background:var(--green-soft);font-weight:700;color:var(--green);}
+td.bad{background:var(--rose-soft);font-weight:700;color:var(--rose);}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes · day&nbsp;2</div>
+    <div class="side-title">.NET: Host &amp; Startup</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>The Host</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> What the Host Is</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> PeopleApp Recap</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Program.cs</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> The Generic Host</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> What It Provides</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> The App Lifecycle</a>
+      </div>
+      <div class="nav-group">
+        <h4>Environments</h4>
+        <a class="nav-link" href="#s07"><span class="n">07</span> Dev / Staging / Prod</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> IHostEnvironment</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Setting the Env Var</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Launch Profiles</a>
+      </div>
+      <div class="nav-group">
+        <h4>Practice</h4>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Hands-On</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Graceful Shutdown</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Mistakes &amp; Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// .NET &nbsp;·&nbsp; day 2 &nbsp;·&nbsp; how an app boots, lives, and knows where it's running</p>
+      <h1>Host &amp; App Startup 🚀</h1>
+      <p class="lede">
+        Every modern .NET app — console, worker, or web — boots through a <b>host</b>: an object built in
+        <code>Program.cs</code> that wires up dependency injection, configuration, and logging, then manages the app's
+        life from <b>start</b> to graceful <b>stop</b>. The host also knows which <b>environment</b> it's in —
+        Development, Staging, or Production — which changes how the app behaves. Today you'll learn the startup model,
+        the lifecycle, and how environments and <b>launch profiles</b> work, then print the environment name on
+        startup. Builds on Day 1's <code>PeopleApp</code>. No prior .NET background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🧩 <b>Program.cs</b></span>
+        <span class="chip">🏗️ <b>Generic host</b></span>
+        <span class="chip">♻️ <b>Lifecycle</b></span>
+        <span class="chip">🌍 <b>Environments</b></span>
+        <span class="chip">🚦 <b>Launch profiles</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>What the Host Is</h2></div>
+      <p class="sec-sub">The host is the object that owns your application's startup and shutdown — it assembles the
+        core services (DI, config, logging) and controls when the app runs and stops.</p>
+
+      <p>When a .NET app starts, it doesn't just jump into your code — it first builds a <strong>host</strong>: a
+        container that sets up the plumbing every app needs. The host reads configuration, creates the dependency-
+        injection container, configures logging, figures out the environment, and then starts your application and
+        keeps it alive until it's told to stop. Whether you're writing a background worker or a web API, this same host
+        model sits underneath.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🏨 Analogy</span>
+        <p>The host is like a hotel's front-desk-and-facilities system. Before any guest (your app logic) can do
+        anything, the hotel has to be set up: power on, rooms assigned, staff briefed, the "which branch am I?" sign
+        lit up. The host does that setup, keeps everything running while guests are present, and handles an orderly
+        closing at the end of the day. Your code is the guest; the host is the building that makes the stay possible.</p>
+      </div>
+
+      <h3>The Day-2 landscape 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">🚀 Host &amp; Startup</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>🏗️ The host</h5>
+            <ul>
+              <li>Built in <code>Program.cs</code></li>
+              <li>Generic host / builder</li>
+              <li><code>Build()</code> → <code>IHost</code></li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🧰 Provides</h5>
+            <ul>
+              <li>Dependency injection</li>
+              <li>Configuration</li>
+              <li>Logging &amp; lifetime</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>♻️ Lifecycle</h5>
+            <ul>
+              <li>Build → Start</li>
+              <li>Run</li>
+              <li>Stop (graceful)</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🌍 Environments</h5>
+            <ul>
+              <li>Development</li>
+              <li>Staging</li>
+              <li>Production</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>🚦 Launch profiles</h5>
+            <ul>
+              <li><code>launchSettings.json</code></li>
+              <li>Env vars per profile</li>
+              <li>Dev-only</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why a host exists</span>
+        <p>Before the host model, every app type wired up configuration, logging, and DI its own way. The
+        <strong>host</strong> unifies all of it into one consistent startup pattern shared by console apps, background
+        workers, and web apps. Learn it once and you understand how every modern .NET app boots.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>PeopleApp Recap</h2></div>
+      <p class="sec-sub">We continue with Day 1's solution — a console app and a class library. Today we upgrade the
+        console app to boot through a proper host.</p>
+
+      <div class="tree">
+<pre><span class="dir">PeopleApp/</span>              <span class="note"># the solution from Day 1</span>
+├── <span class="file">PeopleApp.sln</span>
+├── <span class="dir">PeopleApp.Cli/</span>       <span class="note"># console app — today gets a host</span>
+│   ├── <span class="file">PeopleApp.Cli.csproj</span>
+│   └── <span class="file">Program.cs</span>
+└── <span class="dir">PeopleApp.Core/</span>      <span class="note"># class library (Greeter)</span>
+    ├── <span class="file">PeopleApp.Core.csproj</span>
+    └── <span class="file">Greeter.cs</span></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ One package for the generic host</span>
+        <p>A plain console app doesn't have the host types by default. To use the generic host in
+        <code>PeopleApp.Cli</code>, add the hosting package: <code>dotnet add PeopleApp.Cli package
+        Microsoft.Extensions.Hosting</code>. (Web templates include hosting automatically.) That gives you
+        <code>Host</code>, <code>IHost</code>, <code>IHostEnvironment</code>, and the DI extension methods we'll use
+        today.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Program.cs</h2></div>
+      <p class="sec-sub"><code>Program.cs</code> is the entry point — the first code that runs. Modern .NET uses
+        <strong>top-level statements</strong>, so it can be just a few lines with no ceremony.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">csharp · the old way (pre-.NET 6)</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">namespace</span> PeopleApp.Cli;
+
+<span class="kw">public class</span> <span class="ty">Program</span>
+{
+    <span class="kw">public static void</span> <span class="fn">Main</span>(<span class="ty">string</span>[] args)   <span class="cmt">// explicit entry point</span>
+    {
+        <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Hello"</span>);
+    }
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">csharp · top-level statements (modern)</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// No class, no Main — the file body IS the program. `args` is available.</span>
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Hello"</span>);</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Top-level statements are just sugar</span>
+        <p>The compiler still generates a hidden <code>Program</code> class with a <code>Main</code> method around your
+        top-level code — it's the same thing, minus the boilerplate. The special local variable <code>args</code>
+        (command-line arguments) is available, and you can still <code>return</code> an exit code or use
+        <code>await</code>. Only one file per project may contain top-level statements.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>The Generic Host</h2></div>
+      <p class="sec-sub">You create the host with a <strong>builder</strong>, register everything you need, call
+        <code>Build()</code> to get an <code>IHost</code>, then <code>Run()</code> it.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">csharp · Program.cs — a hosted console app</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.Extensions.Hosting;
+
+<span class="cmt">// 1) Create the builder — sets up config, logging, DI, environment</span>
+<span class="kw">var</span> builder = <span class="ty">Host</span>.<span class="fn">CreateApplicationBuilder</span>(args);
+
+<span class="cmt">// 2) (register your services / configuration here)</span>
+
+<span class="cmt">// 3) Build the host — the DI container is now finalized</span>
+<span class="kw">var</span> host = builder.<span class="fn">Build</span>();
+
+<span class="cmt">// 4) Run — starts the app and blocks until shutdown (Ctrl+C / SIGTERM)</span>
+<span class="kw">await</span> host.<span class="fn">RunAsync</span>();</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Builder → Build → Run</span>
+        <p>The pattern is always the same three moves. The <strong>builder</strong> is where you configure the app
+        (add services, config sources, logging). <code>Build()</code> freezes that configuration and produces the
+        <strong>host</strong> (<code>IHost</code>) with a ready dependency-injection container. <code>Run()</code> (or
+        <code>RunAsync()</code>) starts the app and keeps it alive until a shutdown signal arrives.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Console/worker vs web — same idea</span>
+        <p>For a console or background-worker app you use <code>Host.CreateApplicationBuilder(args)</code>. For a web
+        app you use <code>WebApplication.CreateBuilder(args)</code>, which is the same host model with web features
+        (the HTTP server, middleware, routing) layered on. Both give you DI, configuration, logging, and environments
+        the identical way, which is why learning the generic host transfers directly to ASP.NET Core later.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>What It Provides</h2></div>
+      <p class="sec-sub">The host isn't just a launcher — it hands your app four foundational services, ready to use.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🧩</span><h4>Dependency Injection</h4><p>A built-in service container. Register types on the builder; the host resolves them for you. (Day 3.)</p></div>
+        <div class="card"><span class="glyph">⚙️</span><h4>Configuration</h4><p>Layered settings from appsettings.json, environment variables, command line, and more. (Day 4.)</p></div>
+        <div class="card"><span class="glyph">📝</span><h4>Logging</h4><p>A configured logging system available to every service, with providers for console, files, etc.</p></div>
+        <div class="card"><span class="glyph">♻️</span><h4>Lifetime</h4><p>Controls startup and graceful shutdown, and runs any registered background services.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The host is the composition root</span>
+        <p>Everything your app depends on gets wired together on the host builder — this is the one place where the
+        app is "composed." Config, logging, and services are all registered here, then resolved from the host's DI
+        container at runtime. Configuration and DI each get their own day; today's focus is the host itself and the
+        environment it runs in.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>The App Lifecycle</h2></div>
+      <p class="sec-sub">From process launch to clean exit, a hosted app moves through a fixed set of phases. Knowing
+        them explains where your startup and cleanup code belongs.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <span class="st-icon">🏗️</span>
+          <b>1 · Build</b>
+          <small>The builder registers config, logging, and services; <code>Build()</code> finalizes the DI container.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🟢</span>
+          <b>2 · Start</b>
+          <small>The host starts registered hosted/background services; the <code>ApplicationStarted</code> event fires.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <span class="st-icon">▶️</span>
+          <b>3 · Run</b>
+          <small>The app does its work — a worker loops, a web app serves requests — and stays alive.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🟡</span>
+          <b>4 · Stop signal</b>
+          <small>Ctrl+C or SIGTERM triggers <code>ApplicationStopping</code>; new work is refused.</small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🔴</span>
+          <b>5 · Stop</b>
+          <small>In-flight work finishes, services shut down, <code>ApplicationStopped</code> fires, the process exits.</small>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Run() blocks until shutdown</span>
+        <p><code>host.Run()</code> (or <code>RunAsync()</code>) is what keeps the process alive — it doesn't return
+        until the host receives a shutdown signal and completes stopping. That's why a hosted app doesn't just print
+        and exit like a bare console program: it stays up, running its services, until something tells it to stop.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Dev / Staging / Prod</h2></div>
+      <p class="sec-sub">The <strong>environment</strong> is a named label — usually Development, Staging, or Production
+        — that tells the app where it's running so it can behave appropriately.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🛠️</span><h4>Development</h4><p>Your machine. Detailed errors, verbose logging, developer tools on. Convenience over hardening.</p></div>
+        <div class="card"><span class="glyph">🧪</span><h4>Staging</h4><p>A production-like test environment for final checks before release.</p></div>
+        <div class="card"><span class="glyph">🏭</span><h4>Production</h4><p>The live environment. Minimal error detail, optimized, secure. The default when unset.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Three are conventional, not fixed</span>
+        <p>Development, Staging, and Production are the built-in conventions (with helper methods for each), but the
+        environment name is just a string — you can define your own like <code>"QA"</code> or <code>"Local"</code> and
+        check for it with <code>IsEnvironment("QA")</code>. The framework treats the name as data; only Development
+        gets special developer-friendly defaults.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Default is Production</span>
+        <p>If no environment is set, the app runs as <strong>Production</strong>. That's a safe default — it means an
+        app deployed without configuration won't accidentally expose development conveniences like detailed error
+        pages. The flip side: you must explicitly set <code>Development</code> locally to get those conveniences (which
+        the templates' launch profiles do for you).</p>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>IHostEnvironment</h2></div>
+      <p class="sec-sub">The host exposes the current environment through <code>IHostEnvironment</code>. You can read it
+        off the builder, or resolve it from DI, and there are handy check methods.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">csharp</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.Extensions.Hosting;
+
+<span class="kw">var</span> builder = <span class="ty">Host</span>.<span class="fn">CreateApplicationBuilder</span>(args);
+
+<span class="cmt">// Read it directly off the builder (before Build)</span>
+<span class="ty">IHostEnvironment</span> env = builder.Environment;
+
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(env.EnvironmentName);   <span class="cmt">// "Development", "Production", ...</span>
+
+<span class="kw">if</span> (env.<span class="fn">IsDevelopment</span>()) { <span class="cmt">/* dev-only setup */</span> }
+<span class="kw">if</span> (env.<span class="fn">IsProduction</span>())  { <span class="cmt">/* prod-only setup */</span> }
+<span class="kw">if</span> (env.<span class="fn">IsEnvironment</span>(<span class="str">"QA"</span>)) { <span class="cmt">/* custom */</span> }</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Member</th><th>Gives you</th></tr></thead>
+          <tbody>
+            <tr><td><code>EnvironmentName</code></td><td>The raw name string, e.g. <code>"Development"</code></td></tr>
+            <tr><td><code>IsDevelopment()</code></td><td>True if the environment is Development</td></tr>
+            <tr><td><code>IsStaging()</code> / <code>IsProduction()</code></td><td>Checks for those conventional names</td></tr>
+            <tr><td><code>IsEnvironment("X")</code></td><td>Checks for any custom name (case-insensitive)</td></tr>
+            <tr><td><code>ApplicationName</code></td><td>The entry assembly / app name</td></tr>
+            <tr><td><code>ContentRootPath</code></td><td>The base folder the app runs from</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Prefer the helper methods over string compares</span>
+        <p>Use <code>env.IsDevelopment()</code> rather than <code>env.EnvironmentName == "Development"</code>. The
+        helpers are case-insensitive and express intent clearly, whereas a raw string comparison is easy to get wrong
+        (casing, typos). Reach for <code>IsEnvironment("Name")</code> only for custom environments that have no
+        dedicated helper.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Setting the Env Var</h2></div>
+      <p class="sec-sub">The environment is chosen by an environment variable read at startup:
+        <code>DOTNET_ENVIRONMENT</code> (generic host) or <code>ASPNETCORE_ENVIRONMENT</code> (web host).</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">bash · set it for a run</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># Linux / macOS — prefix the command</span>
+DOTNET_ENVIRONMENT=Staging <span class="cmd">dotnet</span> run --project PeopleApp.Cli
+
+<span class="cmt"># Windows PowerShell</span>
+$env:DOTNET_ENVIRONMENT=<span class="str">"Staging"</span>; <span class="cmd">dotnet</span> run --project PeopleApp.Cli
+
+<span class="cmt"># Or via a named launch profile (next section)</span>
+<span class="cmd">dotnet</span> run --project PeopleApp.Cli --launch-profile Staging</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Variable</th><th>Used by</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>DOTNET_ENVIRONMENT</code></td><td>Generic host (console/worker)</td><td>The general one</td></tr>
+            <tr><td><code>ASPNETCORE_ENVIRONMENT</code></td><td>ASP.NET Core web host</td><td>Takes precedence for web apps</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Two variables, one concept</span>
+        <p>They do the same job for different host types. A web app reads <code>ASPNETCORE_ENVIRONMENT</code> (and it
+        wins if both are set); a generic-host console/worker app reads <code>DOTNET_ENVIRONMENT</code>. In real
+        deployments the hosting platform (a container, a cloud service) sets this variable so the app knows it's in
+        Production; locally, your launch profile sets it to Development.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Launch Profiles</h2></div>
+      <p class="sec-sub"><code>launchSettings.json</code> defines named <strong>launch profiles</strong> for local
+        development — each can set environment variables, arguments, and URLs. It's a <em>dev-only</em> file.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">json · Properties/launchSettings.json</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  "profiles": {
+    "PeopleApp.Cli": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "Staging": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Staging"
+      }
+    }
+  }
+}</code></pre>
+      </div>
+
+      <p>With this file, <code>dotnet run</code> uses the first/default profile (setting Development), and
+        <code>dotnet run --launch-profile Staging</code> runs with Staging. IDEs show these profiles in a dropdown so
+        you can switch environments with one click.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ launchSettings.json never ships</span>
+        <p>This file lives under <code>Properties/</code> and is used <strong>only</strong> by <code>dotnet run</code>
+        and IDEs during local development — it is <em>not</em> included when you <code>publish</code>, and it has no
+        effect in production. In production the real environment variable is set by the hosting platform. So use launch
+        profiles for local convenience, never as a source of production configuration.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ commandName matters</span>
+        <p><code>"commandName": "Project"</code> means "run this project directly with the .NET runtime." Web templates
+        may also have profiles with other command names (like launching a browser or running via a web server). For a
+        console app, <code>Project</code> is what you want.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Hands-On</h2></div>
+      <p class="sec-sub">The Day-2 exercise: boot <code>PeopleApp.Cli</code> through a host and print the environment
+        name on startup — then watch it change with the environment variable.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">bash · add the hosting package</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmd">dotnet</span> add PeopleApp.Cli package Microsoft.Extensions.Hosting</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">csharp · PeopleApp.Cli/Program.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.Extensions.DependencyInjection;
+<span class="kw">using</span> Microsoft.Extensions.Hosting;
+<span class="kw">using</span> PeopleApp.Core;
+
+<span class="kw">var</span> builder = <span class="ty">Host</span>.<span class="fn">CreateApplicationBuilder</span>(args);
+<span class="kw">var</span> host = builder.<span class="fn">Build</span>();
+
+<span class="cmt">// Resolve the environment from the host's service container...</span>
+<span class="kw">var</span> env = host.Services.<span class="fn">GetRequiredService</span>&lt;<span class="ty">IHostEnvironment</span>&gt;();
+
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">$"Starting up in: {env.EnvironmentName}"</span>);
+
+<span class="kw">if</span> (env.<span class="fn">IsDevelopment</span>())
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"  (Development — verbose diagnostics enabled.)"</span>);
+
+<span class="cmt">// Reuse Day 1's Greeter to prove the library reference still works</span>
+<span class="kw">var</span> greeter = <span class="kw">new</span> <span class="ty">Greeter</span>();
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(greeter.<span class="fn">Greet</span>(<span class="str">"Ada"</span>));
+
+<span class="kw">await</span> host.<span class="fn">RunAsync</span>();</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">bash · try each environment</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmd">dotnet</span> run --project PeopleApp.Cli
+<span class="cmt"># → Starting up in: Production          (nothing set → default)</span>
+
+DOTNET_ENVIRONMENT=Development <span class="cmd">dotnet</span> run --project PeopleApp.Cli
+<span class="cmt"># → Starting up in: Development</span>
+<span class="cmt"># →   (Development — verbose diagnostics enabled.)</span>
+
+<span class="cmd">dotnet</span> run --project PeopleApp.Cli --launch-profile Staging
+<span class="cmt"># → Starting up in: Staging</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ What just happened</span>
+        <p>You built a host, asked its DI container for <code>IHostEnvironment</code>, and printed
+        <code>EnvironmentName</code>. Because nothing was set, the first run reported <strong>Production</strong> (the
+        safe default); setting <code>DOTNET_ENVIRONMENT</code> or using a launch profile changed it. This is exactly
+        how a real app discovers whether it's on your laptop or a production server — and it drives everything from
+        error detail to which config file loads (Day 4).</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Two ways to get IHostEnvironment</span>
+        <p>Before <code>Build()</code>, read <code>builder.Environment</code> directly. After <code>Build()</code>,
+        resolve it from <code>host.Services.GetRequiredService&lt;IHostEnvironment&gt;()</code>, or — more commonly —
+        have it injected into a class constructor via DI. All three return the same environment; which you use depends
+        on where in startup you need it.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Graceful Shutdown</h2></div>
+      <p class="sec-sub">A well-behaved app stops cleanly: it stops taking new work, finishes what's in flight, and
+        releases resources. The host exposes lifetime events for hooking into this.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">csharp</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">var</span> lifetime = host.Services.<span class="fn">GetRequiredService</span>&lt;<span class="ty">IHostApplicationLifetime</span>&gt;();
+
+lifetime.ApplicationStarted.<span class="fn">Register</span>(() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Started ✅"</span>));
+lifetime.ApplicationStopping.<span class="fn">Register</span>(() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Stopping… finishing work"</span>));
+lifetime.ApplicationStopped.<span class="fn">Register</span>(() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Stopped 🔴"</span>));</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 SIGTERM, then a grace period</span>
+        <p>When a host platform wants to stop your app (a container being replaced, a deploy), it sends a
+        <strong>SIGTERM</strong> (or you press Ctrl+C). The host fires <code>ApplicationStopping</code>, gives
+        in-flight work a limited <em>shutdown timeout</em> to complete, then forces exit. Designing for this — closing
+        connections, flushing logs, finishing the current request — is what "graceful shutdown" means and why hosted
+        apps don't just die instantly.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Background work belongs in a hosted service</span>
+        <p>For real long-running work (polling a queue, a timer loop), you implement <code>BackgroundService</code> /
+        <code>IHostedService</code> and register it — the host starts it on startup and stops it during graceful
+        shutdown automatically, so you get lifecycle management for free. That's the proper home for "run forever"
+        logic rather than an open-ended loop in <code>Program.cs</code>.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Mistakes &amp; Practices</h2></div>
+      <p class="sec-sub">Startup and environment habits that prevent subtle production bugs.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🏭</span><h4>Remember the default is Production</h4><p>Unset environment = Production. Set Development explicitly (via launch profile) for local dev.</p></div>
+        <div class="card"><span class="glyph">✅</span><h4>Use IsDevelopment(), not strings</h4><p>The helpers are case-insensitive and clear; raw string compares invite typos.</p></div>
+        <div class="card"><span class="glyph">🚫</span><h4>Don't ship dev conveniences</h4><p>Gate detailed errors and dev tools behind <code>IsDevelopment()</code> so they never appear in prod.</p></div>
+        <div class="card"><span class="glyph">📄</span><h4>launchSettings is dev-only</h4><p>Never rely on it in production; the platform sets the real env var there.</p></div>
+        <div class="card"><span class="glyph">♻️</span><h4>Design for graceful shutdown</h4><p>Handle <code>ApplicationStopping</code>; put long-running work in a hosted service.</p></div>
+        <div class="card"><span class="glyph">🏗️</span><h4>Configure on the builder</h4><p>Register services/config before <code>Build()</code>; after Build the container is fixed.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The classic "works locally, breaks in prod"</span>
+        <p>A huge share of environment bugs come from code that behaves one way in Development and silently differently
+        in Production — a detailed error page that vanishes, a config file that doesn't load, a dev-only shortcut that
+        was never meant to ship. Always test in a Production-like environment (that's what Staging is for), and make
+        environment-specific behavior explicit and reviewed.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea, then a full cheat-sheet table.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🧩 Program.cs</h4><p>The entry point; top-level statements remove the Main boilerplate.</p></div>
+        <div class="recap-card"><h4>🏗️ Host</h4><p>Owns startup/shutdown; provides DI, config, logging, lifetime.</p></div>
+        <div class="recap-card"><h4>🔧 Builder → Build → Run</h4><p>Configure on the builder, Build the host, Run it.</p></div>
+        <div class="recap-card"><h4>♻️ Lifecycle</h4><p>Build → Start → Run → Stopping → Stopped.</p></div>
+        <div class="recap-card"><h4>🌍 Environments</h4><p>Development / Staging / Production (default: Production).</p></div>
+        <div class="recap-card"><h4>🔎 IHostEnvironment</h4><p><code>EnvironmentName</code> + <code>IsDevelopment()</code> etc.</p></div>
+        <div class="recap-card"><h4>🔑 Env var</h4><p><code>DOTNET_ENVIRONMENT</code> (generic) / <code>ASPNETCORE_ENVIRONMENT</code> (web).</p></div>
+        <div class="recap-card"><h4>🚦 Launch profiles</h4><p><code>launchSettings.json</code> — dev-only, sets env vars per profile.</p></div>
+        <div class="recap-card"><h4>🔴 Graceful shutdown</h4><p>SIGTERM → ApplicationStopping → finish → Stopped.</p></div>
+        <div class="recap-card"><h4>⏳ BackgroundService</h4><p>The proper home for long-running work, managed by the host.</p></div>
+      </div>
+
+      <h3>Full summary table</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it is</th><th>Key point</th></tr></thead>
+          <tbody>
+            <tr><td>Top-level statements</td><td>Program.cs without explicit Main</td><td>Compiler generates the Program/Main around it</td></tr>
+            <tr><td>Generic host</td><td><code>Host.CreateApplicationBuilder</code></td><td>Console/worker; web uses <code>WebApplication.CreateBuilder</code></td></tr>
+            <tr><td><code>Build()</code></td><td>Finalizes the host</td><td>DI container fixed afterward</td></tr>
+            <tr><td><code>Run()/RunAsync()</code></td><td>Starts and blocks</td><td>Returns only on shutdown</td></tr>
+            <tr><td>Environment</td><td>A named label for where it runs</td><td>Default Production; Development is special</td></tr>
+            <tr><td><code>IHostEnvironment</code></td><td>Exposes the environment</td><td>Prefer <code>IsDevelopment()</code> over string compare</td></tr>
+            <tr><td>Env variable</td><td>Chooses the environment</td><td><code>DOTNET_</code> / <code>ASPNETCORE_ENVIRONMENT</code></td></tr>
+            <tr><td>launchSettings.json</td><td>Local launch profiles</td><td>Dev-only; never published</td></tr>
+            <tr><td>Lifetime events</td><td>Started/Stopping/Stopped</td><td>Hook graceful shutdown here</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What is Program.cs? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It's the entry point of a .NET application — the first code that runs when the app starts. In modern
+        .NET it typically builds the host and starts the app. With top-level statements it can be just a few lines, with no
+        explicit class or Main method.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> What are top-level statements? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A feature that lets you write the body of <code>Program.cs</code> directly, without wrapping it in a class
+        and a <code>Main</code> method. The compiler generates that boilerplate for you behind the scenes. The <code>args</code>
+        array is still available, and you can use <code>await</code> and return an exit code. Only one file per project may use
+        them.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> What is the host in .NET? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>An object that manages an app's startup and shutdown and provides its core services — dependency
+        injection, configuration, logging, and lifetime management. You build it in <code>Program.cs</code> and run it; it keeps
+        the app alive until a shutdown signal arrives. Console, worker, and web apps all use this host model.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> What is an environment (Development/Staging/Production)? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A named label telling the app where it's running so it can behave appropriately. Development enables
+        detailed errors and developer conveniences; Staging is a production-like test setting; Production is the live, hardened
+        environment. The names are conventions with helper methods, and Production is the default when none is set.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> How do you read the current environment name? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Through <code>IHostEnvironment</code> — read <code>builder.Environment.EnvironmentName</code> before
+        <code>Build()</code>, or resolve <code>IHostEnvironment</code> from the host's services (or inject it into a class). It
+        also offers <code>IsDevelopment()</code>, <code>IsStaging()</code>, and <code>IsProduction()</code> helpers.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What's the default environment if none is set? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Production. This is a deliberately safe default: an app deployed without any environment configured won't
+        accidentally turn on development conveniences like detailed error pages. To get Development behavior you must set the
+        environment explicitly, which local launch profiles do for you.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> What is launchSettings.json? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A file under <code>Properties/</code> that defines named launch profiles for local development — each can set
+        environment variables, command-line arguments, and (for web apps) URLs. It's used only by <code>dotnet run</code> and IDEs
+        during development and is never included when you publish, so it has no effect in production.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> How do you run with a specific launch profile? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>dotnet run --launch-profile &lt;name&gt;</code>, where the name matches a profile in
+        <code>launchSettings.json</code>. IDEs also show the profiles in a dropdown for one-click switching. Without specifying one,
+        the default (first) profile is used.</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q09</span> What is the generic host and what does it provide? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The generic host (<code>Host.CreateApplicationBuilder</code> → <code>IHost</code>) is the unified hosting model
+        for non-web and web apps alike. It provides dependency injection, layered configuration, logging, environment information, and
+        lifetime management (startup, graceful shutdown, and running hosted/background services). You configure it on a builder, call
+        <code>Build()</code>, then <code>Run()</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> Host.CreateApplicationBuilder vs WebApplication.CreateBuilder? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Both create a host with DI, configuration, logging, and environments. <code>Host.CreateApplicationBuilder</code>
+        is for console apps and workers. <code>WebApplication.CreateBuilder</code> is the ASP.NET Core variant that layers web features on
+        top — the HTTP server (Kestrel), middleware pipeline, and routing. Same host foundation, with web capabilities added; the
+        environment and DI concepts are identical.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> What environment variable sets the environment? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>DOTNET_ENVIRONMENT</code> for the generic host, and <code>ASPNETCORE_ENVIRONMENT</code> for the ASP.NET Core
+        web host. The host reads it at startup to set the environment name (defaulting to Production if unset). In production the hosting
+        platform sets this variable; locally, launch profiles set it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> Difference between DOTNET_ENVIRONMENT and ASPNETCORE_ENVIRONMENT? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>They serve the same purpose for different host types. <code>ASPNETCORE_ENVIRONMENT</code> is specific to ASP.NET
+        Core web apps and takes precedence for them; <code>DOTNET_ENVIRONMENT</code> is the general one used by the generic host
+        (console/worker). If both are set for a web app, the ASPNETCORE one wins. For a plain console app, use DOTNET_ENVIRONMENT.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> Is launchSettings.json used in production? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>No. It's a development-only file used by <code>dotnet run</code> and IDEs; it is not copied when you
+        <code>publish</code> and has no effect on a deployed app. In production, the environment and any needed settings come from real
+        environment variables set by the hosting platform, plus configuration files — never from launchSettings.json.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> What are the IsDevelopment/IsProduction helpers? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Convenience methods on <code>IHostEnvironment</code> that check the current environment name case-insensitively —
+        <code>IsDevelopment()</code>, <code>IsStaging()</code>, <code>IsProduction()</code>, and the general <code>IsEnvironment("Name")</code>.
+        Preferring them over comparing <code>EnvironmentName</code> to a string avoids casing bugs and reads more clearly.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> What is the app lifecycle? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Build (the builder registers services and <code>Build()</code> finalizes the container), Start (hosted services
+        start, <code>ApplicationStarted</code> fires), Run (the app does its work and stays alive), then on a shutdown signal Stopping
+        (<code>ApplicationStopping</code>, stop accepting new work) and Stopped (finish in-flight work, dispose, <code>ApplicationStopped</code>,
+        exit). <code>Run()</code> blocks through the whole running phase until shutdown.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> How do you access IHostEnvironment? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Three ways: read <code>builder.Environment</code> directly during startup (before <code>Build()</code>); resolve
+        <code>host.Services.GetRequiredService&lt;IHostEnvironment&gt;()</code> after building; or — most commonly in real code — inject
+        <code>IHostEnvironment</code> into a class's constructor via DI. All return the same environment object.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain the host builder pattern and what Build() does. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The builder is a mutable configuration phase: you register services into an <code>IServiceCollection</code>, add
+        configuration sources, and configure logging and the environment. <code>Build()</code> ends that phase — it composes all the
+        registrations into a concrete, immutable dependency-injection container (an <code>IServiceProvider</code>) and returns an
+        <code>IHost</code>. After <code>Build()</code> you can't register new services; you resolve them. This clean separation
+        (configure, then run) is the composition-root pattern and makes startup predictable.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> How does configuration layering interact with environments? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The host loads configuration in layers, later sources overriding earlier ones. By convention it loads
+        <code>appsettings.json</code> then <code>appsettings.{Environment}.json</code> (e.g. <code>appsettings.Development.json</code>),
+        followed by environment variables and command-line args. So the environment name selects which environment-specific file overlays the
+        base settings — the same code reads different values in Development vs Production. This is why the environment matters beyond just error
+        detail, and it's the focus of the configuration day.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> What is IHostedService / BackgroundService and how does the host manage it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>IHostedService</code> is an interface with <code>StartAsync</code>/<code>StopAsync</code> for long-running or
+        startup/shutdown work; <code>BackgroundService</code> is a convenient base class exposing a single <code>ExecuteAsync</code> loop. You
+        register them with the DI container, and the host starts each on application start and signals them to stop (via a cancellation token)
+        during graceful shutdown. It's the correct place for background processing — queue consumers, timers, schedulers — because you get
+        lifecycle integration and clean shutdown for free.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> How does graceful shutdown work? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>On Ctrl+C or a SIGTERM from the platform, the host initiates shutdown: it triggers the
+        <code>ApplicationStopping</code> token so components stop accepting new work, then calls <code>StopAsync</code> on hosted services and
+        waits up to a configurable <em>shutdown timeout</em> for in-flight work to complete, then fires <code>ApplicationStopped</code> and exits.
+        Well-designed apps observe the cancellation token, finish current requests/messages, flush logs, and release resources within that window;
+        anything not done by the timeout is cut off.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> Generic host vs the older WebHost / Startup.cs model? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Early ASP.NET Core used <code>WebHostBuilder</code> plus a separate <code>Startup.cs</code> with
+        <code>ConfigureServices</code> and <code>Configure</code> methods. .NET later introduced the <strong>generic host</strong> to unify web and
+        non-web apps under one model, and the minimal hosting model (<code>WebApplication.CreateBuilder</code>) folded Startup's two methods into
+        <code>Program.cs</code> directly. So modern apps configure services and the middleware pipeline in one place. The concepts (DI, config,
+        environments, middleware) carry over; the older Startup split is legacy but still recognizable in existing codebases.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> How is the environment determined at startup, and what's the source precedence? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The host resolves the environment name from configuration at startup — primarily the environment variable
+        (<code>ASPNETCORE_ENVIRONMENT</code> for web, <code>DOTNET_ENVIRONMENT</code> otherwise), and it can also be influenced by host configuration
+        sources like command-line args. During local development, <code>launchSettings.json</code> sets that variable for the chosen profile. If nothing
+        provides a value, it defaults to Production. Because later configuration sources override earlier ones, an explicitly supplied host setting or env
+        var takes precedence over defaults; the key point is that in production the platform's env var is authoritative, and launchSettings is irrelevant.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> How do you run environment-specific behavior without leaking dev config to prod? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Gate development-only behavior explicitly behind <code>env.IsDevelopment()</code> (detailed errors, developer
+        dashboards, seed data), keep secrets out of source and out of dev-only files, use environment-specific config files
+        (<code>appsettings.Production.json</code>) plus real environment variables/secret stores for production, and never depend on
+        <code>launchSettings.json</code> outside development. Then validate in a Production-like Staging environment. The goal is that turning the
+        environment to Production automatically removes every dev convenience, with no manual toggling required.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> What are IHostApplicationLifetime events and when would you use them? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>IHostApplicationLifetime</code> exposes cancellation tokens for <code>ApplicationStarted</code>,
+        <code>ApplicationStopping</code>, and <code>ApplicationStopped</code>, plus a <code>StopApplication()</code> method to request shutdown. You
+        register callbacks to run post-startup initialization (ApplicationStarted), to begin draining/cleanup when a stop is requested
+        (ApplicationStopping), or to do final teardown after everything has stopped (ApplicationStopped). Typical uses: warming caches after start,
+        signaling a load balancer you're going offline, flushing telemetry, or programmatically stopping the app when a fatal condition occurs.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions establish Program.cs, the host, environments, and launch profiles;
+        <strong>Mid</strong> questions test the generic host, the env variables, and the lifecycle; <strong>Senior</strong> questions probe the builder
+        pattern, config-layering-by-environment, hosted services, graceful shutdown, and the legacy Startup model. Actually run the Day-2 exercise and
+        flip the environment variable — seeing the printed name change makes all of this concrete.</p>
+      </div>
+
+      <p class="foot">Concepts verified against Microsoft Learn (.NET Generic Host, <code>IHostEnvironment</code>, environments in ASP.NET Core, and
+        launch profiles). The host model, environments, and launch profiles are stable across .NET 6–10; this series targets <code>net10.0</code> (current
+        LTS). This single <code>02-dotnet-host-startup.html</code> file is fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

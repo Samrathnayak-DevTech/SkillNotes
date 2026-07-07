@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Introduction to LLD — Session 01</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-track{background:transparent}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}
+.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:hover td{background:var(--bg-soft)}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:1.2rem;transition:transform .2s ease,box-shadow .2s ease}
+.card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(45,42,38,.08)}
+.card-glyph{font-size:1.4rem;margin-bottom:.5rem;display:block}
+.card-title{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;color:var(--ink);margin-bottom:.4rem}
+.card p{font-size:.88rem;color:var(--ink-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}
+#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}
+#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}
+h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+h4{font-family:'JetBrains Mono',monospace;font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin:1.2rem 0 .4rem}
+/* Module map */
+.module-map{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.5rem 0}
+.mod-card{border:1px solid var(--line);border-radius:8px;padding:1rem;background:var(--bg)}
+.mod-card.active-mod{border-color:var(--accent);border-top:3px solid var(--accent);background:var(--accent-soft)}
+.mod-title{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.mod-items{font-size:.82rem;color:var(--ink-soft);line-height:1.8}
+/* HLD diagram */
+.hld-row{display:flex;gap:1rem;align-items:center;flex-wrap:wrap;margin:.6rem 0;font-family:'JetBrains Mono',monospace;font-size:.78rem}
+.hld-box{border:1.5px solid var(--ink);border-radius:4px;padding:.4rem .8rem;background:var(--bg);white-space:nowrap}
+.hld-box.lb{background:var(--accent-soft);border-color:var(--accent)}
+.hld-box.srv{background:var(--blue-soft);border-color:var(--blue)}
+.hld-box.db{background:var(--purple-soft);border-color:var(--purple)}
+.hld-box.cache{background:var(--green-soft);border-color:var(--green)}
+.hld-arrow{color:var(--ink-soft);font-size:1rem}
+/* Props of good code */
+.prop-row{display:flex;gap:.6rem;align-items:flex-start;padding:.7rem 0;border-bottom:1px solid var(--line)}
+.prop-icon{font-size:1.2rem;flex-shrink:0;margin-top:.1rem}
+.prop-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;margin-bottom:.1rem}
+.prop-desc{font-size:.85rem;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar" aria-label="Page navigation">
+  <div class="sidebar-logo">LLD-1 · Session 01</div>
+  <div class="nav-group">
+    <span class="nav-group-label">Getting Started</span>
+    <a class="nav-link" href="#hero">Overview</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Context</span>
+    <a class="nav-link" href="#s01">01 What is LLD?</a>
+    <a class="nav-link" href="#s02">02 HLD vs LLD</a>
+    <a class="nav-link" href="#s03">03 Properties of Good Code</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Module Structure</span>
+    <a class="nav-link" href="#s04">04 LLD-1 Curriculum</a>
+    <a class="nav-link" href="#s05">05 LLD-2 &amp; LLD-3</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Summary</span>
+    <a class="nav-link" href="#recap">Quick Recap</a>
+  </div>
+</nav>
+<main>
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 01 · Introduction</p>
+  <h1>Introduction to Low Level Design</h1>
+  <p class="hero-lede">What LLD actually is, why it matters for software engineers, how it relates to HLD, and a roadmap of everything this module covers.</p>
+  <div class="agenda-chips">
+    <span class="chip">What is LLD?</span>
+    <span class="chip">HLD vs LLD</span>
+    <span class="chip">Good Code</span>
+    <span class="chip">Module Roadmap</span>
+  </div>
+</section>
+
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>What is Low Level Design?</h2></div>
+  <p>Software engineers spend their careers writing code. But not all code is equal — code that is hard to read, hard to change, and impossible to extend is a liability. <strong>Low Level Design (LLD)</strong> is the study of <em>how to write code well</em>. It is the discipline of structuring your classes, objects, and modules so that the codebase remains healthy as it grows.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>LLD is the study of how to write good code — code that is readable, modular, reusable, maintainable, and extensible. It covers Object-Oriented Programming principles, design patterns, and architectural best practices at the class and component level.</p>
+  </div>
+
+  <p>To understand why LLD matters, consider an early-stage startup. The backend might be a single server handling all requests — simple and fast to build. But what happens when millions of users arrive? You can't just keep upgrading that one machine forever (this is called <strong>vertical scaling</strong> or "scaling up"). At some point the machine maxes out, and a single server becomes a single point of failure. You need to distribute your system horizontally — and that requires well-structured code to begin with.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>Think of a small restaurant that works fine with one chef. As it gets popular, you hire more chefs. But if all your recipes are in the head of the original chef with no written-down process, adding new chefs causes chaos. LLD is the discipline of writing down the recipes so anyone can follow them.</p>
+  </div>
+</section>
+
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>HLD vs LLD</h2></div>
+  <p>Software design happens at two levels. It helps to understand both before diving into LLD specifically.</p>
+
+  <table>
+    <thead><tr><th>Dimension</th><th>HLD — High Level Design</th><th>LLD — Low Level Design</th></tr></thead>
+    <tbody>
+      <tr><td>Focus</td><td>System architecture, component layout</td><td>Class structure, code quality, OOP</td></tr>
+      <tr><td>Questions answered</td><td>How many servers? Which database? How does data flow?</td><td>How should classes relate? Which pattern fits?</td></tr>
+      <tr><td>Concepts</td><td>Load balancers, sharding, caching, DB replicas, CDNs</td><td>SOLID principles, design patterns, OOP pillars</td></tr>
+      <tr><td>Output</td><td>Architecture diagrams, infrastructure decisions</td><td>Class diagrams, well-structured source code</td></tr>
+    </tbody>
+  </table>
+
+  <h3>A Typical HLD Architecture</h3>
+  <p>This is what the infrastructure behind a production web service looks like at a high level — load balancers distributing traffic across multiple servers, all reading from a shared cache and database cluster with replicas:</p>
+
+  <div class="diagram-box">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:.75rem; line-height:2.2;">
+      <div class="hld-row">
+        <span style="color:var(--ink-soft)">Requests →</span>
+        <div class="hld-box lb">Load Balancer</div>
+        <span class="hld-arrow">→</span>
+        <div class="hld-box srv">Server S₁</div>
+        <div class="hld-box srv">Server S₂</div>
+        <div class="hld-box srv">Server S₃</div>
+        <div class="hld-box srv">Server S₄</div>
+      </div>
+      <div class="hld-row" style="margin-left:140px;">
+        <span class="hld-arrow">↕</span>
+        <div class="hld-box cache">Cache</div>
+        <span class="hld-arrow">↕</span>
+        <div class="hld-box db">DB Primary</div>
+        <div class="hld-box db">DB Replica 1</div>
+        <div class="hld-box db">DB Replica 2</div>
+      </div>
+    </div>
+    <p style="font-size:.78rem; color:var(--ink-soft); margin-top:.8rem;">The Load Balancer distributes incoming requests evenly across multiple servers (horizontal scaling). Database replicas provide redundancy. Caching reduces DB load. <strong>Sharding</strong> partitions data across multiple databases when one is insufficient.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Key Point</span>
+    <p>LLD doesn't replace HLD — they are complementary. HLD decides the shape of your system; LLD decides the quality of the code inside each component. Great infrastructure with bad code is still a nightmare to maintain.</p>
+  </div>
+</section>
+
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Properties of Good Code</h2></div>
+  <p>Before studying how to achieve these properties, it is worth naming them explicitly. Good code has five key characteristics:</p>
+
+  <div style="margin:1.5rem 0;">
+    <div class="prop-row">
+      <span class="prop-icon">📖</span>
+      <div><div class="prop-title">Readable</div><div class="prop-desc">Another engineer (or future you) can understand what the code does without needing the original author to explain it. Clear naming, consistent style, and meaningful structure are non-negotiable.</div></div>
+    </div>
+    <div class="prop-row">
+      <span class="prop-icon">🧩</span>
+      <div><div class="prop-title">Modular</div><div class="prop-desc">The system is broken into independent, well-defined pieces. Each module has a single responsibility and can be understood in isolation. Changes in one module don't ripple through the entire codebase.</div></div>
+    </div>
+    <div class="prop-row">
+      <span class="prop-icon">♻️</span>
+      <div><div class="prop-title">Reusable</div><div class="prop-desc">Code is written once and used in many contexts. Avoid copy-pasting logic — extract it into a well-named function or class that can be called wherever needed.</div></div>
+    </div>
+    <div class="prop-row">
+      <span class="prop-icon">🔧</span>
+      <div><div class="prop-title">Maintainable</div><div class="prop-desc">Bugs are easy to locate and fix. Version upgrades don't require a full rewrite. The codebase can be handed to a new developer who can be productive quickly.</div></div>
+    </div>
+    <div class="prop-row" style="border-bottom:none;">
+      <span class="prop-icon">🚀</span>
+      <div><div class="prop-title">Extensible</div><div class="prop-desc">New features can be added with minimal changes to existing code. You can <em>extend</em> the system rather than ripping out and replacing it. This is the hardest property to achieve — and the most valuable.</div></div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Tip</span>
+    <p>These five properties are not independent. Highly modular code tends to also be readable and extensible. When you're unsure whether a design decision is good, run it through this checklist: does this change make the code harder or easier to read, modify, reuse, maintain, and extend?</p>
+  </div>
+</section>
+
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>LLD-1 Curriculum</h2></div>
+  <p>The LLD module is divided into three parts. LLD-1 focuses on the Java language features and OOP principles you need to write well-structured code. Here's everything covered:</p>
+
+  <div class="cards-grid">
+    <div class="card">
+      <span class="card-glyph">🏗️</span>
+      <div class="card-title">OOP Foundations</div>
+      <p>Classes, objects, the four pillars (abstraction, encapsulation, inheritance, polymorphism), and access modifiers.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">🔒</span>
+      <div class="card-title">Access Modifiers &amp; Constructors</div>
+      <p>Public, protected, default, private. Default, parameterized, and copy constructors. Shallow vs deep copy.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">🧬</span>
+      <div class="card-title">Inheritance &amp; Polymorphism</div>
+      <p>Extends, IS-A relationships, constructor chaining, method overloading (compile-time) and overriding (runtime).</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">📐</span>
+      <div class="card-title">Interfaces &amp; Abstract Classes</div>
+      <p>Contracts, program-to-interface principle, loose coupling, the diamond problem, default methods (Java 8+).</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">⚙️</span>
+      <div class="card-title">Static Keyword</div>
+      <p>Class-level vs instance-level members, static methods, static nested classes, the Builder pattern.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">🔀</span>
+      <div class="card-title">Concurrency &amp; Multithreading</div>
+      <p>Threads, synchronization, race conditions, locks, and thread-safe design.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">📦</span>
+      <div class="card-title">Collections Framework</div>
+      <p>List, Set, Map, Queue, and their common implementations. When to use which.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">⚠️</span>
+      <div class="card-title">Exception Handling</div>
+      <p>Checked vs unchecked exceptions, try-catch-finally, custom exceptions, and best practices.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">🔣</span>
+      <div class="card-title">Generics</div>
+      <p>Type-safe collections, generic classes and methods, bounded type parameters, wildcards.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">λ</span>
+      <div class="card-title">Lambdas &amp; Streams</div>
+      <p>Functional interfaces, lambda expressions, the Stream API for declarative data processing.</p>
+    </div>
+  </div>
+</section>
+
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>LLD-2 &amp; LLD-3</h2></div>
+  <p>The full LLD course builds on LLD-1's foundations across two more modules:</p>
+
+  <div class="module-map" style="grid-template-columns:1fr 1fr">
+    <div class="mod-card">
+      <div class="mod-title">LLD-2 — Design Principles &amp; Patterns</div>
+      <div class="mod-items">
+        SOLID Principles<br>
+        Creational Patterns (Singleton, Factory, Builder, Prototype)<br>
+        Structural Patterns (Adapter, Decorator, Facade)<br>
+        Behavioural Patterns (Strategy, Observer, Command)
+      </div>
+    </div>
+    <div class="mod-card">
+      <div class="mod-title">LLD-3 — Machine Coding Case Studies</div>
+      <div class="mod-items">
+        Tic Tac Toe<br>
+        Parking Lot<br>
+        Booking Management System (BMS)<br>
+        Splitwise<br>
+        + Backend Project (Java + Spring Boot)
+      </div>
+    </div>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Big Picture</span>
+    <p>LLD-1 gives you the language and OOP tools. LLD-2 gives you the design vocabulary (SOLID + patterns). LLD-3 puts it all together in realistic system designs — the kind you'll be asked to whiteboard in senior engineering interviews.</p>
+  </div>
+</section>
+
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">LLD</div><p>The study of how to write code well — class-level structure, OOP, and design patterns.</p></div>
+    <div class="recap-card"><div class="recap-card-title">HLD</div><p>System-level architecture — servers, load balancers, databases, caching, and sharding.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Good Code</div><p>Readable, modular, reusable, maintainable, and extensible — all five matter.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Vertical vs Horizontal Scaling</div><p>Vertical = bigger machine (hits a limit). Horizontal = more machines (requires good architecture).</p></div>
+    <div class="recap-card"><div class="recap-card-title">Single Point of Failure</div><p>Any component whose failure brings down the whole system. Good HLD eliminates these with redundancy.</p></div>
+    <div class="recap-card"><div class="recap-card-title">LLD-1 Focus</div><p>OOP, Java language features, interfaces, abstract classes, generics, collections, lambdas, streams.</p></div>
+  </div>
+</section>
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.07}).observe||document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.07}).observe(s));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

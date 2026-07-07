@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Behavioural Design Patterns — Session 21</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+.uml-class{border:1.5px solid var(--ink);border-radius:4px;display:inline-flex;flex-direction:column;min-width:150px;font-family:'JetBrains Mono',monospace;font-size:.7rem;margin:.4rem;vertical-align:top}
+.uml-class.iface{border-style:dashed}.uml-name{background:var(--bg-soft);padding:.3rem .7rem;border-bottom:1.5px solid var(--ink);font-weight:600;text-align:center}
+.uml-name .st{display:block;font-size:.58rem;font-style:italic;color:var(--ink-soft)}.uml-body{padding:.3rem .7rem;color:var(--ink-soft)}
+.uml-row{display:block;padding:.05rem 0}.uml-row.hi{color:var(--blue)}
+.pubsub-diagram{display:flex;gap:1.5rem;align-items:flex-start;flex-wrap:wrap}
+.pubsub-pub{background:var(--bg);border:2px solid var(--accent);border-radius:8px;padding:1rem;min-width:180px}
+.pubsub-subs{display:flex;flex-direction:column;gap:.5rem}
+.pubsub-sub{background:var(--bg);border:1.5px solid var(--blue);border-radius:6px;padding:.5rem .8rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--blue)}
+.arrow-connector{align-self:center;font-size:1.4rem;color:var(--accent)}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 21</div>
+  <div class="nav-group"><span class="nav-group-label">Overview</span><a class="nav-link" href="#hero">Introduction</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">Strategy Pattern</span>
+    <a class="nav-link" href="#s01">01 Behavioural Patterns Overview</a>
+    <a class="nav-link" href="#s02">02 Google Maps — The Problem</a>
+    <a class="nav-link" href="#s03">03 SRP &amp; OCP Violations</a>
+    <a class="nav-link" href="#s04">04 Strategy Pattern Defined</a>
+    <a class="nav-link" href="#s05">05 PathCalculator Hierarchy</a>
+    <a class="nav-link" href="#s06">06 PathCalculatorFactory</a>
+    <a class="nav-link" href="#s07">07 Full Implementation</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Observer Pattern</span>
+    <a class="nav-link" href="#s08">08 Amazon Order — The Problem</a>
+    <a class="nav-link" href="#s09">09 Observer Pattern Defined</a>
+    <a class="nav-link" href="#s10">10 Publisher &amp; Subscribers</a>
+    <a class="nav-link" href="#s11">11 Full Implementation</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 21</p>
+  <h1>Behavioural Design Patterns</h1>
+  <p class="hero-lede">Patterns that define how objects communicate and distribute responsibility. Strategy eliminates if-else chains by encapsulating each algorithm in its own class. Observer inverts event dependency — subscribers register themselves rather than being hard-coded into the event source.</p>
+  <div class="agenda-chips">
+    <span class="chip">Strategy</span><span class="chip">Observer</span><span class="chip">Behavioural</span><span class="chip">Google Maps</span><span class="chip">Amazon Orders</span><span class="chip">Pub/Sub</span>
+  </div>
+</section>
+
+<!-- 01 -->
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>Behavioural Patterns Overview</h2></div>
+  <p>Behavioural design patterns are concerned with <strong>algorithms and the assignment of responsibilities</strong> between objects. They describe not just the structure of objects, but also the patterns of communication between them.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Insight</span>
+    <p>Behavioural patterns deal with <strong>methods, actions, and behaviours</strong> — specifically, how to cleanly distribute those actions across a system when there are many possible ways to do something, or many objects that need to react to the same event.</p>
+  </div>
+
+  <p>This session covers two important behavioural patterns:</p>
+  <table>
+    <thead><tr><th>Pattern</th><th>Core Problem</th><th>Solution</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Strategy</strong></td><td>Multiple if-else branches for different "ways to do something"</td><td>Each way becomes its own class; client picks the right one</td></tr>
+      <tr><td><strong>Observer</strong></td><td>An event source hard-codes all the things that should happen when the event fires</td><td>Subscribers register themselves; source iterates and calls them</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 02 -->
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>Google Maps — The Problem</h2></div>
+  <p>Google Maps shows a path from source A to destination B. It supports multiple transport modes: Car, Bike, Bus, Train, Walk. Each mode calculates a completely different path — a car uses highways, a cyclist avoids them, a pedestrian uses footpaths.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Mobile UI</span>
+    <p>The Google Maps app shows a source field, a destination field, and then mode buttons: Bike | Car | Bus | Train | Walk. The route displayed changes entirely depending on which button you press.</p>
+  </div>
+
+  <p>A naïve implementation puts all the logic inside a single <code>findPath</code> method with a chain of <code>if-else</code> branches:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Naïve GoogleMaps (bad design)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">GoogleMaps</span> {
+    <span class="kw">void</span> <span class="fn">findPath</span>(<span class="ty">String</span> src, <span class="ty">String</span> dest, <span class="ty">String</span> mode) {
+        <span class="kw">if</span> (mode.<span class="fn">equals</span>(<span class="str">"Car"</span>)) {
+            <span class="cmt">// ... car routing logic ...</span>
+        } <span class="kw">else if</span> (mode.<span class="fn">equals</span>(<span class="str">"Bike"</span>)) {
+            <span class="cmt">// ... bike routing logic ...</span>
+        } <span class="kw">else if</span> (mode.<span class="fn">equals</span>(<span class="str">"Walk"</span>)) {
+            <span class="cmt">// ... walking routing logic ...</span>
+        } <span class="cmt">// and so on for Bus, Train ...</span>
+    }
+}</pre>
+  </div>
+</section>
+
+<!-- 03 -->
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>SRP &amp; OCP Violations</h2></div>
+
+  <div class="callout warn">
+    <span class="callout-tag">① SRP Violation</span>
+    <p><code>GoogleMaps</code> is now responsible for <em>all</em> routing algorithms — car, bike, walk, bus, train. It has multiple reasons to change: fix a bug in car routing → edit GoogleMaps. Improve bike routing → edit GoogleMaps. Each mode is a separate responsibility crammed into one class.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">② OCP Violation</span>
+    <p>Adding a new transport mode (e.g. "Ferry") requires <em>editing</em> the existing <code>GoogleMaps.findPath</code> method — adding another <code>else if</code> branch. Classes should be open for extension, closed for modification. Every new mode breaks this principle.</p>
+  </div>
+
+  <p>The root cause: <strong>when there are multiple ways of doing something, packing them all into one method leads to SRP and OCP violations</strong> through if-else proliferation. This is the exact scenario the Strategy pattern is designed to solve.</p>
+</section>
+
+<!-- 04 -->
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Strategy Pattern Defined</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>The <strong>Strategy Pattern</strong> defines a family of algorithms, encapsulates each one in a separate class, and makes them interchangeable. Rather than implementing different behaviours as branches inside a single method, each behaviour gets its own class. The client holds a reference to a strategy interface and delegates work to whichever concrete strategy is currently set.</p>
+  </div>
+
+  <p>The rule is: <strong>for every way to do a particular thing, create a class.</strong></p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>Think of a Swiss Army knife vs a toolbox. Packing every tool into one handle (the naïve approach) makes each tool clunky. A toolbox keeps each tool separate — you pick the right one for the job. The Strategy pattern is the toolbox approach for algorithms.</p>
+  </div>
+</section>
+
+<!-- 05 -->
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>PathCalculator Hierarchy</h2></div>
+  <p>We define a <code>PathCalculator</code> interface with a single <code>findPath(src, dest)</code> method. Each transport mode gets its own concrete class implementing this interface.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem">
+      <div class="uml-class iface">
+        <div class="uml-name"><span class="st">&lt;&lt;interface&gt;&gt;</span>PathCalculator</div>
+        <div class="uml-body"><span class="uml-row hi">+ findPath(src, dest)</span></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft)">implements ↓</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center">
+        <div class="uml-class">
+          <div class="uml-name">CarPathCalculator</div>
+          <div class="uml-body"><span class="uml-row hi">+ findPath(src, dest)</span><span class="uml-row" style="font-size:.63rem;color:var(--blue)">// highway algorithm</span></div>
+        </div>
+        <div class="uml-class">
+          <div class="uml-name">BikePathCalculator</div>
+          <div class="uml-body"><span class="uml-row hi">+ findPath(src, dest)</span><span class="uml-row" style="font-size:.63rem;color:var(--green)">// cycle-lane algorithm</span></div>
+        </div>
+        <div class="uml-class">
+          <div class="uml-name">WalkPathCalculator</div>
+          <div class="uml-body"><span class="uml-row hi">+ findPath(src, dest)</span><span class="uml-row" style="font-size:.63rem;color:var(--rose)">// footpath algorithm</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p><code>GoogleMaps</code> no longer contains any routing logic. It holds a <code>PathCalculator</code> reference and delegates to it:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — GoogleMaps with Strategy</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">GoogleMaps</span> {
+    <span class="kw">private</span> <span class="ty">PathCalculator</span> pc;
+
+    <span class="kw">void</span> <span class="fn">findPath</span>(<span class="ty">String</span> src, <span class="ty">String</span> dest, <span class="ty">Mode</span> mode) {
+        <span class="ty">PathCalculator</span> pc = <span class="ty">PathCalculatorFactory</span>.<span class="fn">getPCForMode</span>(mode);
+        pc.<span class="fn">findPath</span>(src, dest);
+    }
+}</pre>
+  </div>
+</section>
+
+<!-- 06 -->
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>PathCalculatorFactory</h2></div>
+  <p>A factory class maps the <code>Mode</code> enum to the correct <code>PathCalculator</code> implementation. The <code>mode</code> parameter is typed as an enum (not a raw String) to prevent typos and enable compile-time checking.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Mode Enum + PathCalculatorFactory</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">enum</span> <span class="ty">Mode</span> { CAR, BIKE, WALK, BUS, TRAIN }
+
+<span class="kw">class</span> <span class="ty">PathCalculatorFactory</span> {
+    <span class="kw">public static</span> <span class="ty">PathCalculator</span> <span class="fn">getPCForMode</span>(<span class="ty">Mode</span> mode) {
+        <span class="kw">if</span> (mode == <span class="ty">Mode</span>.CAR)   <span class="kw">return new</span> <span class="ty">CarPathCalculator</span>();
+        <span class="kw">if</span> (mode == <span class="ty">Mode</span>.BIKE)  <span class="kw">return new</span> <span class="ty">BikePathCalculator</span>();
+        <span class="kw">if</span> (mode == <span class="ty">Mode</span>.WALK)  <span class="kw">return new</span> <span class="ty">WalkPathCalculator</span>();
+        <span class="kw">throw new</span> <span class="ty">IllegalArgumentException</span>(<span class="str">"Unknown mode: "</span> + mode);
+    }
+}</pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Combining Patterns</span>
+    <p>Notice that <code>PathCalculatorFactory</code> is both a Factory (it creates objects) and a companion to the Strategy pattern (it selects the right strategy). Real systems commonly combine two or more design patterns this way.</p>
+  </div>
+</section>
+
+<!-- 07 -->
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>Full Strategy Implementation</h2></div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Complete Strategy Pattern for Google Maps</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Strategy interface</span>
+<span class="kw">interface</span> <span class="ty">PathCalculator</span> {
+    <span class="kw">void</span> <span class="fn">findPath</span>(<span class="ty">String</span> src, <span class="ty">String</span> dest);
+}
+
+<span class="cmt">// Concrete strategies — each encapsulates one algorithm</span>
+<span class="kw">class</span> <span class="ty">CarPathCalculator</span> <span class="kw">implements</span> <span class="ty">PathCalculator</span> {
+    <span class="kw">public void</span> <span class="fn">findPath</span>(<span class="ty">String</span> src, <span class="ty">String</span> dest) {
+        System.out.<span class="fn">println</span>(<span class="str">"Car route: "</span> + src + <span class="str">" → "</span> + dest);
+        <span class="cmt">// highway-aware routing logic</span>
+    }
+}
+
+<span class="kw">class</span> <span class="ty">BikePathCalculator</span> <span class="kw">implements</span> <span class="ty">PathCalculator</span> {
+    <span class="kw">public void</span> <span class="fn">findPath</span>(<span class="ty">String</span> src, <span class="ty">String</span> dest) {
+        System.out.<span class="fn">println</span>(<span class="str">"Bike route: "</span> + src + <span class="str">" → "</span> + dest);
+        <span class="cmt">// cycle-lane-aware routing logic</span>
+    }
+}
+
+<span class="kw">class</span> <span class="ty">WalkPathCalculator</span> <span class="kw">implements</span> <span class="ty">PathCalculator</span> {
+    <span class="kw">public void</span> <span class="fn">findPath</span>(<span class="ty">String</span> src, <span class="ty">String</span> dest) {
+        System.out.<span class="fn">println</span>(<span class="str">"Walking route: "</span> + src + <span class="str">" → "</span> + dest);
+        <span class="cmt">// footpath-based routing logic</span>
+    }
+}
+
+<span class="kw">enum</span> <span class="ty">Mode</span> { CAR, BIKE, WALK }
+
+<span class="kw">class</span> <span class="ty">PathCalculatorFactory</span> {
+    <span class="kw">public static</span> <span class="ty">PathCalculator</span> <span class="fn">getPCForMode</span>(<span class="ty">Mode</span> mode) {
+        <span class="kw">switch</span>(mode) {
+            <span class="kw">case</span> CAR:  <span class="kw">return new</span> <span class="ty">CarPathCalculator</span>();
+            <span class="kw">case</span> BIKE: <span class="kw">return new</span> <span class="ty">BikePathCalculator</span>();
+            <span class="kw">case</span> WALK: <span class="kw">return new</span> <span class="ty">WalkPathCalculator</span>();
+            <span class="kw">default</span>:   <span class="kw">throw new</span> <span class="ty">IllegalArgumentException</span>();
+        }
+    }
+}
+
+<span class="kw">class</span> <span class="ty">GoogleMaps</span> {
+    <span class="kw">void</span> <span class="fn">findPath</span>(<span class="ty">String</span> src, <span class="ty">String</span> dest, <span class="ty">Mode</span> mode) {
+        <span class="ty">PathCalculator</span> pc = <span class="ty">PathCalculatorFactory</span>.<span class="fn">getPCForMode</span>(mode);
+        pc.<span class="fn">findPath</span>(src, dest);
+    }
+}
+
+<span class="cmt">// Usage</span>
+<span class="ty">GoogleMaps</span> gm = <span class="kw">new</span> <span class="ty">GoogleMaps</span>();
+gm.<span class="fn">findPath</span>(<span class="str">"Bangalore"</span>, <span class="str">"Chennai"</span>, <span class="ty">Mode</span>.CAR);
+gm.<span class="fn">findPath</span>(<span class="str">"Bangalore"</span>, <span class="str">"Chennai"</span>, <span class="ty">Mode</span>.BIKE);</pre>
+  </div>
+</section>
+
+<!-- 08 -->
+<section id="s08" class="section">
+  <div class="section-header"><span class="section-num">08</span><h2>Amazon Order — Observer Problem</h2></div>
+  <p>When an order is placed on Amazon, many services need to react: logistics must update delivery routing, inventory must decrement stock, notifications must be sent to the customer, the seller must be informed. Without a pattern, <code>Amazon</code> either calls all these services directly (tight coupling) or uses a Facade (better, but still hard-coded).</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Problems</span>
+    <p>① Every time a new action must happen on order placement (e.g. start a loyalty points calculation), <strong>source code must change and be recompiled</strong>. ② You cannot add or remove a handler <strong>at runtime</strong> without editing the core class. ③ The event source (Amazon) is tightly coupled to every handler — it must know all of them by name.</p>
+  </div>
+</section>
+
+<!-- 09 -->
+<section id="s09" class="section">
+  <div class="section-header"><span class="section-num">09</span><h2>Observer Pattern Defined</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>The <strong>Observer Pattern</strong> (also called Publish-Subscribe or Pub/Sub) defines a one-to-many dependency between objects. When a publisher object changes state or fires an event, all registered subscribers are notified and updated automatically. The key idea is <strong>reversing the dependency</strong>: instead of the publisher knowing about each subscriber, the subscribers register themselves with the publisher.</p>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>A YouTube channel (publisher) doesn't call each subscriber individually. Subscribers click "Subscribe" to opt in. When a video is uploaded (event), YouTube notifies all current subscribers. New subscribers can join and old ones can unsubscribe — the channel doesn't care who is currently watching.</p>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="s10" class="section">
+  <div class="section-header"><span class="section-num">10</span><h2>Publisher &amp; Subscribers</h2></div>
+
+  <div class="diagram-box">
+    <div class="pubsub-diagram">
+      <div class="pubsub-pub">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:600;color:var(--accent);margin-bottom:.6rem">PUBLISHER — Amazon</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;line-height:1.8;color:var(--ink-soft)">
+          List&lt;Subscriber&gt; subs<br>
+          + register(sub)<br>
+          + unregister(sub)<br>
+          + onOrderPlacedEvent()
+        </div>
+        <div style="margin-top:.6rem;font-size:.78rem;color:var(--ink-soft)">Event happens here ↓</div>
+      </div>
+      <div class="arrow-connector">→</div>
+      <div class="pubsub-subs">
+        <div class="pubsub-sub">LogisticsService<br>onOrderPlaced()</div>
+        <div class="pubsub-sub">InventoryService<br>onOrderPlaced()</div>
+        <div class="pubsub-sub">NotificationService<br>onOrderPlaced()</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--ink-soft);padding:.3rem .5rem">+ any future subscriber...</div>
+      </div>
+    </div>
+  </div>
+
+  <p>All subscribers implement a common <code>OnOrderPlacedSubscriber</code> interface. The publisher holds a <code>List</code> of these. When the event fires, it iterates and calls <code>onOrderPlaced()</code> on each.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem">
+      <div class="uml-class iface">
+        <div class="uml-name"><span class="st">&lt;&lt;interface&gt;&gt;</span>OnOrderPlacedSubscriber</div>
+        <div class="uml-body"><span class="uml-row hi">+ onOrderPlaced(): void</span></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--ink-soft)">implements ↓</div>
+      <div style="display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center">
+        <div class="uml-class"><div class="uml-name">LogisticsService</div><div class="uml-body"><span class="uml-row hi">+ onOrderPlaced()</span></div></div>
+        <div class="uml-class"><div class="uml-name">InventoryService</div><div class="uml-body"><span class="uml-row hi">+ onOrderPlaced()</span></div></div>
+        <div class="uml-class"><div class="uml-name">NotificationService</div><div class="uml-body"><span class="uml-row hi">+ onOrderPlaced()</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="s11" class="section">
+  <div class="section-header"><span class="section-num">11</span><h2>Full Observer Implementation</h2></div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Subscriber interface + concrete subscribers</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Subscriber contract</span>
+<span class="kw">interface</span> <span class="ty">OnOrderPlacedSubscriber</span> {
+    <span class="kw">void</span> <span class="fn">onOrderPlaced</span>();
+}
+
+<span class="kw">class</span> <span class="ty">LogisticsService</span> <span class="kw">implements</span> <span class="ty">OnOrderPlacedSubscriber</span> {
+    <span class="kw">public void</span> <span class="fn">onOrderPlaced</span>() {
+        System.out.<span class="fn">println</span>(<span class="str">"Logistics: updating shipping route..."</span>);
+    }
+}
+
+<span class="kw">class</span> <span class="ty">InventoryService</span> <span class="kw">implements</span> <span class="ty">OnOrderPlacedSubscriber</span> {
+    <span class="kw">public void</span> <span class="fn">onOrderPlaced</span>() {
+        System.out.<span class="fn">println</span>(<span class="str">"Inventory: decrementing stock count..."</span>);
+    }
+}
+
+<span class="kw">class</span> <span class="ty">NotificationService</span> <span class="kw">implements</span> <span class="ty">OnOrderPlacedSubscriber</span> {
+    <span class="kw">public void</span> <span class="fn">onOrderPlaced</span>() {
+        System.out.<span class="fn">println</span>(<span class="str">"Notifications: sending order confirmation email..."</span>);
+    }
+}</pre>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Amazon (Publisher)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Amazon</span> {
+    <span class="kw">private</span> <span class="ty">List</span>&lt;<span class="ty">OnOrderPlacedSubscriber</span>&gt; subs = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+
+    <span class="cmt">// Subscribers register themselves at runtime</span>
+    <span class="kw">void</span> <span class="fn">registerOnOrderPlacedSub</span>(<span class="ty">OnOrderPlacedSubscriber</span> sub) {
+        subs.<span class="fn">add</span>(sub);
+    }
+
+    <span class="cmt">// Subscribers can also remove themselves at runtime</span>
+    <span class="kw">void</span> <span class="fn">unregisterOnOrderPlacedSub</span>(<span class="ty">OnOrderPlacedSubscriber</span> sub) {
+        subs.<span class="fn">remove</span>(sub);
+    }
+
+    <span class="cmt">// Called when a customer places an order</span>
+    <span class="kw">void</span> <span class="fn">onOrderPlacedEvent</span>() {
+        <span class="kw">for</span> (<span class="ty">OnOrderPlacedSubscriber</span> sub : subs) {
+            sub.<span class="fn">onOrderPlaced</span>(); <span class="cmt">// notify each subscriber</span>
+        }
+    }
+}
+
+<span class="cmt">// Usage — register subscribers at startup (or any time at runtime)</span>
+<span class="ty">Amazon</span> amazon = <span class="kw">new</span> <span class="ty">Amazon</span>();
+amazon.<span class="fn">registerOnOrderPlacedSub</span>(<span class="kw">new</span> <span class="ty">LogisticsService</span>());
+amazon.<span class="fn">registerOnOrderPlacedSub</span>(<span class="kw">new</span> <span class="ty">InventoryService</span>());
+amazon.<span class="fn">registerOnOrderPlacedSub</span>(<span class="kw">new</span> <span class="ty">NotificationService</span>());
+
+<span class="cmt">// When an order is placed, all registered subscribers are notified</span>
+amazon.<span class="fn">onOrderPlacedEvent</span>();
+
+<span class="cmt">// Remove a subscriber at runtime — no code change needed in Amazon</span>
+amazon.<span class="fn">unregisterOnOrderPlacedSub</span>(inventoryService);</pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Runtime Flexibility</span>
+    <p>Adding or removing a subscriber no longer requires touching <code>Amazon</code>'s source code. A new microservice just registers itself. Maintenance windows, A/B tests, and feature toggles can all be modelled by registering or unregistering subscribers at runtime.</p>
+  </div>
+</section>
+
+<!-- Recap -->
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Behavioural Patterns</div><p>Deal with how objects communicate and assign responsibilities. Strategy handles "multiple ways to do something". Observer handles "multiple things that should react to an event".</p></div>
+    <div class="recap-card"><div class="recap-card-title">Strategy Pattern</div><p>Encapsulate each variant algorithm in its own class. All variants implement a common interface. The client picks and delegates to the right one, eliminating if-else chains.</p></div>
+    <div class="recap-card"><div class="recap-card-title">SRP + OCP Wins</div><p>Strategy restores SRP (each class has one algorithm) and OCP (add a new mode → add a new class, no edits to existing code).</p></div>
+    <div class="recap-card"><div class="recap-card-title">PathCalculatorFactory</div><p>A factory maps a Mode enum to the correct PathCalculator strategy. Combines the Factory Method and Strategy patterns in one tidy class.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Observer Pattern</div><p>Reverses the dependency: subscribers register themselves with the publisher. The publisher iterates its subscriber list and calls onEvent() on each.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Register / Unregister</div><p>Publisher exposes register() and unregister() methods. Subscribers can be added or removed at runtime — no source changes required.</p></div>
+    <div class="recap-card"><div class="recap-card-title">OnOrderPlacedSubscriber</div><p>Common interface for all Amazon event handlers. LogisticsService, InventoryService, NotificationService all implement it. Amazon only knows the interface.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Real-World Observer</div><p>Java's EventListener API, JavaScript's addEventListener, React's state subscriptions, and message brokers like Kafka all implement the Observer pattern at different scales.</p></div>
+  </div>
+</section>
+
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

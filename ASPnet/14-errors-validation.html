@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 14 — Errors &amp; Validation: Exceptions, Guard Clauses, Result Returns &amp; Input Validation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">🛡️ Day 14 · Errors &amp; Validation</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Exceptions</div>
+    <a href="#s01"><span class="n">01</span>What Are Exceptions?</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>try / catch / finally</a>
+    <a href="#s04"><span class="n">04</span>Throwing Well</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Patterns</div>
+    <a href="#s05"><span class="n">05</span>Guard Clauses</a>
+    <a href="#s06"><span class="n">06</span>Input Validation</a>
+    <a href="#s07"><span class="n">07</span>Result-Style Returns</a>
+    <a href="#s08"><span class="n">08</span>Exceptions vs Results</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Practice</div>
+    <a href="#s09"><span class="n">09</span>Putting It Together</a>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 14 · ASP.NET Core Fundamentals</div>
+  <h1>🛡️ Errors &amp; Validation: Failing Well</h1>
+  <p class="lede">Code that only handles the happy path is a demo, not a product. Real software must decide, for every operation: what counts as invalid input, what to do when something breaks, and how to communicate failure clearly. Today you'll learn exceptions and <code>try/finally</code>, guard clauses that fail fast, input validation, and the increasingly popular <code>Result</code> pattern — plus when to reach for each.</p>
+  <div class="agenda">
+    <span class="chip">💥 Exceptions</span>
+    <span class="chip">🧹 try / finally</span>
+    <span class="chip">🚧 Guard Clauses</span>
+    <span class="chip">✅ Validation</span>
+    <span class="chip">📦 Result&lt;T&gt;</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>💥 What Are Exceptions?</h2>
+
+  <p>An <strong>exception</strong> is C#'s built-in mechanism for signaling that something went wrong in a way the current code can't handle. When you <code>throw</code> one, normal execution stops immediately and the runtime <strong>unwinds the call stack</strong> — walking back up through every calling method — looking for a <code>catch</code> block willing to handle it. If none is found, the program crashes.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🚨 Analogy</span>
+    <p>An exception is a <strong>fire alarm in a building</strong>. When someone pulls it, everyone stops what they're doing immediately — no finishing the meeting, no sending the email. The alarm propagates floor by floor (up the call stack) until it reaches someone trained to respond (a <code>catch</code> block). If it reaches the roof with nobody responding, the building is evacuated (the program crashes). Alarms are for <em>emergencies</em> — you don't pull one because the coffee machine is empty.</p>
+  </div>
+
+  <h3>The exception hierarchy 🌳</h3>
+  <p>All exceptions derive from <code>System.Exception</code>. You'll meet a handful constantly, and knowing them helps you both throw the right one and catch precisely:</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Exception</th><th>Means</th><th>Typically thrown when</th></tr></thead>
+    <tbody>
+      <tr><td><code>ArgumentNullException</code></td><td>A required argument was null.</td><td>A method got <code>null</code> where it needs a value.</td></tr>
+      <tr><td><code>ArgumentException</code></td><td>An argument was invalid.</td><td>Wrong format, out of range, empty string.</td></tr>
+      <tr><td><code>ArgumentOutOfRangeException</code></td><td>An argument was outside its allowed range.</td><td>Negative quantity, index too large.</td></tr>
+      <tr><td><code>InvalidOperationException</code></td><td>The object is in a wrong state for this call.</td><td>Confirming an already-cancelled order.</td></tr>
+      <tr><td><code>KeyNotFoundException</code></td><td>A lookup key doesn't exist.</td><td>Fetching an entity by an id that isn't there.</td></tr>
+      <tr><td><code>NotImplementedException</code></td><td>This code isn't written yet.</td><td>A stubbed method — never ship it live.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Exceptions Carry Rich Information</span>
+    <p>An exception object bundles a <code>Message</code> (human-readable), a <code>StackTrace</code> (exactly where it happened, frame by frame), and an <code>InnerException</code> (the original cause, if this one wraps another). That's why, back on Day 6, we passed the exception <em>object</em> to the logger rather than just its message — all of that context would otherwise be lost.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Exceptions Are for the Exceptional</span>
+    <p>Throwing and catching has a real cost — building the stack trace, unwinding frames — and, more importantly, using exceptions for <em>expected</em> outcomes (like "user typed an invalid email") makes normal flow look like an emergency and clutters logs. .NET 9 made exceptions notably faster, but the design principle stands: exceptions are for genuinely unexpected or unrecoverable situations, not routine branching. Sections 05–08 are all about the alternatives for expected failures.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <div class="mindmap">
+    <div class="mm-core">Errors &amp; Validation<small>failing clearly and safely</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-rose">
+        <h4>💥 Exceptions</h4>
+        <ul>
+          <li>For the unexpected</li>
+          <li>Unwind the stack</li>
+          <li>Carry rich context</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-blue">
+        <h4>🧹 try/catch/finally</h4>
+        <ul>
+          <li>Handle &amp; clean up</li>
+          <li><code>finally</code> always runs</li>
+          <li>Catch specific first</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-accent">
+        <h4>🚧 Guard Clauses</h4>
+        <ul>
+          <li>Fail fast at the top</li>
+          <li>Flat, readable code</li>
+          <li>No pyramid of doom</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>✅ Validation</h4>
+        <ul>
+          <li>Check input early</li>
+          <li>Collect all errors</li>
+          <li>Never trust input</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>📦 Result&lt;T&gt;</h4>
+        <ul>
+          <li>Failure as a value</li>
+          <li>Explicit success/fail</li>
+          <li>For expected errors</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p>The through-line: <strong>expected failures</strong> (bad input, "not found", business-rule violations) are best handled with guard clauses, validation, and <code>Result</code> returns; <strong>unexpected failures</strong> (the database is down, disk full) are what exceptions and <code>try/finally</code> are for. Learning to tell them apart is the real skill.</p>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>🧹 try / catch / finally</h2>
+
+  <p>The <code>try</code> block wraps code that might fail. A <code>catch</code> block handles a specific exception if it occurs. A <code>finally</code> block runs <strong>no matter what</strong> — whether the try succeeded, threw, or you returned early — making it the place for cleanup that must always happen.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · The full shape</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">try</span>
+{
+    <span class="cmt">// code that might throw</span>
+    <span class="kw">await</span> ProcessPaymentAsync(order);
+}
+<span class="kw">catch</span> (<span class="ty">PaymentDeclinedException</span> ex)   <span class="cmt">// most specific first</span>
+{
+    logger.<span class="fn">LogWarning</span>(ex, <span class="str">"Payment declined for order {OrderId}"</span>, order.Id);
+    <span class="kw">throw</span>;                            <span class="cmt">// rethrow, preserving the stack trace</span>
+}
+<span class="kw">catch</span> (<span class="ty">Exception</span> ex)                 <span class="cmt">// broadest last, as a safety net</span>
+{
+    logger.<span class="fn">LogError</span>(ex, <span class="str">"Unexpected error paying for order {OrderId}"</span>, order.Id);
+    <span class="kw">throw</span>;
+}
+<span class="kw">finally</span>
+{
+    <span class="cmt">// ALWAYS runs — success, exception, or early return</span>
+    tempFile?.<span class="fn">Delete</span>();
+}
+</code></pre>
+  </div>
+
+  <p>The order matters: catch blocks are checked <strong>top to bottom</strong>, so a broad <code>catch (Exception)</code> placed first would swallow everything and the specific ones below would never run. Always go <strong>most specific → most general</strong>.</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-blue"><div class="val">try</div><div class="idx">risky code</div></div>
+      <div class="arr-cell highlight"><div class="val">catch (Specific)</div><div class="idx">checked 1st</div></div>
+      <div class="arr-cell"><div class="val">catch (Exception)</div><div class="idx">checked last</div></div>
+      <div class="arr-cell highlight-green"><div class="val">finally</div><div class="idx">always runs</div></div>
+    </div>
+    <div class="arr-caption">Order of handling · specific catches before general · finally executes on every path</div>
+  </div>
+
+  <h3><code>using</code>: finally you don't have to write 🎁</h3>
+  <p>For disposable resources (files, connections, EF contexts), the <code>using</code> statement <em>is</em> a hidden <code>try/finally</code> — it guarantees <code>Dispose()</code> is called even if an exception is thrown. Prefer it over manual cleanup:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · using = automatic finally</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// This...</span>
+<span class="kw">using var</span> stream = <span class="ty">File</span>.<span class="fn">OpenRead</span>(path);
+<span class="fn">Process</span>(stream);
+<span class="cmt">// ...is roughly: try { Process(stream); } finally { stream.Dispose(); }</span>
+<span class="cmt">// The file closes whether Process succeeds or throws.</span>
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Never Swallow Exceptions</span>
+    <p>An empty <code>catch { }</code> — or one that catches and does nothing — is one of the worst habits in programming. It hides bugs, produces silent failures, and turns a five-minute fix into a multi-day mystery. If you catch, you must <em>do</em> something: handle it meaningfully, log it, or rethrow. "Catch, log, and swallow" is only acceptable at the very top of the app (a global handler) where crashing would be worse.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ throw; vs throw ex;</span>
+    <p>To rethrow after logging, write <code>throw;</code> — bare, no variable. Writing <code>throw ex;</code> <strong>resets the stack trace</strong> to the current line, erasing where the error actually originated and crippling your debugging. This tiny distinction trips up countless developers; <code>throw;</code> preserves the original trace, which is what you want.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>🎯 Throwing Well</h2>
+
+  <p>When you do throw, throw <strong>the most specific exception type</strong> that fits, with a <strong>clear message</strong> that says what was wrong and ideally how to fix it. A good exception is a message to a future developer (often you) at 3 a.m.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Specific &amp; descriptive</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// ❌ Vague — what argument? what's wrong with it?</span>
+<span class="kw">throw new</span> <span class="ty">Exception</span>(<span class="str">"error"</span>);
+
+<span class="cmt">// ✅ Specific type, actionable message, names the offending value</span>
+<span class="kw">throw new</span> <span class="ty">ArgumentOutOfRangeException</span>(
+    nameof(quantity), quantity, <span class="str">"Quantity must be greater than zero."</span>);
+</code></pre>
+  </div>
+
+  <h3>Custom exceptions for your domain 🏷️</h3>
+  <p>For errors specific to your business, define your own exception types. They make <code>catch</code> blocks precise and carry domain data:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · A domain exception</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">InsufficientStockException</span>(<span class="kw">int</span> productId, <span class="kw">int</span> requested, <span class="kw">int</span> available)
+    : <span class="ty">Exception</span>($<span class="str">"Product {productId}: requested {requested} but only {available} in stock."</span>)
+{
+    <span class="kw">public int</span> ProductId { <span class="kw">get</span>; } = productId;
+    <span class="kw">public int</span> Requested { <span class="kw">get</span>; } = requested;
+    <span class="kw">public int</span> Available { <span class="kw">get</span>; } = available;
+}
+
+<span class="cmt">// Callers can catch THIS specifically and react (e.g. suggest alternatives):</span>
+<span class="kw">catch</span> (<span class="ty">InsufficientStockException</span> ex)
+{
+    <span class="kw">return</span> <span class="ty">Results</span>.<span class="fn">Conflict</span>($<span class="str">"Only {ex.Available} left."</span>);
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Wrapping with InnerException</span>
+    <p>When you catch a low-level exception and throw a more meaningful one, pass the original as the inner exception: <code>throw new OrderProcessingException("Could not place order", ex);</code>. This preserves the full causal chain — your high-level message on top, the root cause (say, a <code>SqlException</code>) still attached underneath for debugging. Never discard the original.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Don't Catch What You Can't Handle</span>
+    <p>Only catch an exception if you can <em>do something useful</em> about it — recover, add context, translate it, or make a decision. If you can't, let it propagate to code that can (often a global error handler). Catching broadly "just in case" and rethrowing adds noise; catching and swallowing hides bugs. The default should be to let exceptions flow up to a place designed to handle them.</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>🚧 Guard Clauses: Fail Fast</h2>
+
+  <p>A <strong>guard clause</strong> is a validation check at the <em>very top</em> of a method that rejects bad input immediately, before any real work begins. It "guards" the method's body from invalid state. The payoff is twofold: invalid data never reaches your logic, and your code stays <strong>flat and readable</strong> instead of drowning in nested <code>if</code> statements.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🛂 Analogy</span>
+    <p>Guard clauses are the <strong>bouncer at the door</strong>. They check IDs before anyone gets inside — no ticket, no entry, turned away immediately at the threshold. The party inside (your business logic) never has to worry about gatecrashers, because they were stopped at the door. Compare that to letting everyone in and then checking IDs table by table, mid-party — chaos.</p>
+  </div>
+
+  <h3>Guards flatten the "pyramid of doom" 🔺</h3>
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Nested vs guarded</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// ❌ Pyramid of doom — logic buried under nested ifs</span>
+<span class="kw">public void</span> <span class="fn">Register</span>(<span class="ty">User</span> user)
+{
+    <span class="kw">if</span> (user != <span class="kw">null</span>)
+    {
+        <span class="kw">if</span> (!<span class="kw">string</span>.<span class="fn">IsNullOrEmpty</span>(user.Email))
+        {
+            <span class="kw">if</span> (user.Age &gt;= <span class="num">18</span>)
+            {
+                <span class="cmt">// the actual work, indented three levels deep...</span>
+            }
+        }
+    }
+}
+
+<span class="cmt">// ✅ Guard clauses — reject early, then the happy path runs unindented</span>
+<span class="kw">public void</span> <span class="fn">Register</span>(<span class="ty">User</span> user)
+{
+    <span class="ty">ArgumentNullException</span>.<span class="fn">ThrowIfNull</span>(user);
+    <span class="kw">if</span> (<span class="kw">string</span>.<span class="fn">IsNullOrWhiteSpace</span>(user.Email))
+        <span class="kw">throw new</span> <span class="ty">ArgumentException</span>(<span class="str">"Email is required."</span>, nameof(user));
+    <span class="kw">if</span> (user.Age &lt; <span class="num">18</span>)
+        <span class="kw">throw new</span> <span class="ty">ArgumentOutOfRangeException</span>(nameof(user), <span class="str">"Must be 18 or older."</span>);
+
+    <span class="cmt">// the actual work — flat, clear, guaranteed-valid input</span>
+}
+</code></pre>
+  </div>
+
+  <h3>Built-in guard helpers (C# 10+) 🧰</h3>
+  <p>Modern .NET ships concise static guards so you write one line instead of an <code>if</code>+<code>throw</code>:</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Helper</th><th>Throws if…</th></tr></thead>
+    <tbody>
+      <tr><td><code>ArgumentNullException.ThrowIfNull(x)</code></td><td><code>x</code> is null.</td></tr>
+      <tr><td><code>ArgumentException.ThrowIfNullOrEmpty(s)</code></td><td>string is null or empty.</td></tr>
+      <tr><td><code>ArgumentException.ThrowIfNullOrWhiteSpace(s)</code></td><td>string is null, empty, or whitespace.</td></tr>
+      <tr><td><code>ArgumentOutOfRangeException.ThrowIfNegative(n)</code></td><td>number is negative.</td></tr>
+      <tr><td><code>ArgumentOutOfRangeException.ThrowIfZero(n)</code></td><td>number is zero.</td></tr>
+      <tr><td><code>ArgumentOutOfRangeException.ThrowIfGreaterThan(a, b)</code></td><td><code>a &gt; b</code>.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ For Repetitive Guards, Centralize</span>
+    <p>If the same checks appear across many methods, a small static <code>Guard</code> helper (or the popular <code>Ardalis.GuardClauses</code> library — <code>Guard.Against.NullOrEmpty(...)</code>, <code>Guard.Against.NegativeOrZero(...)</code>) keeps things DRY and reads like plain English. The built-in helpers cover most needs; reach for a library when your domain has many custom rules.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Guards Encode Preconditions</span>
+    <p>A guard clause documents a method's <strong>contract</strong>: "I require a non-null user, a valid email, an adult." Anyone reading the top of the method instantly sees what must be true for it to work — and the method body can then assume those things without re-checking. Preconditions at the door; clean logic inside.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>✅ Input Validation</h2>
+
+  <p>Guard clauses protect a single method. <strong>Input validation</strong> is the broader discipline of checking that data entering your system is well-formed and sensible <em>before</em> acting on it. The cardinal rule: <strong>never trust input</strong> — not from users, not from other services, not from files.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🛃 Analogy</span>
+    <p>Validation is <strong>customs at the border</strong>. Every item entering the country is inspected against the rules — right paperwork, nothing prohibited, quantities within limits — before it's allowed in. Once it's cleared customs, everyone downstream can trust it's legitimate. Skip customs and contraband circulates freely through the whole economy (your system).</p>
+  </div>
+
+  <h3>Two styles of validation</h3>
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">🏷️</span><b>Declarative (attributes)</b><p>Annotate a model with <code>[Required]</code>, <code>[EmailAddress]</code>, <code>[Range(1, 100)]</code>, <code>[StringLength(120)]</code> (Day 7!). ASP.NET Core checks them automatically for incoming requests. Great for simple, per-field rules.</p></div>
+    <div class="card"><span class="glyph">🧠</span><b>Imperative (code)</b><p>Write validation logic explicitly — for cross-field rules ("end date after start date"), database-dependent checks ("email not already taken"), or complex business rules attributes can't express.</p></div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Declarative on a request model</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">CreateBookingRequest</span>
+{
+    [<span class="ty">Required</span>, <span class="ty">EmailAddress</span>]
+    <span class="kw">public string</span> GuestEmail { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="str">""</span>;
+
+    [<span class="ty">Range</span>(<span class="num">1</span>, <span class="num">10</span>, ErrorMessage = <span class="str">"Guests must be between 1 and 10."</span>)]
+    <span class="kw">public int</span> Guests { <span class="kw">get</span>; <span class="kw">set</span>; }
+
+    [<span class="ty">Required</span>]
+    <span class="kw">public</span> <span class="ty">DateOnly</span> CheckIn { <span class="kw">get</span>; <span class="kw">set</span>; }
+    [<span class="ty">Required</span>]
+    <span class="kw">public</span> <span class="ty">DateOnly</span> CheckOut { <span class="kw">get</span>; <span class="kw">set</span>; }
+}
+</code></pre>
+  </div>
+
+  <h3>Collect all the errors, don't stop at the first ✋</h3>
+  <p>A guard clause throws on the first problem — fine for programmer errors. But for <em>user</em> input, that's a frustrating experience ("fix email" → resubmit → "fix date" → resubmit…). Good input validation gathers <strong>every</strong> problem and reports them together:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Accumulate validation errors</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public</span> <span class="ty">List</span>&lt;<span class="kw">string</span>&gt; <span class="fn">Validate</span>(<span class="ty">CreateBookingRequest</span> req)
+{
+    <span class="kw">var</span> errors = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="kw">string</span>&gt;();
+
+    <span class="kw">if</span> (<span class="kw">string</span>.<span class="fn">IsNullOrWhiteSpace</span>(req.GuestEmail))
+        errors.<span class="fn">Add</span>(<span class="str">"Guest email is required."</span>);
+    <span class="kw">if</span> (req.Guests &lt; <span class="num">1</span> || req.Guests &gt; <span class="num">10</span>)
+        errors.<span class="fn">Add</span>(<span class="str">"Guests must be between 1 and 10."</span>);
+    <span class="kw">if</span> (req.CheckIn &gt;= req.CheckOut)                     <span class="cmt">// cross-field rule</span>
+        errors.<span class="fn">Add</span>(<span class="str">"Check-out must be after check-in."</span>);
+
+    <span class="kw">return</span> errors;   <span class="cmt">// empty list = valid; caller reports all at once</span>
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Validate at the Boundary</span>
+    <p>Validate input <strong>where it enters your system</strong> — the API endpoint, the message consumer — so invalid data is rejected before it touches your business logic or database. Inner layers can then trust their inputs (a guard clause there is a safety net, not the primary check). Validate early, validate at the edge, and never rely on the client to have validated for you.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Beyond the Basics: FluentValidation</span>
+    <p>For anything complex, the <code>FluentValidation</code> library is the community favorite — it expresses rules as readable, testable code (<code>RuleFor(x =&gt; x.Email).NotEmpty().EmailAddress()</code>) separate from your models, handles cross-field and conditional rules elegantly, and integrates with ASP.NET Core. Attributes for simple cases; FluentValidation when rules grow.</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>📦 Result-Style Returns</h2>
+
+  <p>Here's a shift in thinking. For failures that are <strong>expected</strong> — "email already taken," "order not found," "insufficient stock" — throwing an exception is like pulling the fire alarm because the coffee ran out. These aren't emergencies; they're ordinary outcomes. The <strong>Result pattern</strong> models them as <em>return values</em> instead: a method returns an object that says "here's the value" <em>or</em> "here's why it failed."</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · A minimal Result&lt;T&gt;</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public record</span> <span class="ty">Result</span>&lt;<span class="ty">T</span>&gt;(<span class="kw">bool</span> IsSuccess, <span class="ty">T</span>? Value, <span class="kw">string</span>? Error)
+{
+    <span class="kw">public static</span> <span class="ty">Result</span>&lt;<span class="ty">T</span>&gt; <span class="fn">Success</span>(<span class="ty">T</span> value) =&gt; <span class="kw">new</span>(<span class="kw">true</span>, value, <span class="kw">null</span>);
+    <span class="kw">public static</span> <span class="ty">Result</span>&lt;<span class="ty">T</span>&gt; <span class="fn">Fail</span>(<span class="kw">string</span> error) =&gt; <span class="kw">new</span>(<span class="kw">false</span>, <span class="kw">default</span>, error);
+}
+</code></pre>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Using it — failure is a normal return</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">Result</span>&lt;<span class="ty">User</span>&gt;&gt; <span class="fn">CreateUserAsync</span>(<span class="kw">string</span> email, <span class="ty">CancellationToken</span> ct)
+{
+    <span class="kw">if</span> (<span class="kw">string</span>.<span class="fn">IsNullOrWhiteSpace</span>(email))
+        <span class="kw">return</span> <span class="ty">Result</span>&lt;<span class="ty">User</span>&gt;.<span class="fn">Fail</span>(<span class="str">"Email is required."</span>);
+
+    <span class="kw">if</span> (<span class="kw">await</span> _repo.<span class="fn">EmailExistsAsync</span>(email, ct))
+        <span class="kw">return</span> <span class="ty">Result</span>&lt;<span class="ty">User</span>&gt;.<span class="fn">Fail</span>(<span class="str">"That email is already registered."</span>);
+
+    <span class="kw">var</span> user = <span class="kw">new</span> <span class="ty">User</span>(email);
+    <span class="kw">await</span> _repo.<span class="fn">AddAsync</span>(user, ct);
+    <span class="kw">return</span> <span class="ty">Result</span>&lt;<span class="ty">User</span>&gt;.<span class="fn">Success</span>(user);
+}
+
+<span class="cmt">// The caller MUST look at the result — failure can't be ignored:</span>
+<span class="kw">var</span> result = <span class="kw">await</span> _users.<span class="fn">CreateUserAsync</span>(email, ct);
+<span class="kw">return</span> result.IsSuccess
+    ? <span class="ty">Results</span>.<span class="fn">Ok</span>(result.Value)
+    : <span class="ty">Results</span>.<span class="fn">BadRequest</span>(result.Error);
+</code></pre>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">📬 Analogy</span>
+    <p>An exception is a <strong>fire alarm</strong>; a Result is a <strong>delivery receipt that says "delivered" or "address not found."</strong> The receipt is part of the normal transaction — you <em>expect</em> to read it, and both outcomes are routine. You don't evacuate the building because a parcel couldn't be delivered; you just check the receipt and act accordingly. Result returns make the failure a normal, visible part of the method's signature.</p>
+  </div>
+
+  <h3>Why teams reach for it 💡</h3>
+  <ul>
+    <li>🔎 <strong>Explicit</strong> — the return type <code>Result&lt;User&gt;</code> tells callers, right in the signature, that this can fail. An exception is invisible until it's thrown.</li>
+    <li>🧭 <strong>Forces handling</strong> — you can't use the value without checking <code>IsSuccess</code>, so failures don't get silently ignored.</li>
+    <li>⚡ <strong>No throw/unwind cost</strong> — expected failures don't pay the exception performance tax or pollute logs with stack traces.</li>
+    <li>🧪 <strong>Easy to test</strong> — assert <code>result.IsSuccess</code> and <code>result.Error</code>, no <code>Assert.Throws</code> gymnastics.</li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="tag">✅ Libraries Do This Well</span>
+    <p>Rolling your own <code>Result&lt;T&gt;</code> is fine to learn, but mature libraries like <code>ErrorOr</code>, <code>FluentResults</code>, or a <code>Result</code> type from a framework give you richer errors (codes, categories like Validation/Conflict/NotFound), multiple errors, and helpful methods for chaining. <code>ErrorOr&lt;User&gt;</code> returning <code>Error.Conflict("User.Duplicate", "...")</code> maps cleanly to HTTP status codes at the boundary.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>⚖️ Exceptions vs Results: Choosing</h2>
+
+  <p>This is the judgment call that separates tidy codebases from messy ones. The guiding question: <strong>is this failure expected and part of normal flow, or genuinely exceptional?</strong></p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-green"><div class="val">📦 Result</div><div class="idx">expected failure</div></div>
+      <div class="arr-cell"><div class="val">validation · not found · business rule</div><div class="idx">routine, recoverable</div></div>
+    </div>
+    <div class="arr-row" style="margin-top:14px;">
+      <div class="arr-cell neg"><div class="val">💥 Exception</div><div class="idx">unexpected failure</div></div>
+      <div class="arr-cell"><div class="val">DB down · null bug · disk full · corrupt state</div><div class="idx">rare, often unrecoverable</div></div>
+    </div>
+    <div class="arr-caption">The dividing line · expected &amp; part of the API contract → Result · truly exceptional → exception</div>
+  </div>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Situation</th><th>Reach for</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>User submitted an invalid email</td><td>📦 Result / validation</td><td>Expected; happens constantly; not an emergency.</td></tr>
+      <tr><td>Requested order doesn't exist</td><td>📦 Result (or a NotFound)</td><td>A normal outcome of a lookup.</td></tr>
+      <tr><td>Business rule violated (insufficient stock)</td><td>📦 Result</td><td>Expected domain outcome the caller should handle.</td></tr>
+      <tr><td>A method got <code>null</code> it should never get</td><td>💥 Exception (guard clause)</td><td>A programmer bug — fail fast and loud.</td></tr>
+      <tr><td>Database connection failed</td><td>💥 Exception</td><td>Truly exceptional; can't proceed; needs infra attention.</td></tr>
+      <tr><td>Object is in an impossible state</td><td>💥 Exception</td><td>Indicates a bug; continuing would corrupt data.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 The Pragmatic Middle Ground</span>
+    <p>You don't have to pick one dogmatically. A common, healthy pattern: <strong>guard clauses throw</strong> for programmer errors (null args, impossible state — these are bugs, fail fast), <strong>Result returns</strong> for expected business/validation failures (the caller should handle them gracefully), and <strong>exceptions propagate</strong> for genuine infrastructure failures (handled centrally by a global error handler). Each tool for what it's best at.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Don't Use Exceptions for Control Flow</span>
+    <p>The classic anti-pattern: <code>try { return Parse(x); } catch { return default; }</code> as normal branching, or throwing to break out of loops. It's slow, obscures intent, and makes debugging harder because real errors hide among "expected" ones. If a failure is expected often enough to be part of normal logic, it belongs in a <code>Result</code> or a <code>Try...</code> method (<code>int.TryParse</code>), not an exception.</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>🧩 Putting It Together</h2>
+
+  <p>Here's a service method that layers everything today into a coherent whole — guard clauses for programmer errors, validation for user input, a Result for expected business failures, and exceptions left to propagate for the truly unexpected:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · A well-guarded, well-validated service method</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">Result</span>&lt;<span class="ty">Order</span>&gt;&gt; <span class="fn">PlaceOrderAsync</span>(
+    <span class="ty">PlaceOrderRequest</span> request, <span class="ty">CancellationToken</span> ct = <span class="kw">default</span>)
+{
+    <span class="cmt">// 1️⃣ GUARD CLAUSES — programmer errors → throw, fail fast &amp; loud</span>
+    <span class="ty">ArgumentNullException</span>.<span class="fn">ThrowIfNull</span>(request);
+
+    <span class="cmt">// 2️⃣ INPUT VALIDATION — user errors → collect &amp; return as a Result</span>
+    <span class="kw">var</span> errors = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="kw">string</span>&gt;();
+    <span class="kw">if</span> (request.Items.Count == <span class="num">0</span>)
+        errors.<span class="fn">Add</span>(<span class="str">"Order must contain at least one item."</span>);
+    <span class="kw">if</span> (<span class="kw">string</span>.<span class="fn">IsNullOrWhiteSpace</span>(request.CustomerEmail))
+        errors.<span class="fn">Add</span>(<span class="str">"Customer email is required."</span>);
+    <span class="kw">if</span> (errors.Count &gt; <span class="num">0</span>)
+        <span class="kw">return</span> <span class="ty">Result</span>&lt;<span class="ty">Order</span>&gt;.<span class="fn">Fail</span>(<span class="kw">string</span>.<span class="fn">Join</span>(<span class="str">" "</span>, errors));
+
+    <span class="cmt">// 3️⃣ BUSINESS RULE — expected failure → Result, not exception</span>
+    <span class="kw">foreach</span> (<span class="kw">var</span> item <span class="kw">in</span> request.Items)
+    {
+        <span class="kw">var</span> product = <span class="kw">await</span> _repo.<span class="fn">GetProductAsync</span>(item.ProductId, ct);
+        <span class="kw">if</span> (product <span class="kw">is null</span>)
+            <span class="kw">return</span> <span class="ty">Result</span>&lt;<span class="ty">Order</span>&gt;.<span class="fn">Fail</span>($<span class="str">"Product {item.ProductId} not found."</span>);
+        <span class="kw">if</span> (product.Stock &lt; item.Quantity)
+            <span class="kw">return</span> <span class="ty">Result</span>&lt;<span class="ty">Order</span>&gt;.<span class="fn">Fail</span>(
+                $<span class="str">"Only {product.Stock} of '{product.Name}' available."</span>);
+    }
+
+    <span class="cmt">// 4️⃣ THE WORK — infra failures (DB down) throw &amp; propagate to a</span>
+    <span class="cmt">//     global handler; we don't try/catch what we can't fix here.</span>
+    <span class="kw">var</span> order = <span class="ty">Order</span>.<span class="fn">From</span>(request);
+    <span class="kw">await</span> _repo.<span class="fn">SaveOrderAsync</span>(order, ct);
+
+    _logger.<span class="fn">LogInformation</span>(<span class="str">"Placed order {OrderId}"</span>, order.Id);  <span class="cmt">// Day 6</span>
+    <span class="kw">return</span> <span class="ty">Result</span>&lt;<span class="ty">Order</span>&gt;.<span class="fn">Success</span>(order);
+}
+</code></pre>
+  </div>
+
+  <p>Notice the layered discipline, mapping straight to the endpoint at the boundary:</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="emoji">🚧</span>
+      <div><b>Guard</b><span class="desc">Null request → throw immediately. That's a bug in the calling code, not a user's fault.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">✅</span>
+      <div><b>Validate</b><span class="desc">Collect all input problems, return them together as a failed Result → maps to 400 Bad Request.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="emoji">📦</span>
+      <div><b>Business rules</b><span class="desc">Not found / insufficient stock → failed Result → maps to 404 / 409. Expected, handled gracefully.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">💥</span>
+      <div><b>Let infra throw</b><span class="desc">DB failure bubbles up as an exception to a global handler → 500. We don't mask what we can't fix.</span></div>
+    </div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 One Rule to Remember</span>
+    <p>Match the <em>mechanism</em> to the <em>meaning</em>. Bugs (null args, impossible state) → <strong>throw</strong>, loudly. User/business failures (invalid, not found, rule violated) → <strong>Result</strong>, gracefully. Infrastructure failures → <strong>let them propagate</strong> to one place that logs and returns a clean 500. When the tool matches the meaning, your error handling almost writes itself.</p>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: Add Validation &amp; Error Handling to a Service</h2>
+
+  <p>Today's <strong>Do</strong>: take one service method you built earlier (yesterday's tested <code>OrderService</code> is ideal — you already have tests to keep green) and give it proper validation and error handling. The path:</p>
+
+  <ol>
+    <li>🚧 <strong>Add guard clauses</strong> at the top for programmer errors: <code>ArgumentNullException.ThrowIfNull(request)</code> and any non-nullable arguments that must never be null.</li>
+    <li>✅ <strong>Validate user input</strong>: check the real rules (required fields, ranges, cross-field rules like check-out after check-in). Collect <em>all</em> errors into a list rather than throwing on the first.</li>
+    <li>📦 <strong>Introduce a <code>Result&lt;T&gt;</code></strong> (write the small record from section 07, or add <code>ErrorOr</code>) and return failures as values for expected problems — invalid input, not found, business-rule violations.</li>
+    <li>🎯 <strong>Throw specific exceptions</strong> only where appropriate — a custom domain exception, or a built-in like <code>InvalidOperationException</code> for impossible state.</li>
+    <li>🧹 <strong>Use <code>try/finally</code> or <code>using</code></strong> where you have cleanup that must always run (a resource to dispose, a temp file to delete).</li>
+    <li>💥 <strong>Let infrastructure failures propagate</strong> — don't wrap the whole method in a catch-all that swallows the database being down. If you catch, add context and rethrow with <code>throw;</code>.</li>
+    <li>🔌 <strong>Map at the boundary</strong>: in the endpoint, translate a failed Result to the right HTTP status (400/404/409) and a success to 200/201.</li>
+    <li>🧪 <strong>Update your tests</strong> (Day 13!): add cases asserting a failed <code>Result</code> for each invalid input, and verify no side effects fired on failure (<code>Times.Never</code>). Confirm the happy path still passes.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>From your updated method: (1) Which failures did you model as exceptions and which as Results — and can you justify each choice with "expected vs exceptional"? (2) If a user submits three bad fields, do they see all three errors or just the first? (3) Is there any empty <code>catch { }</code> hiding somewhere? (4) If you rethrow, did you write <code>throw;</code> and not <code>throw ex;</code>? (5) Does a failed validation leave the database untouched?</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>💥 Exceptions</b>Signal unexpected failures; they unwind the call stack and carry Message, StackTrace, and InnerException. For the exceptional, not routine flow.</div>
+    <div class="recap-card"><b>🧹 try/catch/finally</b>Catch specific → general; <code>finally</code> always runs (as does <code>using</code>'s hidden dispose). Never swallow; rethrow with bare <code>throw;</code>.</div>
+    <div class="recap-card"><b>🎯 Throw well</b>Most specific type, actionable message, name the bad value. Wrap low-level errors with an inner exception; catch only what you can handle.</div>
+    <div class="recap-card"><b>🚧 Guard clauses</b>Fail fast at the top of a method; flatten the pyramid of doom. Built-in helpers like <code>ArgumentNullException.ThrowIfNull</code>.</div>
+    <div class="recap-card"><b>✅ Validation</b>Never trust input; validate at the boundary. Declarative attributes for simple rules, code for cross-field/business rules; collect all errors.</div>
+    <div class="recap-card"><b>📦 Result&lt;T&gt;</b>Model expected failures as return values — explicit in the signature, forces handling, no throw cost. Libraries: ErrorOr, FluentResults.</div>
+    <div class="recap-card"><b>⚖️ Choosing</b>Expected &amp; recoverable → Result; programmer bug → throw (guard); infra failure → let it propagate to a global handler.</div>
+    <div class="recap-card"><b>🧩 Layer them</b>Guard for bugs, validate user input, Result for business failures, exceptions for infra. Map results to HTTP status at the edge.</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Tool</th><th>Use for</th><th>Mechanism</th><th>Remember</th></tr></thead>
+    <tbody>
+      <tr><td>💥 Exception</td><td>Unexpected / unrecoverable failures</td><td><code>throw</code> + unwind stack</td><td>Specific type, clear message; not for control flow</td></tr>
+      <tr><td>🧹 <code>finally</code> / <code>using</code></td><td>Cleanup that must always run</td><td>Runs on every path</td><td><code>using</code> is an automatic try/finally</td></tr>
+      <tr><td>🔁 <code>throw;</code></td><td>Rethrowing after logging</td><td>Preserves stack trace</td><td>Never <code>throw ex;</code> — it resets the trace</td></tr>
+      <tr><td>🚧 Guard clause</td><td>Preconditions / programmer errors</td><td>Check + throw at top</td><td><code>ArgumentNullException.ThrowIfNull</code></td></tr>
+      <tr><td>✅ Validation</td><td>Untrusted input at the boundary</td><td>Attributes or code</td><td>Collect all errors; never trust input</td></tr>
+      <tr><td>📦 <code>Result&lt;T&gt;</code></td><td>Expected business failures</td><td>Return value, not throw</td><td>Explicit, testable, no exception cost</td></tr>
+      <tr><td>🏷️ Custom exception</td><td>Domain-specific errors</td><td>Derive from Exception</td><td>Lets callers catch precisely + carry data</td></tr>
+      <tr><td>🔌 Boundary mapping</td><td>Turning failures into responses</td><td>Result → HTTP status</td><td>400 / 404 / 409 for expected, 500 for infra</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is an exception, and what happens when one is thrown?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>An exception is an object that signals an error the current code can't handle. When you <code>throw</code> one, normal execution stops immediately and the runtime "unwinds the call stack" — walking back up through each calling method — looking for a <code>catch</code> block that handles that type of exception. If it finds one, execution continues there; if it reaches the top without a handler, the program crashes. The exception object carries a message, a stack trace showing where it happened, and optionally an inner exception (the underlying cause).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What does the finally block do, and when does it run?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>finally</code> contains cleanup code that runs <em>no matter what</em> happens in the <code>try</code> — whether it completed normally, threw an exception, or returned early. It's where you release resources that must always be freed: close a file, dispose a connection, delete a temp file. Because it always runs, it guarantees cleanup even on the error path. In practice, the <code>using</code> statement is a built-in <code>try/finally</code> that disposes a resource automatically, so you often don't write <code>finally</code> by hand.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">Why should catch blocks go from specific to general?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Because C# checks catch blocks top to bottom and uses the first one that matches. If you put the broad <code>catch (Exception)</code> first, it matches everything, so any more specific catch blocks below it can never run — the compiler will even warn you. Ordering most-specific first (e.g. <code>catch (PaymentDeclinedException)</code> before <code>catch (Exception)</code>) lets you handle known errors precisely and keep the general one as a last-resort safety net.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What is a guard clause?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A guard clause is a check at the very top of a method that rejects invalid input immediately — before any real work runs. For example, <code>ArgumentNullException.ThrowIfNull(user)</code> or "if quantity is negative, throw." It "guards" the method body from bad data. The benefits: invalid input is stopped early ("fail fast"), and the code stays flat and readable instead of wrapping the logic in deeply nested <code>if</code> statements.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What's the difference between throw; and throw ex;?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>throw;</code> (bare, in a catch block) rethrows the current exception while <strong>preserving its original stack trace</strong> — so you can still see where the error actually started. <code>throw ex;</code> rethrows but <strong>resets the stack trace</strong> to that line, erasing the original location and making the bug much harder to trace. Almost always you want <code>throw;</code>. It's a small syntax difference with a big debugging impact.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">Why is an empty catch block dangerous?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>An empty <code>catch { }</code> "swallows" the exception — the error happens but nothing records it or reacts, so the program silently continues in a possibly broken state. Bugs become invisible: data quietly goes wrong, and there's no log, no crash, no clue. A five-minute fix turns into days of mystery debugging. If you catch an exception, you must do something meaningful with it — handle it, log it, or rethrow. Swallowing is only acceptable in rare, deliberate cases (like a top-level handler), never as a routine habit.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What is input validation and why does it matter?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Input validation is checking that data entering your system is well-formed and sensible before you act on it — required fields present, values in range, formats correct. It matters because you can never trust input: users make mistakes, and malicious input can break or exploit your system. Validating at the boundary (like the API endpoint) rejects bad data before it reaches your business logic or database, keeping everything downstream safe and simple. The rule of thumb: never trust input, validate early.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">Give an example of when to throw an exception versus return an error value.</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Throw an exception for something <em>unexpected</em> — a method received <code>null</code> where it should never be null (a bug), or the database is unreachable. Return an error value (like a Result) for something <em>expected</em> — a user submitted an invalid email, or an order lookup found nothing. The test: "Is this a normal outcome I planned for, or an emergency?" Invalid user input happens all day long, so it's normal → return it; a corrupted state or downed dependency is exceptional → throw.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">What is the Result pattern and what advantages does it have over exceptions for expected failures?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>The Result pattern models failure as a <em>return value</em> instead of a thrown exception: a method returns an object (e.g. <code>Result&lt;User&gt;</code>) that says either "success, here's the value" or "failure, here's why." Advantages for expected failures: it's <strong>explicit</strong> — the return type tells callers this can fail, whereas an exception is invisible until thrown; it <strong>forces handling</strong> — you must check <code>IsSuccess</code> before using the value; it <strong>avoids the exception cost</strong> — no stack unwinding or log noise for routine outcomes; and it's <strong>easier to test</strong> — assert on the returned object rather than catching. It shines for validation errors, "not found," and business-rule violations that happen as part of normal flow.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">How do you decide between the Result pattern and exceptions in a real codebase?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>The guiding question is "expected or exceptional?" Expected, recoverable failures that are part of the operation's normal contract — validation failures, not-found, business rules like insufficient stock — are best as <strong>Results</strong>: the caller should handle them gracefully and they happen routinely. Genuinely exceptional situations — a null argument that indicates a bug, an impossible object state, a failed database connection, out of memory — are best as <strong>exceptions</strong>: rare, often unrecoverable, and something you want to fail loudly and handle centrally. A common healthy split: guard clauses throw for programmer errors, Results carry expected business failures, and infrastructure exceptions propagate to a global handler. Consistency within the team matters as much as the exact rule.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">Why shouldn't you use exceptions for control flow?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Using exceptions for normal branching — like <code>try { return Parse(x); } catch { return 0; }</code> as routine logic, or throwing to exit a loop — has several problems. Performance: throwing and unwinding the stack is far costlier than a simple check (even though .NET 9 improved this). Clarity: it hides intent — a reader expects exceptions to mean "something went wrong," so using them for expected cases is misleading. Debugging: real errors get buried among "expected" ones, and exception-break debugging becomes noisy. Correctness: it's easy to catch too broadly and mask a genuine bug. When a failure is expected often enough to be part of the logic, use a check, a <code>Try...</code> method (<code>int.TryParse</code>), or a Result — reserve exceptions for the genuinely exceptional.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">When validating user input, why collect all errors instead of failing on the first?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Because failing on the first error creates a miserable, slow feedback loop for the user: they fix the email, resubmit, learn the date is wrong, resubmit, learn the quantity is invalid, and so on — one round trip per mistake. Collecting <em>all</em> validation errors and returning them together lets the user fix everything at once. This is exactly why input validation differs from guard clauses: a guard clause throws on the first violation (fine for detecting a programmer bug, where one problem is enough), but user-facing input validation should accumulate errors into a collection and report the complete set. Frameworks like ASP.NET Core model binding and FluentValidation do this accumulation for you.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">What's the difference between declarative and imperative validation, and when do you use each?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><strong>Declarative</strong> validation uses attributes on a model — <code>[Required]</code>, <code>[Range]</code>, <code>[EmailAddress]</code>, <code>[StringLength]</code> — and the framework checks them automatically. It's concise and great for simple, per-field rules. <strong>Imperative</strong> validation is explicit code, needed for anything attributes can't express: cross-field rules ("check-out after check-in"), rules requiring a database or service call ("is this email already taken"), or complex conditional logic. Use declarative for the straightforward field constraints and imperative (often via FluentValidation, which keeps it clean and testable) for the rest. They coexist happily — attributes for the basics, code for the business rules.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">How do you preserve the original cause when translating a low-level exception into a domain one?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Pass the caught exception as the <em>inner exception</em> when you throw the new one: <code>catch (SqlException ex) { throw new OrderProcessingException("Failed to place order", ex); }</code>. This keeps the full causal chain — your meaningful high-level message on top, with the original <code>SqlException</code> (and its stack trace and message) attached underneath via <code>InnerException</code>. Logs and debuggers can then show both: <em>what</em> failed at the business level and <em>why</em> at the technical level. Never discard the original by omitting it — you'd lose the actual root cause and be left debugging blind.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">Where should validation happen in a layered application, and why?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Validate untrusted input at the <strong>boundary</strong> where it enters the system — the API endpoint or message consumer — so bad data is rejected before it reaches business logic or the database. That keeps inner layers simpler because they can largely trust their inputs. Guard clauses deeper in the code act as a <em>secondary</em> safety net (defensive checks against programmer errors), not the primary validation. There's nuance: some rules can only be checked deeper (e.g. against database state), and domain models can enforce their own invariants. But the principle is validate-early-at-the-edge for untrusted external input, and don't rely on the client having validated. Defense in depth: boundary validation as the main gate, guards inside as backup.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">What are the built-in guard helper methods in modern .NET, and why prefer them?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Modern .NET (C# 10+/.NET 6+) added concise static guards: <code>ArgumentNullException.ThrowIfNull(x)</code>, <code>ArgumentException.ThrowIfNullOrEmpty(s)</code> / <code>ThrowIfNullOrWhiteSpace(s)</code>, and <code>ArgumentOutOfRangeException.ThrowIfNegative/ThrowIfZero/ThrowIfGreaterThan(...)</code>. Prefer them because they replace a two-line <code>if (x is null) throw new ArgumentNullException(nameof(x))</code> with one readable line, they automatically capture the argument name via caller-argument-expression (so the exception names the right parameter), and they throw the correct, specific exception type with a good message. For repeated domain-specific checks, a small custom <code>Guard</code> class or the <code>Ardalis.GuardClauses</code> library (<code>Guard.Against.NullOrEmpty</code>) keeps things DRY and expressive.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Design an error-handling strategy for a layered ASP.NET Core application.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Layered by concern. <strong>At the boundary</strong> (controllers/endpoints): validate incoming DTOs (model validation + FluentValidation), returning 400 with all errors for invalid input. <strong>In the domain/service layer</strong>: use guard clauses to fail fast on programmer errors (invariant violations, nulls that shouldn't happen), and return a <code>Result</code>/<code>ErrorOr</code> for expected business failures (not found, conflict, rule violations) that carry an error category. <strong>At the edge again</strong>: map those result categories to HTTP status codes (Validation→400, NotFound→404, Conflict→409). <strong>Globally</strong>: a centralized exception handler (middleware or <code>IExceptionHandler</code>) catches anything unhandled, logs it with full context (Day 6 structured logging + correlation id), and returns a clean <code>ProblemDetails</code> 500 without leaking internals. The principles: expected failures are explicit values handled locally; unexpected ones propagate to <em>one</em> place; users get actionable messages; logs get full detail; and internal errors never leak to clients. Consistency (one Result type, one error shape, one handler) is what makes it maintainable.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">What are the real costs of exceptions, and how has .NET 9 changed the calculus?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Costs: throwing captures a stack trace and unwinds frames, which is expensive relative to a branch — historically enough that exceptions-as-control-flow in a hot loop could dominate runtime. There are also indirect costs: log noise (every "expected" failure produces a stack trace), obscured intent, and harder debugging. .NET 9 significantly improved exception <em>throughput</em> — throwing is now much faster and lighter — which weakens the pure-performance argument against them. But the design argument is unchanged: even cheap exceptions are still the wrong <em>semantic</em> tool for expected outcomes, because the Result pattern's explicitness, forced handling, and readability aren't about speed. So post-.NET 9 I'd say: don't reach for Results <em>solely</em> for performance anymore, but do reach for them for clarity and maintainability of expected-failure flows; reserve exceptions for the genuinely exceptional regardless of how fast they've become.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">How do you handle validation and errors consistently across an API so clients get a uniform experience?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Standardize on a single error contract — <code>ProblemDetails</code> (RFC 9457) is the built-in, well-supported choice: a consistent JSON shape with type, title, status, detail, and a place for validation errors. Wire it up so every failure path produces it: ASP.NET Core already returns <code>ValidationProblemDetails</code> for model-validation failures; map your <code>Result</code>/<code>ErrorOr</code> error categories to the matching status + ProblemDetails at the boundary; and register a global exception handler that converts unhandled exceptions into a ProblemDetails 500 (with a trace/correlation id the client can quote to support, but no internal details or stack traces leaked). The result: whether a request fails validation, hits a business rule, or trips an unexpected error, the client always parses the same structure and knows where to find the message and the correlation id. Document it, and consider a shared error-code enum so clients can branch on stable codes rather than message strings.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">A method needs to do several things that must all succeed or all roll back, with cleanup. How do you structure the error handling?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Combine transactional atomicity with guaranteed cleanup. For the all-or-nothing part, use the mechanism appropriate to the resource — a database transaction (EF's <code>BeginTransactionAsync</code>, Day 9) so either everything commits or everything rolls back; wrap the work in <code>try</code>, commit at the end, and roll back in the <code>catch</code> before rethrowing. For cleanup that must always run regardless of outcome (releasing a lock, deleting a temp file, disposing a non-DI resource), use <code>finally</code> or, better, <code>using</code>/<code>await using</code> so disposal is automatic even on the exception path. Order matters: acquire resources, do the transactional work, commit; <code>finally</code> handles disposal; <code>catch</code> handles rollback and adds context. Also make the operation idempotent where possible so a retry after a partial failure is safe. And distinguish expected failures (return a Result, no rollback needed because nothing was committed yet) from exceptions (roll back, then propagate). The shape is: guard → validate → begin transaction → try{ work; commit } catch{ rollback; throw } finally{ dispose }.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">What's the argument against the Result pattern, and when would you NOT use it?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The honest downsides: it adds <strong>boilerplate</strong> — every method signature and call site has to thread the Result type and check it, versus letting an exception bubble; it can <strong>propagate verbosely</strong> up through many layers (mitigated by railway-oriented helpers like <code>Bind</code>/<code>Map</code>, which add their own learning curve); it doesn't compose as naturally with language features that assume exceptions; and if applied dogmatically to <em>everything</em> it obscures the genuinely exceptional cases among routine ones. When not to use it: for truly exceptional, unrecoverable failures (use exceptions — you don't want to Result-wrap "out of memory"); in code paths where the failure genuinely can't be handled locally and should just crash or hit the global handler; and where the team isn't bought in (inconsistent use of Result and exceptions is worse than consistent use of either). It's a tool for expected failures in your core logic, not a religion — mixing it sensibly with exceptions is the mature position.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">How do you avoid leaking sensitive information through error messages?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Separate <em>internal</em> error detail from <em>external</em> error responses. Internally, log everything — full exception, stack trace, parameters (minus secrets), correlation id — so you can diagnose. Externally, return a generic, safe message for unexpected errors ("An error occurred; reference id X") and never echo stack traces, SQL, connection strings, file paths, or internal type names to clients — those hand attackers a map of your system. For <em>expected</em> failures, return specific but non-sensitive messages ("Email already registered" is fine; "SQL constraint UQ_Users_Email violated on server DB01" is not). Watch subtle leaks: don't let "email not found" vs "wrong password" reveal which accounts exist (use a uniform "invalid credentials"); be careful that validation messages don't disclose internal rules that aid enumeration. In ASP.NET Core, ensure developer exception pages are dev-only and production returns ProblemDetails without the exception detail. The rule: detailed inward, minimal and generic outward, with a correlation id bridging the two.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">Defensive programming vs fail-fast — where's the balance?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>They sound opposed but target different things. <strong>Fail-fast</strong> says: when you detect an invalid state or a broken precondition (a bug), stop immediately and loudly — don't limp along corrupting data. Guard clauses that throw embody this. <strong>Defensive programming</strong> says: anticipate that inputs and collaborators may misbehave and handle it gracefully — validate external input, check for null returns, degrade gracefully when a dependency is down. The balance comes from <em>who</em> the failure is from. For <strong>your own code's bugs</strong> (a precondition that should always hold) → fail fast; masking it hides the bug and makes it worse. For <strong>external/untrusted boundaries</strong> (user input, network, third-party data) → be defensive; those <em>will</em> misbehave and that's expected, so validate and handle. The anti-patterns are at both extremes: over-defensive code that swallows its own bugs and null-checks everything internally (noise that hides real problems), and under-defensive code that trusts external input (security holes, crashes). Rule of thumb: trust your own invariants and fail fast if they break; distrust the outside world and validate it.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">How do you make error handling testable, and what would you assert?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Design for it (Day 13 pays off here). Prefer Results for expected failures precisely because they're trivial to assert — a test checks <code>result.IsSuccess</code> is false and the error/code matches, no <code>Assert.Throws</code> needed and no risk of catching the wrong exception. For paths that legitimately throw, use <code>Assert.ThrowsAsync&lt;TException&gt;</code> and assert on the exception's type <em>and</em> message/properties (a custom domain exception makes this precise). Crucially, also assert the <strong>side-effect discipline</strong>: on a validation or business-rule failure, verify with mocks (<code>Times.Never</code>) that nothing was saved, no email sent, no downstream call made — proving the guard actually protected the system, not just returned an error. Test each failure branch explicitly (each invalid field, each business rule, the not-found case), not only the happy path, since the error paths are where bugs hide. Inject failures via mocks (<code>ThrowsAsync</code>) to test that infrastructure errors propagate or are wrapped correctly. And test the boundary mapping — that a failed Result becomes the right HTTP status. The meta-point: code that's hard to test for errors usually has tangled error handling; making it testable (explicit Results, injected dependencies, specific exceptions) improves the design itself.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Nail Q1–Q8 first — exceptions, <code>finally</code>, guard clauses, and especially "throw vs return an error" plus <code>throw;</code> vs <code>throw ex;</code> are guaranteed openers. Then own Q9 and Q10 together: explaining the Result pattern <em>and</em> the "expected vs exceptional" decision framework is what shows you can architect error handling, not just write try/catch. Save the senior set (Q17 strategy, Q19 ProblemDetails, Q22 info leakage) for after the hands-on — once you've layered guards, validation, and Results into one real method and mapped them to status codes, the whole-system view stops being abstract.</p>
+  </div>
+</section>
+
+<footer>Day 14 of the .NET series · Errors &amp; Validation: Exceptions, Guard Clauses, Result Returns &amp; Input Validation · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

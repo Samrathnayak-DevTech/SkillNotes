@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ASP.NET Core · Samrath's Coding Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --ink-mute:    #8a8478;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: radial-gradient(ellipse 120% 80% at 15% 20%, #f5ede8 0%, transparent 60%),
+              radial-gradient(ellipse 80% 60% at 90% 80%, #e8e4f2 0%, transparent 55%),
+              var(--bg);
+  color: var(--ink);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 18px; line-height: 1.7; min-height: 100vh;
+}
+#progress-bar {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+  background: linear-gradient(90deg, var(--green), var(--accent));
+  z-index: 1000; transition: width .1s linear; border-radius: 0 2px 2px 0;
+}
+.shell { max-width: 1080px; margin: 0 auto; padding: 4rem 2rem 6rem; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 2rem; border-bottom: 1px solid var(--line); margin-bottom: 2.5rem;
+}
+.brand {
+  font-family: "JetBrains Mono", monospace; font-size: .72rem;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--green);
+}
+.brand strong {
+  display: block; font-family: "Fraunces", serif; font-weight: 600;
+  letter-spacing: 0; font-size: 1rem; color: var(--ink); margin-top: .15rem;
+}
+.topnav-links { display: flex; gap: .5rem; }
+.topnav-links a {
+  font-family: "JetBrains Mono", monospace; font-size: .66rem;
+  letter-spacing: .12em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: .35rem;
+  background: var(--bg); border: 1px solid var(--line); color: var(--ink-soft);
+  padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+  transition: all .18s ease;
+}
+.topnav-links a:hover { color: var(--green); border-color: var(--green); background: var(--green-soft); }
+
+.crumb {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .7rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-mute); margin-bottom: 1.5rem;
+}
+.crumb a { color: var(--ink-soft); text-decoration: none; }
+.crumb a:hover { color: var(--green); }
+.crumb span { color: var(--green); }
+
+.hero { padding: 1rem 0 3.5rem; border-bottom: 1px solid var(--line); margin-bottom: 3.5rem; }
+.hero-eyebrow {
+  font-family: "JetBrains Mono", monospace; font-size: .72rem;
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--green); margin-bottom: 1rem;
+}
+.hero h1 {
+  font-family: "Fraunces", serif; font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 600; line-height: 1.1; color: var(--ink); margin-bottom: 1.1rem;
+}
+.hero-lede { font-size: 1.1rem; color: var(--ink-soft); max-width: 620px; margin-bottom: 1.6rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.chip {
+  font-family: "JetBrains Mono", monospace; font-size: .7rem;
+  letter-spacing: .04em; padding: .3rem .75rem; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft);
+}
+
+.section-header {
+  display: flex; align-items: baseline; gap: 1rem; margin-bottom: 2rem;
+  padding-bottom: .75rem; border-bottom: 1px solid var(--line);
+}
+.section-num {
+  font-family: "JetBrains Mono", monospace; font-size: .72rem;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--green);
+  background: var(--green-soft); padding: .2rem .55rem; border-radius: 4px;
+}
+.section-header h2 {
+  font-family: "Fraunces", serif; font-size: 1.9rem; font-weight: 600;
+  color: var(--ink); line-height: 1.2;
+}
+
+.notes-list { display: flex; flex-direction: column; gap: .9rem; }
+.note-row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.1rem 1.4rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.note-row:hover {
+  transform: translateX(4px);
+  border-color: var(--green);
+  box-shadow: 0 10px 28px -16px rgba(45,42,38,.22);
+}
+.note-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .75rem; letter-spacing: .08em;
+  color: var(--green); background: var(--green-soft);
+  text-align: center; padding: .4rem 0; border-radius: 6px;
+}
+.note-body h3 {
+  font-family: "Fraunces", serif; font-size: 1.2rem; font-weight: 600;
+  color: var(--ink); margin-bottom: .15rem; line-height: 1.3;
+}
+.note-body p { font-size: .92rem; color: var(--ink-soft); margin: 0; }
+.note-go {
+  font-family: "JetBrains Mono", monospace; font-size: 1.05rem;
+  color: var(--green); transition: transform .2s ease;
+}
+.note-row:hover .note-go { transform: translateX(3px); }
+
+.note-group { margin-bottom: 3rem; }
+.note-group-label {
+  font-family: "JetBrains Mono", monospace; font-size: .66rem;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-mute); margin-bottom: .9rem; padding-left: .25rem;
+}
+
+.foot {
+  margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between;
+  font-family: "JetBrains Mono", monospace; font-size: .68rem;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mute);
+}
+
+@media (max-width: 640px) {
+  .shell { padding: 2rem 1.25rem 4rem; }
+  .topbar { flex-direction: column; gap: 1rem; align-items: flex-start; }
+  .note-row { grid-template-columns: 50px 1fr auto; gap: .8rem; padding: .9rem 1rem; }
+  .note-body h3 { font-size: 1.05rem; }
+  .foot { flex-direction: column; gap: .75rem; }
+}
+
+.note-row { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .35s ease, border-color .25s ease, box-shadow .25s ease, background .2s ease; }
+.note-row.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="shell">
+
+  <header class="topbar">
+    <div class="brand">
+      Samrath's Coding Notes · .NET Developer
+      <strong>Series 03 · ASP.NET Core</strong>
+    </div>
+    <nav class="topnav-links">
+      <a href="../index.html"><span>⌂</span>Home</a>
+      <a href="../dotnet.html"><span>←</span>.NET</a>
+    </nav>
+  </header>
+
+  <div class="crumb">
+    <a href="../index.html">Home</a> &nbsp;›&nbsp;
+    <a href="../dotnet.html">.NET Developer</a> &nbsp;›&nbsp;
+    <span>ASP.NET Core</span>
+  </div>
+
+  <section class="hero">
+    <p class="hero-eyebrow">.NET · Series 03 · ASP.NET Core</p>
+    <h1>ASP.NET Core —<br>hosts, DI &amp; EF Core.</h1>
+    <p class="hero-lede">
+      Fifteen days of ASP.NET Core — the .NET host, dependency injection,
+      configuration and logging, EF Core for data, async and background work,
+      testing, and shipping a real project end-to-end.
+    </p>
+    <div class="chips">
+      <span class="chip">15 Notes</span>
+      <span class="chip">.NET Host</span>
+      <span class="chip">DI</span>
+      <span class="chip">Configuration</span>
+      <span class="chip">Logging</span>
+      <span class="chip">EF Core</span>
+      <span class="chip">Async</span>
+      <span class="chip">Testing</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <span class="section-num">Notes</span>
+      <h2>All chapters in this track</h2>
+    </div>
+
+    <!-- PLATFORM -->
+    <div class="note-group">
+      <div class="note-group-label">Part 01 · Platform &amp; DI</div>
+      <div class="notes-list">
+        <a class="note-row" href="01-dotnet-ecosystem-cli.html">
+          <div class="note-num">01</div>
+          <div class="note-body">
+            <h3>.NET — Ecosystem &amp; the CLI</h3>
+            <p>The runtime, SDKs and the dotnet CLI commands you'll actually use every day.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="02-dotnet-host-startup.html">
+          <div class="note-num">02</div>
+          <div class="note-body">
+            <h3>.NET — Host &amp; App Startup</h3>
+            <p>WebApplicationBuilder, the request pipeline, and how a modern .NET app boots.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="03-dotnet-di.html">
+          <div class="note-num">03</div>
+          <div class="note-body">
+            <h3>.NET — Dependency Injection</h3>
+            <p>The built-in container, service registration and lifetimes at the platform level.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- CONFIGURATION & LOGGING -->
+    <div class="note-group">
+      <div class="note-group-label">Part 02 · Configuration &amp; Logging</div>
+      <div class="notes-list">
+        <a class="note-row" href="04-aspnetcore-configuration.html">
+          <div class="note-num">04</div>
+          <div class="note-body">
+            <h3>Configuration in ASP.NET Core</h3>
+            <p>appsettings, environment variables and the layered configuration providers model.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="05-aspnetcore-options-pattern.html">
+          <div class="note-num">05</div>
+          <div class="note-body">
+            <h3>The Options Pattern</h3>
+            <p>IOptions, IOptionsSnapshot and IOptionsMonitor — strongly-typed configuration done right.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="06-logging.html">
+          <div class="note-num">06</div>
+          <div class="note-body">
+            <h3>Logging in .NET</h3>
+            <p>ILogger&lt;T&gt;, log levels, structured logging and wiring up Serilog.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- EF CORE -->
+    <div class="note-group">
+      <div class="note-group-label">Part 03 · EF Core</div>
+      <div class="notes-list">
+        <a class="note-row" href="07-efcore-setup.html">
+          <div class="note-num">07</div>
+          <div class="note-body">
+            <h3>EF Core Setup — DbContext &amp; Entity Configuration</h3>
+            <p>DbContext lifetime, SQL Server provider setup, and fluent entity configuration.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="08-efcore-querying.html">
+          <div class="note-num">08</div>
+          <div class="note-body">
+            <h3>EF Core Querying — Tracking, Projections, Async &amp; Include</h3>
+            <p>Change-tracking vs no-tracking, projections, Include chains and async query APIs.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="09-efcore-writes-migrations.html">
+          <div class="note-num">09</div>
+          <div class="note-body">
+            <h3>EF Core Writes &amp; Migrations</h3>
+            <p>SaveChanges semantics, relationships, migrations and seeding.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- ASYNC & INTEGRATION -->
+    <div class="note-group">
+      <div class="note-group-label">Part 04 · Async &amp; Integration</div>
+      <div class="notes-list">
+        <a class="note-row" href="10-async-await.html">
+          <div class="note-num">10</div>
+          <div class="note-body">
+            <h3>Async / Await Deep-Dive</h3>
+            <p>Task, cancellation tokens and the async pitfalls that catch every team eventually.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="11-httpclient-external-calls.html">
+          <div class="note-num">11</div>
+          <div class="note-body">
+            <h3>HttpClient &amp; External Calls</h3>
+            <p>IHttpClientFactory, typed clients and System.Text.Json for talking to other services.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="12-background-services.html">
+          <div class="note-num">12</div>
+          <div class="note-body">
+            <h3>Background Services</h3>
+            <p>IHostedService, BackgroundService, scopes and doing periodic work correctly.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- QUALITY -->
+    <div class="note-group">
+      <div class="note-group-label">Part 05 · Quality &amp; Delivery</div>
+      <div class="notes-list">
+        <a class="note-row" href="13-unit-testing.html">
+          <div class="note-num">13</div>
+          <div class="note-body">
+            <h3>Unit Testing — xUnit, Moq &amp; Fakes</h3>
+            <p>Testing DI services, arranging fakes, and keeping the tests fast and honest.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="14-errors-validation.html">
+          <div class="note-num">14</div>
+          <div class="note-body">
+            <h3>Errors &amp; Validation</h3>
+            <p>Exceptions, guard clauses, result returns and validating input at the edge.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="15-consolidation-project.html">
+          <div class="note-num">15</div>
+          <div class="note-body">
+            <h3>Consolidation Project</h3>
+            <p>DI + Config + Options + Logging + EF Core — one project that ties it all together.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+  </section>
+
+  <footer class="foot">
+    <span>© Samrath · Coding Notes</span>
+    <span>ASP.NET Core · 15 Notes</span>
+  </footer>
+</div>
+
+<script>
+  const bar = document.getElementById('progress-bar');
+  const updateBar = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    bar.style.width = max > 0 ? (h.scrollTop / max * 100) + '%' : '0%';
+  };
+  document.addEventListener('scroll', updateBar, { passive: true });
+  updateBar();
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: .08 });
+  document.querySelectorAll('.note-row').forEach(c => io.observe(c));
+</script>
+</body>
+</html>

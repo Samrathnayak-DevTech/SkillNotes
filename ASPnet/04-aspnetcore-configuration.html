@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 4 — Configuration in ASP.NET Core</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; color:var(--ink);
+  background:
+    radial-gradient(1200px 600px at 12% -8%, #ece4f3aa, transparent 60%),
+    radial-gradient(1000px 700px at 100% 0%, #f0e2d088, transparent 55%),
+    var(--bg);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+}
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed; top:0; left:0; height:4px; width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose));
+  z-index:1000; transition:width .1s linear;
+}
+/* ---------- layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto;}
+/* ---------- sidebar ---------- */
+#sidebar{
+  position:sticky; top:0; align-self:flex-start;
+  width:var(--sidebar-w); min-width:var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:26px 16px 60px 22px;
+  border-right:1px solid var(--line); background:#fbf9f4cc; backdrop-filter:blur(4px);
+}
+#sidebar .brand{font-family:"Fraunces",serif; font-weight:600; font-size:1.15rem; margin:0 0 4px;}
+#sidebar .brand .em{color:var(--accent);}
+#sidebar .subtitle{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-soft); margin-bottom:20px;}
+.nav-group{margin-bottom:16px;}
+.nav-group h4{
+  font-family:"JetBrains Mono",monospace; font-size:.6rem; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--accent); margin:0 0 6px; padding-left:10px;
+}
+#sidebar a{
+  display:block; text-decoration:none; color:var(--ink-soft);
+  font-size:.86rem; line-height:1.35; padding:6px 10px; border-radius:7px;
+  border-left:2px solid transparent; transition:background .15s,color .15s,border-color .15s;
+}
+#sidebar a .num{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:var(--accent); margin-right:7px;}
+#sidebar a:hover{background:var(--bg-soft); color:var(--ink);}
+#sidebar a.active{background:var(--accent-soft); color:var(--ink); border-left-color:var(--accent); font-weight:500;}
+/* ---------- main ---------- */
+main{flex:1; min-width:0; padding:0 clamp(20px,5vw,72px) 120px;}
+.section{max-width:820px; margin:0 auto; padding-top:26px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section[id]{scroll-margin-top:24px;}
+/* ---------- hero ---------- */
+.hero{max-width:820px; margin:0 auto; padding:64px 0 20px;}
+.hero .eyebrow{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:14px;}
+.hero h1{font-family:"Fraunces",serif; font-weight:600; line-height:1.05;
+  font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 16px;}
+.hero .lede{font-size:1.18rem; color:var(--ink-soft); margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.7rem; letter-spacing:.04em;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);
+  padding:6px 12px; border-radius:999px;}
+/* ---------- section headers ---------- */
+h2{font-family:"Fraunces",serif; font-weight:600; font-size:1.85rem; line-height:1.15;
+  margin:8px 0 18px; display:flex; align-items:center; gap:14px;}
+h2 .badge{font-family:"JetBrains Mono",monospace; font-size:.85rem; font-weight:700;
+  color:#fff; background:var(--accent); padding:4px 10px; border-radius:8px; flex:none;}
+h3{font-family:"Fraunces",serif; font-weight:600; font-size:1.28rem; margin:30px 0 10px;}
+p{margin:0 0 16px;}
+a.inline{color:var(--accent);}
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace; font-size:.82em;
+  color:var(--accent); background:var(--bg-soft);
+  border:1px solid var(--line); border-radius:4px; padding:1px 6px;
+}
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft); background:var(--bg-soft);
+  border-radius:0 10px 10px 0; padding:14px 18px; margin:20px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.64rem; letter-spacing:.14em;
+  text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px;}
+.callout p{margin:0;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; overflow:hidden; margin:20px 0;
+  box-shadow:0 8px 22px -14px rgba(0,0,0,.5);}
+.code-head{display:flex; align-items:center; justify-content:space-between;
+  padding:8px 14px; background:#232229; border-bottom:1px solid #3a3944;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.14em;
+  text-transform:uppercase; color:#9d9aa8;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; cursor:pointer;
+  background:#34333d; color:#c9c6d4; border:1px solid #45444f; border-radius:6px; padding:3px 10px;
+  transition:background .15s,color .15s;}
+.copy-btn:hover{background:#403f4a;}
+.copy-btn.done{color:#c3e88d; border-color:#5a7d5a;}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.7; color:var(--code-ink);}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+/* ---------- diagram / array cells ---------- */
+.diagram{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px;
+  padding:22px; margin:22px 0;}
+.diagram .cap{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-soft); margin-bottom:14px;}
+.arr-row{display:flex; flex-wrap:wrap; gap:10px;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:8px 12px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.78rem; color:var(--ink); text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.62rem; color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft); border-color:var(--rose); color:var(--rose);}
+/* ---------- mind map ---------- */
+.mindmap{margin:26px 0;}
+.mm-core{margin:0 auto 0; width:max-content; max-width:100%; text-align:center;
+  background:var(--ink); color:var(--bg); font-family:"Fraunces",serif; font-weight:600; font-size:1.15rem;
+  padding:14px 26px; border-radius:12px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-branches{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+.mm-branch .cap{padding:10px 14px; font-family:"Fraunces",serif; font-weight:600; font-size:1rem; color:#fff;}
+.mm-branch.accent .cap{background:var(--accent);}
+.mm-branch.blue .cap{background:var(--blue);}
+.mm-branch.green .cap{background:var(--green);}
+.mm-branch.rose .cap{background:var(--rose);}
+.mm-branch.purple .cap{background:var(--purple);}
+.mm-branch ul{margin:0; padding:12px 16px 14px 30px;}
+.mm-branch li{font-size:.86rem; margin-bottom:5px; color:var(--ink-soft);}
+/* ---------- flowchart ---------- */
+.flow{margin:24px 0; display:flex; flex-direction:column; align-items:center;}
+.flow-step{width:100%; max-width:560px; background:#fff; border:1px solid var(--line);
+  border-radius:12px; padding:14px 18px;}
+.flow-step .st-title{font-family:"Fraunces",serif; font-weight:600; font-size:1.02rem; margin-bottom:2px;}
+.flow-step .st-body{font-size:.86rem; color:var(--ink-soft);}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:26px; background:var(--accent); position:relative;}
+.flow-connector::after{content:"▼"; position:absolute; bottom:-4px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.7rem;}
+/* ---------- complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:6px; font-family:"JetBrains Mono",monospace;
+  font-size:.72rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 12px; margin:3px 6px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);}
+.complexity-badge .v{color:var(--accent); font-weight:700;}
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 18px 20px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-4px); box-shadow:0 14px 28px -18px rgba(45,42,38,.5);}
+.card .glyph{font-family:"Fraunces",serif; font-size:1.7rem; display:block; margin-bottom:6px;}
+.card .t{font-weight:600; font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:4px;}
+.card .b{font-size:.85rem; color:var(--ink-soft);}
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.86rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.64rem; letter-spacing:.1em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:10px 12px; border-bottom:1px solid var(--line);}
+tbody td{padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody code{white-space:nowrap;}
+/* ---------- interview Q&A ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:11px; margin:11px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:14px 18px; display:flex; align-items:center; gap:12px;
+  font-family:"Fraunces",serif; font-weight:600; font-size:1rem;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.7rem; font-weight:700; color:#fff;
+  background:var(--accent); border-radius:6px; padding:3px 8px; flex:none;}
+.qa summary .qtxt{flex:1;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.6rem; letter-spacing:.08em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:none;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa[open] summary{border-bottom:1px solid var(--line);}
+.qa .ans{padding:14px 18px 18px; font-size:.92rem; color:var(--ink-soft);}
+.qa .ans p{margin:0 0 10px;} .qa .ans p:last-child{margin:0;}
+.qa-group-h{font-family:"Fraunces",serif; font-weight:600; font-size:1.2rem; margin:26px 0 6px;}
+/* ---------- recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:20px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent);
+  border-radius:10px; padding:14px 16px;}
+.recap-card .h{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:5px;}
+.recap-card .b{font-size:.86rem; color:var(--ink-soft);}
+/* ---------- FAB / mobile ---------- */
+#fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002;
+  width:52px; height:52px; border-radius:50%; border:none; cursor:pointer;
+  background:var(--accent); color:#fff; font-size:1.4rem; box-shadow:0 8px 20px -6px rgba(181,101,29,.7);}
+#backdrop{display:none; position:fixed; inset:0; z-index:1001;
+  background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+@media(max-width:920px){
+  #sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%);
+    transition:transform .28s ease; box-shadow:0 0 40px -10px rgba(0,0,0,.4);}
+  #sidebar.open{transform:translateX(0);}
+  #backdrop.show{display:block;}
+  #fab{display:flex; align-items:center; justify-content:center;}
+  main{padding-left:20px; padding-right:20px;}
+  .hero{padding-top:44px;}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card{transition:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="shell">
+  <!-- ================= SIDEBAR ================= -->
+  <aside id="sidebar">
+    <p class="brand">⚙️ <span class="em">Config</span> in ASP.NET Core</p>
+    <p class="subtitle">Day 4 · Study Notes</p>
+
+    <div class="nav-group">
+      <h4>Foundations</h4>
+      <a href="#s01"><span class="num">01</span>Why Configuration Exists</a>
+      <a href="#s02"><span class="num">02</span>The Configuration Model</a>
+    </div>
+    <div class="nav-group">
+      <h4>The Sources</h4>
+      <a href="#s03"><span class="num">03</span>appsettings.json</a>
+      <a href="#s04"><span class="num">04</span>Environment-Specific Files</a>
+      <a href="#s05"><span class="num">05</span>Environment Variables</a>
+      <a href="#s06"><span class="num">06</span>User Secrets</a>
+    </div>
+    <div class="nav-group">
+      <h4>Putting It Together</h4>
+      <a href="#s07"><span class="num">07</span>Precedence &amp; Load Order</a>
+      <a href="#s08"><span class="num">08</span>Reading With IConfiguration</a>
+      <a href="#s09"><span class="num">09</span>The Options Pattern</a>
+      <a href="#s10"><span class="num">10</span>Hands-On Walkthrough</a>
+      <a href="#s11"><span class="num">11</span>Best Practices &amp; Pitfalls</a>
+    </div>
+    <div class="nav-group">
+      <h4>Review</h4>
+      <a href="#s12"><span class="num">12</span>Quick Recap</a>
+      <a href="#s13"><span class="num">13</span>Interview Questions</a>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// .NET FUNDAMENTALS · DAY 4</p>
+      <h1>Configuration in ASP.NET Core ⚙️</h1>
+      <p class="lede">How a modern .NET app reads its settings — connection strings, feature toggles, API keys — from many places at once, keeps secrets out of source control, and behaves differently in development versus production, all through one tidy interface.</p>
+      <div class="chips">
+        <span class="chip">📄 appsettings.json</span>
+        <span class="chip">🌍 environment files</span>
+        <span class="chip">🔧 env variables</span>
+        <span class="chip">🔐 user secrets</span>
+        <span class="chip">🧩 IConfiguration</span>
+        <span class="chip">📦 Options pattern</span>
+      </div>
+    </header>
+
+    <!-- ===== 01 ===== -->
+    <section class="section" id="s01">
+      <h2><span class="badge">01</span>Why Configuration Exists</h2>
+      <p>Every real application has values that shouldn't be baked into the code. The address of the database, the port for the email server, whether a new feature is switched on, the secret key that talks to a payment provider — these change between your laptop, the testing server, and the live production site. If you hard-code them, you'd have to edit and recompile the program every time one changes. <strong>Configuration</strong> is the mechanism that pulls those values <em>out</em> of the code and lets the running app read them from the outside.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🍳 Analogy</span>
+        <p>Think of your app as a recipe and configuration as the <em>pantry labels</em>. The recipe says "add the oil from the bottle on the shelf." It doesn't care whether the bottle holds olive oil at home or sunflower oil at a friend's kitchen — it just reads the label at cooking time. Swap the pantry, and the same recipe produces the right dish for that kitchen. Configuration lets the same compiled code run correctly in every "kitchen" (environment).</p>
+      </div>
+
+      <p>In ASP.NET Core, configuration data is simply a big collection of <strong>key–value pairs</strong>. A key like <code>ConnectionStrings:DefaultConnection</code> maps to a value like a database address. Those pairs can come from a JSON file, from the operating system's environment variables, from the command line, or from several other places — and the framework merges them all into one unified view your code can read.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Key idea</span>
+        <p>Configuration in .NET is an ordered <em>chain of providers</em> stacked on top of each other. Each provider contributes key–value pairs, and if two providers set the same key, the one added <strong>later</strong> wins. That single rule explains almost everything about how settings behave.</p>
+      </div>
+    </section>
+
+    <!-- ===== 02 ===== -->
+    <section class="section" id="s02">
+      <h2><span class="badge">02</span>The Configuration Model</h2>
+      <p>When your app starts, the line <code>var builder = WebApplication.CreateBuilder(args);</code> quietly wires up a set of default <strong>configuration providers</strong>. Each provider knows how to read one kind of source. Together they fill a single object you'll interact with everywhere: <code>IConfiguration</code>.</p>
+
+      <div class="mindmap">
+        <div class="mm-core">🧩 IConfiguration<br><span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;opacity:.8;">one merged key–value store</span></div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch accent">
+            <div class="cap">📄 JSON files</div>
+            <ul>
+              <li><code>appsettings.json</code> — base settings</li>
+              <li><code>appsettings.{Env}.json</code> — per-environment overrides</li>
+              <li>Loaded by the JSON provider</li>
+            </ul>
+          </div>
+          <div class="mm-branch blue">
+            <div class="cap">🔐 User secrets</div>
+            <ul>
+              <li>A JSON file outside the project</li>
+              <li>Development only, by default</li>
+              <li>Keeps secrets out of Git</li>
+            </ul>
+          </div>
+          <div class="mm-branch green">
+            <div class="cap">🔧 Environment variables</div>
+            <ul>
+              <li>Set by the OS, container, or host</li>
+              <li>Ideal for servers &amp; production</li>
+              <li>Use <code>__</code> for nested keys</li>
+            </ul>
+          </div>
+          <div class="mm-branch rose">
+            <div class="cap">⌨️ Command-line args</div>
+            <ul>
+              <li>Passed to <code>dotnet run</code></li>
+              <li>Highest priority by default</li>
+              <li>Great for quick overrides</li>
+            </ul>
+          </div>
+          <div class="mm-branch purple">
+            <div class="cap">➕ Others</div>
+            <ul>
+              <li>Azure Key Vault, Azure App Config</li>
+              <li>In-memory, INI, XML, key-per-file</li>
+              <li>Even custom providers you write</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <p>Your code never asks "which file did this come from?" It just asks <code>IConfiguration</code> for a key and gets a value. That indirection is the whole point: the <em>same</em> reading code works no matter where a value physically lives.</p>
+
+      <div class="callout tip">
+        <span class="tag">✅ Tip</span>
+        <p>Configuration <strong>keys are case-insensitive</strong>, and every value is fundamentally a <strong>string</strong>. When you ask for an <code>int</code> or a <code>bool</code>, the framework converts the string for you. A <code>null</code> value can't be stored in configuration.</p>
+      </div>
+    </section>
+
+    <!-- ===== 03 ===== -->
+    <section class="section" id="s03">
+      <h2><span class="badge">03</span>appsettings.json</h2>
+      <p>This is the primary, human-readable settings file that ships in the root of almost every ASP.NET Core project. It's plain JSON, it's checked into source control, and it holds your <strong>non-secret defaults</strong>: logging levels, allowed hosts, and your own custom sections.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">json · appsettings.json</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  <span class="str">"ConnectionStrings"</span>: {
+    <span class="str">"DefaultConnection"</span>: <span class="str">"Server=localhost;Database=ShopDb;Trusted_Connection=True;TrustServerCertificate=True;"</span>
+  },
+  <span class="str">"Logging"</span>: {
+    <span class="str">"LogLevel"</span>: {
+      <span class="str">"Default"</span>: <span class="str">"Information"</span>,
+      <span class="str">"Microsoft.AspNetCore"</span>: <span class="str">"Warning"</span>
+    }
+  },
+  <span class="str">"AllowedHosts"</span>: <span class="str">"*"</span>,
+  <span class="str">"EmailSettings"</span>: {
+    <span class="str">"SenderName"</span>: <span class="str">"Shop Notifications"</span>,
+    <span class="str">"FromAddress"</span>: <span class="str">"no-reply@myshop.com"</span>,
+    <span class="str">"SmtpPort"</span>: <span class="num">587</span>
+  }
+}</code></pre>
+      </div>
+
+      <p>Notice the JSON is <em>nested</em> (an object inside an object). Internally the configuration system <strong>flattens</strong> this hierarchy into flat keys, joining the levels with a colon (<code>:</code>). So the nested value above is addressed as <code>EmailSettings:SmtpPort</code>.</p>
+
+      <div class="diagram">
+        <div class="cap">Nested JSON → flattened configuration keys</div>
+        <div class="arr-row">
+          <div class="arr-cell highlight"><div class="val">EmailSettings<br>:SmtpPort</div><div class="idx">= 587</div></div>
+          <div class="arr-cell highlight-blue"><div class="val">ConnectionStrings<br>:DefaultConnection</div><div class="idx">= "Server=…"</div></div>
+          <div class="arr-cell highlight-green"><div class="val">Logging:LogLevel<br>:Default</div><div class="idx">= "Information"</div></div>
+          <div class="arr-cell"><div class="val">AllowedHosts</div><div class="idx">= "*"</div></div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Good to know</span>
+        <p>With the default host, <code>appsettings.json</code> is loaded with <strong>reload-on-change</strong> turned on. Edit and save the file while the app is running and the new values take effect immediately — no restart needed (whether your code <em>sees</em> the change depends on how you read it; more in §09).</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Warning</span>
+        <p><code>appsettings.json</code> is committed to source control and readable by anyone with the repository. <strong>Never put passwords, API keys, or other secrets here.</strong> A local, password-free connection string is fine; a real production password is not.</p>
+      </div>
+    </section>
+
+    <!-- ===== 04 ===== -->
+    <section class="section" id="s04">
+      <h2><span class="badge">04</span>Environment-Specific Files</h2>
+      <p>Alongside <code>appsettings.json</code> you can add files named <code>appsettings.{Environment}.json</code>. The <code>{Environment}</code> part matches the app's current environment name, which comes from the <code>ASPNETCORE_ENVIRONMENT</code> environment variable. The three conventional names are <strong>Development</strong>, <strong>Staging</strong>, and <strong>Production</strong>, but the value is free-form, so you can invent your own.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">💻</span><div class="t">appsettings.Development.json</div><div class="b">Loaded when <code>ASPNETCORE_ENVIRONMENT=Development</code> — usually on your laptop. Verbose logging, local database.</div></div>
+        <div class="card"><span class="glyph">🚀</span><div class="t">appsettings.Production.json</div><div class="b">Loaded in production. Quieter logging, real service endpoints. Overrides the base file's values.</div></div>
+        <div class="card"><span class="glyph">🧪</span><div class="t">appsettings.Staging.json</div><div class="b">A pre-production rehearsal environment. Optional — create it only if you use a staging tier.</div></div>
+      </div>
+
+      <p>The key behaviour is <strong>layering</strong>: the base <code>appsettings.json</code> loads first, then the environment file loads <em>on top</em> and overrides any keys they share. You only put the <em>differences</em> in the environment file, not a full copy.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">json · appsettings.Development.json</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  <span class="cmt">// Only the keys that differ in Development.</span>
+  <span class="str">"Logging"</span>: {
+    <span class="str">"LogLevel"</span>: {
+      <span class="str">"Default"</span>: <span class="str">"Debug"</span>       <span class="cmt">// noisier logs while coding</span>
+    }
+  },
+  <span class="str">"EmailSettings"</span>: {
+    <span class="str">"SmtpPort"</span>: <span class="num">1025</span>          <span class="cmt">// a local fake mail server</span>
+  }
+}</code></pre>
+      </div>
+
+      <p>At runtime, <code>Logging:LogLevel:Default</code> becomes <code>Debug</code> and <code>EmailSettings:SmtpPort</code> becomes <code>1025</code>, while every other key (like <code>SenderName</code> and <code>AllowedHosts</code>) is still inherited from the base file.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Where does the environment name come from?</span>
+        <p>From the <code>ASPNETCORE_ENVIRONMENT</code> variable. On your machine it's typically set to <code>Development</code> inside <code>Properties/launchSettings.json</code>. If it's not set anywhere, the framework defaults to <strong>Production</strong> — a safe default, since Production applies the strictest behaviour.</p>
+      </div>
+    </section>
+
+    <!-- ===== 05 ===== -->
+    <section class="section" id="s05">
+      <h2><span class="badge">05</span>Environment Variables</h2>
+      <p>Environment variables are name–value pairs maintained by the operating system, a container, or a cloud host rather than by a file in your project. They're the standard way to feed settings into an app running on a server, in Docker, or in Kubernetes — because you can change them per-machine without touching the code or any committed file.</p>
+
+      <p>By default, ASP.NET Core reads environment variables that are <strong>not</strong> prefixed with <code>ASPNETCORE_</code> or <code>DOTNET_</code> (those two prefixes are reserved for configuring the host itself).</p>
+
+      <h3>The double-underscore rule</h3>
+      <p>Configuration keys are nested with a colon (<code>ConnectionStrings:DefaultConnection</code>), but many operating systems and shells (Bash, for example) don't allow a colon in a variable name. The solution is a <strong>double underscore</strong> <code>__</code>, which .NET automatically converts into a colon when it reads the variable.</p>
+
+      <div class="diagram">
+        <div class="cap">Environment variable name → configuration key</div>
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val">ConnectionStrings__DefaultConnection</div><div class="idx">env variable</div></div>
+          <div class="arr-cell highlight"><div class="val">→ converts to →</div><div class="idx">__ becomes :</div></div>
+          <div class="arr-cell highlight-blue"><div class="val">ConnectionStrings:DefaultConnection</div><div class="idx">config key</div></div>
+        </div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">bash · setting variables on Linux / macOS</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># Nested key: __ turns into : inside the app</span>
+<span class="kw">export</span> ConnectionStrings__DefaultConnection=<span class="str">"Server=prod-db;Database=ShopDb;User Id=app;Password=…;"</span>
+<span class="kw">export</span> EmailSettings__SmtpPort=<span class="num">2525</span>
+
+<span class="cmt"># Choose the environment file that loads</span>
+<span class="kw">export</span> ASPNETCORE_ENVIRONMENT=Production
+
+dotnet run</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">powershell · setting variables on Windows</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="fn">$env:</span>ConnectionStrings__DefaultConnection = <span class="str">"Server=prod-db;Database=ShopDb;User Id=app;Password=…;"</span>
+<span class="fn">$env:</span>ASPNETCORE_ENVIRONMENT = <span class="str">"Production"</span>
+dotnet run</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Best fit</span>
+        <p>Environment variables are appropriate for <strong>any</strong> environment, production included, and are the usual home for real production secrets when you're not using a dedicated secret store like Azure Key Vault. Because they're set on the host, they never end up in your repository.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Not encrypted</span>
+        <p>Environment variables are stored as plain text. If a machine or process is compromised, they can be read. For highly sensitive production secrets, a managed secret store (Azure Key Vault, AWS Secrets Manager) is stronger.</p>
+      </div>
+    </section>
+
+    <!-- ===== 06 ===== -->
+    <section class="section" id="s06">
+      <h2><span class="badge">06</span>User Secrets</h2>
+      <p>During development you often need a real secret — a password, an API key — but you must never commit it. <strong>User Secrets</strong> (managed by the "Secret Manager" tool) solve this by storing those values in a JSON file that lives <em>outside</em> your project folder, in your personal user profile. Because it's outside the project tree, it can't be accidentally checked into Git.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">bash · the Secret Manager workflow</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># 1) Run once, from the project folder. Adds a UserSecretsId (a GUID) to the .csproj</span>
+dotnet user-secrets init
+
+<span class="cmt"># 2) Store secrets. The key uses the same colon syntax as appsettings.json</span>
+dotnet user-secrets set <span class="str">"ConnectionStrings:DefaultConnection"</span> <span class="str">"Server=localhost;Database=ShopDb;User Id=dev;Password=Sup3rSecret!;"</span>
+dotnet user-secrets set <span class="str">"EmailSettings:ApiKey"</span> <span class="str">"sk_test_51H…"</span>
+
+<span class="cmt"># 3) Inspect or clean up</span>
+dotnet user-secrets list
+dotnet user-secrets remove <span class="str">"EmailSettings:ApiKey"</span>
+dotnet user-secrets clear</code></pre>
+      </div>
+
+      <p>After <code>init</code>, your project file gains a marker that links the project to its secret store:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">xml · MyShop.csproj</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">&lt;PropertyGroup&gt;</span>
+  <span class="kw">&lt;TargetFramework&gt;</span>net10.0<span class="kw">&lt;/TargetFramework&gt;</span>
+  <span class="kw">&lt;UserSecretsId&gt;</span>a1b2c3d4-5e6f-47a8-9012-3456789abcde<span class="kw">&lt;/UserSecretsId&gt;</span>
+<span class="kw">&lt;/PropertyGroup&gt;</span></code></pre>
+      </div>
+
+      <h3>Where the file actually lives</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>OS</th><th>secrets.json path</th></tr></thead>
+          <tbody>
+            <tr><td>Windows</td><td><code>%APPDATA%\Microsoft\UserSecrets\&lt;UserSecretsId&gt;\secrets.json</code></td></tr>
+            <tr><td>Linux / macOS</td><td><code>~/.microsoft/usersecrets/&lt;UserSecretsId&gt;/secrets.json</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Development only — and not encrypted</span>
+        <p>User Secrets are loaded <strong>only when the app runs in the Development environment</strong>, and the file is stored as <strong>plain, unencrypted text</strong>. Their value is convenience and keeping secrets out of source control — <em>not</em> cryptographic protection. Use environment variables or Key Vault for staging and production.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🔐 Analogy</span>
+        <p>User Secrets are like a sticky note you keep in your own desk drawer instead of taped to the shared office whiteboard. It's still readable by anyone who opens your drawer — but it won't be photographed and shared with the whole company (committed to the repo) by accident.</p>
+      </div>
+    </section>
+
+    <!-- ===== 07 ===== -->
+    <section class="section" id="s07">
+      <h2><span class="badge">07</span>Precedence &amp; Load Order</h2>
+      <p>When the same key is defined in more than one place, who wins? The provider added <strong>later</strong> overrides the one added earlier. With the default host builder, the sources are registered in a fixed order, so the effective priority (highest to lowest) is:</p>
+
+      <div class="flow">
+        <div class="flow-step highlight">
+          <div class="st-title">⌨️ 1 · Command-line arguments</div>
+          <div class="st-body">Highest priority. Passed to <code>dotnet run</code>. Overrides everything else — perfect for one-off tweaks.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">🔧 2 · Environment variables</div>
+          <div class="st-body">Non-prefixed OS variables. The usual channel for server and production values.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">🔐 3 · User Secrets <em>(Development only)</em></div>
+          <div class="st-body">Loaded after the JSON files, so a secret here overrides the same key in appsettings.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">🌍 4 · appsettings.{Environment}.json</div>
+          <div class="st-body">Per-environment overrides layered on top of the base file.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">📄 5 · appsettings.json</div>
+          <div class="st-body">The base defaults. Lowest priority of the app sources.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">🏠 6 · Host configuration (fallback)</div>
+          <div class="st-body">The bottom layer the host itself established.</div>
+        </div>
+      </div>
+
+      <p>A concrete example: suppose <code>EmailSettings:SmtpPort</code> is set in three places. The final value is decided top-down.</p>
+
+      <div class="diagram">
+        <div class="cap">Resolving EmailSettings:SmtpPort — last writer wins</div>
+        <div class="arr-row">
+          <div class="arr-cell neg"><div class="val">587</div><div class="idx">appsettings.json</div></div>
+          <div class="arr-cell neg"><div class="val">1025</div><div class="idx">Development.json</div></div>
+          <div class="arr-cell highlight"><div class="val">2525</div><div class="idx">env variable ✅ wins</div></div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The mental model</span>
+        <p>Picture the providers as sheets of tracing paper laid down one after another. Later sheets sit on top. When you look straight down at a key, you see whatever is written on the topmost sheet that has it. That's precedence in one image.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Override anything from the command line</span>
+        <p>Because command-line args sit at the very top, you can override any setting instantly:<br><code>dotnet run --EmailSettings:SmtpPort=9000</code></p>
+      </div>
+    </section>
+
+    <!-- ===== 08 ===== -->
+    <section class="section" id="s08">
+      <h2><span class="badge">08</span>Reading With IConfiguration</h2>
+      <p>You get to the merged settings through the <code>IConfiguration</code> service. In <code>Program.cs</code> it's available as <code>builder.Configuration</code>; anywhere else you receive it through dependency injection. Here are the reading methods you'll use most.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔤</span><div class="t">Indexer <code>[ ]</code></div><div class="b">The raw way. Returns a <code>string?</code>. <code>config["EmailSettings:SmtpPort"]</code> gives <code>"587"</code> as text.</div></div>
+        <div class="card"><span class="glyph">🔢</span><div class="t">GetValue&lt;T&gt;</div><div class="b">Reads one value and converts its type, with an optional default. <code>GetValue&lt;int&gt;("…:SmtpPort", 25)</code>.</div></div>
+        <div class="card"><span class="glyph">🔗</span><div class="t">GetConnectionString</div><div class="b">A shortcut that reads the <code>ConnectionStrings</code> section by name. Cleaner than the full key.</div></div>
+        <div class="card"><span class="glyph">📂</span><div class="t">GetSection</div><div class="b">Returns a sub-tree of related keys. Never returns null — an empty section instead.</div></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · Program.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+<span class="ty">IConfiguration</span> config = builder.Configuration;
+
+<span class="cmt">// Raw string (may be null)</span>
+<span class="kw">string</span>? portText = config[<span class="str">"EmailSettings:SmtpPort"</span>];
+
+<span class="cmt">// Typed read with a fallback default of 25</span>
+<span class="kw">int</span> smtpPort = config.<span class="fn">GetValue</span>&lt;<span class="kw">int</span>&gt;(<span class="str">"EmailSettings:SmtpPort"</span>, <span class="num">25</span>);
+
+<span class="cmt">// Connection-string shortcut — reads ConnectionStrings:DefaultConnection</span>
+<span class="kw">string</span>? conn = config.<span class="fn">GetConnectionString</span>(<span class="str">"DefaultConnection"</span>);
+
+<span class="cmt">// Grab a whole section, then read children by their short keys</span>
+<span class="ty">IConfigurationSection</span> email = config.<span class="fn">GetSection</span>(<span class="str">"EmailSettings"</span>);
+<span class="kw">string</span>? sender = email[<span class="str">"SenderName"</span>];</code></pre>
+      </div>
+
+      <p>To read configuration inside a controller or service, just ask for <code>IConfiguration</code> in the constructor and the framework hands it to you:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · injecting into a service</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">ReportService</span>(<span class="ty">IConfiguration</span> config)
+{
+    <span class="kw">public void</span> <span class="fn">Run</span>()
+    {
+        <span class="kw">var</span> host = config[<span class="str">"EmailSettings:FromAddress"</span>];
+        <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">$"Sending report from {host}"</span>);
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The magic-string problem</span>
+        <p>Reading with string keys like <code>"EmailSettings:SmptPort"</code> is fragile: a typo compiles fine but silently returns <code>null</code> at runtime, and any class holding <code>IConfiguration</code> can read <em>every</em> setting, including secrets it shouldn't touch. Section 09 fixes both problems.</p>
+      </div>
+    </section>
+
+    <!-- ===== 09 ===== -->
+    <section class="section" id="s09">
+      <h2><span class="badge">09</span>The Options Pattern</h2>
+      <p>Instead of scattering string keys through your code, the <strong>Options pattern</strong> binds a whole configuration section to a plain C# class once, then injects that strongly-typed class wherever it's needed. You get autocomplete, compile-time safety, and each class only sees <em>its own</em> settings.</p>
+
+      <h3>Step 1 — Define a class that mirrors the section</h3>
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · EmailSettings.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">EmailSettings</span>
+{
+    <span class="kw">public const string</span> SectionName = <span class="str">"EmailSettings"</span>;
+
+    <span class="kw">public string</span> SenderName  { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">string</span>.Empty;
+    <span class="kw">public string</span> FromAddress { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">string</span>.Empty;
+    <span class="kw">public int</span>    SmtpPort    { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+      </div>
+
+      <h3>Step 2 — Bind the section during startup</h3>
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · Program.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services.<span class="fn">Configure</span>&lt;<span class="ty">EmailSettings</span>&gt;(
+    builder.Configuration.<span class="fn">GetSection</span>(<span class="ty">EmailSettings</span>.SectionName));</code></pre>
+      </div>
+
+      <h3>Step 3 — Inject and use it</h3>
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · EmailSender.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> <span class="ty">Microsoft.Extensions.Options</span>;
+
+<span class="kw">public class</span> <span class="ty">EmailSender</span>(<span class="ty">IOptions</span>&lt;<span class="ty">EmailSettings</span>&gt; options)
+{
+    <span class="kw">private readonly</span> <span class="ty">EmailSettings</span> _settings = options.Value;
+
+    <span class="kw">public void</span> <span class="fn">Send</span>()
+    {
+        <span class="ty">Console</span>.<span class="fn">WriteLine</span>(
+            <span class="str">$"From {_settings.SenderName} on port {_settings.SmtpPort}"</span>);
+    }
+}</code></pre>
+      </div>
+
+      <h3>Three ways to receive options</h3>
+      <p>There are three accessor interfaces, and choosing the right one is a favourite interview topic. They differ in <em>lifetime</em> and <em>whether they notice config changes after startup</em>.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Interface</th><th>Lifetime</th><th>Reloads on change?</th><th>Use when…</th></tr></thead>
+          <tbody>
+            <tr><td><code>IOptions&lt;T&gt;</code></td><td>Singleton</td><td>❌ No — read once at startup</td><td>Values are effectively constant (connection strings, fixed URLs). Fastest, simplest — the default choice.</td></tr>
+            <tr><td><code>IOptionsSnapshot&lt;T&gt;</code></td><td>Scoped</td><td>✅ Yes — fresh per web request</td><td>You want each request to pick up edited config. Can't be injected into a singleton.</td></tr>
+            <tr><td><code>IOptionsMonitor&lt;T&gt;</code></td><td>Singleton</td><td>✅ Yes — current value any time</td><td>Long-lived / background services that need live values, plus change notifications via <code>OnChange</code>.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Rule of thumb</span>
+        <p>Default to <code>IOptions&lt;T&gt;</code>. Reach for <code>IOptionsSnapshot&lt;T&gt;</code> only when a per-request refresh matters, and <code>IOptionsMonitor&lt;T&gt;</code> when a singleton or background worker must always see the latest value.</p>
+      </div>
+
+      <p>You can also validate options — catch a bad or missing value at startup instead of at 3 a.m. in production:</p>
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · validate at startup</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services.<span class="fn">AddOptions</span>&lt;<span class="ty">EmailSettings</span>&gt;()
+    .<span class="fn">Bind</span>(builder.Configuration.<span class="fn">GetSection</span>(<span class="ty">EmailSettings</span>.SectionName))
+    .<span class="fn">ValidateDataAnnotations</span>()
+    .<span class="fn">ValidateOnStart</span>();</code></pre>
+      </div>
+    </section>
+
+    <!-- ===== 10 ===== -->
+    <section class="section" id="s10">
+      <h2><span class="badge">10</span>Hands-On Walkthrough</h2>
+      <p>Here's the day's task assembled end to end: <strong>load a connection string and bind a settings section</strong> in a minimal API. Follow the flow, then read the full <code>Program.cs</code>.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st-title">1 · Put defaults in appsettings.json 📄</div>
+          <div class="st-body">Add a <code>ConnectionStrings</code> block and an <code>EmailSettings</code> section (the non-secret parts).</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">2 · Move the real password into User Secrets 🔐</div>
+          <div class="st-body"><code>dotnet user-secrets set "ConnectionStrings:DefaultConnection" "…with password…"</code> — overrides the base value in Development.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st-title">3 · Read the connection string 🔗</div>
+          <div class="st-body"><code>builder.Configuration.GetConnectionString("DefaultConnection")</code> — the framework has already merged every source, so you just ask once.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">4 · Bind the settings section 📦</div>
+          <div class="st-body"><code>Configure&lt;EmailSettings&gt;(...GetSection("EmailSettings"))</code> registers the strongly-typed class.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">5 · Use both via injection ✅</div>
+          <div class="st-body">Endpoints and services receive <code>IOptions&lt;EmailSettings&gt;</code> and the DB context reads the connection string.</div>
+        </div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · complete Program.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> <span class="ty">Microsoft.Extensions.Options</span>;
+
+<span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+
+<span class="cmt">// (1) Read the connection string. In Development this resolves to the</span>
+<span class="cmt">//     User Secrets value; in Production, to an environment variable.</span>
+<span class="kw">string</span>? connectionString =
+    builder.Configuration.<span class="fn">GetConnectionString</span>(<span class="str">"DefaultConnection"</span>);
+
+<span class="kw">if</span> (<span class="kw">string</span>.<span class="fn">IsNullOrWhiteSpace</span>(connectionString))
+    <span class="kw">throw new</span> <span class="ty">InvalidOperationException</span>(
+        <span class="str">"Missing ConnectionStrings:DefaultConnection."</span>);
+
+<span class="cmt">// Hand it to your data layer, e.g. Entity Framework Core:</span>
+<span class="cmt">// builder.Services.AddDbContext&lt;ShopContext&gt;(o =&gt; o.UseSqlServer(connectionString));</span>
+
+<span class="cmt">// (2) Bind the EmailSettings section to a strongly-typed class</span>
+builder.Services.<span class="fn">Configure</span>&lt;<span class="ty">EmailSettings</span>&gt;(
+    builder.Configuration.<span class="fn">GetSection</span>(<span class="ty">EmailSettings</span>.SectionName));
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+<span class="cmt">// (3) Read the connection string from an endpoint (masking the value)</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/db"</span>, (<span class="ty">IConfiguration</span> cfg) =&gt;
+{
+    <span class="kw">var</span> cs = cfg.<span class="fn">GetConnectionString</span>(<span class="str">"DefaultConnection"</span>);
+    <span class="kw">return</span> <span class="ty">Results</span>.<span class="fn">Ok</span>(<span class="kw">new</span> { Configured = !<span class="kw">string</span>.<span class="fn">IsNullOrEmpty</span>(cs) });
+});
+
+<span class="cmt">// (4) Consume the bound settings section via the Options pattern</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/email-config"</span>, (<span class="ty">IOptions</span>&lt;<span class="ty">EmailSettings</span>&gt; opts) =&gt;
+{
+    <span class="ty">EmailSettings</span> s = opts.Value;
+    <span class="kw">return</span> <span class="ty">Results</span>.<span class="fn">Ok</span>(<span class="kw">new</span> { s.SenderName, s.FromAddress, s.SmtpPort });
+});
+
+app.<span class="fn">Run</span>();
+
+<span class="cmt">// ---- supporting class ----</span>
+<span class="kw">public class</span> <span class="ty">EmailSettings</span>
+{
+    <span class="kw">public const string</span> SectionName = <span class="str">"EmailSettings"</span>;
+    <span class="kw">public string</span> SenderName  { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">string</span>.Empty;
+    <span class="kw">public string</span> FromAddress { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">string</span>.Empty;
+    <span class="kw">public int</span>    SmtpPort    { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 What just happened</span>
+        <p>The exact same code runs everywhere. On your laptop the connection string comes from User Secrets and <code>SmtpPort</code> from <code>appsettings.Development.json</code>; on the server both may come from environment variables. Your <code>Program.cs</code> neither knows nor cares — that's the payoff of the provider chain.</p>
+      </div>
+    </section>
+
+    <!-- ===== 11 ===== -->
+    <section class="section" id="s11">
+      <h2><span class="badge">11</span>Best Practices &amp; Pitfalls</h2>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🚫</span><div class="t">No secrets in appsettings</div><div class="b">Keep passwords and keys out of committed JSON. Use User Secrets locally; env vars or Key Vault in production.</div></div>
+        <div class="card"><span class="glyph">📦</span><div class="t">Prefer the Options pattern</div><div class="b">Bind sections to classes rather than sprinkling <code>config["…"]</code> everywhere. Fewer typos, real type safety.</div></div>
+        <div class="card"><span class="glyph">🧩</span><div class="t">Only the diffs in env files</div><div class="b">Environment files should hold overrides, not a full copy of the base file. Less duplication, fewer surprises.</div></div>
+        <div class="card"><span class="glyph">🔁</span><div class="t">Pick the right Options accessor</div><div class="b"><code>IOptions</code> for constants; <code>IOptionsMonitor</code> when a singleton must see live changes.</div></div>
+        <div class="card"><span class="glyph">✅</span><div class="t">Validate on start</div><div class="b">Use <code>ValidateOnStart()</code> so a missing or malformed setting fails loudly at launch, not mid-request.</div></div>
+        <div class="card"><span class="glyph">🔤</span><div class="t">Mind the separators</div><div class="b">Colon <code>:</code> in code and JSON; double underscore <code>__</code> in environment variables.</div></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Common gotchas</span>
+        <p><strong>Wrong environment name</strong> means the wrong file loads — check <code>ASPNETCORE_ENVIRONMENT</code> first when settings look "stale." <strong>User Secrets ignored?</strong> They only load in Development. <strong>Value not overriding?</strong> An env variable or command-line arg sits <em>above</em> your JSON — remember precedence. And a <strong>misspelled key</strong> returns <code>null</code> silently rather than throwing.</p>
+      </div>
+
+      <div class="complexity-badge"><span class="lbl">separator · code</span><span class="v">:</span></div>
+      <div class="complexity-badge"><span class="lbl">separator · env var</span><span class="v">__</span></div>
+      <div class="complexity-badge"><span class="lbl">separator · Key Vault</span><span class="v">--</span></div>
+      <div class="complexity-badge"><span class="lbl">default environment</span><span class="v">Production</span></div>
+      <div class="complexity-badge"><span class="lbl">keys are</span><span class="v">case-insensitive</span></div>
+    </section>
+
+    <!-- ===== 12 ===== -->
+    <section class="section" id="s12">
+      <h2><span class="badge">12</span>Quick Recap</h2>
+      <div class="recap-grid">
+        <div class="recap-card"><div class="h">Why config</div><div class="b">Pulls changeable values out of code so one build runs correctly in every environment.</div></div>
+        <div class="recap-card"><div class="h">IConfiguration</div><div class="b">The single merged key–value store your code reads, regardless of where a value came from.</div></div>
+        <div class="recap-card"><div class="h">appsettings.json</div><div class="b">Base, committed JSON for non-secret defaults; nested keys flatten with a colon.</div></div>
+        <div class="recap-card"><div class="h">Environment files</div><div class="b"><code>appsettings.{Env}.json</code> layers overrides on top, chosen by ASPNETCORE_ENVIRONMENT.</div></div>
+        <div class="recap-card"><div class="h">Env variables</div><div class="b">Host-set pairs, great for servers; nest keys with double underscore <code>__</code>.</div></div>
+        <div class="recap-card"><div class="h">User Secrets</div><div class="b">Dev-only, unencrypted JSON outside the project so secrets never reach Git.</div></div>
+        <div class="recap-card"><div class="h">Precedence</div><div class="b">Last provider wins: command line &gt; env vars &gt; secrets &gt; env file &gt; appsettings.</div></div>
+        <div class="recap-card"><div class="h">Reading</div><div class="b">Indexer, <code>GetValue&lt;T&gt;</code>, <code>GetConnectionString</code>, <code>GetSection</code>.</div></div>
+        <div class="recap-card"><div class="h">Options pattern</div><div class="b">Bind a section to a class; inject strongly-typed settings with safety.</div></div>
+        <div class="recap-card"><div class="h">Options accessors</div><div class="b"><code>IOptions</code> (static), <code>IOptionsSnapshot</code> (per request), <code>IOptionsMonitor</code> (live).</div></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it is</th><th>Key detail</th></tr></thead>
+          <tbody>
+            <tr><td><code>appsettings.json</code></td><td>Primary JSON settings file</td><td>Committed; non-secret defaults; reload-on-change</td></tr>
+            <tr><td><code>appsettings.{Env}.json</code></td><td>Environment override file</td><td>Layers over base; chosen by <code>ASPNETCORE_ENVIRONMENT</code></td></tr>
+            <tr><td>Environment variables</td><td>OS/host key–value pairs</td><td>Use <code>__</code> for nesting; fine for production</td></tr>
+            <tr><td>User Secrets</td><td>Dev secret store</td><td>Development only; unencrypted; outside project</td></tr>
+            <tr><td>Command-line args</td><td>Values passed to <code>dotnet run</code></td><td>Highest precedence by default</td></tr>
+            <tr><td><code>IConfiguration</code></td><td>Merged read interface</td><td>Case-insensitive keys; values are strings</td></tr>
+            <tr><td><code>GetConnectionString</code></td><td>Shortcut method</td><td>Reads the <code>ConnectionStrings</code> section</td></tr>
+            <tr><td><code>GetSection</code></td><td>Isolate a sub-tree</td><td>Never null; returns an empty section if missing</td></tr>
+            <tr><td>Options pattern</td><td>Section bound to a class</td><td><code>Configure&lt;T&gt;</code> + inject <code>IOptions&lt;T&gt;</code></td></tr>
+            <tr><td><code>IOptionsMonitor&lt;T&gt;</code></td><td>Live options accessor</td><td>Singleton; current value + <code>OnChange</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== 13 ===== -->
+    <section class="section" id="s13">
+      <h2><span class="badge">13</span>Interview Questions</h2>
+      <p>Click any question to reveal a plain-English answer. Grouped by level — start with the 🌱 Junior set and work down.</p>
+
+      <p class="qa-group-h">🌱 Junior <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);">(0–2 yrs)</span></p>
+
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtxt">What is configuration in ASP.NET Core, in one sentence?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It's the system that lets an app read its settings — things like a database address, a port number, or a feature toggle — from outside the code, so those values can change without recompiling the program.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtxt">What is the <code>appsettings.json</code> file used for?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It's the main settings file in the project root. It holds non-secret default values in JSON — logging levels, allowed hosts, and your own custom settings. It's committed to source control, so it must never contain passwords or secret keys.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtxt">Why have an <code>appsettings.Development.json</code> as well?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>To keep settings that differ between environments. When the app runs in Development, that file loads on top of the base file and overrides matching keys — so you can use a local database or verbose logging while developing, without changing what production uses.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtxt">How is the app's environment (Development, Production) decided?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>By an environment variable named <code>ASPNETCORE_ENVIRONMENT</code>. On a developer machine it's usually set to <code>Development</code> in <code>launchSettings.json</code>. If it isn't set anywhere, the framework defaults to <code>Production</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtxt">How do you read a value from configuration in code?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>You use the <code>IConfiguration</code> object. In <code>Program.cs</code> it's <code>builder.Configuration</code>; elsewhere you receive it through the constructor. Then you read a value by its key, for example <code>config["EmailSettings:SmtpPort"]</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtxt">What does the colon mean in a key like <code>EmailSettings:SmtpPort</code>?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It's a separator for nested settings. The JSON has <code>SmtpPort</code> inside an <code>EmailSettings</code> object, and the colon walks down that hierarchy — outer name, colon, inner name.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtxt">Where should a real database password live during development?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>In User Secrets, not in <code>appsettings.json</code>. User Secrets store the value in a file outside the project folder so it can't be committed to source control by accident. In production you'd use an environment variable or a managed secret store instead.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtxt">What is a connection string, and how do you fetch one?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A connection string is the piece of text that tells the app how to reach a database — server, database name, and credentials. You fetch it with the shortcut <code>config.GetConnectionString("DefaultConnection")</code>, which reads the <code>ConnectionStrings</code> section by name.</p></div></details>
+
+      <p class="qa-group-h">🟠 Mid <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);">(2–5 yrs)</span></p>
+
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtxt">If the same key is set in two places, which value wins?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The provider added later wins. With the default host the priority, highest to lowest, is: command-line arguments, then environment variables, then User Secrets (Development only), then the environment-specific JSON file, then the base <code>appsettings.json</code>. Picture stacked tracing paper — the top sheet with the key is what you see.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtxt">Why do environment variables use <code>__</code> instead of a colon?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Because many shells and operating systems (Bash, for instance) don't allow a colon inside a variable name. The framework accepts a double underscore <code>__</code> on every platform and automatically converts it to a colon when it reads the value, so <code>ConnectionStrings__DefaultConnection</code> becomes <code>ConnectionStrings:DefaultConnection</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtxt">What is the Options pattern and why prefer it over reading <code>IConfiguration</code> directly?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The Options pattern binds a configuration section to a strongly-typed C# class, which you then inject where needed. It's better because you get compile-time safety and autocomplete (no fragile string keys), and each class only sees its own settings rather than the entire configuration, which is cleaner and more secure.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtxt">Walk through binding a settings section with the Options pattern.</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Three steps: define a class whose properties mirror the JSON keys; register it in startup with <code>builder.Services.Configure&lt;EmailSettings&gt;(builder.Configuration.GetSection("EmailSettings"))</code>; then inject <code>IOptions&lt;EmailSettings&gt;</code> and read <code>.Value</code> wherever you need the settings.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtxt">Are User Secrets encrypted or safe for production?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>No on both counts. User Secrets are stored as plain, unencrypted text and only load in the Development environment by default. Their purpose is to keep secrets out of source control and off shared config files during development — not to provide cryptographic protection. Production should use environment variables or a secret store such as Azure Key Vault.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtxt">What's the difference between the indexer, <code>GetValue&lt;T&gt;</code>, and <code>GetSection</code>?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The indexer <code>config["key"]</code> returns the raw value as a string (or null). <code>GetValue&lt;T&gt;("key", default)</code> reads one value, converts it to the type you ask for, and lets you supply a fallback. <code>GetSection("name")</code> returns a whole sub-tree of related keys that you can read or bind; it never returns null — you get an empty section if the name isn't found.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtxt">What does <code>reloadOnChange</code> do, and does it always update running code?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It makes the JSON provider watch the file and re-read it when you save changes, so the merged configuration updates without a restart. But whether your <em>code</em> sees the new value depends on how you read it: a value captured once at startup (like a plain <code>IOptions&lt;T&gt;</code>) won't change; you need <code>IOptionsSnapshot</code> or <code>IOptionsMonitor</code> to observe reloads.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtxt">A setting you added to <code>appsettings.json</code> isn't taking effect. How do you debug it?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Check precedence first — an environment variable or command-line argument with the same key sits above the JSON and overrides it. Then confirm the key spelling and nesting exactly match (a typo returns null silently). Verify the environment name is what you expect, since the wrong <code>appsettings.{Env}.json</code> may be loading. Enumerating <code>app.Configuration.AsEnumerable()</code> at startup can print the effective keys and values.</p></div></details>
+
+      <p class="qa-group-h">🔴 Senior <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);">(5–7 yrs)</span></p>
+
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtxt">Explain <code>IOptions</code> vs <code>IOptionsSnapshot</code> vs <code>IOptionsMonitor</code>.</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>IOptions&lt;T&gt;</code> is a singleton computed once at startup — it never reflects later config changes; it's the fastest and the default choice for stable values. <code>IOptionsSnapshot&lt;T&gt;</code> is scoped, so it's recomputed once per web request and picks up changes on the next request; because it's scoped it can't be injected into a singleton. <code>IOptionsMonitor&lt;T&gt;</code> is a singleton that always exposes the current value through <code>CurrentValue</code> and fires an <code>OnChange</code> callback — the right choice for long-lived or background services that must react to live updates.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtxt">Why can't <code>IOptionsSnapshot&lt;T&gt;</code> be injected into a singleton, and what happens if you try?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>IOptionsSnapshot</code> is registered as a scoped service, and injecting a scoped service into a singleton is a lifetime violation — the singleton would capture one request's scope forever (a "captive dependency"). The DI container detects this and throws at startup when scope validation is on. For live values in a singleton, use <code>IOptionsMonitor</code>, which is itself a singleton.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtxt">How would you add a custom configuration source, and when is that justified?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p>You implement <code>IConfigurationSource</code> and a matching <code>ConfigurationProvider</code> that populates the key–value dictionary in its <code>Load</code> method, then register it via an extension on the configuration builder. It's justified when settings live somewhere the built-in providers don't cover — a database table, a feature-flag service, or a bespoke vault. You'd weigh cost against alternatives like Azure App Configuration, and decide whether reload-on-change is worth implementing.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtxt">How do you validate configuration and fail fast on a bad value?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Use the options builder: <code>AddOptions&lt;T&gt;().Bind(section).ValidateDataAnnotations().ValidateOnStart()</code>. Data-annotation attributes (or a custom <code>Validate</code> delegate) express the rules, and <code>ValidateOnStart()</code> forces evaluation at launch so a missing or malformed setting crashes the app immediately rather than surfacing as a confusing runtime failure later. This is far preferable to discovering a bad connection string on the first request in production.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtxt">What are the security trade-offs across appsettings, env vars, User Secrets, and Key Vault?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>appsettings.json</code> is committed and world-readable to anyone with the repo — never for secrets. Environment variables aren't committed but are plain text and readable by anyone who can inspect the process, so they're acceptable but not strong. User Secrets solve the "don't commit it" problem in development only and are unencrypted. A managed store like Azure Key Vault adds encryption at rest, access policies, auditing, and rotation — the right answer for sensitive production secrets. The general principle: raise the protection level as you move from dev to prod and as the sensitivity of the value increases.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtxt">Explain the difference between host configuration and app configuration.</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Host configuration is read very early to bootstrap the host itself — the environment name, content root, and application name — and draws mainly from <code>DOTNET_</code>- and <code>ASPNETCORE_</code>-prefixed environment variables and the command line. App configuration is the broader set your application code reads through <code>IConfiguration</code>, and it takes priority over host configuration. Some settings, such as <code>URLS</code>, are read from app configuration even though host configuration can act as a fallback for them.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtxt">A config array merged from two sources gives unexpected results. Why?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Arrays are flattened into indexed keys (<code>Modules:0</code>, <code>Modules:1</code>, …). Because the last source wins per key, a shorter array from a higher-priority source overwrites only the overlapping indices and leaves trailing elements from the earlier source in place — producing a spliced, surprising result. Fixes: keep array indices aligned across sources, or store the list as a single delimited string and split it yourself so it's replaced atomically.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span><span class="qtxt">Why are configuration values always strings, and what are the implications?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Because the providers read from text-based sources (files, environment variables, command lines) that have no native type system, everything arrives as a string, and the binder converts on read. The implications: type conversion happens when you call <code>GetValue&lt;T&gt;</code> or bind, so an unconvertible value ("banana" for an int) becomes a silent default or a bind error rather than a compile error; <code>null</code> can't be represented, so a "cleared" value is an empty string, not null; and culture/format issues can bite numeric and date parsing. Strong typing and validation via the Options pattern are how you tame this.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Learn it in the order this page is written: first <em>why</em> config exists and the merged <code>IConfiguration</code> view, then each source (appsettings → environment files → env vars → User Secrets), then the precedence rule that ties them together, and finally reading with <code>IConfiguration</code> and the Options pattern. Nail Q1–Q8 cold before touching the mid questions — juniors are expected to know the sources and precedence, while the Options accessor trio (Q17) is the single highest-value senior topic.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  var sidebar = document.getElementById('sidebar');
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  var progress = document.getElementById('progress');
+  var links = Array.prototype.slice.call(sidebar.querySelectorAll('a[href^="#"]'));
+  var sections = links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
+
+  /* ---- reading progress bar ---- */
+  function updateProgress(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var pct = max > 0 ? (h.scrollTop || document.body.scrollTop) / max * 100 : 0;
+    progress.style.width = pct + '%';
+  }
+
+  /* ---- scroll-spy + auto-center active link ---- */
+  function updateActive(){
+    var pos = window.scrollY + 90;
+    var current = sections[0];
+    for (var i = 0; i < sections.length; i++){
+      if (sections[i] && sections[i].offsetTop <= pos) current = sections[i];
+    }
+    links.forEach(function(a, i){
+      var on = sections[i] === current;
+      a.classList.toggle('active', on);
+      if (on){
+        var target = a.offsetTop - sidebar.clientHeight / 2 + a.clientHeight / 2;
+        sidebar.scrollTo({ top: target, behavior: 'smooth' });
+      }
+    });
+  }
+
+  var ticking = false;
+  window.addEventListener('scroll', function(){
+    if (!ticking){
+      window.requestAnimationFrame(function(){
+        updateProgress(); updateActive(); ticking = false;
+      });
+      ticking = true;
+    }
+  });
+  window.addEventListener('resize', updateProgress);
+
+  /* ---- mobile sidebar ---- */
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', openNav);
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(a){ a.addEventListener('click', closeNav); });
+
+  /* ---- copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('code') : null;
+      if (!code) return;
+      var text = code.innerText;
+      function done(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try { document.execCommand('copy'); done(); } catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+
+  /* ---- scroll reveal ---- */
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce || !('IntersectionObserver' in window)){
+    document.querySelectorAll('.section').forEach(function(s){ s.classList.add('visible'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){ e.target.classList.add('visible'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.section').forEach(function(s){ io.observe(s); });
+  }
+
+  updateProgress(); updateActive();
+})();
+</script>
+</body>
+</html>

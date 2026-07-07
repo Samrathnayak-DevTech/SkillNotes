@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>C# Runtime — CLR, IL, JIT vs AOT, GC Generations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:540px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">C# Runtime Internals</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>Foundations</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> The Big Picture</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The CLR</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> IL — Intermediate Lang</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Managed vs Unmanaged</a>
+      </div>
+      <div class="nav-group">
+        <h4>Compilation</h4>
+        <a class="nav-link" href="#s05"><span class="n">05</span> JIT Compilation</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Tiered &amp; PGO</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> AOT Compilation</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> JIT vs AOT</a>
+      </div>
+      <div class="nav-group">
+        <h4>Memory</h4>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Garbage Collection</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> GC Generations</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Quick Recap</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// .NET &nbsp;·&nbsp; how your C# actually runs</p>
+      <h1>The C# Runtime, demystified 🚀</h1>
+      <p class="lede">
+        You write friendly C#. Somewhere between your keyboard and the CPU, a small army of
+        machinery turns it into something the processor understands — and quietly cleans up
+        the memory mess behind you. This page walks through that machinery piece by piece:
+        the <b>CLR</b>, the <b>IL</b> it runs, how <b>JIT</b> and <b>AOT</b> compile your code, and how the
+        <b>garbage collector</b> manages memory in generations. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">⚙️ <b>CLR</b></span>
+        <span class="chip">📜 <b>IL / MSIL</b></span>
+        <span class="chip">⚡ <b>JIT</b></span>
+        <span class="chip">🏭 <b>AOT</b></span>
+        <span class="chip">🧹 <b>GC Generations</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>The Big Picture</h2></div>
+      <p class="sec-sub">Before any term, get the journey straight: what really happens between
+        "I wrote some C#" and "my program is running."</p>
+
+      <p>Most beginners imagine the computer reads C# directly. It does not. Your CPU only
+        understands raw <strong>machine code</strong> (the 1s and 0s for that exact chip). C# takes a
+        two-step trip to get there.</p>
+
+      <h3>The journey of your code 🧭</h3>
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell highlight-green"><div class="val">C# source</div><div class="idx">.cs files</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">Compiler (Roslyn)</div><div class="idx">build time</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight"><div class="val">IL + metadata</div><div class="idx">.dll / .exe</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">CLR + JIT</div><div class="idx">run time</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell neg"><div class="val">Machine code</div><div class="idx">CPU runs it</div></div>
+        </div>
+      </div>
+
+      <p><strong>Step 1 — Compile (at build time):</strong> The C# compiler (called <strong>Roslyn</strong>) does
+        <em>not</em> produce machine code. It produces a portable, CPU-neutral instruction set called
+        <strong>Intermediate Language (IL)</strong>, packaged with <strong>metadata</strong> into a <code>.dll</code> or <code>.exe</code>
+        called an <em>assembly</em>.</p>
+      <p><strong>Step 2 — Execute (at run time):</strong> When you launch the program, the <strong>CLR</strong>
+        (the runtime) loads the assembly and uses the <strong>JIT compiler</strong> to translate IL into the exact
+        machine code for <em>your</em> processor, right before each method runs. The <strong>garbage collector</strong>
+        manages memory the whole time.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🍳 Analogy</span>
+        <p>Think of C# as a recipe written in plain English. <strong>IL</strong> is that same recipe translated into
+        a universal cooking notation any kitchen understands. The <strong>CLR</strong> is the head chef in your specific
+        kitchen who reads the notation and, dish by dish (the <strong>JIT</strong>), turns it into precise actions for the
+        equipment they actually have. The <strong>GC</strong> is the kitchen porter quietly clearing dirty plates so you
+        never run out.</p>
+      </div>
+
+      <h3>How the pieces fit together 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">⚙️ The .NET Runtime</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>⚙️ CLR</h5>
+            <ul>
+              <li>The execution engine</li>
+              <li>Loads assemblies</li>
+              <li>Manages memory &amp; security</li>
+              <li>Handles exceptions &amp; threads</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>📜 IL</h5>
+            <ul>
+              <li>CPU-neutral instructions</li>
+              <li>Output of the compiler</li>
+              <li>Stored in the assembly</li>
+              <li>Plus rich metadata</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>⚡ JIT / 🏭 AOT</h5>
+            <ul>
+              <li>Turn IL → machine code</li>
+              <li>JIT = while running</li>
+              <li>AOT = before shipping</li>
+              <li>Different trade-offs</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🧹 GC</h5>
+            <ul>
+              <li>Automatic memory cleanup</li>
+              <li>Generations 0 / 1 / 2</li>
+              <li>Mark → sweep → compact</li>
+              <li>No manual free()</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Key idea</span>
+        <p>This whole stack is why .NET is called a <strong>managed</strong> platform: a runtime <em>manages</em> the
+        execution of your code instead of letting it talk to the hardware directly. That management is what
+        gives you safety, portability, and automatic memory cleanup.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>The CLR</h2></div>
+      <p class="sec-sub">Common Language Runtime — the engine that actually runs your program.</p>
+
+      <p>The <strong>CLR (Common Language Runtime)</strong> is the heart of .NET. It is the virtual environment that
+        loads your compiled code and runs it. Languages like C#, F#, and VB.NET all compile to the same IL, so they
+        all run on the same CLR — that is the "Common" in the name.</p>
+
+      <h3>What the CLR does for you 🛠️</h3>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📂</span><h4>Assembly loading</h4><p>Finds and loads the <code>.dll</code>/<code>.exe</code> files your program needs, reading their IL and metadata.</p></div>
+        <div class="card"><span class="glyph">⚡</span><h4>JIT compilation</h4><p>Calls the Just-In-Time compiler to turn IL into native machine code as methods are first used.</p></div>
+        <div class="card"><span class="glyph">🧹</span><h4>Memory management</h4><p>Runs the garbage collector so you almost never allocate or free memory by hand.</p></div>
+        <div class="card"><span class="glyph">🛡️</span><h4>Type safety</h4><p>Verifies that code only uses memory and types in valid ways, preventing whole classes of bugs.</p></div>
+        <div class="card"><span class="glyph">💥</span><h4>Exception handling</h4><p>Provides a uniform way to throw and catch errors across all .NET languages.</p></div>
+        <div class="card"><span class="glyph">🧵</span><h4>Threads &amp; security</h4><p>Coordinates threads and enforces security boundaries while your code executes.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 CLR vs CoreCLR vs .NET</span>
+        <p>Historically the runtime in the old Windows-only <strong>.NET Framework</strong> was "the CLR." Modern,
+        cross-platform .NET (.NET Core, .NET 5/6/7/8/9/10) uses an evolved, open-source runtime often called
+        <strong>CoreCLR</strong>. People still say "the CLR" for both — it means the same role: the execution engine.</p>
+      </div>
+
+      <h3>CTS &amp; CLS — the shared rulebook 📏</h3>
+      <p>Two specifications let multiple languages cooperate on one runtime:</p>
+      <ul>
+        <li><strong>CTS (Common Type System):</strong> defines all the types (int, string, classes, structs…) and how
+          they behave, so a <code>string</code> means the same thing in C# and F#.</li>
+        <li><strong>CLS (Common Language Specification):</strong> a subset of rules a library should follow so it can be
+          consumed from <em>any</em> .NET language without surprises.</li>
+      </ul>
+
+      <div class="callout tip">
+        <span class="tag">✅ Beginner takeaway</span>
+        <p>You rarely "use" the CLR directly — it works invisibly. But almost every advanced behavior (why memory is
+        cleaned automatically, why a crash gives a stack trace, why .NET runs on Windows, Linux, and macOS) traces back
+        to the CLR doing its job.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>IL — Intermediate Language</h2></div>
+      <p class="sec-sub">The portable "in-between" code your C# becomes. Also written MSIL or CIL.</p>
+
+      <p><strong>Intermediate Language (IL)</strong> — also called <strong>MSIL</strong> (Microsoft IL) or
+        <strong>CIL</strong> (Common IL) — is what the C# compiler produces. It is a low-level, CPU-independent
+        instruction set. It is <em>not</em> tied to Intel, ARM, or any specific chip, which is exactly why the same
+        compiled <code>.dll</code> can run on different machines.</p>
+
+      <h3>See it for yourself 👀</h3>
+      <p>Here is a tiny C# method and the IL it roughly compiles to. Notice IL is <em>stack-based</em> — it pushes
+        values onto an evaluation stack and operates on them.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public int</span> <span class="fn">Add</span>(<span class="kw">int</span> a, <span class="kw">int</span> b)
+{
+    <span class="kw">return</span> a + b;
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">IL (simplified)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// method Add(int32 a, int32 b)</span>
+ldarg.1      <span class="cmt">// push argument a onto the stack</span>
+ldarg.2      <span class="cmt">// push argument b onto the stack</span>
+add          <span class="cmt">// pop both, push (a + b)</span>
+ret          <span class="cmt">// return the value on top of the stack</span></code></pre>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🧱 Analogy</span>
+        <p>IL is like flat-pack furniture instructions: standardized, picture-based steps that work in any country.
+        The actual assembly (machine code) depends on the tools <em>you</em> have at home — but the instruction sheet
+        is universal.</p>
+      </div>
+
+      <h3>IL carries metadata too 🏷️</h3>
+      <p>An assembly is not just IL instructions. It also contains <strong>metadata</strong>: a self-describing catalog of
+        every type, method, property, and parameter. This is what powers:</p>
+      <ul>
+        <li><strong>Reflection</strong> — code that inspects types at runtime.</li>
+        <li><strong>IntelliSense</strong> — your editor knowing what methods exist.</li>
+        <li><strong>Interoperability</strong> — different languages understanding each other's libraries.</li>
+      </ul>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Worth knowing</span>
+        <p>Because IL + metadata describe your program so completely, compiled .NET assemblies can be
+        <strong>decompiled</strong> back into readable C# (with tools like ILSpy or dotPeek). If you ship sensitive logic,
+        you may need <em>obfuscation</em>. IL is portable and inspectable by design.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Managed vs Unmanaged</h2></div>
+      <p class="sec-sub">Why "managed code" is a phrase you will hear constantly — and what it costs.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Aspect</th><th>Managed code (C#)</th><th>Unmanaged code (C / C++)</th></tr></thead>
+          <tbody>
+            <tr><td>Runs under</td><td>The CLR</td><td>Directly on the OS / CPU</td></tr>
+            <tr><td>Memory cleanup</td><td>Automatic (garbage collector)</td><td>Manual (<code>malloc</code>/<code>free</code>, <code>new</code>/<code>delete</code>)</td></tr>
+            <tr><td>Type/memory safety</td><td>Enforced by the runtime</td><td>Programmer's responsibility</td></tr>
+            <tr><td>Portability</td><td>High (IL is CPU-neutral)</td><td>Recompile per platform</td></tr>
+            <tr><td>Raw speed ceiling</td><td>Very high, slight overhead</td><td>Highest, full control</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>Managed code</strong> is code the CLR runs and supervises. The runtime manages its memory, checks its
+        type safety, and handles its exceptions. C# is normally managed. <strong>Unmanaged code</strong> runs outside that
+        supervision — typically C/C++ talking straight to the operating system, where you must free memory yourself.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 The trade</span>
+        <p>Managed code trades a little raw speed and control for a <em>lot</em> of safety and productivity. You stop
+        worrying about memory leaks and dangling pointers; the runtime handles them. For 95% of applications, that trade
+        is overwhelmingly worth it.</p>
+      </div>
+
+      <h3>When C# touches the unmanaged world 🌉</h3>
+      <p>Sometimes you must call native libraries (an OS API, a hardware driver, a C++ DLL). The runtime cannot
+        garbage-collect those resources, so C# gives you tools to clean up manually: <code>IDisposable</code>, the
+        <code>using</code> statement, and finalizers.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// 'using' guarantees Dispose() is called even if an error occurs.</span>
+<span class="cmt">// This is how you safely release unmanaged resources like files.</span>
+<span class="kw">using</span> (<span class="kw">var</span> file = <span class="kw">new</span> <span class="ty">StreamReader</span>(<span class="str">"data.txt"</span>))
+{
+    <span class="kw">string</span> text = file.<span class="fn">ReadToEnd</span>();
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>(text);
+}   <span class="cmt">// file handle released right here, automatically</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Rule of thumb</span>
+        <p>If a type implements <code>IDisposable</code> (files, network connections, database connections), wrap it in
+        a <code>using</code>. The GC handles managed memory, but <code>Dispose()</code> handles the unmanaged resources
+        the GC can't see.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>JIT Compilation</h2></div>
+      <p class="sec-sub">Just-In-Time: the CLR translates IL into machine code while your program runs.</p>
+
+      <p>The <strong>JIT (Just-In-Time) compiler</strong> is the part of the CLR that converts IL into native machine code
+        — but only <em>when a method is actually about to run for the first time</em>. It compiles "just in time," method
+        by method, not all upfront.</p>
+
+      <h3>How a method gets JIT-compiled ⚡</h3>
+      <div class="flow">
+        <div class="flow-step"><b><span class="st-icon">▶️</span>Method called for the first time</b><small>e.g. your code calls <code>CalculateTotal()</code></small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">🔎</span>CLR checks: already compiled?</b><small>Is native code for this method cached yet?</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight"><b><span class="st-icon">⚙️</span>JIT compiles IL → machine code</b><small>Optimized for the exact CPU it's running on</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">💾</span>Cache the native code</b><small>Stored in memory for the rest of the program's life</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">🔁</span>Next calls reuse the cache</b><small>No re-compilation — it runs at full native speed</small></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The big win</span>
+        <p>Because JIT compiles on the <em>actual</em> machine at runtime, it can use that exact CPU's features (special
+        instruction sets, register layout) and even real usage data to produce highly optimized code. A single portable
+        IL file gets tailor-made machine code on every device.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🗣️ Analogy</span>
+        <p>JIT is like a <strong>live interpreter</strong> at a conference who translates each sentence the moment it's
+        first spoken — then remembers the translation, so if the same phrase comes up again it's instant. The very first
+        time costs a beat; everything after is fluent.</p>
+      </div>
+
+      <h3>The downside: warm-up cost 🐢</h3>
+      <p>The first time each method runs, there's a tiny pause while the JIT works. For a long-running web server this
+        is invisible — methods compile once and then fly. But for short-lived programs (a tiny command-line tool, a
+        cloud function that starts, runs once, and stops), that startup cost matters. This is exactly the problem
+        <strong>AOT</strong> solves (section 07).</p>
+
+      <div class="complexity-badge"><span class="lab">first call</span><span class="val">slower (compiling)</span></div>
+      <div class="complexity-badge"><span class="lab">later calls</span><span class="val">full native speed</span></div>
+      <div class="complexity-badge"><span class="lab">startup</span><span class="val">JIT warm-up</span></div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Tiered Compilation &amp; PGO</h2></div>
+      <p class="sec-sub">A clever upgrade to JIT: compile fast first, then re-compile the hot paths better.</p>
+
+      <p>Modern .NET doesn't just JIT a method once. It uses <strong>tiered compilation</strong> — two levels of quality —
+        to get the best of both worlds: fast startup <em>and</em> fast steady-state performance.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🥉</span><h4>Tier 0 — Quick JIT</h4><p>The first time a method runs, the JIT compiles it <em>fast</em> with minimal optimization. The app starts quickly.</p></div>
+        <div class="card"><span class="glyph">🥇</span><h4>Tier 1 — Optimized</h4><p>If a method is called many times (it's "hot"), a background thread re-compiles it with full optimizations and swaps it in.</p></div>
+      </div>
+
+      <p>The runtime counts how often each method runs. Cold methods stay at cheap Tier 0; hot methods get promoted to
+        high-quality Tier 1 — without you doing anything.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 OSR — On-Stack Replacement</span>
+        <p>What about a method with one giant loop that runs for ages? Waiting for the <em>next call</em> to upgrade it
+        would be too late. <strong>OSR</strong> lets the runtime swap a long-running loop from Tier 0 to optimized code
+        <em>while it is still executing</em>. Clever.</p>
+      </div>
+
+      <h3>Dynamic PGO — learning from real usage 📈</h3>
+      <p><strong>Profile-Guided Optimization (PGO)</strong> means the runtime watches how your code <em>actually</em>
+        behaves (which branches are taken, which types appear most) during Tier 0, then uses that real profile data to
+        produce smarter Tier 1 code. <strong>Dynamic PGO is on by default in modern .NET (.NET 8 and later)</strong>,
+        and often gives a free throughput boost.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🏃 Analogy</span>
+        <p>Tier 0 is jogging to warm up; Tier 1 is sprinting once your muscles are ready. PGO is a coach watching your
+        first laps and rewriting your training plan around exactly how you run.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>AOT Compilation</h2></div>
+      <p class="sec-sub">Ahead-of-Time: do the IL → machine code step <em>before</em> shipping, not at runtime.</p>
+
+      <p><strong>AOT (Ahead-Of-Time)</strong> compilation flips the timing. Instead of translating IL to machine code
+        while the program runs (JIT), AOT does it earlier — at <em>build/publish</em> time. The program ships as native
+        code that's ready to run instantly. .NET offers two flavors.</p>
+
+      <h3>Two kinds of AOT in .NET 🏭</h3>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">⚡</span><h4>ReadyToRun (R2R)</h4><p>Precompiles IL to native code <em>but keeps the IL too</em>. Faster startup with no code changes. The JIT can still kick in for hot paths and re-optimize them at Tier 1. Bigger file size.</p></div>
+        <div class="card"><span class="glyph">📦</span><h4>Native AOT</h4><p>Compiles everything to a single self-contained native executable with <em>no JIT at all</em>. Tiny footprint, instant startup, runs without .NET installed — at the cost of some dynamic features.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Native AOT timeline</span>
+        <p>Native AOT arrived for console apps in <strong>.NET 7</strong>, gained comprehensive support including
+        ASP.NET Core in <strong>.NET 8</strong>, and continues to expand in recent releases (.NET 9 and .NET 10). It
+        targets a <em>specific</em> platform (e.g. <code>linux-x64</code>, <code>win-x64</code>) — you build a separate
+        binary per target.</p>
+      </div>
+
+      <h3>Turning Native AOT on 🔧</h3>
+      <p>It's a single project setting. After this, <code>dotnet publish -r &lt;runtime&gt;</code> produces a native
+        executable.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">.csproj</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">&lt;Project</span> <span class="ty">Sdk</span>=<span class="str">"Microsoft.NET.Sdk"</span><span class="kw">&gt;</span>
+  <span class="kw">&lt;PropertyGroup&gt;</span>
+    <span class="kw">&lt;OutputType&gt;</span>Exe<span class="kw">&lt;/OutputType&gt;</span>
+    <span class="kw">&lt;TargetFramework&gt;</span>net10.0<span class="kw">&lt;/TargetFramework&gt;</span>
+    <span class="cmt">&lt;!-- this one line enables Native AOT --&gt;</span>
+    <span class="kw">&lt;PublishAot&gt;</span>true<span class="kw">&lt;/PublishAot&gt;</span>
+  <span class="kw">&lt;/PropertyGroup&gt;</span>
+<span class="kw">&lt;/Project&gt;</span></code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">terminal</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt"># build a self-contained native binary for Linux x64</span>
+dotnet publish -r linux-x64 -c Release</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Native AOT trade-offs</span>
+        <p>Because there's no JIT and unused code is trimmed away, some dynamic features break or are restricted:
+        heavy <strong>reflection</strong>, <code>Reflection.Emit</code> (generating code at runtime), and loading
+        assemblies on the fly. The build also shows <em>AOT warnings</em> — heed them, because an app that warns at
+        publish time may misbehave. Use Native AOT when startup speed and small size truly matter (microservices,
+        serverless functions, CLI tools, containers).</p>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>JIT vs AOT</h2></div>
+      <p class="sec-sub">Same goal — IL becomes machine code — but the <em>when</em> changes everything.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Dimension</th><th>JIT (default)</th><th>Native AOT</th></tr></thead>
+          <tbody>
+            <tr><td>Compiles IL → native</td><td>At runtime, per method</td><td>At publish time, all upfront</td></tr>
+            <tr><td>Startup time</td><td>Slower (warm-up)</td><td>Very fast (instant)</td></tr>
+            <tr><td>Peak throughput</td><td>Excellent (Tier 1 + PGO)</td><td>Good, but no runtime re-optimization</td></tr>
+            <tr><td>Memory footprint</td><td>Larger</td><td>Smaller</td></tr>
+            <tr><td>Needs .NET installed?</td><td>Yes (or self-contained)</td><td>No — standalone binary</td></tr>
+            <tr><td>Portability of output</td><td>One IL runs anywhere</td><td>One binary per platform</td></tr>
+            <tr><td>Reflection / dynamic code</td><td>Fully supported</td><td>Restricted / may break</td></tr>
+            <tr><td>Best for</td><td>Long-running servers, desktop apps</td><td>Serverless, CLI, containers, microservices</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ How to choose</span>
+        <p>Pick by <strong>deployment shape</strong>, not raw benchmarks. Long-running service where peak speed matters →
+        keep the <strong>default JIT</strong> (tiered + PGO converge on the fastest steady-state code). Want faster
+        startup with zero code changes → <strong>ReadyToRun</strong>. Startup time, memory, or running without a JIT is
+        the dominating constraint, and you don't lean on reflection → <strong>Native AOT</strong>.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🍞 Analogy</span>
+        <p><strong>JIT</strong> is baking bread fresh as customers order — perfectly suited to whoever walks in, but
+        there's a wait. <strong>AOT</strong> is pre-baking everything before opening — instant service the moment the
+        door opens, but you committed to the menu in advance and can't adapt on the fly.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Garbage Collection</h2></div>
+      <p class="sec-sub">The CLR's automatic memory cleaner — so you (almost) never free memory by hand.</p>
+
+      <p>When you create an object with <code>new</code>, it lives on the <strong>managed heap</strong> (memory the CLR
+        controls). Eventually nothing in your program references that object anymore — it's garbage. The
+        <strong>Garbage Collector (GC)</strong> finds and reclaims that memory automatically.</p>
+
+      <h3>What "no longer referenced" means 🔗</h3>
+      <p>The GC starts from <strong>roots</strong> — things definitely still alive: local variables on the stack, static
+        fields, CPU registers. Any object reachable by following references from a root is <em>live</em>. Anything not
+        reachable is unreachable garbage.</p>
+
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell highlight-green"><div class="val">Root</div><div class="idx">stack var</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-green"><div class="val">Order</div><div class="idx">live ✓</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-green"><div class="val">Customer</div><div class="idx">live ✓</div></div>
+          <div class="arr-cell neg" style="margin-left:24px"><div class="val">OldCart</div><div class="idx">unreachable ✗</div></div>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:.88rem;color:var(--ink-soft);margin-top:-4px;">
+        <code>Order</code> and <code>Customer</code> are reachable from a root → kept.
+        <code>OldCart</code> has no path from any root → collected.</p>
+
+      <h3>The three phases: mark → sweep → compact 🧹</h3>
+      <div class="flow">
+        <div class="flow-step"><b><span class="st-icon">🏷️</span>1. Mark</b><small>Walk from the roots and flag every reachable (live) object</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">🗑️</span>2. Sweep</b><small>Reclaim the memory of everything <em>not</em> marked</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight"><b><span class="st-icon">📚</span>3. Compact</b><small>Slide survivors together to remove gaps, then fix up their references</small></div>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">📚 Analogy</span>
+        <p>Imagine a bookshelf where you keep grabbing and discarding books. <strong>Mark</strong> = put a sticky note on
+        every book you're still reading. <strong>Sweep</strong> = throw out everything without a note. <strong>Compact</strong>
+        = push the remaining books together so there are no awkward gaps, and update the library index so you can still
+        find them.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Don't call GC.Collect()</span>
+        <p>Beginners often discover <code>GC.Collect()</code> and sprinkle it everywhere to "free memory." Don't. The GC
+        is far smarter than you about <em>when</em> to run; forcing it usually <em>hurts</em> performance by triggering
+        expensive collections at the wrong time. Trust it. Let objects fall out of scope naturally.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Stop-the-world</span>
+        <p>To safely move objects, the GC briefly <strong>pauses</strong> your app's threads ("stop-the-world"). The whole
+        point of the generational design in the next section is to keep these pauses tiny by usually collecting only a
+        small slice of memory.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>GC Generations</h2></div>
+      <p class="sec-sub">The performance secret: most objects die young, so collect the young area often and cheaply.</p>
+
+      <p>If the GC had to scan every object every time, it would be painfully slow. Instead it uses a key observation
+        called the <strong>generational hypothesis</strong>: <em>most objects die very young</em> (a temporary string, a
+        loop variable), while objects that survive a while tend to keep surviving (a config object, a cache).</p>
+      <p>So the heap is split into <strong>three generations</strong>, and the GC mostly collects the youngest one.</p>
+
+      <h3>The managed heap, by generation 🧱</h3>
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell highlight-green"><div class="val">Gen 0</div><div class="idx">newest, collected most</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">Gen 1</div><div class="idx">survived once · buffer</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight"><div class="val">Gen 2</div><div class="idx">long-lived, collected least</div></div>
+        </div>
+        <div class="arr-row" style="margin-top:18px;">
+          <div class="arr-cell neg"><div class="val">LOH</div><div class="idx">≥ 85,000 bytes</div></div>
+          <div class="arr-cell" style="--c:var(--purple)"><div class="val" style="background:var(--purple-soft);border-color:var(--purple);color:var(--purple);font-weight:700;">POH</div><div class="idx">pinned objects</div></div>
+        </div>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🌱</span><h4>Generation 0</h4><p>Where brand-new small objects are born. Tiny and collected very frequently — most objects die here, so collections are cheap and fast.</p></div>
+        <div class="card"><span class="glyph">🪴</span><h4>Generation 1</h4><p>Objects that survived one Gen 0 collection. Acts as a <em>buffer</em> between short-lived and long-lived objects.</p></div>
+        <div class="card"><span class="glyph">🌳</span><h4>Generation 2</h4><p>Long-lived objects (statics, caches, app-wide singletons). Collected rarely because Gen 2 collections are expensive.</p></div>
+      </div>
+
+      <h3>Promotion: surviving moves you up ⬆️</h3>
+      <p>Survival is the rule of promotion. An object that lives through a collection is "promoted" to the next
+        generation up. You only ever allocate small objects into Gen 0 yourself — the GC does the promoting.</p>
+      <div class="flow">
+        <div class="flow-step"><b><span class="st-icon">🌱</span>Born in Gen 0</b><small>every <code>new SmallObject()</code> starts here</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">⬆️</span>Survives a Gen 0 GC → promoted to Gen 1</b></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight"><b><span class="st-icon">⬆️</span>Survives a Gen 1 GC → promoted to Gen 2</b><small>and stays in Gen 2 thereafter</small></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Collections are cumulative</span>
+        <p>A Gen 1 collection also collects Gen 0. A <strong>Gen 2 collection</strong> collects <em>everything</em> (Gen 0,
+        1, 2, plus LOH) — this is the expensive "full GC." That's why the GC tries hard to satisfy most requests with a
+        cheap Gen 0 collection alone.</p>
+      </div>
+
+      <div class="complexity-badge"><span class="lab">Gen 0 GC</span><span class="val">cheapest, frequent</span></div>
+      <div class="complexity-badge"><span class="lab">Gen 1 GC</span><span class="val">+ Gen 0</span></div>
+      <div class="complexity-badge"><span class="lab">Gen 2 GC</span><span class="val">full · everything · costliest</span></div>
+
+      <h3>Special heaps: LOH &amp; POH 📦📌</h3>
+      <ul>
+        <li><strong>LOH — Large Object Heap:</strong> objects <strong>≥ 85,000 bytes</strong> (big arrays, large buffers)
+          go here. The LOH is <em>not compacted</em> by default (copying huge blocks is too expensive) and is
+          <strong>logically collected as part of Gen 2</strong> — so it's only freed during a full collection.</li>
+        <li><strong>POH — Pinned Object Heap:</strong> introduced in <strong>.NET 5</strong>, a dedicated home for
+          <em>pinned</em> objects (objects fixed in place so the GC can't move them, often for native interop). Isolating
+          them here keeps the rest of the heap freely compactable.</li>
+      </ul>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ LOH fragmentation</span>
+        <p>Because the LOH isn't compacted, frequently allocating and discarding large objects can leave gaps it can't
+        reuse efficiently — <em>fragmentation</em>. The fix usually isn't forcing compaction; it's <strong>pooling and
+        reusing</strong> large buffers (e.g. <code>ArrayPool&lt;T&gt;</code>) so you allocate them once.</p>
+      </div>
+
+      <h3>Seeing generations in code 🔬</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> obj = <span class="kw">new</span> <span class="ty">object</span>();
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="ty">GC</span>.<span class="fn">GetGeneration</span>(obj));   <span class="cmt">// 0  — brand new</span>
+
+<span class="ty">GC</span>.<span class="fn">Collect</span>();                                <span class="cmt">// (demo only — don't do this in real apps)</span>
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="ty">GC</span>.<span class="fn">GetGeneration</span>(obj));   <span class="cmt">// 1  — it survived, so it was promoted</span>
+
+<span class="cmt">// A large array lands on the Large Object Heap (reported as Gen 2):</span>
+<span class="kw">var</span> big = <span class="kw">new</span> <span class="kw">byte</span>[<span class="num">100_000</span>];           <span class="cmt">// &gt;= 85,000 bytes -&gt; LOH</span>
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="ty">GC</span>.<span class="fn">GetGeneration</span>(big));   <span class="cmt">// 2</span></code></pre>
+      </div>
+
+      <h3>Workstation vs Server GC ⚙️</h3>
+      <p>One last knob worth knowing: the GC has <strong>modes</strong>.</p>
+      <ul>
+        <li><strong>Workstation GC:</strong> default for desktop/client apps; tuned to keep the UI responsive with short pauses.</li>
+        <li><strong>Server GC:</strong> uses multiple heaps and threads (one set per CPU core) for maximum throughput on
+          servers with many cores. Common for web apps.</li>
+        <li><strong>Background / concurrent GC:</strong> does much of the expensive Gen 2 work on a background thread so
+          your app keeps running with minimal pauses.</li>
+      </ul>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea. If you can explain each card aloud, you understand the runtime.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>⚙️ CLR</h4><p>The execution engine that loads, runs, and supervises your .NET code.</p></div>
+        <div class="recap-card"><h4>📜 IL</h4><p>Portable, CPU-neutral instructions the compiler produces from C#, stored with metadata in an assembly.</p></div>
+        <div class="recap-card"><h4>🔒 Managed code</h4><p>Code the CLR runs with automatic memory and type safety — versus unmanaged C/C++ you free yourself.</p></div>
+        <div class="recap-card"><h4>⚡ JIT</h4><p>Translates IL to native machine code at runtime, method by method, then caches it.</p></div>
+        <div class="recap-card"><h4>🥇 Tiered + PGO</h4><p>Quick Tier 0 for fast startup, optimized Tier 1 for hot paths, guided by real usage data.</p></div>
+        <div class="recap-card"><h4>🏭 AOT</h4><p>Compiles IL to native code before shipping — ReadyToRun keeps IT, Native AOT drops the JIT entirely.</p></div>
+        <div class="recap-card"><h4>⚖️ JIT vs AOT</h4><p>JIT wins steady-state throughput; AOT wins startup time and footprint.</p></div>
+        <div class="recap-card"><h4>🧹 GC</h4><p>Automatically reclaims unreachable objects via mark → sweep → compact.</p></div>
+        <div class="recap-card"><h4>🌱 Generations</h4><p>Gen 0/1/2 — collect the young, short-lived area often and cheaply; full Gen 2 collections rarely.</p></div>
+        <div class="recap-card"><h4>📦 LOH &amp; POH</h4><p>Big objects (≥85KB) live on the un-compacted LOH (collected with Gen 2); pinned objects live on the POH.</p></div>
+      </div>
+
+      <h3>Compilation &amp; GC summary table 📊</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>When</th><th>Cost / trait</th><th>Key fact</th></tr></thead>
+          <tbody>
+            <tr><td>JIT (Tier 0)</td><td>First call, runtime</td><td>Fast compile, slower code</td><td>Quick startup</td></tr>
+            <tr><td>JIT (Tier 1)</td><td>Hot methods, background</td><td>Slow compile, fast code</td><td>Best steady-state</td></tr>
+            <tr><td>ReadyToRun</td><td>Publish time</td><td>Larger binary, keeps IL</td><td>Fast startup, JIT still available</td></tr>
+            <tr><td>Native AOT</td><td>Publish time</td><td>Small binary, no JIT</td><td>Instant start, limited reflection</td></tr>
+            <tr><td>Gen 0 GC</td><td>Gen 0 full</td><td>Cheapest, frequent</td><td>Most objects die here</td></tr>
+            <tr><td>Gen 1 GC</td><td>Gen 1 full</td><td>Includes Gen 0</td><td>Buffer generation</td></tr>
+            <tr><td>Gen 2 GC</td><td>Gen 2 / LOH full</td><td>Full collection, costliest</td><td>Collects everything incl. LOH</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a clear answer. Tagged by level — Junior (0–2 yrs),
+        Mid (2–5 yrs), Senior (5–7 yrs). Written for someone with no prior coding background.</p>
+
+      <h3>🌱 Junior — fundamentals (0–2 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q1</span> What is the CLR? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The <strong>Common Language Runtime</strong> is the engine that runs .NET programs. It loads your
+        compiled code, converts it to machine code (via the JIT), manages memory with the garbage collector, enforces type
+        safety, and handles exceptions. Because C#, F#, and VB.NET all compile to the same intermediate code, they all run
+        on this one common runtime.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span> What is IL (MSIL/CIL)? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><strong>Intermediate Language</strong> is the CPU-independent code the C# compiler produces — not
+        machine code. It's stored, along with metadata describing your types, inside a <code>.dll</code> or <code>.exe</code>
+        assembly. The runtime later turns this IL into machine code for the specific computer. IL is what makes one compiled
+        file able to run on different processors.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span> Does the C# compiler produce machine code directly? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>No. The C# compiler (Roslyn) produces <strong>IL</strong>, not machine code. Converting IL to
+        machine code happens later — at runtime by the JIT, or at publish time with AOT. This two-step design is what gives
+        .NET its portability.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span> What does "managed code" mean? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Managed code runs <em>under the supervision of the CLR</em>. The runtime manages its memory
+        (garbage collection), checks its type safety, and handles its errors. The opposite is <strong>unmanaged code</strong>
+        (like C/C++) that runs directly on the OS and where the programmer must free memory manually.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span> What is garbage collection in simple terms? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It's the runtime's <strong>automatic memory cleaner</strong>. When you create objects, they use
+        memory. When nothing in your program refers to an object anymore, the garbage collector detects that it's no longer
+        needed and reclaims its memory — so you don't have to free memory by hand and rarely get memory leaks.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span> What is the JIT compiler? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The <strong>Just-In-Time compiler</strong> converts IL into native machine code <em>while the program
+        runs</em> — specifically the first time each method is called. It then caches the result, so subsequent calls run at
+        full native speed. "Just in time" means it compiles each method right before it's needed, not all at once.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span> What is an assembly? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>An <strong>assembly</strong> is the unit of deployment in .NET — typically a <code>.dll</code> or
+        <code>.exe</code> file. It contains your compiled IL code plus metadata (a self-describing catalog of all the types and
+        methods inside). Assemblies are what the CLR loads and runs.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span> What are the GC generations and why do they exist? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The heap is split into <strong>Gen 0, Gen 1, and Gen 2</strong>. The reason is a simple observation:
+        most objects die young. So the GC keeps new objects in Gen 0 and collects it often and cheaply. Objects that survive get
+        promoted upward (Gen 0 → 1 → 2). Long-lived objects end up in Gen 2, which is collected rarely because it's expensive.
+        This makes most collections small and fast.</p></div></details>
+
+      <h3>🟠 Mid-level — going deeper (2–5 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q9</span> Walk through what happens from C# source to a running program. <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>(1) You write <code>.cs</code> files. (2) The Roslyn compiler turns them into <strong>IL + metadata</strong>
+        inside an assembly (<code>.dll</code>/<code>.exe</code>). (3) At launch, the <strong>CLR</strong> loads the assembly. (4)
+        As each method is first called, the <strong>JIT</strong> compiles its IL into native machine code for the current CPU and
+        caches it. (5) The <strong>garbage collector</strong> manages memory throughout. With AOT, step 4 happens earlier — at
+        publish time instead of runtime.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> What's the difference between JIT and AOT? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Both turn IL into machine code; the difference is <em>when</em>. <strong>JIT</strong> compiles at
+        runtime, method by method — slower startup but it can optimize for the exact CPU and real usage (Tier 1 + PGO), giving
+        excellent steady-state speed. <strong>AOT</strong> compiles ahead of time at publish — instant startup, smaller footprint,
+        can run without .NET installed, but it's platform-specific and restricts dynamic features like reflection.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> Explain mark, sweep, and compact. <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><strong>Mark:</strong> starting from roots (stack variables, statics, registers), the GC flags every
+        object still reachable. <strong>Sweep:</strong> it reclaims the memory of everything <em>not</em> marked. <strong>Compact:</strong>
+        it slides the surviving objects together to eliminate gaps (reducing fragmentation) and updates all references to point to
+        the new locations.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> What is the Large Object Heap (LOH)? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Objects <strong>≥ 85,000 bytes</strong> (typically big arrays) are allocated on the LOH instead of the
+        normal small-object heap. The LOH is <strong>not compacted by default</strong> because copying huge blocks is expensive, and
+        it's <strong>collected only during a Gen 2 (full) collection</strong>. Frequent large allocations can cause fragmentation,
+        so the usual remedy is to pool and reuse large buffers.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What does object promotion mean? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>When an object survives a garbage collection, the GC <strong>promotes</strong> it to the next higher
+        generation: Gen 0 survivors become Gen 1, Gen 1 survivors become Gen 2. Objects already in Gen 2 stay in Gen 2. You only
+        allocate small objects into Gen 0 directly; the GC does all the promoting based on survival.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> Should you call GC.Collect() to improve performance? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Almost never. The GC self-tunes and knows far better than you <em>when</em> to collect. Manually calling
+        <code>GC.Collect()</code> usually forces an expensive full collection at a bad time, hurting performance. Better practice is
+        to reduce allocations, let objects go out of scope naturally, and dispose unmanaged resources with <code>using</code>. Manual
+        collection is only for rare, well-measured scenarios.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> What is IDisposable and why is it needed if the GC exists? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The GC handles <strong>managed memory</strong>, but it doesn't know about <strong>unmanaged resources</strong>
+        like file handles, database connections, or network sockets. <code>IDisposable</code> gives those types a <code>Dispose()</code>
+        method to release such resources promptly and deterministically. The <code>using</code> statement calls <code>Dispose()</code>
+        automatically — even if an exception is thrown.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> Why can .NET assemblies be decompiled, and what can you do about it? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Because assemblies contain IL plus rich metadata describing every type and method, tools like ILSpy can
+        reconstruct readable C#. That self-describing nature is what powers reflection and IntelliSense, but it also exposes your
+        logic. If you need to protect intellectual property, you can apply <strong>obfuscation</strong> (and for some cases, Native
+        AOT, which compiles to native code without shipping IL, raises the bar).</p></div></details>
+
+      <h3>🔴 Senior — synthesis &amp; judgment (5–7 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain tiered compilation and how it balances startup vs throughput. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The JIT compiles a method twice. <strong>Tier 0</strong> is a fast, low-optimization compile so the app starts
+        quickly. The runtime counts method calls; once a method is "hot," a background thread recompiles it at <strong>Tier 1</strong>
+        with full optimizations and swaps it in. <strong>OSR (On-Stack Replacement)</strong> handles long-running loops by upgrading
+        them mid-execution. This gives both fast startup (Tier 0) and fast steady-state (Tier 1) without developer effort.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> What is Dynamic PGO and why does it matter? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><strong>Profile-Guided Optimization</strong> instruments Tier 0 code to collect real runtime behavior —
+        which branches are taken, which concrete types show up most — then feeds that profile into Tier 1 so the optimized code is
+        tailored to actual usage (e.g. devirtualizing hot virtual calls). <strong>Dynamic PGO is on by default in .NET 8 and later</strong>
+        and typically improves throughput for free, which is a strong reason to keep the default JIT for long-running services.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> When would you choose Native AOT, and what do you give up? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Choose Native AOT when <strong>startup time, memory footprint, or running without a JIT</strong> dominates —
+        serverless functions, CLI tools, sidecars, scale-to-zero containers, locked-down environments. You give up runtime
+        re-optimization (no Tier 1/PGO), broad reflection and <code>Reflection.Emit</code>, runtime assembly loading, and
+        cross-platform portability of a single binary (it's platform-specific). You must also resolve AOT trim warnings, since
+        unhandled ones can cause runtime failures. For long-running, throughput-critical servers, the default JIT usually wins.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> Why are Gen 2 (full) collections expensive, and how do you minimize them? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A Gen 2 collection is a <strong>full collection</strong> — it scans and collects Gen 0, 1, 2, and the LOH,
+        and may compact large amounts of memory, causing longer stop-the-world pauses. To minimize them: reduce mid-life and
+        long-lived allocations, avoid promoting short-lived objects (don't hold references longer than needed), pool large buffers to
+        keep them off a churning LOH, prefer <code>struct</code>/<code>Span&lt;T&gt;</code> for hot paths to cut heap allocations, and
+        consider Server GC + background GC for throughput-sensitive services.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> What problem does the Pinned Object Heap (POH) solve? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Pinned objects are fixed in memory so the GC can't move them — common when passing buffers to native
+        code via interop. Before, pinned objects scattered through the normal heap blocked compaction and caused fragmentation. The
+        <strong>POH</strong>, introduced in <strong>.NET 5</strong>, gives pinned objects a dedicated region, so the rest of the heap
+        stays freely compactable and fragmentation from pinning is contained.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> Compare Workstation GC, Server GC, and Background GC. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><strong>Workstation GC</strong> (client default) uses a single heap and prioritizes low latency for
+        responsive UIs. <strong>Server GC</strong> creates multiple heaps and GC threads (roughly one set per core) to maximize
+        throughput on multi-core servers — ideal for web apps. <strong>Background (concurrent) GC</strong> performs most of the
+        expensive Gen 2 work on a background thread so application threads keep running with minimal pauses. You choose modes via
+        runtime configuration based on whether you optimize for latency or throughput.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> A short-lived cloud function has slow cold starts. How does the runtime knowledge help? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Cold-start slowness often comes from JIT warm-up: methods compile on first use, which a short-lived
+        function pays every invocation. Mitigations, in increasing commitment: enable <strong>ReadyToRun</strong> to precompile to
+        native at publish (faster startup, zero code changes), or move to <strong>Native AOT</strong> to eliminate the JIT entirely
+        for near-instant startup and a smaller image — provided the function avoids reflection-heavy dependencies. The decision is
+        driven by deployment shape, exactly the JIT-vs-AOT trade-off.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> Explain the difference between the stack and the managed heap. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The <strong>stack</strong> stores method call frames, local value-type variables, and parameters; it's
+        fast, LIFO, and automatically reclaimed when a method returns — no GC needed. The <strong>managed heap</strong> stores
+        reference-type objects (created with <code>new</code>); it's where the garbage collector operates with its generations.
+        Value types (<code>int</code>, <code>struct</code>) typically live on the stack or inline; reference types
+        (<code>class</code>) live on the heap, with the variable holding a reference to them. Reducing heap allocations (e.g. via
+        structs and <code>Span&lt;T&gt;</code>) reduces GC pressure.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work the questions top to bottom: <strong>Junior</strong> builds vocabulary (CLR, IL, JIT, GC), <strong>Mid</strong>
+        connects them into the end-to-end pipeline and memory model, and <strong>Senior</strong> tests judgment (when to use AOT,
+        how to reduce full GCs, latency vs throughput). If you can answer a question out loud in plain English without peeking,
+        move on. The ones you stumble on point straight to the section to re-read.</p>
+      </div>
+
+      <p class="foot">All technical details verified against Microsoft Learn (.NET garbage collection, Native AOT, and
+        compilation docs) and the dotnet/runtime documentation. Facts current as of mid-2026 — Native AOT spans .NET 7
+        through .NET 10; Dynamic PGO is on by default in .NET 8+. This single <code>01-csharp-runtime.html</code> file is
+        fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

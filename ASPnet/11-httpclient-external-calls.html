@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 11 — HttpClient &amp; External Calls: IHttpClientFactory, Typed Clients &amp; System.Text.Json</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">🌐 Day 11 · HttpClient</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">The Problem</div>
+    <a href="#s01"><span class="n">01</span>Calling Other APIs</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>The HttpClient Trap</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">The Factory</div>
+    <a href="#s04"><span class="n">04</span>IHttpClientFactory</a>
+    <a href="#s05"><span class="n">05</span>Named vs Typed Clients</a>
+    <a href="#s06"><span class="n">06</span>Making Requests</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Data &amp; Robustness</div>
+    <a href="#s07"><span class="n">07</span>System.Text.Json</a>
+    <a href="#s08"><span class="n">08</span>Error Handling</a>
+    <a href="#s09"><span class="n">09</span>Resilience</a>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 11 · ASP.NET Core Fundamentals</div>
+  <h1>🌐 HttpClient: Talking to the Outside World</h1>
+  <p class="lede">Your app rarely lives alone — it calls payment gateways, weather services, other microservices. Today you'll learn to make those calls the right way: <code>IHttpClientFactory</code> instead of the deceptively simple <code>new HttpClient()</code>, clean typed clients, and turning JSON responses into C# objects with <code>System.Text.Json</code>.</p>
+  <div class="agenda">
+    <span class="chip">📞 HTTP Requests</span>
+    <span class="chip">🏭 IHttpClientFactory</span>
+    <span class="chip">📦 Typed Clients</span>
+    <span class="chip">🔤 System.Text.Json</span>
+    <span class="chip">🛡️ Resilience</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>📞 Calling Other APIs</h2>
+
+  <p>A REST API call is a simple round trip: your app sends an <strong>HTTP request</strong> (a verb like GET, a URL, headers, maybe a body) to another server, and gets back an <strong>HTTP response</strong> (a status code, headers, and usually a body — most often JSON). In .NET, the class that performs this round trip is <code>HttpClient</code>.</p>
+
+  <p>The <em>using</em> is easy. The <em>using it correctly</em> is where nearly every developer stumbles — because the obvious way (<code>new HttpClient()</code> for each call) quietly destabilizes production. This whole lesson exists to teach the correct way from the start.</p>
+
+  <div class="callout analogy">
+    <span class="tag">☎️ Analogy</span>
+    <p>An <code>HttpClient</code> is like a <strong>phone line to another office</strong>. Setting up a line takes real work — dialing, handshaking, establishing the connection. The naive approach is to <em>install and rip out a brand-new phone line for every single call</em>, then leave the dead line's wires warm in the wall for minutes afterward. Do that a few thousand times a second and the building runs out of wall sockets. The professional approach keeps a small switchboard of reusable lines — that's what today's factory gives you.</p>
+  </div>
+
+  <h3>The anatomy of a request/response 📨</h3>
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-blue"><div class="val">GET</div><div class="idx">verb</div></div>
+      <div class="arr-cell"><div class="val">/posts/1</div><div class="idx">path</div></div>
+      <div class="arr-cell"><div class="val">Accept: json</div><div class="idx">headers</div></div>
+      <div class="arr-cell highlight-green"><div class="val">200 OK</div><div class="idx">status</div></div>
+      <div class="arr-cell highlight"><div class="val">{ … }</div><div class="idx">JSON body</div></div>
+    </div>
+    <div class="arr-caption">One HTTP round trip · request (verb + path + headers) → response (status + body)</div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>Calling an external API is I/O — exactly the kind of waiting Day 10 was about. Every method here is <code>async</code>, takes a <code>CancellationToken</code>, and is awaited all the way up. HttpClient and async are inseparable partners.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <div class="mindmap">
+    <div class="mm-core">HttpClient &amp; External Calls<small>request · response · map to model</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-rose">
+        <h4>⚠️ The Trap</h4>
+        <ul>
+          <li><code>new HttpClient()</code> per call</li>
+          <li>Socket exhaustion</li>
+          <li>Stale DNS</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-accent">
+        <h4>🏭 The Factory</h4>
+        <ul>
+          <li><code>IHttpClientFactory</code></li>
+          <li>Pools &amp; rotates handlers</li>
+          <li>Central configuration</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-blue">
+        <h4>📦 Client Styles</h4>
+        <ul>
+          <li>Basic / named / typed</li>
+          <li>Typed = a real class</li>
+          <li>Injected via DI</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>🔤 JSON</h4>
+        <ul>
+          <li><code>System.Text.Json</code></li>
+          <li><code>GetFromJsonAsync&lt;T&gt;</code></li>
+          <li>Attributes &amp; options</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>🛡️ Robustness</h4>
+        <ul>
+          <li>Status &amp; error handling</li>
+          <li>Timeouts</li>
+          <li>Retry &amp; circuit breaker</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p>The arc: understand why the naive approach fails (03), adopt the factory (04–06), turn responses into models (07), then make the whole thing survive the real world of flaky networks (08–09).</p>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>⚠️ The HttpClient Trap</h2>
+
+  <p>Here's the code that looks perfect and is quietly dangerous:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · The tempting mistake</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// ❌ NEVER do this in a request handler or hot path:</span>
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">Post</span>?&gt; <span class="fn">GetPostAsync</span>(<span class="kw">int</span> id)
+{
+    <span class="kw">using var</span> client = <span class="kw">new</span> <span class="ty">HttpClient</span>();   <span class="cmt">// 💣 new client + new socket every call</span>
+    <span class="kw">return await</span> client.<span class="fn">GetFromJsonAsync</span>&lt;<span class="ty">Post</span>&gt;(
+        $<span class="str">"https://jsonplaceholder.typicode.com/posts/{id}"</span>);
+}
+</code></pre>
+  </div>
+
+  <p>It compiles, it works in a demo, and it will destabilize your app in production. Two distinct failures:</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">🔌</span><b>Socket exhaustion</b><p>Each <code>HttpClient</code> holds its own connection pool. Disposing it doesn't free the underlying TCP socket immediately — the OS holds it in <code>TIME_WAIT</code> for minutes. Create thousands per second and you run out of ports; new connections fail with obscure errors.</p></div>
+    <div class="card"><span class="glyph">📡</span><b>Stale DNS</b><p>The opposite fix — one <code>static</code> HttpClient forever — solves sockets but caches DNS for the app's whole life. If the target service's IP changes (failover, scaling), your app keeps calling the dead address.</p></div>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ HttpClient Is Meant to Be Reused</span>
+    <p><code>HttpClient</code> implements <code>IDisposable</code>, which screams "wrap me in <code>using</code>!" — but that instinct is exactly wrong here. It's designed to be <strong>long-lived and shared</strong>, not created and disposed per call. The disposable interface is a genuine footgun.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 The Dilemma</span>
+    <p>Per-request client → socket exhaustion. One eternal static client → stale DNS. You need something that <strong>reuses connections</strong> yet <strong>periodically refreshes them</strong> to pick up DNS changes. That's precisely the problem <code>IHttpClientFactory</code> was built to solve.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>🏭 IHttpClientFactory</h2>
+
+  <p><code>IHttpClientFactory</code> threads the needle. It manages the expensive part — the <code>HttpMessageHandler</code> that owns the connection pool — separately from the cheap, disposable <code>HttpClient</code> wrapper you actually use. Handlers are <strong>pooled and reused</strong> (no socket exhaustion) but <strong>rotated on a timer</strong> (default ~2 minutes, so DNS changes get picked up).</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-green"><div class="val">HttpClient</div><div class="idx">cheap · short-lived · yours</div></div>
+      <div class="arr-cell"><div class="val">wraps →</div><div class="idx"></div></div>
+      <div class="arr-cell highlight"><div class="val">HttpMessageHandler</div><div class="idx">expensive · pooled · rotated</div></div>
+      <div class="arr-cell"><div class="val">owns →</div><div class="idx"></div></div>
+      <div class="arr-cell highlight-blue"><div class="val">Connection pool</div><div class="idx">reused sockets</div></div>
+    </div>
+    <div class="arr-caption">The factory's split · you get fresh cheap clients; the costly handler + sockets are pooled behind them</div>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">🚕 Analogy</span>
+    <p>Think of a <strong>taxi rank</strong>. The <em>cars</em> (message handlers, with their engines warm and routes known) are expensive to prepare, so the depot keeps a managed fleet and reuses them — and retires each car every couple of hours so it re-checks the maps (DNS). You just grab whichever <em>taxi ticket</em> (HttpClient) is next in line, take your ride, and toss the ticket — the car keeps running for the next passenger. You never build a car per trip.</p>
+  </div>
+
+  <h3>What you get 🎁</h3>
+  <ul>
+    <li>🔌 <strong>No socket exhaustion</strong> — handlers and their connections are pooled and reused.</li>
+    <li>📡 <strong>No stale DNS</strong> — handlers are recycled periodically so new IPs are picked up.</li>
+    <li>⚙️ <strong>Central configuration</strong> — base address, default headers, and timeout live in one place per client.</li>
+    <li>🧅 <strong>A handler pipeline</strong> — plug in cross-cutting middleware (logging, auth, retries) as delegating handlers.</li>
+    <li>🛡️ <strong>Resilience hooks</strong> — one line adds retries, timeouts, and circuit breakers (section 09).</li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="tag">✅ Registration Is One Line</span>
+    <p>You register HTTP clients in <code>Program.cs</code> with <code>builder.Services.AddHttpClient(...)</code>. That single call wires the factory into DI; from then on you ask DI for a client (or a typed client) and the lifetime management is handled for you.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ A Factory Client Is Still Short-Lived</span>
+    <p>The clients the factory hands you are meant to be <strong>requested fresh and used briefly</strong> — don't cache one in a field for hours. And never inject a <em>typed</em> client into a <strong>singleton</strong> service: the singleton would pin one handler forever, defeating the DNS-refresh rotation. (More on typed-client lifetime in section 05.)</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>📦 Named vs Typed Clients</h2>
+
+  <p>There are three ways to consume the factory, escalating in structure. For real applications, <strong>typed clients</strong> are the sweet spot.</p>
+
+  <h3>1 — Basic (unnamed) 🌱</h3>
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Just get a client</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services.<span class="fn">AddHttpClient</span>();   <span class="cmt">// register the factory</span>
+
+<span class="cmt">// Inject IHttpClientFactory, create a default client per use:</span>
+<span class="kw">var</span> client = _factory.<span class="fn">CreateClient</span>();
+<span class="kw">var</span> post = <span class="kw">await</span> client.<span class="fn">GetFromJsonAsync</span>&lt;<span class="ty">Post</span>&gt;(<span class="str">"https://.../posts/1"</span>, ct);
+</code></pre>
+  </div>
+
+  <h3>2 — Named 🏷️</h3>
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Configuration behind a name</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services.<span class="fn">AddHttpClient</span>(<span class="str">"jsonplaceholder"</span>, client =&gt;
+{
+    client.BaseAddress = <span class="kw">new</span> <span class="ty">Uri</span>(<span class="str">"https://jsonplaceholder.typicode.com/"</span>);
+    client.Timeout = <span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">30</span>);
+    client.DefaultRequestHeaders.<span class="fn">Add</span>(<span class="str">"Accept"</span>, <span class="str">"application/json"</span>);
+});
+
+<span class="cmt">// Ask for it by name — you must remember the string everywhere:</span>
+<span class="kw">var</span> client = _factory.<span class="fn">CreateClient</span>(<span class="str">"jsonplaceholder"</span>);
+<span class="kw">var</span> post = <span class="kw">await</span> client.<span class="fn">GetFromJsonAsync</span>&lt;<span class="ty">Post</span>&gt;(<span class="str">"posts/1"</span>, ct);
+</code></pre>
+  </div>
+
+  <h3>3 — Typed (recommended) 🌟</h3>
+  <p>A typed client is a <strong>class of your own</strong> that receives a pre-configured <code>HttpClient</code> in its constructor and exposes clean, intention-revealing methods. It hides the URLs and JSON plumbing behind a tidy API and is fully DI-friendly:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Services/JsonPlaceholderClient.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">JsonPlaceholderClient</span>(<span class="ty">HttpClient</span> http)
+{
+    <span class="cmt">// The HttpClient is already configured (base address, headers, timeout)</span>
+    <span class="cmt">// by the registration below — this class just uses it.</span>
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">Post</span>?&gt; <span class="fn">GetPostAsync</span>(<span class="kw">int</span> id, <span class="ty">CancellationToken</span> ct = <span class="kw">default</span>)
+        =&gt; <span class="kw">await</span> http.<span class="fn">GetFromJsonAsync</span>&lt;<span class="ty">Post</span>&gt;($<span class="str">"posts/{id}"</span>, ct);
+
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Post</span>&gt;&gt; <span class="fn">GetPostsByUserAsync</span>(<span class="kw">int</span> userId, <span class="ty">CancellationToken</span> ct = <span class="kw">default</span>)
+        =&gt; <span class="kw">await</span> http.<span class="fn">GetFromJsonAsync</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Post</span>&gt;&gt;($<span class="str">"posts?userId={userId}"</span>, ct) ?? [];
+}
+</code></pre>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Program.cs — register &amp; inject</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services.<span class="fn">AddHttpClient</span>&lt;<span class="ty">JsonPlaceholderClient</span>&gt;(client =&gt;
+{
+    client.BaseAddress = <span class="kw">new</span> <span class="ty">Uri</span>(<span class="str">"https://jsonplaceholder.typicode.com/"</span>);
+    client.Timeout = <span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">30</span>);
+});
+
+<span class="cmt">// Anywhere via DI — no factory, no magic strings, just a clean dependency:</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/posts/{id}"</span>, <span class="kw">async</span> (<span class="kw">int</span> id, <span class="ty">JsonPlaceholderClient</span> api, <span class="ty">CancellationToken</span> ct) =&gt;
+    <span class="kw">await</span> api.<span class="fn">GetPostAsync</span>(id, ct) <span class="kw">is</span> { } post
+        ? <span class="ty">Results</span>.<span class="fn">Ok</span>(post)
+        : <span class="ty">Results</span>.<span class="fn">NotFound</span>());
+</code></pre>
+  </div>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Style</th><th>How you get it</th><th>Best for</th></tr></thead>
+    <tbody>
+      <tr><td>🌱 Basic</td><td><code>_factory.CreateClient()</code></td><td>One-off calls, quick scripts.</td></tr>
+      <tr><td>🏷️ Named</td><td><code>_factory.CreateClient("name")</code></td><td>Several configs, or when you can't add a class.</td></tr>
+      <tr><td>🌟 Typed</td><td>Inject <code>MyApiClient</code> directly</td><td>Real apps — strongly typed, testable, self-documenting.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Why Typed Wins</span>
+    <p>A typed client turns "call this URL and parse JSON" scattered across your codebase into a single, named capability — <code>weatherApi.GetForecastAsync(city)</code>. Callers depend on <em>your</em> interface, not on HttpClient or magic strings, which makes the code readable and trivial to mock in tests. It's the same "depend on abstractions" lesson from Days 3, 6, and 7.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Typed Client Lifetime</span>
+    <p>A typed client's lifetime is tied to the injected <code>HttpClient</code>, so it's <strong>transient/short-lived</strong> by design. That's why you must not capture it in a singleton — doing so pins one message handler forever and breaks the DNS-refresh rotation, quietly reintroducing the stale-DNS problem the factory exists to prevent.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>📤 Making Requests</h2>
+
+  <p>Two levels of API. The <strong>JSON helpers</strong> from <code>System.Net.Http.Json</code> do request + deserialize in one line — reach for these first. The <strong>raw methods</strong> give you the full <code>HttpResponseMessage</code> when you need the status code or headers.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · The JSON convenience helpers</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> System.Net.Http.Json;
+
+<span class="cmt">// GET + deserialize in one call (throws on non-success status):</span>
+<span class="ty">Post</span>? post = <span class="kw">await</span> http.<span class="fn">GetFromJsonAsync</span>&lt;<span class="ty">Post</span>&gt;(<span class="str">"posts/1"</span>, ct);
+
+<span class="cmt">// POST an object as JSON, read the created result back:</span>
+<span class="kw">var</span> response = <span class="kw">await</span> http.<span class="fn">PostAsJsonAsync</span>(<span class="str">"posts"</span>, <span class="kw">new</span> <span class="ty">NewPost</span>(<span class="str">"Title"</span>, <span class="str">"Body"</span>, <span class="num">1</span>), ct);
+response.<span class="fn">EnsureSuccessStatusCode</span>();
+<span class="ty">Post</span>? created = <span class="kw">await</span> response.Content.<span class="fn">ReadFromJsonAsync</span>&lt;<span class="ty">Post</span>&gt;(ct);
+
+<span class="cmt">// PUT and DELETE follow the same shape:</span>
+<span class="kw">await</span> http.<span class="fn">PutAsJsonAsync</span>($<span class="str">"posts/{id}"</span>, updated, ct);
+<span class="kw">await</span> http.<span class="fn">DeleteAsync</span>($<span class="str">"posts/{id}"</span>, ct);
+</code></pre>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Raw methods when you need the response details</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// Get the full response so you can inspect status &amp; headers:</span>
+<span class="ty">HttpResponseMessage</span> res = <span class="kw">await</span> http.<span class="fn">GetAsync</span>(<span class="str">"posts/1"</span>, ct);
+
+<span class="kw">if</span> (res.StatusCode == <span class="ty">HttpStatusCode</span>.NotFound)
+    <span class="kw">return null</span>;                                    <span class="cmt">// handle 404 without an exception</span>
+
+res.<span class="fn">EnsureSuccessStatusCode</span>();                      <span class="cmt">// throw for other failures</span>
+<span class="ty">Post</span>? post = <span class="kw">await</span> res.Content.<span class="fn">ReadFromJsonAsync</span>&lt;<span class="ty">Post</span>&gt;(ct);
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Never Mutate the Injected Client's Defaults</span>
+    <p>Don't set <code>http.BaseAddress</code>, <code>http.Timeout</code>, or <code>http.DefaultRequestHeaders</code> <em>inside a request handler</em> on a factory-provided client. Those clients come from a shared pool; mutating defaults causes race conditions and header bleed between requests (one request's auth header leaking into another's). Configure defaults <strong>once, at registration</strong>. For per-request headers, set them on an individual <code>HttpRequestMessage</code> instead.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Per-Request Headers Done Right</span>
+    <p>Need a per-call header (say a request-specific auth token)? Build an <code>HttpRequestMessage</code>, add the header to <em>it</em>, and send with <code>http.SendAsync(request, ct)</code>. The shared client's defaults stay untouched, so nothing bleeds between requests.</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>🔤 System.Text.Json: Mapping the Response</h2>
+
+  <p>JSON is text; your app wants objects. <strong>Deserialization</strong> is the translation, and <code>System.Text.Json</code> is .NET's built-in, high-performance engine (the <code>GetFromJsonAsync&lt;T&gt;</code> you've been using calls it under the hood). The core idea: define a C# type shaped like the JSON, and the serializer fills it in by matching names.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">JSON · what the API returns</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  <span class="str">"userId"</span>: <span class="num">1</span>,
+  <span class="str">"id"</span>: <span class="num">1</span>,
+  <span class="str">"title"</span>: <span class="str">"sunt aut facere"</span>,
+  <span class="str">"body"</span>: <span class="str">"quia et suscipit..."</span>
+}
+</code></pre>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · the model to map onto</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// A record is perfect for immutable API responses.</span>
+<span class="cmt">// System.Text.Json matches JSON names to properties CASE-INSENSITIVELY</span>
+<span class="cmt">// by default in the web helpers, so "userId" → UserId works out of the box.</span>
+<span class="kw">public record</span> <span class="ty">Post</span>(<span class="kw">int</span> UserId, <span class="kw">int</span> Id, <span class="kw">string</span> Title, <span class="kw">string</span> Body);
+</code></pre>
+  </div>
+
+  <h3>When names don't line up: attributes 🏷️</h3>
+  <p>Real APIs use snake_case, odd names, or fields you want renamed. <code>[JsonPropertyName]</code> maps a JSON key to a differently named property; <code>[JsonIgnore]</code> drops one:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Explicit name mapping</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> System.Text.Json.Serialization;
+
+<span class="kw">public class</span> <span class="ty">WeatherReading</span>
+{
+    [<span class="ty">JsonPropertyName</span>(<span class="str">"temp_c"</span>)]          <span class="cmt">// JSON "temp_c" → C# TemperatureC</span>
+    <span class="kw">public double</span> TemperatureC { <span class="kw">get</span>; <span class="kw">set</span>; }
+
+    [<span class="ty">JsonPropertyName</span>(<span class="str">"condition"</span>)]
+    <span class="kw">public string</span> Condition { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="str">""</span>;
+
+    [<span class="ty">JsonIgnore</span>]                          <span class="cmt">// never read/written to JSON</span>
+    <span class="kw">public bool</span> IsStale { <span class="kw">get</span>; <span class="kw">set</span>; }
+}
+</code></pre>
+  </div>
+
+  <h3>Global options 🎛️</h3>
+  <p>Rather than attribute every property, configure the serializer once — the cleanest fix for a whole snake_case API:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · JsonSerializerOptions</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">var</span> options = <span class="kw">new</span> <span class="ty">JsonSerializerOptions</span>
+{
+    PropertyNamingPolicy = <span class="ty">JsonNamingPolicy</span>.SnakeCaseLower,  <span class="cmt">// temp_c ↔ TempC</span>
+    PropertyNameCaseInsensitive = <span class="kw">true</span>,
+    NumberHandling = <span class="ty">JsonNumberHandling</span>.AllowReadingFromString,  <span class="cmt">// "42" → 42</span>
+    DefaultIgnoreCondition = <span class="ty">JsonIgnoreCondition</span>.WhenWritingNull
+};
+
+<span class="cmt">// Pass options to the helper:</span>
+<span class="kw">var</span> reading = <span class="kw">await</span> http.<span class="fn">GetFromJsonAsync</span>&lt;<span class="ty">WeatherReading</span>&gt;(url, options, ct);
+</code></pre>
+  </div>
+
+  <h3>Handy option flags</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Option / attribute</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>PropertyNameCaseInsensitive</code></td><td>Match names ignoring case (on by default in the <code>*Json*</code> web helpers).</td></tr>
+      <tr><td><code>PropertyNamingPolicy</code></td><td>Bulk-map casing: <code>CamelCase</code>, <code>SnakeCaseLower</code>, etc.</td></tr>
+      <tr><td><code>[JsonPropertyName("x")]</code></td><td>Map one property to a specific JSON key.</td></tr>
+      <tr><td><code>[JsonIgnore]</code></td><td>Skip a property entirely.</td></tr>
+      <tr><td><code>NumberHandling</code></td><td>Read numbers that arrive as strings (<code>"42"</code>).</td></tr>
+      <tr><td><code>DefaultIgnoreCondition</code></td><td>Omit null (or default) values when serializing.</td></tr>
+      <tr><td><code>Converters</code></td><td>Custom logic for tricky types (enums-as-string, odd date formats).</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 System.Text.Json vs Newtonsoft</span>
+    <p>You'll see <code>Newtonsoft.Json</code> (Json.NET) in older code — it's mature and feature-rich. <code>System.Text.Json</code> is the modern built-in default: faster, lower-allocation, no extra package. It's stricter by default (case-sensitive when used directly, though the web helpers relax that), which occasionally surprises people migrating. For new code, start with System.Text.Json and only reach for Newtonsoft if you hit a feature it lacks.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Map Defensively</span>
+    <p>You don't control the external API's payload — fields can be missing, null, or renamed without warning. Model only the fields you actually use, make reference types nullable where the API might omit them, and never assume a field is present. A missing field deserializes to <code>null</code>/default, not an exception — so guard before you use it.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>🧯 Error Handling</h2>
+
+  <p>External calls fail in more ways than local code: the network drops, the server returns 500, the request times out, the JSON is malformed. Each surfaces differently, so handle them deliberately:</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell neg"><div class="val">HttpRequestException</div><div class="idx">network / DNS / non-success*</div></div>
+      <div class="arr-cell highlight"><div class="val">TaskCanceledException</div><div class="idx">timeout / cancellation</div></div>
+      <div class="arr-cell neg"><div class="val">JsonException</div><div class="idx">malformed body</div></div>
+      <div class="arr-cell"><div class="val">null result</div><div class="idx">404 or empty</div></div>
+    </div>
+    <div class="arr-caption">The failure modes of an HTTP call · *EnsureSuccessStatusCode &amp; the Json helpers throw HttpRequestException on 4xx/5xx</div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Handling the failure modes</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">Post</span>?&gt; <span class="fn">TryGetPostAsync</span>(<span class="kw">int</span> id, <span class="ty">CancellationToken</span> ct)
+{
+    <span class="kw">try</span>
+    {
+        <span class="kw">var</span> res = <span class="kw">await</span> _http.<span class="fn">GetAsync</span>($<span class="str">"posts/{id}"</span>, ct);
+
+        <span class="kw">if</span> (res.StatusCode == <span class="ty">HttpStatusCode</span>.NotFound)
+            <span class="kw">return null</span>;                          <span class="cmt">// expected "missing" — not an error</span>
+
+        res.<span class="fn">EnsureSuccessStatusCode</span>();            <span class="cmt">// 4xx/5xx → HttpRequestException</span>
+        <span class="kw">return await</span> res.Content.<span class="fn">ReadFromJsonAsync</span>&lt;<span class="ty">Post</span>&gt;(ct);
+    }
+    <span class="kw">catch</span> (<span class="ty">HttpRequestException</span> ex)
+    {
+        _logger.<span class="fn">LogError</span>(ex, <span class="str">"Network/HTTP error fetching post {PostId}"</span>, id);  <span class="cmt">// Day 6</span>
+        <span class="kw">throw</span>;
+    }
+    <span class="kw">catch</span> (<span class="ty">TaskCanceledException</span>) <span class="kw">when</span> (!ct.IsCancellationRequested)
+    {
+        <span class="cmt">// Cancellation the caller DIDN'T ask for = the HttpClient timeout fired.</span>
+        _logger.<span class="fn">LogWarning</span>(<span class="str">"Timeout fetching post {PostId}"</span>, id);
+        <span class="kw">throw new</span> <span class="ty">TimeoutException</span>($<span class="str">"Timed out fetching post {id}"</span>);
+    }
+    <span class="kw">catch</span> (<span class="ty">JsonException</span> ex)
+    {
+        _logger.<span class="fn">LogError</span>(ex, <span class="str">"Malformed JSON for post {PostId}"</span>, id);
+        <span class="kw">throw</span>;
+    }
+}
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ The Timeout Disguise</span>
+    <p>When <code>HttpClient</code>'s own timeout elapses it throws <code>TaskCanceledException</code> — the <em>same</em> type as caller cancellation. Distinguish them with the token: <code>when (!ct.IsCancellationRequested)</code> means "nobody asked to cancel, so this was a timeout." (Newer .NET wraps the inner cause as a <code>TimeoutException</code>, but the catch pattern above is the portable idiom.)</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ 4xx/5xx Aren't Network Failures</span>
+    <p>A 404 or 400 is a <em>successful</em> HTTP round trip that returned an error status — very different from the connection failing. Decide per status: often a 404 should become a <code>null</code>/NotFound in your domain rather than a thrown exception, while 5xx is worth retrying (next section). Check <code>response.IsSuccessStatusCode</code> or the specific <code>StatusCode</code> before calling <code>EnsureSuccessStatusCode</code>.</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>🛡️ Resilience: Surviving Flaky Networks</h2>
+
+  <p>Networks are unreliable by nature — packets drop, services hiccup, a dependency briefly overloads. A robust app <strong>expects</strong> transient failure and absorbs it. In .NET 8+ the built-in <code>Microsoft.Extensions.Http.Resilience</code> package (built on Polly v8) adds this with essentially one line:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · One-line standard resilience</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// dotnet add package Microsoft.Extensions.Http.Resilience</span>
+builder.Services.<span class="fn">AddHttpClient</span>&lt;<span class="ty">JsonPlaceholderClient</span>&gt;(client =&gt;
+{
+    client.BaseAddress = <span class="kw">new</span> <span class="ty">Uri</span>(<span class="str">"https://jsonplaceholder.typicode.com/"</span>);
+})
+.<span class="fn">AddStandardResilienceHandler</span>();   <span class="cmt">// retry + circuit breaker + timeout + rate limiter</span>
+</code></pre>
+  </div>
+
+  <p>That standard handler bundles the four patterns every external call should have:</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">🔁</span><b>Retry</b><p>Automatically re-attempt transient failures (5xx, timeouts) with <strong>exponential backoff</strong> — waits grow between tries so you don't hammer a struggling service.</p></div>
+    <div class="card"><span class="glyph">⚡</span><b>Circuit breaker</b><p>After too many failures, "trip" and fail fast for a cool-down period instead of piling requests onto a service that's clearly down — then test the waters again.</p></div>
+    <div class="card"><span class="glyph">⏱️</span><b>Timeout</b><p>A per-attempt (and total) time cap so one slow call can't hang a request forever.</p></div>
+    <div class="card"><span class="glyph">🚦</span><b>Rate limiter</b><p>Bound how many requests you fire concurrently, protecting both you and the downstream service.</p></div>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">☎️ Analogy</span>
+    <p>Resilience is <strong>polite phone etiquette for a line that keeps dropping</strong>. <em>Retry</em> = call back a couple of times if it cuts out — but wait a little longer each time (backoff), not redial furiously. <em>Circuit breaker</em> = if the number's clearly dead, stop dialing for a while instead of jamming the exchange. <em>Timeout</em> = hang up if nobody answers in 10 seconds. Together they keep one flaky dependency from dragging down your whole system.</p>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Custom pipeline when you need control</span><button class="copy-btn">Copy</button></div>
+<pre><code>.<span class="fn">AddResilienceHandler</span>(<span class="str">"custom"</span>, builder =&gt;
+{
+    builder
+        .<span class="fn">AddRetry</span>(<span class="kw">new</span> <span class="ty">HttpRetryStrategyOptions</span>
+        {
+            MaxRetryAttempts = <span class="num">3</span>,
+            BackoffType = <span class="ty">DelayBackoffType</span>.Exponential,
+            Delay = <span class="ty">TimeSpan</span>.<span class="fn">FromMilliseconds</span>(<span class="num">500</span>)
+        })
+        .<span class="fn">AddTimeout</span>(<span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">10</span>));
+});
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Only Retry Idempotent Operations Blindly</span>
+    <p>Retrying a GET is safe — it just reads. Retrying a POST that <em>creates</em> something risks duplicates (two orders!) if the first attempt actually succeeded but the response got lost. Retry non-idempotent writes only with care — an idempotency key, or by scoping retries to reads. The standard handler is tuned conservatively, but you own this judgment.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 It Composes with the Handler Pipeline</span>
+    <p>Resilience plugs in as delegating handlers in the same pipeline as logging and auth (section 04). The factory wires them in order, so retries, timeouts, and your own middleware all wrap each outgoing request cleanly — configured once at registration, invisible at the call site.</p>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: Call a Public API, Map the Response</h2>
+
+  <p>Today's <strong>Do</strong>: call a real public API and map the JSON to a model. A free, no-key option like <code>https://jsonplaceholder.typicode.com</code> is perfect. The path:</p>
+
+  <ol>
+    <li>🏭 In <code>Program.cs</code>, register a <strong>typed client</strong> with <code>AddHttpClient&lt;PostsApiClient&gt;(...)</code>, setting <code>BaseAddress</code> and a <code>Timeout</code>.</li>
+    <li>🧱 Define a <strong>model</strong> matching the JSON — start with a <code>record Post(int UserId, int Id, string Title, string Body)</code>. Note that case-insensitive matching means you don't need attributes here.</li>
+    <li>📦 Write the typed client class with an async method: <code>GetPostAsync(int id, CancellationToken ct)</code> using <code>GetFromJsonAsync&lt;Post&gt;</code>.</li>
+    <li>🔌 Expose an endpoint that injects the typed client and returns the mapped model — return <code>NotFound</code> when the API 404s.</li>
+    <li>🏷️ Try an API with awkward names (or pretend one does): rename a field with <code>[JsonPropertyName]</code>, or set a <code>PropertyNamingPolicy</code>, and confirm mapping still works.</li>
+    <li>🧯 Add error handling: wrap the call, distinguish a 404 (→ null), a timeout (<code>TaskCanceledException</code> with no caller cancellation), and a network failure (<code>HttpRequestException</code>).</li>
+    <li>🛡️ Add <code>.AddStandardResilienceHandler()</code> (install <code>Microsoft.Extensions.Http.Resilience</code>) and note that transient failures now retry automatically.</li>
+    <li>🔬 Prove correctness: hit your endpoint, confirm the JSON became a real object, and — bonus — log the mapped title with structured logging (Day 6). Try requesting a nonexistent id to see your NotFound path.</li>
+  </ol>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · A complete, runnable slice</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// ── Model ──</span>
+<span class="kw">public record</span> <span class="ty">Post</span>(<span class="kw">int</span> UserId, <span class="kw">int</span> Id, <span class="kw">string</span> Title, <span class="kw">string</span> Body);
+
+<span class="cmt">// ── Typed client ──</span>
+<span class="kw">public class</span> <span class="ty">PostsApiClient</span>(<span class="ty">HttpClient</span> http, <span class="ty">ILogger</span>&lt;<span class="ty">PostsApiClient</span>&gt; logger)
+{
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">Post</span>?&gt; <span class="fn">GetPostAsync</span>(<span class="kw">int</span> id, <span class="ty">CancellationToken</span> ct = <span class="kw">default</span>)
+    {
+        <span class="kw">var</span> res = <span class="kw">await</span> http.<span class="fn">GetAsync</span>($<span class="str">"posts/{id}"</span>, ct);
+        <span class="kw">if</span> (res.StatusCode == <span class="ty">HttpStatusCode</span>.NotFound) <span class="kw">return null</span>;
+        res.<span class="fn">EnsureSuccessStatusCode</span>();
+
+        <span class="kw">var</span> post = <span class="kw">await</span> res.Content.<span class="fn">ReadFromJsonAsync</span>&lt;<span class="ty">Post</span>&gt;(ct);
+        logger.<span class="fn">LogInformation</span>(<span class="str">"Fetched post {PostId}: {Title}"</span>, id, post?.Title);
+        <span class="kw">return</span> post;
+    }
+}
+
+<span class="cmt">// ── Program.cs ──</span>
+builder.Services.<span class="fn">AddHttpClient</span>&lt;<span class="ty">PostsApiClient</span>&gt;(c =&gt;
+    c.BaseAddress = <span class="kw">new</span> <span class="ty">Uri</span>(<span class="str">"https://jsonplaceholder.typicode.com/"</span>))
+    .<span class="fn">AddStandardResilienceHandler</span>();
+
+app.<span class="fn">MapGet</span>(<span class="str">"/posts/{id:int}"</span>, <span class="kw">async</span> (<span class="kw">int</span> id, <span class="ty">PostsApiClient</span> api, <span class="ty">CancellationToken</span> ct) =&gt;
+    <span class="kw">await</span> api.<span class="fn">GetPostAsync</span>(id, ct) <span class="kw">is</span> { } post
+        ? <span class="ty">Results</span>.<span class="fn">Ok</span>(post)
+        : <span class="ty">Results</span>.<span class="fn">NotFound</span>());
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>Answer these from your own code: (1) Where is the base address configured, and why not in the call itself? (2) If <code>jsonplaceholder</code>'s IP changed while your app ran, what mechanism ensures you'd eventually use the new one? (3) Which exception fires if the API takes longer than your timeout, and how do you tell it apart from a user canceling the request?</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>📞 The call</b>An HTTP request (verb + path + headers) returns a response (status + JSON body); it's async I/O, awaited with a CancellationToken.</div>
+    <div class="recap-card"><b>⚠️ The trap</b><code>new HttpClient()</code> per call exhausts sockets; one eternal static client goes DNS-stale. Neither is right.</div>
+    <div class="recap-card"><b>🏭 The factory</b><code>IHttpClientFactory</code> pools &amp; rotates the message handler — reused connections <em>and</em> refreshed DNS, plus central config.</div>
+    <div class="recap-card"><b>📦 Typed clients</b>A class receiving a configured HttpClient, injected via DI — strongly typed, testable, no magic strings. The default choice.</div>
+    <div class="recap-card"><b>📤 Requests</b><code>GetFromJsonAsync</code>/<code>PostAsJsonAsync</code> for one-line JSON; raw <code>GetAsync</code> when you need status/headers. Never mutate a pooled client's defaults.</div>
+    <div class="recap-card"><b>🔤 JSON</b><code>System.Text.Json</code> maps by name (case-insensitive in web helpers); <code>[JsonPropertyName]</code> and options handle mismatches. Map defensively.</div>
+    <div class="recap-card"><b>🧯 Errors</b>Network → HttpRequestException; timeout → TaskCanceledException; bad body → JsonException; 404 → decide null vs throw.</div>
+    <div class="recap-card"><b>🛡️ Resilience</b><code>AddStandardResilienceHandler()</code> adds retry + circuit breaker + timeout + rate limiting — but retry writes carefully.</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Concept</th><th>Do this</th><th>Not this</th><th>Because</th></tr></thead>
+    <tbody>
+      <tr><td>Getting a client</td><td>inject a typed client / use the factory</td><td><code>new HttpClient()</code> per call</td><td>Per-call clients exhaust sockets</td></tr>
+      <tr><td>Configuration</td><td>set base address/headers at registration</td><td>mutate a pooled client per request</td><td>Shared pool → header bleed &amp; races</td></tr>
+      <tr><td>Lifetime</td><td>short-lived, transient</td><td>typed client in a singleton</td><td>Pins a handler → stale DNS returns</td></tr>
+      <tr><td>Reading JSON</td><td><code>GetFromJsonAsync&lt;T&gt;</code></td><td>manual string parsing</td><td>One line; fast; well-tested</td></tr>
+      <tr><td>Name mismatch</td><td><code>[JsonPropertyName]</code> / naming policy</td><td>rename to fight the API</td><td>Map cleanly, keep C# idiomatic</td></tr>
+      <tr><td>404 handling</td><td>check StatusCode → return null</td><td>let it throw as an error</td><td>404 is a valid response, not a fault</td></tr>
+      <tr><td>Timeout vs cancel</td><td><code>catch (TaskCanceledException) when (!ct...)</code></td><td>treat both the same</td><td>Same type, different causes</td></tr>
+      <tr><td>Flaky services</td><td><code>AddStandardResilienceHandler()</code></td><td>assume the network is reliable</td><td>Transient failure is the default state</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is HttpClient used for?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It's the .NET class for sending HTTP requests to other servers and reading their responses — calling REST APIs, downloading data, posting to a webhook. You give it a verb (GET/POST/…), a URL, optional headers and body, and await the response, which carries a status code and usually a JSON body you then turn into objects.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">Why is "new HttpClient()" for every request a problem?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Each HttpClient owns a connection pool tied to network sockets. Creating and disposing one per request means sockets aren't released immediately — the OS holds them in a waiting state for a couple of minutes. Under load you create thousands, run out of available ports, and new connections start failing with confusing errors. This is "socket exhaustion." HttpClient is meant to be reused, not created per call.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What is IHttpClientFactory and why use it?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It's the built-in, recommended way to create HttpClient instances. It manages the expensive underlying message handler (and its connection pool) for you — pooling handlers so connections are reused (no socket exhaustion) and periodically recycling them so DNS changes are picked up (no stale DNS). It also gives you one place to configure base address, headers, and timeouts, and hooks for resilience. You register it in Program.cs and get clients through DI.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What is a typed client?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A typed client is your own class that receives a pre-configured HttpClient in its constructor and exposes clean methods like <code>GetPostAsync(id)</code>. You register it with <code>AddHttpClient&lt;MyClient&gt;(...)</code> and inject it wherever you need it. It hides URLs and JSON parsing behind a tidy, strongly-typed API, so callers depend on your interface instead of raw HttpClient or magic strings — which is cleaner and easy to mock in tests.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What is System.Text.Json and what does deserialization mean?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>System.Text.Json</code> is .NET's built-in JSON library. Deserialization is turning JSON text into C# objects — the serializer reads the JSON and fills in a matching class or record by matching property names. (Serialization is the reverse: object to JSON.) The helper <code>GetFromJsonAsync&lt;Post&gt;</code> combines an HTTP GET with deserialization into a <code>Post</code> in one call.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">How do you map a JSON field whose name doesn't match your C# property?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Put a <code>[JsonPropertyName("json_key")]</code> attribute on the property, giving the exact JSON name. For example <code>[JsonPropertyName("temp_c")] public double TemperatureC</code> maps the JSON <code>temp_c</code> onto <code>TemperatureC</code>. If the whole API uses one convention like snake_case, it's cleaner to set a <code>PropertyNamingPolicy</code> in <code>JsonSerializerOptions</code> once instead of attributing every property.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">Which methods read JSON from an HTTP response, and what's the simplest one?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>The simplest is <code>GetFromJsonAsync&lt;T&gt;(url)</code> from <code>System.Net.Http.Json</code> — it does the GET and deserializes to <code>T</code> in one line. For posting, <code>PostAsJsonAsync</code> serializes an object and sends it. When you need the raw response (to check status or headers), use <code>GetAsync</code> then <code>response.Content.ReadFromJsonAsync&lt;T&gt;()</code>.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">Why are all these HttpClient calls async?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Calling another server is I/O — your app spends the time waiting for the network, exactly the situation Day 10's async lesson addressed. Making the calls async and awaiting them releases the thread during that wait so it can serve other requests, letting the server scale. That's why every HttpClient method is async, takes a CancellationToken, and should be awaited all the way up the call chain.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">Explain the socket exhaustion AND stale DNS problems, and how the factory solves both.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>They're opposite failures of the two naive approaches. <strong>Per-request clients</strong> → socket exhaustion: each disposed client leaves its socket in TIME_WAIT for minutes, so high request rates run out of ports. <strong>One eternal static client</strong> fixes sockets but → stale DNS: the underlying handler caches DNS for the app's lifetime, so if the target's IP changes (failover, autoscaling) you keep calling a dead address. <code>IHttpClientFactory</code> resolves both by separating the cheap, short-lived HttpClient wrapper from the expensive HttpMessageHandler: handlers are pooled and reused (connections shared → no exhaustion) but recycled on a timer (~2 min default) so DNS refreshes. You get reuse and freshness at once.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">Why must you not modify a factory-provided client's DefaultRequestHeaders in a request handler?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Because the factory hands out clients backed by a shared, pooled message handler; mutating a client's default headers (or base address/timeout) affects state that can be observed across requests. In concurrent scenarios you get race conditions and "header bleed" — one request's auth token leaking into another's, headers accumulating over time. Configure defaults <em>once at registration</em>. For per-request values, build an <code>HttpRequestMessage</code>, set the header on it, and send with <code>SendAsync</code> so nothing shared is touched.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">Why should you never inject a typed client into a singleton service?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>A typed client's lifetime is tied to the HttpClient injected into it, which is meant to be short-lived (transient). A singleton captures its dependencies for the app's entire life — so it would hold onto one HttpClient, and therefore one message handler, forever. That defeats the factory's handler rotation, so DNS changes are never picked up: you've silently reintroduced the stale-DNS problem the factory exists to prevent. If a long-lived service needs to make calls, inject <code>IHttpClientFactory</code> (or the typed client via a scope/factory) and get a fresh client per operation.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">How do you tell a timeout apart from a caller-requested cancellation?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Both surface as <code>TaskCanceledException</code> (a subclass of <code>OperationCanceledException</code>), so the type alone doesn't tell you. The trick is to inspect the token you passed: <code>catch (TaskCanceledException) when (!ct.IsCancellationRequested)</code> means "the caller did <em>not</em> ask to cancel, so this was the HttpClient timeout firing." If <code>ct.IsCancellationRequested</code> is true, it was genuine cancellation (client disconnected) and you usually let it propagate. Newer .NET also exposes the timeout as an inner <code>TimeoutException</code>, but the token-check pattern is the portable idiom.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">A 404 comes back. Should that be an exception? How do you handle HTTP error statuses generally?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>A 404 is a successful HTTP round trip that returned "not found" — it's a valid response, not a network failure, so throwing is often the wrong model. Usually you check <code>response.StatusCode</code> and translate 404 into a domain <code>null</code>/NotFound. General approach: inspect the status deliberately — 2xx read the body; 404 → null; 4xx client errors are usually your bug (bad request/auth) and shouldn't be blindly retried; 5xx are transient server problems worth retrying. The convenience helpers and <code>EnsureSuccessStatusCode()</code> throw <code>HttpRequestException</code> on any non-success, which is fine when you want any error to bubble, but for nuanced handling check the status first.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">System.Text.Json vs Newtonsoft.Json — how do you choose?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><code>System.Text.Json</code> is the modern built-in default: significantly faster, lower memory, no extra dependency, and integrated with the ASP.NET Core pipeline and the <code>*Json*</code> HttpClient helpers. <code>Newtonsoft.Json</code> (Json.NET) is older, extremely feature-rich, and more lenient by default. Choose System.Text.Json for new code; reach for Newtonsoft only when you need a specific feature it still handles more easily (certain complex custom serialization, some polymorphism scenarios, or legacy compatibility). Be aware System.Text.Json is stricter — case-sensitive when used directly (the web helpers relax that), and less forgiving of malformed input — which occasionally surprises teams migrating.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">What is exponential backoff and why is it better than immediate retries?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Exponential backoff means increasing the wait between retry attempts — e.g., 0.5s, then 1s, then 2s — rather than retrying immediately or at a fixed interval. It's better because a service that's failing is often overloaded; hammering it with instant retries makes things worse and can cause a "retry storm" that keeps it down. Growing delays give it room to recover. In practice you also add <em>jitter</em> (small random variation) so many clients don't retry in synchronized waves. The standard resilience handler does exponential backoff with jitter for you.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">What does AddStandardResilienceHandler give you, and which package provides it?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>It's from <code>Microsoft.Extensions.Http.Resilience</code> (the .NET 8+ package built on Polly v8, which replaced the older <code>Microsoft.Extensions.Http.Polly</code>). Chained onto <code>AddHttpClient</code>, one call adds a sensible default pipeline of four patterns: <strong>retry</strong> with exponential backoff for transient failures, a <strong>circuit breaker</strong> that fails fast when a dependency is clearly down, a <strong>timeout</strong> per attempt and total, and a <strong>rate limiter</strong> bounding concurrency. It's conservatively tuned and configurable, giving most apps production-grade resilience for external calls with essentially one line.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Explain the circuit breaker pattern and its states. When is it essential?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>A circuit breaker prevents a struggling dependency from dragging your whole system down. It has three states: <strong>Closed</strong> (normal — requests flow, failures are counted); when failures cross a threshold it trips to <strong>Open</strong> (requests fail fast immediately without even trying, for a cool-down period — protecting both you and the downstream service); after the cool-down it moves to <strong>Half-Open</strong>, allowing a trial request or two — success closes the circuit, failure re-opens it. It's essential in distributed systems where a slow dependency would otherwise cause cascading failure: threads pile up waiting on it, your thread pool starves (Day 10!), and the outage spreads upstream. Failing fast contains the blast radius and lets the dependency recover without being hammered.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">Retries and non-idempotent operations: what's the danger and how do you handle it?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The danger: a retry can't tell "the request failed" from "the request succeeded but the response was lost." For a GET that's harmless — read it again. For a POST that creates a resource (place order, charge card), a blind retry can create a <em>duplicate</em> if the first attempt actually landed. Handling: prefer <strong>idempotency keys</strong> — the client sends a unique key with the write, the server deduplicates so repeats are no-ops; this makes the operation safely retriable. Otherwise, scope automatic retries to idempotent verbs (GET/PUT/DELETE are naturally idempotent; POST usually isn't), and for critical writes require explicit, careful handling rather than default retry policies. Design the API to be idempotent where you can — it's the clean solution.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">Walk through how you'd add authentication and logging to all outgoing calls of a client.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Use <strong>DelegatingHandlers</strong> — middleware in the outgoing pipeline, the mirror image of ASP.NET Core's request middleware. Write a handler that overrides <code>SendAsync</code>: attach the auth token (fetched/refreshed from a token service, ideally cached), call <code>base.SendAsync</code>, and on the way back inspect the response. Register it with <code>AddHttpClient&lt;MyClient&gt;().AddHttpMessageHandler&lt;AuthHandler&gt;()</code>. Handlers compose in order, so you can stack auth, logging, and resilience cleanly, each concern isolated. Caveats specific to the factory: message handlers live in their own DI scope separate from the request scope, so you can't rely on scoped services like the current HttpContext inside a handler — inject <code>IHttpContextAccessor</code> or pass what you need explicitly. For auth token refresh, guard against concurrent refreshes. Logging often you get for free (the factory logs requests), but a handler lets you add correlation IDs and timing.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">The factory rotates handlers every ~2 minutes. What happens to in-flight requests, and how would you tune this?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Rotation is graceful: when a handler's lifetime expires it's marked for retirement but not disposed while any HttpClient is still using it or requests are in flight — the factory disposes it only once it's truly idle. New clients get a fresh handler; existing work finishes on the old one. So there's no torn request. Tuning: <code>SetHandlerLifetime(TimeSpan)</code> on the registration adjusts the interval. Lower it if you expect frequent DNS changes (aggressive failover, blue-green deploys) and want faster pickup; raise it to reduce the small cost of re-establishing connection pools if your endpoints are stable. Setting it to <code>Timeout.InfiniteTimeSpan</code> disables rotation entirely — occasionally right for a load-balancer VIP with a stable IP, but you lose DNS refresh, so it's a deliberate trade-off, not a default.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">How do you unit-test code that calls an external API via a typed client?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Don't hit the real network in unit tests. Two clean levels. (1) Test <em>consumers</em> of the typed client by mocking the typed client's interface — extract an <code>IPostsApiClient</code> and mock it; the code under test never sees HttpClient. (2) Test the typed client <em>itself</em> by giving it an HttpClient wired to a fake <code>HttpMessageHandler</code> — either a small custom handler that returns canned <code>HttpResponseMessage</code>s (asserting the request URL/headers/body), or a library like WireMock.NET / a mocked handler, so you verify serialization, URL construction, status handling, and error paths deterministically. For resilience, WireMock or a fault-injecting handler lets you simulate 500s and timeouts to prove retries and circuit breaking behave. Integration tests against a sandbox API are a separate, slower tier.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">An external API is your bottleneck: slow, rate-limited, called on every request. What's your strategy?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Layered approach, cheapest first. <strong>Cache</strong> — if the data tolerates staleness, cache responses (in-memory or distributed) keyed by request, with a TTL matched to how fresh it must be; this removes most calls entirely. <strong>Coalesce</strong> duplicate concurrent requests for the same key so a cache miss triggers one upstream call, not fifty. <strong>Respect the rate limit</strong> proactively with a client-side limiter (the resilience rate limiter) rather than getting 429'd. <strong>Batch</strong> if the API supports fetching many items per call. <strong>Degrade gracefully</strong> — a fallback (last-known-good cached value, or a sensible default) when the dependency is unavailable, so your app stays up. <strong>Decouple</strong> — if the call isn't needed synchronously, move it to a background job/queue and return immediately. And measure: add metrics on latency, cache hit rate, and 429s to know which lever actually helps. The meta-point is reducing dependence on the synchronous hot-path call, not just calling it faster.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">A response is a large JSON array. How do you deserialize it efficiently?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Avoid buffering the whole payload into a string first — that allocates a huge string and then a huge object graph, spiking memory. Instead <strong>stream</strong>: get the response with <code>HttpCompletionOption.ResponseHeadersRead</code> so you start processing before the full body arrives, take the content <em>stream</em>, and deserialize from it. For a big array, <code>JsonSerializer.DeserializeAsyncEnumerable&lt;T&gt;</code> yields items one at a time as they're parsed, so you can process (or project into DTOs) without ever holding the entire collection in memory — ideal for pipelines that transform or forward records. Also project to a lean model (only the fields you need) so you don't materialize unused data. If the API supports it, prefer pagination over one giant response in the first place. The principle mirrors EF's: don't materialize more than you must, and stream when the data is large.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">Your app calls twelve different external services. How do you structure and standardize that cleanly?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>One typed client per external service, each behind its own interface, each registered with its own base address, timeout, headers, and resilience policy tuned to <em>that</em> dependency's characteristics (a flaky partner API gets aggressive retries; a fast internal one gets tight timeouts). Standardize the cross-cutting concerns via shared DelegatingHandlers (correlation ID propagation, structured logging, auth) applied consistently, and consider a small registration helper/extension method so every client is wired the same way — reducing copy-paste drift. Keep response models per service (don't share DTOs across unrelated APIs — they evolve independently). Put configuration (URLs, timeouts) in <code>appsettings</code>/options bound per client, not hard-coded, so environments differ cleanly. Add per-client metrics and health checks so you can see which dependency is degrading. The goals: each integration is isolated and independently tunable, the boilerplate is centralized, and a new service is a small, uniform addition rather than a fresh reinvention.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Lock in Q1–Q8 first — "why not <code>new HttpClient()</code>," what the factory does, and what a typed client is are the questions that <em>always</em> come up. Then own Q9 and Q11 together: being able to explain both socket exhaustion <em>and</em> stale DNS, and why a typed client in a singleton reintroduces the latter, is the answer that marks real understanding. Save resilience (Q17, Q18) and the architecture questions (Q22, Q24) for after the hands-on — once you've watched a retry fire against a real API, circuit breakers and idempotency stop being abstract.</p>
+  </div>
+</section>
+
+<footer>Day 11 of the .NET series · HttpClient &amp; External Calls: IHttpClientFactory, Typed Clients &amp; System.Text.Json · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

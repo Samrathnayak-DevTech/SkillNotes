@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Builder Design Pattern — Session 16</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 16</div>
+  <div class="nav-group"><span class="nav-group-label">Overview</span><a class="nav-link" href="#hero">Introduction</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">The Problem</span>
+    <a class="nav-link" href="#s01">01 Classes with Many Attributes</a>
+    <a class="nav-link" href="#s02">02 Constructor Hell</a>
+    <a class="nav-link" href="#s03">03 Telescoping Constructors</a>
+    <a class="nav-link" href="#s04">04 HashMap Approach &amp; Why It Fails</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">The Solution</span>
+    <a class="nav-link" href="#s05">05 The Builder Pattern</a>
+    <a class="nav-link" href="#s06">06 Full Implementation</a>
+    <a class="nav-link" href="#s07">07 Validation in Builder</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 16</p>
+  <h1>Builder Design Pattern</h1>
+  <p class="hero-lede">A creational pattern for constructing complex objects with many optional attributes, built-in validation, and readable call-site code — without telescoping constructors or stringly-typed maps.</p>
+  <div class="agenda-chips">
+    <span class="chip">Creational</span><span class="chip">Builder</span><span class="chip">Fluent API</span><span class="chip">Validation</span><span class="chip">Immutability</span><span class="chip">Telescoping Constructor</span>
+  </div>
+</section>
+
+<!-- 01 -->
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>The Problem: Classes with Many Attributes</h2></div>
+  <p>Consider a <code>Student</code> class that models a learner in an online education platform:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Student</span> {
+    <span class="ty">String</span>  name;
+    <span class="kw">int</span>     age;
+    <span class="ty">String</span>  batch;
+    <span class="kw">double</span>  psp;           <span class="cmt">// Problem-Solving Proficiency score</span>
+    <span class="ty">String</span>  univName;
+    <span class="kw">int</span>     gradYear;
+    <span class="ty">String</span>  phoneNo;
+}</pre>
+  </div>
+
+  <p>We need three things from object construction:</p>
+  <p><strong>1.</strong> We want to validate the object before it is created — <code>gradYear</code> should not be in the past before 2021, <code>phoneNo</code> must have a valid format.</p>
+  <p><strong>2.</strong> No invalid <code>Student</code> object should be creatable — the moment <code>new Student(…)</code> succeeds, the object must be internally consistent.</p>
+  <p><strong>3.</strong> Not all attributes are always known — some are optional.</p>
+</section>
+
+<!-- 02 -->
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>Constructor Hell</h2></div>
+  <p>The first instinct is to add a parameterised constructor with all required fields:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Painful constructor</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">Student</span> st = <span class="kw">new</span> <span class="ty">Student</span>(<span class="str">"Kailash"</span>, <span class="num">25</span>, <span class="str">"Morning"</span>, <span class="num">89.28</span>, <span class="str">"IIT"</span>, <span class="num">2023</span>, <span class="str">"9876543210"</span>);
+<span class="cmt">// Which arg is psp? Which is gradYear? Impossible to tell at call-site.</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Problems</span>
+    <p><strong>Prone to errors:</strong> Swapping two same-type arguments (e.g., two Strings) compiles fine but produces a wrong object silently. <strong>Hard to read:</strong> At the call site you have no idea what the 4th or 5th positional argument represents. <strong>Impossible to have optional fields cleanly:</strong> Every combination of optional fields needs its own overload.</p>
+  </div>
+
+  <h3>Overloading Gone Wrong</h3>
+  <p>What if we try overloading constructors for different combinations of optional fields?</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Overloaded constructors fail</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">Student</span>(<span class="ty">String</span> name, <span class="kw">int</span> age)              { … }
+<span class="ty">Student</span>(<span class="ty">String</span> name, <span class="ty">String</span> univName)       { … }
+<span class="cmt">// ✗ Compile error: both have signature (String, String) — same erasure</span>
+<span class="cmt">// Java overloading only distinguishes by parameter types, not names</span></pre>
+  </div>
+</section>
+
+<!-- 03 -->
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Telescoping Constructors</h2></div>
+  <p>A classic partial solution: define constructors for the most common combinations, each delegating to a more complete one via <code>this(…)</code>.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Telescoping Constructors</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">Student</span>(<span class="ty">String</span> name) {
+    <span class="kw">this</span>(name, <span class="num">0</span>);                       <span class="cmt">// delegates down</span>
+}
+<span class="ty">Student</span>(<span class="ty">String</span> name, <span class="kw">int</span> age) {
+    <span class="kw">this</span>(name, age, <span class="str">""</span>);
+}
+<span class="ty">Student</span>(<span class="ty">String</span> name, <span class="kw">int</span> age, <span class="ty">String</span> univName) {
+    <span class="kw">this</span>.name     = name;
+    <span class="kw">this</span>.age      = age;
+    <span class="kw">this</span>.univName = univName;
+}</pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Still broken</span>
+    <p>The same method-signature collision problem arises if two constructors in the chain have the same parameter types. More fundamentally, you still can't name the parameters at the call site — you still get positional confusion.</p>
+  </div>
+</section>
+
+<!-- 04 -->
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>HashMap Approach &amp; Why It Fails</h2></div>
+  <p>Another tempting fix: pass a <code>HashMap&lt;String, Object&gt;</code> as the "named parameters" map.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — HashMap "named parameters"</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">Map</span>&lt;<span class="ty">String</span>, <span class="ty">Object</span>&gt; map = <span class="kw">new</span> <span class="ty">HashMap</span>&lt;&gt;();
+map.<span class="fn">put</span>(<span class="str">"name"</span>,     <span class="str">"Shubham"</span>);
+map.<span class="fn">put</span>(<span class="str">"age"</span>,      <span class="num">25</span>);
+map.<span class="fn">put</span>(<span class="str">"gradYear"</span>, <span class="num">2024</span>);
+
+<span class="kw">class</span> <span class="ty">Student</span> {
+    <span class="ty">Student</span>(<span class="ty">Map</span>&lt;<span class="ty">String</span>, <span class="ty">Object</span>&gt; map) {
+        <span class="kw">this</span>.name     = (<span class="ty">String</span>)  map.<span class="fn">get</span>(<span class="str">"name"</span>);      <span class="cmt">// type cast</span>
+        <span class="kw">this</span>.age      = (<span class="ty">Integer</span>) map.<span class="fn">get</span>(<span class="str">"age"</span>);
+        <span class="kw">this</span>.gradYear = (<span class="ty">Integer</span>) map.<span class="fn">get</span>(<span class="str">"gradYear"</span>);
+    }
+}</pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Problems</span>
+    <p><strong>No compile-time safety:</strong> The compiler cannot catch a typo in the key string (<code>"gradyear"</code> vs <code>"gradYear"</code>), a missing required key, or a wrong type for a value. All errors surface only at runtime as <code>ClassCastException</code> or <code>NullPointerException</code>. This is strictly worse than positional constructors in terms of safety.</p>
+  </div>
+</section>
+
+<!-- 05 -->
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>The Builder Pattern</h2></div>
+  <p>The <strong>Builder</strong> pattern introduces an intermediate <em>helper</em> object (the Builder or Helper) that accumulates attribute values via named setter-like methods, then constructs the final object in one step — running all validations just before construction.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Core Idea</span>
+    <p>Separate the construction of a complex object from its representation, so that the same construction process can create different representations — and so that validation can be enforced at the boundary between builder and product.</p>
+  </div>
+
+  <p>The approach gives you:</p>
+  <p><strong>Named arguments at the call site</strong> — <code>.setName("Shubham")</code> is unambiguous. <strong>Optional fields are trivial</strong> — simply don't call the setter for optional fields; they get a default. <strong>Compile-time safety</strong> — misspelling <code>setNme()</code> is a compile error, not a runtime surprise. <strong>Validation before construction</strong> — the <code>build()</code> method runs all checks before returning the object.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>Think of ordering a custom sandwich. You tell the builder your preferences one by one: <em>"add lettuce"</em>, <em>"skip onions"</em>, <em>"extra cheese"</em>. When you say <em>"done"</em>, the builder validates the order and hands you the finished sandwich. You never had to memorise a rigid positional list of all ingredients.</p>
+  </div>
+</section>
+
+<!-- 06 -->
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>Full Implementation</h2></div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Builder Pattern</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Student</span> {
+    <span class="cmt">// Product attributes (private, immutable after construction)</span>
+    <span class="kw">private final</span> <span class="ty">String</span> name;
+    <span class="kw">private final</span> <span class="kw">int</span>    age;
+    <span class="kw">private final</span> <span class="ty">String</span> batch;
+    <span class="kw">private final</span> <span class="kw">double</span> psp;
+    <span class="kw">private final</span> <span class="ty">String</span> univName;
+    <span class="kw">private final</span> <span class="kw">int</span>    gradYear;
+    <span class="kw">private final</span> <span class="ty">String</span> phoneNo;
+
+    <span class="cmt">// Private constructor — only the inner Builder can call it</span>
+    <span class="kw">private</span> <span class="fn">Student</span>(<span class="ty">Builder</span> builder) {
+        <span class="kw">this</span>.name     = builder.name;
+        <span class="kw">this</span>.age      = builder.age;
+        <span class="kw">this</span>.batch    = builder.batch;
+        <span class="kw">this</span>.psp      = builder.psp;
+        <span class="kw">this</span>.univName = builder.univName;
+        <span class="kw">this</span>.gradYear = builder.gradYear;
+        <span class="kw">this</span>.phoneNo  = builder.phoneNo;
+    }
+
+    <span class="cmt">// ── Inner Builder class ──────────────────────────────────────</span>
+    <span class="kw">static class</span> <span class="ty">Builder</span> {
+        <span class="kw">private</span> <span class="ty">String</span> name;
+        <span class="kw">private</span> <span class="kw">int</span>    age;
+        <span class="kw">private</span> <span class="ty">String</span> batch;
+        <span class="kw">private</span> <span class="kw">double</span> psp;
+        <span class="kw">private</span> <span class="ty">String</span> univName;
+        <span class="kw">private</span> <span class="kw">int</span>    gradYear;
+        <span class="kw">private</span> <span class="ty">String</span> phoneNo;
+
+        <span class="cmt">// Each setter returns 'this' to enable method chaining</span>
+        <span class="kw">public</span> <span class="ty">Builder</span> <span class="fn">setName</span>(<span class="ty">String</span> name)         { <span class="kw">this</span>.name     = name;     <span class="kw">return this</span>; }
+        <span class="kw">public</span> <span class="ty">Builder</span> <span class="fn">setAge</span>(<span class="kw">int</span> age)              { <span class="kw">this</span>.age      = age;      <span class="kw">return this</span>; }
+        <span class="kw">public</span> <span class="ty">Builder</span> <span class="fn">setBatch</span>(<span class="ty">String</span> batch)       { <span class="kw">this</span>.batch    = batch;    <span class="kw">return this</span>; }
+        <span class="kw">public</span> <span class="ty">Builder</span> <span class="fn">setPsp</span>(<span class="kw">double</span> psp)           { <span class="kw">this</span>.psp      = psp;      <span class="kw">return this</span>; }
+        <span class="kw">public</span> <span class="ty">Builder</span> <span class="fn">setUnivName</span>(<span class="ty">String</span> univName) { <span class="kw">this</span>.univName = univName;  <span class="kw">return this</span>; }
+        <span class="kw">public</span> <span class="ty">Builder</span> <span class="fn">setGradYear</span>(<span class="kw">int</span> gradYear)   { <span class="kw">this</span>.gradYear = gradYear;  <span class="kw">return this</span>; }
+        <span class="kw">public</span> <span class="ty">Builder</span> <span class="fn">setPhoneNo</span>(<span class="ty">String</span> phoneNo)   { <span class="kw">this</span>.phoneNo  = phoneNo;   <span class="kw">return this</span>; }
+
+        <span class="kw">public</span> <span class="ty">Student</span> <span class="fn">build</span>() {
+            <span class="fn">validate</span>();               <span class="cmt">// run checks before creating</span>
+            <span class="kw">return new</span> <span class="ty">Student</span>(<span class="kw">this</span>);
+        }
+
+        <span class="kw">private void</span> <span class="fn">validate</span>() {
+            <span class="kw">if</span> (gradYear &lt; <span class="num">2021</span>)
+                <span class="kw">throw new</span> <span class="ty">IllegalArgumentException</span>(<span class="str">"gradYear must be ≥ 2021"</span>);
+            <span class="kw">if</span> (phoneNo == <span class="kw">null</span> || !phoneNo.<span class="fn">matches</span>(<span class="str">"\\d{10}"</span>))
+                <span class="kw">throw new</span> <span class="ty">IllegalArgumentException</span>(<span class="str">"phoneNo must be 10 digits"</span>);
+            <span class="kw">if</span> (name == <span class="kw">null</span> || name.<span class="fn">isBlank</span>())
+                <span class="kw">throw new</span> <span class="ty">IllegalArgumentException</span>(<span class="str">"name is required"</span>);
+        }
+    }
+}
+
+<span class="cmt">// ── Call site — readable, named, order-independent ───────────</span>
+<span class="ty">Student</span> student = <span class="kw">new</span> <span class="ty">Student</span>.<span class="ty">Builder</span>()
+    .<span class="fn">setName</span>(<span class="str">"Shubham"</span>)
+    .<span class="fn">setAge</span>(<span class="num">25</span>)
+    .<span class="fn">setBatch</span>(<span class="str">"Mar24-MWFLLD"</span>)
+    .<span class="fn">setPsp</span>(<span class="num">87.5</span>)
+    .<span class="fn">setUnivName</span>(<span class="str">"Scaler"</span>)
+    .<span class="fn">setGradYear</span>(<span class="num">2024</span>)
+    .<span class="fn">setPhoneNo</span>(<span class="str">"9876543210"</span>)
+    .<span class="fn">build</span>();              <span class="cmt">// validates and constructs</span></pre>
+  </div>
+</section>
+
+<!-- 07 -->
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>Validation in the Builder</h2></div>
+  <p>One of the most powerful features of the Builder pattern is that validation logic belongs cleanly inside <code>validate()</code>, called by <code>build()</code>. <em>No Student object can exist unless it passed all validations</em> — because the only way to construct one is through the Builder, and the Builder's constructor is private.</p>
+
+  <div class="callout tip">
+    <span class="callout-tag">Why not validate in the Student constructor directly?</span>
+    <p>You could, but then validation logic is tangled inside the product class. The Builder pattern cleanly separates <em>how to construct</em> (Builder's job) from <em>what the constructed object is</em> (Student's job). This also makes it easier to have multiple Builders for the same product class — for example a <code>StudentFromCSVBuilder</code> vs a <code>StudentFromWebFormBuilder</code>, each with different validation rules.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Approach</th><th>Named args</th><th>Compile-safe</th><th>Validation</th><th>Optional fields</th></tr></thead>
+    <tbody>
+      <tr><td>Positional constructor</td><td>✗</td><td>Partial</td><td>In constructor</td><td>Overloads required</td></tr>
+      <tr><td>Telescoping constructors</td><td>✗</td><td>✓</td><td>In constructor</td><td>Complex chains</td></tr>
+      <tr><td>HashMap</td><td>✓ (stringly)</td><td>✗</td><td>At runtime</td><td>✓</td></tr>
+      <tr><td><strong>Builder</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>In build()</strong></td><td><strong>✓</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Real-World Usage</span>
+    <p>The Builder pattern is ubiquitous in Java libraries. <code>StringBuilder</code>, Lombok's <code>@Builder</code> annotation, Retrofit's <code>Retrofit.Builder</code>, OkHttp's <code>OkHttpClient.Builder</code>, and Spring's <code>WebClient.Builder</code> all implement this exact pattern. Recognising it in the wild is a sign of a strong engineering foundation.</p>
+  </div>
+</section>
+
+<!-- Recap -->
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Builder Pattern</div><p>A creational pattern for objects with many attributes. Separates construction from representation via an intermediate Builder class.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Why not constructors?</div><p>Many attributes → positional confusion and impossible overloading for same-type parameters. Prone to silent bugs at call site.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Why not HashMap?</div><p>No compile-time checking. Typos in key strings, wrong value types, and missing required keys all become runtime errors.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Inner Builder class</div><p>Contains the same fields as the product, with named setter methods that each return <code>this</code> for fluent chaining.</p></div>
+    <div class="recap-card"><div class="recap-card-title">build() method</div><p>Runs all validation logic, then calls the product's private constructor. The product is never in an invalid state.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Private product constructor</div><p>Only the Builder can construct the product. Enforces that all objects must go through the Builder and its validation.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Fluent API</div><p>Each setter returns <code>this</code>, allowing chained calls: <code>.setName().setAge().build()</code>. Readable and order-independent.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Real-world usage</div><p>Lombok @Builder, Retrofit.Builder, OkHttpClient.Builder, StringBuilder — the pattern is everywhere in Java ecosystem.</p></div>
+  </div>
+</section>
+
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

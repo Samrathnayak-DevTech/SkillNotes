@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exception Handling — throw vs throw ex (C#)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0; --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea; --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3; --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink); font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;}
+#progress{position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .08s linear;}
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+:not(pre) > code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--accent);
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;}
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;
+  background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;background:transparent;
+  border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;color:var(--code-ink);
+  background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;} .err{color:#f07178;}
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent);font-weight:700;}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:24px 22px;margin:24px 0;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+/* two-column compare */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:24px 0;}
+.compare-col{border:1.5px solid var(--line);border-radius:14px;padding:18px;background:#fff;}
+.compare-col h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+.compare-col.good{border-top:4px solid var(--green);} .compare-col.good h5{color:var(--green);}
+.compare-col.bad{border-top:4px solid var(--rose);} .compare-col.bad h5{color:var(--rose);}
+.compare-col .rslt{font-family:"JetBrains Mono",monospace;font-size:11.5px;background:var(--code-bg);color:var(--code-ink);
+  border-radius:8px;padding:10px 12px;margin-top:8px;line-height:1.6;white-space:pre-wrap;}
+/* hierarchy tree */
+.tree{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.tree-node{background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:9px 16px;
+  font-family:"JetBrains Mono",monospace;font-size:12.5px;font-weight:600;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.tree-node.top{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.tree-node.mid{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+.tree-conn{width:2px;height:20px;background:var(--accent);}
+.tree-row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;}
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+.mindmap{display:flex;flex-direction:column;align-items:center;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;font-size:1.1rem;
+  padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);transition:transform .28s ease;
+    box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+  .compare{grid-template-columns:1fr;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">Exception Handling</div>
+    <nav>
+      <div class="nav-group">
+        <h4>Basics</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> Overview</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> try / catch / finally</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> The Hierarchy</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Throwing</a>
+      </div>
+      <div class="nav-group">
+        <h4>Rethrowing ★</h4>
+        <a class="nav-link" href="#s05"><span class="n">05</span> throw vs throw ex</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Wrapping &amp; Dispatch</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> Exception Filters</a>
+      </div>
+      <div class="nav-group">
+        <h4>Doing It Well</h4>
+        <a class="nav-link" href="#s08"><span class="n">08</span> Custom Exceptions</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Best Practices</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Worked Example</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Quick Recap</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// C# &nbsp;·&nbsp; handling things that go wrong</p>
+      <h1>Exception Handling 🛡️</h1>
+      <p class="lede">
+        When something goes wrong at runtime — a missing file, a bad number, a null reference — C# raises an
+        <b>exception</b> that interrupts normal flow. <b>try / catch / finally</b> lets you respond gracefully instead
+        of crashing. This page covers the mechanics, the exception hierarchy, and the single most-asked interview
+        distinction: <b>throw vs throw ex</b> — which one keeps your stack trace intact and which one quietly destroys
+        your ability to debug. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🧯 <b>try / catch / finally</b></span>
+        <span class="chip">🌲 <b>Exception hierarchy</b></span>
+        <span class="chip">♻️ <b>throw vs throw ex</b></span>
+        <span class="chip">🔎 <b>Filters (when)</b></span>
+        <span class="chip">🏷️ <b>Custom exceptions</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- 01 -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>Overview</h2></div>
+      <p class="sec-sub">An exception is the runtime's way of saying "I can't continue normally." Handling it well keeps your app stable and debuggable.</p>
+
+      <p>An <strong>exception</strong> is an object describing an error that occurred during execution — dividing by zero,
+        opening a missing file, calling a method on <code>null</code>. When thrown, it <strong>interrupts</strong> the
+        normal flow and travels up the call stack looking for code that can handle it. If nothing does, the program
+        crashes. Exception handling is how you catch and respond to these events deliberately.</p>
+
+      <div class="mindmap">
+        <div class="mm-core">🛡️ Exception handling</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>🧯 try/catch/finally</h5>
+            <ul><li>try = risky code</li><li>catch = handle it</li><li>finally = always cleanup</li></ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🌲 Hierarchy</h5>
+            <ul><li>All derive from <code>Exception</code></li><li>Catch specific types</li><li>Most-derived first</li></ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>♻️ Rethrowing</h5>
+            <ul><li><code>throw;</code> keeps stack trace</li><li><code>throw ex;</code> resets it</li><li>Filters with <code>when</code></li></ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🏷️ Doing it well</h5>
+            <ul><li>Custom exceptions</li><li>Don't swallow</li><li>Cleanup with using</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Exceptions are for the exceptional</span>
+        <p>Exceptions are for <em>unexpected</em> conditions, not normal control flow. Throwing and catching is relatively
+        expensive, so don't use exceptions to, say, end a loop. When a failure is <em>expected</em> (parsing user input,
+        looking up a maybe-missing key), prefer the <code>Try…</code> pattern (<code>int.TryParse</code>,
+        <code>TryGetValue</code>) that returns a bool instead of throwing.</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>try / catch / finally</h2></div>
+      <p class="sec-sub">Three blocks: try the risky code, catch the failure, and finally clean up no matter what.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">try</span>
+{
+    <span class="kw">var</span> text = <span class="ty">File</span>.<span class="fn">ReadAllText</span>(<span class="str">"data.txt"</span>);   <span class="cmt">// might fail</span>
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>(text);
+}
+<span class="kw">catch</span> (<span class="ty">FileNotFoundException</span> ex)            <span class="cmt">// most specific first</span>
+{
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"Missing file: {ex.FileName}"</span>);
+}
+<span class="kw">catch</span> (<span class="ty">IOException</span> ex)                       <span class="cmt">// broader I/O problems</span>
+{
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"I/O error: {ex.Message}"</span>);
+}
+<span class="kw">finally</span>
+{
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Done (runs whether or not it failed)"</span>);
+}</code></pre>
+      </div>
+
+      <div class="flow">
+        <div class="flow-step"><b><span class="st-icon">▶️</span>try block runs</b><small>your risky code executes line by line</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight"><b><span class="st-icon">💥</span>Exception thrown?</b><small>flow jumps to the first matching <code>catch</code> — remaining try lines are skipped</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">🧹</span>finally always runs</b><small>whether or not an exception happened — ideal for cleanup</small></div>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🎯</span><h4>try</h4><p>Wraps the code that might throw. If a line throws, the rest of the try is skipped.</p></div>
+        <div class="card"><span class="glyph">🪤</span><h4>catch</h4><p>Handles a specific exception type. Multiple catches are checked top-to-bottom; the first match runs.</p></div>
+        <div class="card"><span class="glyph">🧹</span><h4>finally</h4><p>Runs no matter what — exception or not — so it's where you release resources (files, connections).</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Order catches most-derived → least-derived</span>
+        <p>The first <code>catch</code> whose type matches (exactly or as a base class) wins. So a broad
+        <code>catch (Exception)</code> placed <em>before</em> a specific <code>catch (FileNotFoundException)</code> would
+        swallow everything and make the specific one unreachable — that's a compile error. Always put specific types first.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 finally vs using</span>
+        <p>For objects that implement <code>IDisposable</code> (files, DB connections), a <code>using</code> statement is
+        the cleaner way to guarantee cleanup — it compiles to a try/finally that calls <code>Dispose()</code>. Use an
+        explicit <code>finally</code> for cleanup that isn't tied to an <code>IDisposable</code>.</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>The Exception Hierarchy</h2></div>
+      <p class="sec-sub">Every exception derives from <code>System.Exception</code>. Catching a base type also catches its descendants.</p>
+
+      <p>Exceptions form a class hierarchy rooted at <code>System.Exception</code>. Because catching a type also catches
+        anything derived from it, you can catch broadly (<code>IOException</code> covers many file errors) or narrowly
+        (<code>FileNotFoundException</code> specifically).</p>
+
+      <div class="tree">
+        <div class="tree-node top">System.Exception</div>
+        <div class="tree-conn"></div>
+        <div class="tree-row">
+          <div class="tree-node mid">SystemException</div>
+          <div class="tree-node mid">ApplicationException</div>
+        </div>
+        <div class="tree-conn"></div>
+        <div class="tree-row">
+          <div class="tree-node">ArgumentException</div>
+          <div class="tree-node">InvalidOperationException</div>
+          <div class="tree-node">NullReferenceException</div>
+          <div class="tree-node">IOException</div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Common exception</th><th>Thrown when…</th></tr></thead>
+          <tbody>
+            <tr><td><code>NullReferenceException</code></td><td>You use a member on a <code>null</code> reference</td></tr>
+            <tr><td><code>ArgumentException</code> / <code>ArgumentNullException</code></td><td>A method gets an invalid / null argument</td></tr>
+            <tr><td><code>InvalidOperationException</code></td><td>An operation isn't valid for the object's current state</td></tr>
+            <tr><td><code>IndexOutOfRangeException</code></td><td>You access an array index that doesn't exist</td></tr>
+            <tr><td><code>FormatException</code></td><td>A string isn't in the expected format (e.g. bad number)</td></tr>
+            <tr><td><code>DivideByZeroException</code></td><td>You divide an integer by zero</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Key properties of every exception</span>
+        <p><code>Message</code> (human-readable description), <code>StackTrace</code> (the call path to where it was
+        thrown — crucial for debugging), <code>InnerException</code> (the original exception, when one was wrapped in
+        another), and <code>Data</code> (a dictionary for extra context). The <code>StackTrace</code> is exactly what the
+        <code>throw</code> vs <code>throw ex</code> question is all about.</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Throwing</h2></div>
+      <p class="sec-sub">You raise an exception yourself with <code>throw</code> when your code detects a condition it can't proceed past.</p>
+
+      <p>Use <code>throw new SomeException(...)</code> to signal a problem — most commonly to <strong>validate input</strong>
+        at the start of a method (fail fast) rather than letting bad data cause a confusing error deeper down.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">decimal</span> <span class="fn">Withdraw</span>(<span class="kw">decimal</span> balance, <span class="kw">decimal</span> amount)
+{
+    <span class="cmt">// guard clauses -- validate and fail fast with the RIGHT exception type</span>
+    <span class="kw">if</span> (amount &lt;= <span class="num">0</span>)
+        <span class="kw">throw new</span> <span class="ty">ArgumentOutOfRangeException</span>(<span class="kw">nameof</span>(amount), <span class="str">"Must be positive."</span>);
+    <span class="kw">if</span> (amount &gt; balance)
+        <span class="kw">throw new</span> <span class="ty">InvalidOperationException</span>(<span class="str">"Insufficient funds."</span>);
+
+    <span class="kw">return</span> balance - amount;
+}</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Throw the most specific type, with a clear message</span>
+        <p>Pick the exception type that best describes the problem — <code>ArgumentNullException</code> for a null arg,
+        <code>InvalidOperationException</code> for a bad state — and write a message a developer reading the log will
+        understand. Use <code>nameof(param)</code> so the parameter name stays correct if you rename it.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ throw is also an expression (C# 7+)</span>
+        <p>Since C# 7, <code>throw</code> can appear in expression positions, enabling concise patterns like
+        <code>name = input ?? throw new ArgumentNullException(nameof(input));</code>. Handy, but don't let it hide
+        important control flow.</p>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>throw vs throw ex ★</h2></div>
+      <p class="sec-sub">The headline distinction. Both rethrow a caught exception — but one preserves the stack trace and one destroys it.</p>
+
+      <p>When you catch an exception, do some work (like logging), and want to let it continue up the stack, you
+        <em>rethrow</em> it. You have two ways to write it, and they are <strong>not</strong> equivalent:</p>
+
+      <div class="compare">
+        <div class="compare-col good">
+          <h5>✅ throw;</h5>
+          <div class="code" style="margin:0 0 8px;">
+            <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+            <pre><code><span class="kw">catch</span> (<span class="ty">Exception</span> ex)
+{
+    <span class="fn">Log</span>(ex);
+    <span class="kw">throw</span>;        <span class="cmt">// rethrow as-is</span>
+}</code></pre>
+          </div>
+          <div class="rslt">at OriginalMethod()  <span style="color:#c3e88d;">← real origin kept ✓</span>
+at MiddleMethod()
+at Main()</div>
+          <p style="font-size:.85rem;margin:10px 0 0;"><strong>Preserves</strong> the original stack trace — you still see where it really came from.</p>
+        </div>
+        <div class="compare-col bad">
+          <h5>❌ throw ex;</h5>
+          <div class="code" style="margin:0 0 8px;">
+            <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+            <pre><code><span class="kw">catch</span> (<span class="ty">Exception</span> ex)
+{
+    <span class="fn">Log</span>(ex);
+    <span class="kw">throw</span> ex;     <span class="cmt">// rethrow the object</span>
+}</code></pre>
+          </div>
+          <div class="rslt">at CurrentMethod()  <span style="color:#f07178;">← trace RESET here ✗</span>
+at Main()
+<span style="color:#697098;">(original origin lost)</span></div>
+          <p style="font-size:.85rem;margin:10px 0 0;"><strong>Resets</strong> the stack trace to this line — the real origin is gone.</p>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The rule in one line</span>
+        <p><code>throw;</code> (no operand) rethrows the <em>current</em> exception and <strong>keeps its original stack
+        trace</strong>. <code>throw ex;</code> rethrows the exception object and <strong>resets the stack trace</strong> to
+        the current line — making it look like the error originated where you rethrew it. Microsoft's analyzer flags
+        <code>throw ex;</code> as rule <strong>CA2200</strong>.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Why this ruins production debugging</span>
+        <p>The stack trace is your map to where a bug actually happened. With <code>throw ex;</code>, every rethrow point
+        looks like the source, so a log entry points at your <em>catch block</em> instead of the failing line deep in the
+        code. In a large codebase, that turns a five-minute fix into an hour of hunting. <strong>Almost always use
+        <code>throw;</code></strong></p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ When (rarely) is throw ex acceptable?</span>
+        <p>Only if you <em>intentionally</em> want to hide internal stack details — e.g. at a trust boundary where you've
+        deliberately decided the inner trace shouldn't leak. Even then, wrapping in a new exception
+        (<code>throw new …(msg, ex)</code>) is usually the better choice, because it preserves the original as
+        <code>InnerException</code> while presenting a clean outer message.</p>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Wrapping &amp; Dispatch</h2></div>
+      <p class="sec-sub">Two more ways to rethrow that keep information: wrap with an inner exception, or capture-and-throw from outside the catch.</p>
+
+      <h3>Wrapping with InnerException 🎁</h3>
+      <p>Sometimes you want to add context — translate a low-level error into a meaningful one for your domain — without
+        losing the original. Pass the caught exception as the <strong>inner exception</strong>; it's preserved in the chain
+        via the <code>InnerException</code> property.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">try</span>
+{
+    <span class="fn">LoadConfig</span>();
+}
+<span class="kw">catch</span> (<span class="ty">IOException</span> ex)
+{
+    <span class="cmt">// add meaning, but keep the original as InnerException</span>
+    <span class="kw">throw new</span> <span class="ty">ConfigurationException</span>(<span class="str">"Could not load config."</span>, ex);
+}
+<span class="cmt">// later, both messages + both stack traces are available:</span>
+<span class="cmt">//   outer: ConfigurationException "Could not load config."</span>
+<span class="cmt">//   inner: IOException "..." with its original stack trace</span></code></pre>
+      </div>
+
+      <h3>ExceptionDispatchInfo — rethrow from elsewhere 📮</h3>
+      <p>If you need to capture an exception and rethrow it <em>later</em> or from <em>outside</em> the catch block (common
+        in async/Task code), <code>throw;</code> isn't available. <code>ExceptionDispatchInfo</code> (.NET 4.5+) captures
+        the exception with its stack trace intact and rethrows it preserving everything.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">using</span> <span class="ty">System.Runtime.ExceptionServices</span>;
+
+<span class="ty">ExceptionDispatchInfo</span> captured = <span class="kw">null</span>;
+<span class="kw">try</span> { <span class="fn">Risky</span>(); }
+<span class="kw">catch</span> (<span class="ty">Exception</span> ex) { captured = <span class="ty">ExceptionDispatchInfo</span>.<span class="fn">Capture</span>(ex); }
+
+<span class="fn">DoCleanup</span>();                   <span class="cmt">// work between catching and rethrowing</span>
+captured?.<span class="fn">Throw</span>();              <span class="cmt">// rethrows with the ORIGINAL stack trace preserved</span></code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Technique</th><th>Stack trace</th><th>Use when</th></tr></thead>
+          <tbody>
+            <tr><td><code>throw;</code></td><td>Preserved</td><td>Rethrowing as-is inside a catch block</td></tr>
+            <tr><td><code>throw ex;</code></td><td>Reset (lost)</td><td>Almost never — avoid</td></tr>
+            <tr><td><code>throw new X(msg, ex)</code></td><td>Original kept as InnerException</td><td>Adding context / translating the error</td></tr>
+            <tr><td><code>ExceptionDispatchInfo</code></td><td>Preserved</td><td>Rethrowing outside the catch / async</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Exception Filters</h2></div>
+      <p class="sec-sub">The <code>when</code> keyword (C# 6) lets a catch block decide — <em>before</em> catching — whether it actually wants this exception.</p>
+
+      <p>An <strong>exception filter</strong> adds a boolean condition with <code>when</code>. The catch only activates if
+        the condition is true; otherwise the exception keeps propagating to the next handler — <strong>without unwinding
+        the stack</strong>, so the original trace and local debugging context are preserved.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">try</span>
+{
+    response = <span class="kw">await</span> http.<span class="fn">GetAsync</span>(url);
+}
+<span class="cmt">// only handle 429 (rate-limited) here; let everything else bubble up</span>
+<span class="kw">catch</span> (<span class="ty">HttpRequestException</span> ex) <span class="kw">when</span> (ex.StatusCode == <span class="ty">HttpStatusCode</span>.TooManyRequests)
+{
+    <span class="kw">await</span> <span class="fn">RetryAfterDelay</span>();
+}
+<span class="cmt">// distinct handling for a different condition, same exception type</span>
+<span class="kw">catch</span> (<span class="ty">HttpRequestException</span> ex) <span class="kw">when</span> (ex.StatusCode == <span class="ty">HttpStatusCode</span>.NotFound)
+{
+    <span class="fn">UseDefault</span>();
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Filters beat catch-then-check</span>
+        <p>The old way — catch, test a condition, and <code>throw;</code> if it's not yours — works, but the act of
+        catching already unwound the stack. A <code>when</code> filter is evaluated <em>before</em> the stack unwinds, so
+        if it returns false the exception continues untouched, with its full original context intact. Cleaner and better
+        for debugging.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Logging without catching</span>
+        <p>A neat trick: a filter that calls a logging method and always returns <code>false</code> logs the exception
+        <em>without</em> handling it — so it keeps propagating. <code>catch (Exception ex) when (Log(ex))</code> where
+        <code>Log</code> returns <code>false</code> records every exception while letting it bubble up unchanged.</p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>Custom Exceptions</h2></div>
+      <p class="sec-sub">When built-in types don't carry enough meaning, define your own — with domain data callers can use.</p>
+
+      <p>Built-in exceptions like <code>ArgumentException</code> are great for low-level problems, but they don't carry
+        <em>domain</em> context. If callers need to handle "invalid coupon" differently from "invalid email," parsing the
+        message string is fragile. A <strong>custom exception</strong> gives them a specific type to catch and typed
+        properties to read.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// derive from Exception; add domain-specific data</span>
+<span class="kw">public class</span> <span class="ty">InsufficientFundsException</span> : <span class="ty">Exception</span>
+{
+    <span class="kw">public decimal</span> Shortfall { <span class="kw">get</span>; }
+
+    <span class="cmt">// provide the standard constructors, including one taking an inner exception</span>
+    <span class="kw">public</span> <span class="fn">InsufficientFundsException</span>(<span class="kw">string</span> message, <span class="kw">decimal</span> shortfall)
+        : <span class="kw">base</span>(message) =&gt; Shortfall = shortfall;
+
+    <span class="kw">public</span> <span class="fn">InsufficientFundsException</span>(<span class="kw">string</span> message, <span class="ty">Exception</span> inner)
+        : <span class="kw">base</span>(message, inner) { }
+}
+
+<span class="cmt">// caller can catch the specific type and read typed data</span>
+<span class="kw">try</span> { account.<span class="fn">Withdraw</span>(<span class="num">500</span>); }
+<span class="kw">catch</span> (<span class="ty">InsufficientFundsException</span> ex)
+{
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"Short by {ex.Shortfall:C}"</span>);   <span class="cmt">// no string parsing!</span>
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Conventions for custom exceptions</span>
+        <p>End the name with <code>Exception</code>. Derive directly from <code>Exception</code> (modern guidance — the old
+        <code>ApplicationException</code> base is discouraged). Provide the three standard constructors (parameterless,
+        message, message + inner exception) plus any you need for your data. Make it serializable if it may cross process
+        boundaries.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ When to create one</span>
+        <p>Create a custom exception when callers should be able to <em>handle this failure distinctly</em> from others, or
+        when you have domain data worth attaching. If a built-in type already conveys the meaning accurately
+        (<code>ArgumentNullException</code> for a null arg), just use that — don't proliferate types needlessly.</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Best Practices</h2></div>
+      <p class="sec-sub">The habits that separate robust code from code that hides its own bugs.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🎯</span><h4>Catch what you can handle</h4><p>Only catch exceptions you can meaningfully recover from. Otherwise let them propagate to code that can — or to a global handler.</p></div>
+        <div class="card"><span class="glyph">🚫</span><h4>Don't swallow</h4><p>An empty <code>catch { }</code> hides bugs and makes failures invisible. If you catch, at minimum log it.</p></div>
+        <div class="card"><span class="glyph">♻️</span><h4>Use throw, not throw ex</h4><p>Preserve the stack trace when rethrowing. Reserve wrapping (<code>throw new …(msg, ex)</code>) for adding context.</p></div>
+        <div class="card"><span class="glyph">🧹</span><h4>Clean up reliably</h4><p>Use <code>using</code> for <code>IDisposable</code> resources; <code>finally</code> for the rest. Don't throw from <code>finally</code>.</p></div>
+        <div class="card"><span class="glyph">🔢</span><h4>Don't use exceptions for flow</h4><p>Prefer <code>TryParse</code>/<code>TryGetValue</code> for expected failures — throwing is costly and obscures intent.</p></div>
+        <div class="card"><span class="glyph">🎚️</span><h4>Be specific</h4><p>Catch the narrowest type that fits. Avoid bare <code>catch (Exception)</code> unless you rethrow or it's a top-level handler.</p></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// ❌ exceptions for control flow -- slow and noisy</span>
+<span class="kw">try</span> { age = <span class="kw">int</span>.<span class="fn">Parse</span>(input); }
+<span class="kw">catch</span> (<span class="ty">FormatException</span>) { age = <span class="num">0</span>; }
+
+<span class="cmt">// ✅ expected failure -> use the Try pattern (no exception thrown)</span>
+<span class="kw">if</span> (!<span class="kw">int</span>.<span class="fn">TryParse</span>(input, <span class="kw">out</span> age))
+    age = <span class="num">0</span>;
+
+<span class="cmt">// ❌ swallowing -- the bug vanishes silently</span>
+<span class="kw">try</span> { <span class="fn">DoWork</span>(); } <span class="kw">catch</span> { }
+
+<span class="cmt">// ✅ handle or log, then rethrow if you can't recover</span>
+<span class="kw">try</span> { <span class="fn">DoWork</span>(); }
+<span class="kw">catch</span> (<span class="ty">Exception</span> ex) { <span class="fn">Log</span>(ex); <span class="kw">throw</span>; }</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Never throw from a finally block</span>
+        <p>An exception thrown in <code>finally</code> replaces any exception currently propagating — masking the real
+        error. Microsoft's rule <strong>CA2219</strong> flags this. Keep <code>finally</code> blocks to safe cleanup that
+        won't itself throw.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Worked Example</h2></div>
+      <p class="sec-sub">A service method that validates, wraps low-level errors with context, rethrows correctly, and cleans up — all the pieces together.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public</span> <span class="ty">Order</span> <span class="fn">PlaceOrder</span>(<span class="kw">string</span> customerId, <span class="kw">int</span> quantity)
+{
+    <span class="cmt">// 1) validate -- fail fast with the right exception type</span>
+    <span class="kw">if</span> (<span class="kw">string</span>.<span class="fn">IsNullOrEmpty</span>(customerId))
+        <span class="kw">throw new</span> <span class="ty">ArgumentException</span>(<span class="str">"Required."</span>, <span class="kw">nameof</span>(customerId));
+    <span class="kw">if</span> (quantity &lt;= <span class="num">0</span>)
+        <span class="kw">throw new</span> <span class="ty">ArgumentOutOfRangeException</span>(<span class="kw">nameof</span>(quantity));
+
+    <span class="kw">var</span> db = <span class="kw">new</span> <span class="ty">DbConnection</span>();
+    <span class="kw">try</span>
+    {
+        db.<span class="fn">Open</span>();
+        <span class="kw">return</span> db.<span class="fn">Save</span>(customerId, quantity);
+    }
+    <span class="cmt">// 2) only handle the case we can add meaning to; filter the rest out</span>
+    <span class="kw">catch</span> (<span class="ty">SqlException</span> ex) <span class="kw">when</span> (ex.Number == <span class="num">1205</span>)   <span class="cmt">// deadlock</span>
+    {
+        <span class="cmt">// 3) wrap with domain context, keep original as InnerException</span>
+        <span class="kw">throw new</span> <span class="ty">OrderException</span>(<span class="str">"Order failed due to a deadlock; retry."</span>, ex);
+    }
+    <span class="kw">catch</span> (<span class="ty">Exception</span> ex)
+    {
+        <span class="fn">Log</span>(ex);
+        <span class="kw">throw</span>;   <span class="cmt">// 4) rethrow preserving the stack trace</span>
+    }
+    <span class="kw">finally</span>
+    {
+        db.<span class="fn">Dispose</span>();   <span class="cmt">// 5) always clean up the connection</span>
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Every concept in one place</span>
+        <p><strong>Validation</strong> throws specific types up front. An <strong>exception filter</strong> (<code>when</code>)
+        catches only the deadlock case. That case is <strong>wrapped</strong> with domain context while keeping the original
+        as <code>InnerException</code>. Anything else is logged and rethrown with <strong><code>throw;</code></strong> to
+        preserve the trace. And <strong><code>finally</code></strong> guarantees the connection is released no matter what.
+        That's production-grade exception handling.</p>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea. If you can explain each card aloud, you've got it.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🛡️ Exception</h4><p>An object describing a runtime error that interrupts flow and travels up the stack seeking a handler.</p></div>
+        <div class="recap-card"><h4>🧯 try/catch/finally</h4><p>Try the risky code, catch specific failures, and finally clean up whether or not it failed.</p></div>
+        <div class="recap-card"><h4>🎚️ Order catches</h4><p>Most-derived to least-derived; the first matching catch runs, and a base type before a derived one won't compile.</p></div>
+        <div class="recap-card"><h4>🌲 Hierarchy</h4><p>All exceptions derive from <code>System.Exception</code>; catching a base type also catches its descendants.</p></div>
+        <div class="recap-card"><h4>♻️ throw;</h4><p>Rethrows the current exception and <strong>preserves</strong> its original stack trace — the correct default.</p></div>
+        <div class="recap-card"><h4>🚫 throw ex;</h4><p><strong>Resets</strong> the stack trace to the rethrow line, hiding the real origin — flagged by CA2200; avoid.</p></div>
+        <div class="recap-card"><h4>🎁 Wrapping</h4><p><code>throw new X(msg, ex)</code> adds context while keeping the original as <code>InnerException</code>.</p></div>
+        <div class="recap-card"><h4>🔎 Filters (when)</h4><p>A catch condition evaluated before the stack unwinds — preserves context and avoids catch-then-rethrow.</p></div>
+        <div class="recap-card"><h4>🏷️ Custom exceptions</h4><p>Derive from <code>Exception</code>, add typed domain data, and provide the standard constructors.</p></div>
+        <div class="recap-card"><h4>✅ Best practice</h4><p>Catch only what you can handle, never swallow, prefer <code>Try…</code> for expected failures, and clean up reliably.</p></div>
+      </div>
+
+      <h3>Rethrow techniques at a glance 📊</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>You want to…</th><th>Use</th><th>Stack trace</th></tr></thead>
+          <tbody>
+            <tr><td>Rethrow as-is from a catch</td><td><code>throw;</code></td><td>✅ Preserved</td></tr>
+            <tr><td>Add context / translate the error</td><td><code>throw new X(msg, ex)</code></td><td>✅ Kept as InnerException</td></tr>
+            <tr><td>Rethrow later / outside the catch</td><td><code>ExceptionDispatchInfo</code></td><td>✅ Preserved</td></tr>
+            <tr><td>Handle only some cases</td><td><code>catch … when (…)</code></td><td>✅ Preserved if filter is false</td></tr>
+            <tr><td>(Anti-pattern)</td><td><code>throw ex;</code></td><td>❌ Reset</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a clear answer. Tagged by level — Junior (0–2 yrs),
+        Mid (2–5 yrs), Senior (5–7 yrs). Written for someone with no prior coding background.</p>
+
+      <h3>🌱 Junior — fundamentals (0–2 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q1</span> What is an exception? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>An exception is an object that represents an error occurring during program execution — like dividing by zero or opening a missing
+        file. When thrown, it interrupts the normal flow and travels up the call stack looking for code that handles it. If nothing handles it, the
+        program crashes.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span> What do try, catch, and finally do? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><strong>try</strong> wraps code that might fail. <strong>catch</strong> handles a specific exception type if one is thrown — you can have
+        several, checked top to bottom. <strong>finally</strong> runs afterward whether or not an exception occurred, which makes it the place to release
+        resources like files or connections.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span> Does the finally block always run? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Almost always — whether the try succeeds, throws and is caught, or throws and isn't caught, the <code>finally</code> runs before control
+        leaves. (The rare exceptions are catastrophic process termination like <code>Environment.FailFast</code> or a power loss.) That reliability is why
+        cleanup goes there.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span> What's the difference between throw and throw ex? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>throw;</code> (with no exception named) rethrows the current exception and <strong>keeps its original stack trace</strong> — you still see
+        where it really came from. <code>throw ex;</code> rethrows the exception object but <strong>resets the stack trace</strong> to the line where you wrote
+        it, hiding the true origin. Use <code>throw;</code> — it's almost always what you want.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span> What is a stack trace and why does it matter? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A stack trace is the list of method calls leading to where the exception was thrown — like a breadcrumb trail from the error back through the
+        code that called it. It's the single most useful piece of debugging information, because it tells you exactly where and how the failure happened. Preserving
+        it (with <code>throw;</code>) is essential.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span> Why should catch blocks be ordered specific-to-general? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The first <code>catch</code> whose type matches the exception (exactly or as a base class) runs. If you put a broad <code>catch (Exception)</code>
+        first, it would match everything, so a more specific catch after it could never run — and C# treats that as a compile error. So list specific types first, broad
+        ones last.</p></div></details>
+
+      <h3>🟠 Mid-level — going deeper (2–5 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q7</span> Exactly why does throw ex reset the stack trace? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>When you write <code>throw ex;</code>, you're throwing an exception object with an operand, and the CLR treats that as throwing "from here" — it
+        overwrites the stack trace starting at the current method, discarding the call chain between the original throw site and this point. <code>throw;</code> with no
+        operand tells the runtime to rethrow the in-flight exception without resetting, so the original trace is preserved. Microsoft's analyzer flags <code>throw ex;</code>
+        as rule CA2200.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span> How do you rethrow while adding context without losing the original error? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Wrap it: <code>throw new MyException("higher-level message", ex);</code>. The caught exception becomes the new exception's <code>InnerException</code>,
+        so both messages and both stack traces remain available. This is how you translate a low-level error (e.g. <code>SqlException</code>) into a domain-meaningful one
+        while preserving the root cause for debugging.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q9</span> What are exception filters and what advantage do they have? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Exception filters (C# 6) add a <code>when (condition)</code> clause to a catch. The catch activates only if the condition is true; otherwise the exception
+        keeps propagating. The advantage: the filter is evaluated <strong>before the stack unwinds</strong>, so if it returns false the exception's original stack trace and local
+        context are untouched — unlike catch-then-check-then-rethrow, which already unwound and (if you used <code>throw ex</code>) could damage the trace.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> When should you create a custom exception, and how? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Create one when callers need to handle a failure <em>distinctly</em> from others or you have domain data worth attaching. Derive from <code>Exception</code>,
+        name it ending in <code>Exception</code>, add typed properties for your data, and provide the standard constructors (message, and message + inner exception). Avoid deriving
+        from the discouraged <code>ApplicationException</code>. If a built-in type already conveys the meaning, use that instead.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> Why shouldn't you use exceptions for control flow? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Throwing and catching is relatively expensive (capturing a stack trace, unwinding) and signals "something went wrong" — using it for ordinary, expected
+        outcomes is both slow and misleading. For expected failures like parsing user input or a maybe-missing dictionary key, use the <code>Try…</code> pattern
+        (<code>int.TryParse</code>, <code>TryGetValue</code>) that returns a bool. Reserve exceptions for genuinely exceptional conditions.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> What's wrong with an empty catch block? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>An empty <code>catch { }</code> swallows the exception silently — the program keeps running as if nothing happened, but the underlying problem is hidden and
+        the bug becomes invisible. At minimum, log the exception. Better: only catch what you can actually handle, and let everything else propagate to code (or a global handler)
+        that can deal with it or surface it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What does catching a base exception type catch? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It catches that type <em>and all types derived from it</em>. So <code>catch (Exception)</code> catches everything, and <code>catch (IOException)</code> catches
+        <code>FileNotFoundException</code>, <code>DirectoryNotFoundException</code>, etc. This is why catch order matters and why you should generally catch the narrowest type that
+        fits — broad catches can unintentionally handle (and hide) errors you didn't anticipate.</p></div></details>
+
+      <h3>🔴 Senior — synthesis &amp; judgment (5–7 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> How do you rethrow an exception captured outside a catch block while preserving its stack trace? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Use <code>ExceptionDispatchInfo</code> (.NET 4.5+): in the catch, call <code>ExceptionDispatchInfo.Capture(ex)</code> to snapshot the exception with its stack
+        trace; later — even after other work, or from a different method — call <code>.Throw()</code> on it to rethrow with the original trace intact. <code>throw;</code> only works
+        directly inside the catch, so <code>ExceptionDispatchInfo</code> is the tool for async/TPL scenarios and deferred rethrow. It's what the framework uses to surface task
+        exceptions through <code>await</code> without aggregating.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> Compare throw ex, throw, throw new (wrapping), and ExceptionDispatchInfo for rethrowing. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>throw ex;</code> resets the stack trace (anti-pattern). <code>throw;</code> rethrows in-place preserving the trace — the default for "log and rethrow."
+        <code>throw new X(msg, ex)</code> preserves the original as <code>InnerException</code> while adding a higher-level message — for translating errors across abstraction
+        boundaries. <code>ExceptionDispatchInfo.Capture/Throw</code> preserves the trace when you must rethrow outside the catch or after intervening work. Choose by intent: rethrow
+        as-is → <code>throw;</code>; add meaning → wrap; rethrow elsewhere → dispatch info.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> How do exception filters interact with the stack and side effects, and what's a risk? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A <code>when</code> filter runs <em>before</em> the stack unwinds, in the context of the throwing frame — so it preserves the original trace and can inspect live
+        state. Two consequences: (1) it enables "log without catching" via a filter that returns false; (2) filter code runs as part of exception dispatch, so it should be fast and must
+        not throw (an exception in a filter is swallowed and the filter is treated as false, which can mask issues). Avoid heavy work or side effects with surprising ordering in filters.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> Why is throwing from a finally block dangerous? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>If an exception is already propagating out of the try/catch and the <code>finally</code> throws a new one, the new exception <strong>replaces</strong> the original —
+        the real error is lost, along with its stack trace, and callers see the cleanup error instead of the root cause. This makes diagnosis very hard. Microsoft's rule CA2219 flags it.
+        Keep <code>finally</code> to cleanup that can't throw, and if cleanup might fail, guard it (e.g. check state) or handle its exception locally without letting it escape.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> What's the performance cost of exceptions, and how should it shape design? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Throwing is expensive relative to normal returns: the runtime captures a stack trace and unwinds frames searching for a handler. A caught exception on a cold path is
+        negligible; throwing thousands per second on a hot path is not. So design APIs to avoid exceptions for expected outcomes — offer <code>Try…</code> variants, validate cheaply,
+        return result objects or status codes for routine failures — and reserve exceptions for truly exceptional conditions. This is why <code>int.TryParse</code> exists alongside
+        <code>int.Parse</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> How should exceptions be handled in async/task-returning methods? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Exceptions thrown inside the asynchronous part of a task-returning method are captured and stored on the returned <code>Task</code>; they don't surface until the task is
+        awaited (or its <code>.Result</code>/<code>.Wait()</code> is accessed, which wraps them in <code>AggregateException</code>). So validate arguments and throw
+        <code>ArgumentException</code>-type errors <em>synchronously</em> before the first <code>await</code>, so callers see them immediately. When awaiting, the original exception is rethrown
+        with its stack trace preserved (the framework uses <code>ExceptionDispatchInfo</code> internally). Prefer catching <code>OperationCanceledException</code> over its derived
+        <code>TaskCanceledException</code> for cancellation.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> What's your strategy for global/unhandled exception handling in an application? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Handle exceptions locally only where you can recover; let the rest bubble to a top-level boundary. There, a global handler logs the full exception (message, type, stack
+        trace, inner exceptions) with correlation context, returns a clean error response (e.g. a sanitized message to users, never raw stack traces), and decides whether to continue or
+        fail fast. In ASP.NET Core that's exception-handling middleware; for unobserved cases there are <code>AppDomain.UnhandledException</code> and <code>TaskScheduler.UnobservedTaskException</code>.
+        The principle: catch low to recover, catch high to log and translate, never swallow in between.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Lock down <strong>Junior</strong> — what an exception is, try/catch/finally, catch ordering, and especially the <code>throw</code> vs <code>throw ex</code> stack-trace difference.
+        <strong>Mid</strong> is the interview core: why <code>throw ex</code> resets the trace, wrapping with <code>InnerException</code>, exception filters, custom exceptions, and not using
+        exceptions for flow. <strong>Senior</strong> goes deep: <code>ExceptionDispatchInfo</code>, throwing-from-finally, performance, async exception semantics, and global handling strategy.
+        Answer each aloud without peeking; stumbles point back to the section.</p>
+      </div>
+
+      <p class="foot">All technical details verified against Microsoft Learn (exception-handling statements, best practices for exceptions, code analysis rules CA2200 and CA2219,
+        <code>ExceptionDispatchInfo</code>) and supporting references. Version notes: exception filters (<code>when</code>) → C# 6; <code>throw</code> expressions → C# 7;
+        <code>ExceptionDispatchInfo</code> → .NET 4.5. This single <code>09-exception-handling.html</code> file is fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+function updateProgress(){const h=document.documentElement;const max=h.scrollHeight-h.clientHeight;
+  progress.style.width=(max>0?(h.scrollTop/max)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});
+window.addEventListener('resize',updateProgress);updateProgress();
+
+const sidebar=document.getElementById('sidebar');const backdrop=document.getElementById('backdrop');
+function closeSidebar(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(link.getAttribute('href'));
+    if(target){const y=target.getBoundingClientRect().top+window.pageYOffset-24;window.scrollTo({top:y,behavior:'smooth'});}
+    if(window.innerWidth<=920) closeSidebar();
+  });
+});
+
+const sections=[...document.querySelectorAll('.section')];
+const navLinks=[...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on=l.getAttribute('href')==='#'+id;
+    l.classList.toggle('active',on);
+    if(on){const lr=l.getBoundingClientRect(),sr=sidebar.getBoundingClientRect();
+      if(lr.top<sr.top+60||lr.bottom>sr.bottom-60){sidebar.scrollTop+=(lr.top-sr.top)-sidebar.clientHeight/2+lr.height/2;}}
+  });
+}
+const spy=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting) setActive(en.target.id);});},
+  {rootMargin:'-20% 0px -70% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+const reveal=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');reveal.unobserve(en.target);}});},{threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.closest('.code').querySelector('pre code').innerText;
+    const done=()=>{btn.textContent='Copied!';btn.classList.add('done');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done');},2000);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code,done));
+    } else {fallback(code,done);}
+  });
+});
+function fallback(text,cb){const ta=document.createElement('textarea');ta.value=text;
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
+
+document.getElementById('fab').addEventListener('click',()=>{
+  const open=sidebar.classList.toggle('open');backdrop.classList.toggle('show',open);});
+backdrop.addEventListener('click',closeSidebar);
+</script>
+</body>
+</html>

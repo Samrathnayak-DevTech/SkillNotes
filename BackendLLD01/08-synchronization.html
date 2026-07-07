@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Introduction to Synchronization — Session 08</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* race condition step trace */
+.trace{display:grid;grid-template-columns:auto 1fr 1fr;gap:.2rem .8rem;font-family:'JetBrains Mono',monospace;font-size:.75rem;margin:1rem 0;align-items:center}
+.trace-step{background:var(--bg-soft);border:1px solid var(--line);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:600;flex-shrink:0}
+.trace-step.t1{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.trace-step.t2{background:var(--rose-soft);border-color:var(--rose);color:var(--rose)}
+.trace-op{padding:.15rem .4rem}
+.trace-state{color:var(--ink-soft);font-size:.68rem}
+/* prop card */
+.prop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin:1.5rem 0}
+.prop-card{border-radius:8px;padding:1rem;border:1px solid}
+.prop-card.me{background:var(--blue-soft);border-color:var(--blue)}
+.prop-card.pr{background:var(--green-soft);border-color:var(--green)}
+.prop-card.bw{background:var(--accent-soft);border-color:var(--accent)}
+.prop-card.nb{background:var(--purple-soft);border-color:var(--purple)}
+.prop-num{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.3rem}
+.prop-card.me .prop-num{color:var(--blue)}.prop-card.pr .prop-num{color:var(--green)}
+.prop-card.bw .prop-num{color:var(--accent)}.prop-card.nb .prop-num{color:var(--purple)}
+.prop-title{font-family:'Fraunces',serif;font-size:1rem;font-weight:600;margin-bottom:.3rem}
+.prop-card p{font-size:.82rem;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 08</div>
+  <div class="nav-group"><span class="nav-group-label">Getting Started</span><a class="nav-link" href="#hero">Overview</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">The Problem</span>
+    <a class="nav-link" href="#s01">01 The Race Condition</a>
+    <a class="nav-link" href="#s02">02 Critical Section</a>
+    <a class="nav-link" href="#s03">03 Preemption Inside Critical Section</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Properties of a Good Solution</span>
+    <a class="nav-link" href="#s04">04 Four Required Properties</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Java Solutions</span>
+    <a class="nav-link" href="#s05">05 MUTEX — The Lock</a>
+    <a class="nav-link" href="#s06">06 synchronized Block</a>
+    <a class="nav-link" href="#s07">07 synchronized Method</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 08 · 24th Nov</p>
+  <h1>Introduction to Synchronization</h1>
+  <p class="hero-lede">Why parallel threads produce wrong results when they share data, what a race condition is, and how Java's <code>synchronized</code> keyword enforces mutual exclusion.</p>
+  <div class="agenda-chips">
+    <span class="chip">Race Condition</span><span class="chip">Critical Section</span><span class="chip">Preemption</span><span class="chip">Mutual Exclusion</span><span class="chip">MUTEX</span><span class="chip">synchronized</span>
+  </div>
+</section>
+
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>The Race Condition</h2></div>
+  <p>Consider a shared <code>count</code> variable initialized to 0. Two threads run concurrently: T1 adds numbers 1–100 to <code>count</code>; T2 subtracts numbers 1–100 from <code>count</code>. If both finish perfectly, the result should be 0. But in practice, it is often not.</p>
+  <p>The reason: a single <code>count += i</code> statement is not atomic at the machine level. It compiles to three CPU instructions — read, modify, write — and the CPU can context-switch between any two of them.</p>
+
+  <div class="diagram-box">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:.75rem; margin-bottom:.6rem; color:var(--ink-soft);">count = 0, T1 adds, T2 subtracts — interleaved execution:</div>
+    <div class="trace">
+      <div class="trace-step t1">①</div><div class="trace-op">T1: x ← count</div><div class="trace-state">x = 0, count = 0</div>
+      <div class="trace-step t1">②</div><div class="trace-op">T1: x ← x + 1</div><div class="trace-state">x = 1, count = 0</div>
+      <div class="trace-step t2">③</div><div class="trace-op">T2: y ← count</div><div class="trace-state">y = 0, count = 0</div>
+      <div class="trace-step t2">④</div><div class="trace-op">T2: y ← y - 1</div><div class="trace-state">y = -1, count = 0</div>
+      <div class="trace-step t2">⑤</div><div class="trace-op">T2: count ← y</div><div class="trace-state">count = -1</div>
+      <div class="trace-step t1">⑥</div><div class="trace-op">T1: count ← x</div><div class="trace-state" style="color:var(--rose);">count = 1 ← WRONG! T2's write was overwritten</div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Synchronization Problem</span>
+    <p>When more than one thread is working on shared data at the same time, the result can be <strong>unpredictably wrong</strong>. This non-deterministic corruption is called a <strong>race condition</strong> — the output depends on the exact interleaving (race) of thread operations, which the OS scheduler controls non-deterministically.</p>
+  </div>
+</section>
+
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>Critical Section</h2></div>
+  <p>The <strong>critical section</strong> is the segment of code where shared data is being read or written. When more than one thread enters the critical section simultaneously, a race condition can occur.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>A <strong>critical section</strong> is any code that accesses shared mutable state. The goal of synchronization is to ensure that at most one thread executes the critical section at any given time.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">int</span> count = <span class="num">0</span>;
+
+<span class="cmt">// CRITICAL SECTION — both T1 and T2 try to execute this simultaneously:</span>
+count += i;   <span class="cmt">// read count, add i, write back
+              // NOT atomic! Three separate CPU ops.</span></pre>
+  </div>
+</section>
+
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Preemption Inside the Critical Section</h2></div>
+  <p><strong>Preemption</strong> is when the CPU forcibly pauses a thread mid-execution to give another thread CPU time. This is normal and necessary for fairness — but if preemption happens while a thread is inside the critical section, the shared data is left in a partially-updated state that the next thread will read incorrectly.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Key Point</span>
+    <p>If a thread is preempted <em>inside</em> the critical section — having read the shared variable but not yet written back its update — and another thread enters the critical section during that gap, the second thread reads stale data. Both threads end up writing independent updates, and one of them is silently lost.</p>
+  </div>
+</section>
+
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Four Properties of a Good Synchronization Solution</h2></div>
+
+  <div class="prop-grid">
+    <div class="prop-card me">
+      <div class="prop-num">Property 1</div>
+      <div class="prop-title">Mutual Exclusion</div>
+      <p>Only one thread can be inside the critical section at a time. This is the most fundamental requirement.</p>
+    </div>
+    <div class="prop-card pr">
+      <div class="prop-num">Property 2</div>
+      <div class="prop-title">Progress</div>
+      <p>If no thread is in the critical section and some threads want to enter, one of them must be allowed to proceed. The system must not deadlock.</p>
+    </div>
+    <div class="prop-card bw">
+      <div class="prop-num">Property 3</div>
+      <div class="prop-title">Bounded Waiting</div>
+      <p>Once a thread requests to enter the critical section, it must eventually be granted access. No thread should wait indefinitely (starvation).</p>
+    </div>
+    <div class="prop-card nb">
+      <div class="prop-num">Property 4</div>
+      <div class="prop-title">No Busy Waiting</div>
+      <p>A thread waiting to enter the critical section should be blocked (sleeping), not spinning in a tight loop consuming CPU cycles.</p>
+    </div>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy — Trial Room</span>
+    <p>A fitting room in a store is the critical section — only one person at a time. Mutual exclusion is the lock on the door. Progress means the store attendant must eventually let a waiting customer in. Bounded waiting means nobody waits forever. No busy waiting means customers sit down rather than pacing back and forth in front of the door.</p>
+  </div>
+</section>
+
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>MUTEX — The Lock</h2></div>
+  <p>A <strong>MUTEX</strong> (short for <em>Mutual Exclusion</em>) is a locking mechanism. A thread must acquire the lock before entering the critical section and release it afterward. If another thread tries to acquire a lock that is already held, it blocks until the lock is released.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">import</span> java.util.concurrent.locks.ReentrantLock;
+
+<span class="ty">ReentrantLock</span> lock = <span class="kw">new</span> <span class="ty">ReentrantLock</span>();
+<span class="kw">int</span> count = <span class="num">0</span>;
+
+<span class="cmt">// T1 — Adder</span>
+lock.<span class="fn">acquire</span>();   <span class="cmt">// or lock.lock() — blocks if already held</span>
+    x = count;
+    x = x + <span class="num">1</span>;
+    count = x;
+lock.<span class="fn">release</span>();   <span class="cmt">// or lock.unlock() — wakes a waiting thread</span>
+
+<span class="cmt">// T2 — Subtractor (runs concurrently)
+// T2 calls lock.acquire(); if T1 holds the lock, T2 blocks here
+// Once T1 calls lock.release(), T2 gets the lock and proceeds</span></pre>
+  </div>
+</section>
+
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>The <code>synchronized</code> Block</h2></div>
+  <p>Java has a built-in locking mechanism: <strong>every object has an implicit monitor lock (intrinsic lock)</strong>. The <code>synchronized</code> block lets you grab that lock for any object.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">Object</span> count = <span class="kw">new</span> <span class="ty">Object</span>();  <span class="cmt">// used as the lock object</span>
+<span class="kw">int</span> value = <span class="num">0</span>;
+
+<span class="cmt">// T1 — Adder</span>
+<span class="kw">synchronized</span> (count) {    <span class="cmt">// acquires count's monitor lock</span>
+    x = value;
+    x = x + <span class="num">1</span>;
+    value = x;
+}                          <span class="cmt">// automatically releases lock on exit (even on exception)</span>
+
+<span class="cmt">// T2 — Subtractor
+// synchronized(count) { ... } — tries to acquire same lock, blocks if T1 holds it</span>
+
+<span class="cmt">// You can nest synchronized blocks for different locks:
+// synchronized(count)   { synchronized(student) { ... } }
+// But be careful of deadlock when acquiring multiple locks!</span></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Tip</span>
+    <p><code>synchronized</code> blocks are preferred over synchronizing the entire method because they narrow the critical section to exactly the code that needs protection, allowing other non-critical code to run concurrently.</p>
+  </div>
+</section>
+
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>Synchronized Methods</h2></div>
+  <p>You can also declare an entire method as <code>synchronized</code>. The lock used is the instance's own monitor (<code>this</code>). Only one thread can be inside <em>any</em> synchronized method of a particular object at a time.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Counter</span> {
+    <span class="kw">private int</span> value = <span class="num">0</span>;
+
+    <span class="kw">public synchronized void</span> <span class="fn">addV</span>(<span class="kw">int</span> x)  { value += x; }  <span class="cmt">// sync on 'this'</span>
+    <span class="kw">public synchronized void</span> <span class="fn">subV</span>(<span class="kw">int</span> x)  { value -= x; }
+    <span class="kw">public int</span>               <span class="fn">getV</span>()        { <span class="kw">return</span> value; }  <span class="cmt">// not synchronized</span>
+}
+
+<span class="ty">Counter</span> c1 = <span class="kw">new</span> <span class="ty">Counter</span>();
+<span class="ty">Counter</span> c2 = <span class="kw">new</span> <span class="ty">Counter</span>();
+
+<span class="cmt">// ✗  T1: c1.addV() and T2: c1.subV() — BLOCKED (same object c1's lock)
+// ✓  T1: c1.addV() and T2: c2.subV() — OK (different objects, different locks)
+// ✓  T1: c1.addV() and T2: c1.getV() — OK (getV is not synchronized)</span></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Rule</span>
+    <p>Only one synchronized method can execute on a given object at a time. Two threads can call synchronized methods on <em>different</em> objects simultaneously — each object has its own lock. Unsynchronized methods are always accessible regardless.</p>
+  </div>
+</section>
+
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Race Condition</div><p>Multiple threads accessing shared data concurrently produce wrong results. The output depends on unpredictable thread scheduling.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Critical Section</div><p>Code that accesses shared mutable state. Must be protected so only one thread executes it at a time.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Preemption</div><p>OS pauses a thread mid-execution. If this happens inside the critical section, the next thread sees inconsistent data.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Mutual Exclusion</div><p>Only one thread in the critical section at a time. The core requirement of any sync solution.</p></div>
+    <div class="recap-card"><div class="recap-card-title">MUTEX</div><p>A lock mechanism: acquire before entering critical section, release after. Blocking — waiting threads sleep, not spin.</p></div>
+    <div class="recap-card"><div class="recap-card-title">synchronized block</div><p>Acquires the monitor lock of a specified object. Automatically released on exit. Narrower and preferred over method-level sync.</p></div>
+    <div class="recap-card"><div class="recap-card-title">synchronized method</div><p>Locks the entire method on <code>this</code>. Only one sync method per object at a time. Non-sync methods remain accessible.</p></div>
+    <div class="recap-card"><div class="recap-card-title">4 Properties</div><p>Mutual exclusion, progress (no deadlock), bounded waiting (no starvation), no busy waiting.</p></div>
+  </div>
+</section>
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

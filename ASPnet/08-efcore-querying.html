@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 8 — EF Core Querying: Tracking, Projections, Async &amp; Include</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">🔍 Day 8 · EF Core Querying</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">How Queries Work</div>
+    <a href="#s01"><span class="n">01</span>LINQ Becomes SQL</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>Deferred Execution</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Core Techniques</div>
+    <a href="#s04"><span class="n">04</span>Tracking vs No-Tracking</a>
+    <a href="#s05"><span class="n">05</span>Projections</a>
+    <a href="#s06"><span class="n">06</span>Async Queries</a>
+    <a href="#s07"><span class="n">07</span>Include &amp; ThenInclude</a>
+    <a href="#s08"><span class="n">08</span>Split Queries</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Seeing the SQL</div>
+    <a href="#s09"><span class="n">09</span>Inspecting Generated SQL</a>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 08 · ASP.NET Core Fundamentals</div>
+  <h1>🔍 Querying with EF Core: LINQ In, SQL Out</h1>
+  <p class="lede">Yesterday you mapped entities to tables. Today you'll pull data back out — and learn what separates a fast, precise query from an accidental table scan. The four levers: turn tracking off for reads, project only the columns you need, always go async, and load related data deliberately with <code>Include</code>. Then we'll open the hood and read the SQL EF actually generates.</p>
+  <div class="agenda">
+    <span class="chip">🌳 IQueryable</span>
+    <span class="chip">🕵️ Tracking vs No-Tracking</span>
+    <span class="chip">🎯 Projections</span>
+    <span class="chip">⏳ Async Queries</span>
+    <span class="chip">🧩 Include</span>
+    <span class="chip">🔬 Generated SQL</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>🌳 How LINQ Becomes SQL</h2>
+
+  <p>When you write a LINQ query against a <code>DbSet</code>, something subtle happens: <strong>nothing runs</strong>. You aren't fetching data — you're <em>describing</em> data. EF Core collects your <code>Where</code>, <code>OrderBy</code>, and <code>Select</code> calls into an <strong>expression tree</strong>: a data structure representing the query as a recipe, not a result.</p>
+
+  <p>Two interfaces make this possible, and confusing them is the #1 source of slow EF code:</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">🌳</span><b>IQueryable&lt;T&gt;</b><p>A <em>description</em> of a query. Every operator you chain extends the recipe. EF translates the whole thing into one SQL statement — the filtering happens <strong>in the database</strong>.</p></div>
+    <div class="card"><span class="glyph">📦</span><b>IEnumerable&lt;T&gt;</b><p>An <em>in-memory sequence</em>. Operators run in your app's RAM, one item at a time. Once a query becomes IEnumerable, the database can no longer help.</p></div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · The trap and the fix</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// ❌ TRAP: ToList() runs "SELECT * FROM Orders" — the ENTIRE table —</span>
+<span class="cmt">// then filters the rows in your app's memory.</span>
+<span class="kw">var</span> big = db.Orders.<span class="fn">ToList</span>()
+    .<span class="fn">Where</span>(o =&gt; o.Total &gt; <span class="num">1000</span>)
+    .<span class="fn">Take</span>(<span class="num">10</span>);
+
+<span class="cmt">// ✅ FIX: keep it IQueryable until the end — the filter and TOP(10)</span>
+<span class="cmt">// travel into the SQL, and only 10 rows cross the network.</span>
+<span class="kw">var</span> small = <span class="kw">await</span> db.Orders
+    .<span class="fn">Where</span>(o =&gt; o.Total &gt; <span class="num">1000</span>)
+    .<span class="fn">OrderByDescending</span>(o =&gt; o.PlacedAt)
+    .<span class="fn">Take</span>(<span class="num">10</span>)
+    .<span class="fn">ToListAsync</span>();
+</code></pre>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">🛒 Analogy</span>
+    <p>An <code>IQueryable</code> is a <strong>shopping list you hand to a personal shopper</strong> (the database): "10 most recent orders over ₹1000, please." She walks the aisles with her expert knowledge (indexes!) and brings back exactly ten items. Calling <code>ToList()</code> too early is like having the <em>entire supermarket</em> delivered to your kitchen and then searching the boxes yourself.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>Every LINQ operator placed <em>before</em> the terminal call (<code>ToListAsync</code>, <code>FirstOrDefaultAsync</code>, <code>CountAsync</code>…) is a candidate for SQL translation. Everything <em>after</em> runs in memory. Push work toward the database — it's built for exactly this.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Not Everything Translates</span>
+    <p>EF can only translate what SQL can express. Call a custom C# method inside a <code>Where</code> and you'll get a runtime <code>InvalidOperationException</code>: "could not be translated." The fix is to rewrite the condition with translatable operations (string methods, math, <code>EF.Functions.Like</code>, date parts) — or, if truly needed, materialize first and accept in-memory filtering <em>knowingly</em>.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <p>Everything today orbits one skill: <strong>controlling the shape and cost of the SQL you generate</strong>. Here's the map:</p>
+
+  <div class="mindmap">
+    <div class="mm-core">EF Core Querying<small>LINQ in · SQL out</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-accent">
+        <h4>🌳 Deferred Execution</h4>
+        <ul>
+          <li>IQueryable = recipe</li>
+          <li>Terminal call executes</li>
+          <li>Filter before materialize</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-blue">
+        <h4>🕵️ Tracking</h4>
+        <ul>
+          <li>Default: snapshots for updates</li>
+          <li><code>AsNoTracking</code> for reads</li>
+          <li>Big memory/CPU savings</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>🎯 Projections</h4>
+        <ul>
+          <li><code>Select</code> → DTO</li>
+          <li>Only needed columns</li>
+          <li>Never tracked anyway</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-rose">
+        <h4>🧩 Loading Related Data</h4>
+        <ul>
+          <li><code>Include</code> / <code>ThenInclude</code></li>
+          <li>Filtered includes</li>
+          <li>N+1 &amp; split queries</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>🔬 Inspect the SQL</h4>
+        <ul>
+          <li><code>ToQueryString()</code></li>
+          <li>Command logging</li>
+          <li>Trust, but verify</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3>The life of one query</h3>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="emoji">✍️</span>
+      <div><b>1. You compose LINQ</b><span class="desc"><code>db.Orders.Where(...).OrderBy(...).Select(...)</code> — each call extends an expression tree. Zero database contact.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="emoji">🎬</span>
+      <div><b>2. A terminal operator triggers execution</b><span class="desc"><code>ToListAsync()</code>, <code>FirstOrDefaultAsync()</code>, <code>CountAsync()</code>, or <code>await foreach</code> — this is the moment the recipe becomes action.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🔀</span>
+      <div><b>3. EF translates the tree to SQL</b><span class="desc">The provider compiles the expression tree into parameterized T-SQL and caches the compilation for reuse.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🏛️</span>
+      <div><b>4. SQL Server executes</b><span class="desc">The database plans, uses indexes, filters, sorts — and streams back only the resulting rows.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🧪</span>
+      <div><b>5. Materialization</b><span class="desc">Rows become C# objects. If tracking is on, each entity is also snapshotted into the change tracker; projections and no-tracking results skip that.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>⏱️ Deferred Execution in Your Hands</h2>
+
+  <p>Because the query is a recipe until a terminal call, you can <strong>build queries in stages</strong> — adding filters conditionally — and EF still compiles one clean SQL statement at the end:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Composing a search query</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Order</span>&gt;&gt; <span class="fn">SearchAsync</span>(<span class="kw">int</span>? customerId, <span class="kw">decimal</span>? minTotal, <span class="kw">int</span> page)
+{
+    <span class="ty">IQueryable</span>&lt;<span class="ty">Order</span>&gt; query = db.Orders;          <span class="cmt">// recipe starts here</span>
+
+    <span class="kw">if</span> (customerId <span class="kw">is not null</span>)
+        query = query.<span class="fn">Where</span>(o =&gt; o.CustomerId == customerId);
+
+    <span class="kw">if</span> (minTotal <span class="kw">is not null</span>)
+        query = query.<span class="fn">Where</span>(o =&gt; o.Total &gt;= minTotal);   <span class="cmt">// Wheres combine with AND</span>
+
+    <span class="kw">return await</span> query
+        .<span class="fn">OrderByDescending</span>(o =&gt; o.PlacedAt)
+        .<span class="fn">Skip</span>((page - <span class="num">1</span>) * <span class="num">20</span>)
+        .<span class="fn">Take</span>(<span class="num">20</span>)                                  <span class="cmt">// pagination in SQL: OFFSET/FETCH</span>
+        .<span class="fn">ToListAsync</span>();                            <span class="cmt">// 🎬 executes exactly here</span>
+}
+</code></pre>
+  </div>
+
+  <p>Where the boundary sits in a typical chain — everything left of the terminal call is translated; the terminal call executes; results arrive after:</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell"><div class="val">DbSet</div><div class="idx">source</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">.Where</div><div class="idx">→ WHERE</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">.OrderBy</div><div class="idx">→ ORDER BY</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">.Take(20)</div><div class="idx">→ FETCH 20</div></div>
+      <div class="arr-cell highlight"><div class="val">.ToListAsync</div><div class="idx">🎬 executes</div></div>
+      <div class="arr-cell highlight-green"><div class="val">List&lt;Order&gt;</div><div class="idx">in memory</div></div>
+    </div>
+    <div class="arr-caption">The translation boundary · blue ops become SQL · after the terminal call you're in C# land</div>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Terminal Operators You'll Use Daily</span>
+    <p><code>ToListAsync()</code> (all matches), <code>FirstOrDefaultAsync()</code> (first or null — pair with <code>Where</code> or a predicate), <code>SingleOrDefaultAsync()</code> (asserts at most one match), <code>CountAsync()</code>, <code>AnyAsync()</code> (cheapest existence check — becomes <code>EXISTS</code>), <code>SumAsync()</code>/<code>MaxAsync()</code>, and <code>FindAsync(id)</code> (checks the change tracker first, then the database).</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Multiple Enumeration</span>
+    <p>Each terminal call re-executes the query. Iterating the same <code>IQueryable</code> twice = two database round trips, possibly with different results in between. If you need the data more than once, materialize it once into a list and reuse that.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>🕵️ Tracking vs No-Tracking</h2>
+
+  <p>Remember Day 7's change tracker: by default, <strong>every entity a query returns is tracked</strong>. EF creates an internal entry and a snapshot of each property value so a later <code>SaveChangesAsync()</code> can detect what you modified. That's essential for updates — and pure overhead for reads.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · The two modes</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// TRACKED (default) — because you intend to modify and save:</span>
+<span class="kw">var</span> order = <span class="kw">await</span> db.Orders.<span class="fn">FirstOrDefaultAsync</span>(o =&gt; o.Id == id);
+order!.Status = <span class="ty">OrderStatus</span>.Shipped;
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();      <span class="cmt">// tracker knows exactly which column changed</span>
+
+<span class="cmt">// NO-TRACKING — read-only list for an API response:</span>
+<span class="kw">var</span> recent = <span class="kw">await</span> db.Orders
+    .<span class="fn">AsNoTracking</span>()
+    .<span class="fn">Where</span>(o =&gt; o.PlacedAt &gt;= cutoff)
+    .<span class="fn">ToListAsync</span>();                <span class="cmt">// no snapshots, less memory, faster</span>
+</code></pre>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">📚 Analogy</span>
+    <p>A tracked query is <strong>borrowing library books with a lending record</strong> — the librarian notes each book's condition so any change is detected at return. <code>AsNoTracking</code> is the <strong>reading room</strong>: browse as much as you like, no paperwork, but you can't take anything home to modify. If you only came to read, skip the paperwork.</p>
+  </div>
+
+  <h3>Choosing, at a glance</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Scenario</th><th>Mode</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>GET endpoint returning a list / report / dashboard</td><td>🟢 <code>AsNoTracking()</code></td><td>You'll never call SaveChanges on these — tracking is wasted work.</td></tr>
+      <tr><td>Load → modify → <code>SaveChangesAsync()</code></td><td>🔵 Tracked (default)</td><td>The tracker computes the UPDATE for you.</td></tr>
+      <tr><td>Projection to a DTO via <code>Select</code></td><td>⚪ Neither needed</td><td>DTOs aren't entities — EF doesn't track them regardless.</td></tr>
+      <tr><td>Read-only query where the same related entity appears many times</td><td>🟢 <code>AsNoTrackingWithIdentityResolution()</code></td><td>No tracking, but duplicate rows still map to one shared instance.</td></tr>
+      <tr><td>Whole context is read-only (reporting service)</td><td>🟢 Set once: <code>ChangeTracker.QueryTrackingBehavior = NoTracking</code></td><td>Flip the default instead of repeating the call.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    <span class="complexity-badge"><span class="lbl">Typical speedup (large reads)</span><span class="valb">~30–50%</span></span>
+    <span class="complexity-badge"><span class="lbl">Memory saved</span><span class="valb">no snapshots</span></span>
+    <span class="complexity-badge"><span class="lbl">Cost of the call</span><span class="valb">one method</span></span>
+  </p>
+
+  <div class="callout key">
+    <span class="tag">🔑 Identity Resolution — the Subtle Difference</span>
+    <p>Tracked queries guarantee <strong>one object per database row</strong>: if two orders reference customer 42, both point to the <em>same</em> Customer instance. Plain <code>AsNoTracking</code> gives up that guarantee — you may get duplicate Customer objects. Usually harmless for display; when it matters, <code>AsNoTrackingWithIdentityResolution()</code> restores the one-instance behavior while staying read-only.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ The Classic Bug</span>
+    <p>Loading an entity with <code>AsNoTracking()</code>, changing a property, calling <code>SaveChangesAsync()</code> — and nothing happens. No error, no UPDATE. The tracker never knew the entity existed. If you intend to modify, load it tracked (or attach it explicitly).</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>🎯 Projections: Ask Only for What You Need</h2>
+
+  <p>A query that returns whole entities fetches <strong>every mapped column</strong> — the description, the notes field, the byte-array nobody reads. A <strong>projection</strong> uses <code>Select</code> to reshape the result into exactly the fields the caller needs, and EF translates it into a SQL statement selecting <em>only those columns</em>:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Entity vs projection</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// ❌ Whole entities: SELECT every column of Orders (and you only wanted 3)</span>
+<span class="kw">var</span> orders = <span class="kw">await</span> db.Orders.<span class="fn">Where</span>(o =&gt; o.CustomerId == id).<span class="fn">ToListAsync</span>();
+
+<span class="cmt">// ✅ Projection to a DTO: SELECT Id, PlacedAt, Total — nothing else</span>
+<span class="kw">public record</span> <span class="ty">OrderSummaryDto</span>(<span class="kw">int</span> Id, <span class="ty">DateTime</span> PlacedAt, <span class="kw">decimal</span> Total);
+
+<span class="kw">var</span> summaries = <span class="kw">await</span> db.Orders
+    .<span class="fn">Where</span>(o =&gt; o.CustomerId == id)
+    .<span class="fn">Select</span>(o =&gt; <span class="kw">new</span> <span class="ty">OrderSummaryDto</span>(o.Id, o.PlacedAt, o.Total))
+    .<span class="fn">ToListAsync</span>();
+</code></pre>
+  </div>
+
+  <h3>Projections can reach across relationships 🪄</h3>
+  <p>Inside a <code>Select</code>, you can walk navigation properties and even aggregate children — EF turns it into JOINs and subqueries, often making <code>Include</code> unnecessary for read scenarios:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Projection across navigations</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">var</span> report = <span class="kw">await</span> db.Customers
+    .<span class="fn">Where</span>(c =&gt; c.Orders.<span class="fn">Any</span>())                    <span class="cmt">// only customers with orders</span>
+    .<span class="fn">Select</span>(c =&gt; <span class="kw">new</span>
+    {
+        c.Id,
+        c.Name,
+        OrderCount = c.Orders.<span class="fn">Count</span>(),               <span class="cmt">// → COUNT subquery</span>
+        TotalSpent = c.Orders.<span class="fn">Sum</span>(o =&gt; o.Total),     <span class="cmt">// → SUM subquery</span>
+        LastOrder  = c.Orders.<span class="fn">Max</span>(o =&gt; o.PlacedAt)
+    })
+    .<span class="fn">OrderByDescending</span>(x =&gt; x.TotalSpent)
+    .<span class="fn">Take</span>(<span class="num">10</span>)
+    .<span class="fn">ToListAsync</span>();
+</code></pre>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">🥡 Analogy</span>
+    <p>Fetching full entities is ordering the <strong>entire thali</strong> when you only wanted the dal. A projection is ordering <strong>à la carte</strong>: exactly the dishes you'll eat. Cheaper, faster to arrive, nothing wasted — and the kitchen (database) plates it for you in one trip.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Three Wins in One</span>
+    <p>Projections (1) shrink the SQL to the needed columns, (2) skip change tracking entirely — DTOs aren't entities, so there's nothing to track, and (3) decouple your API response shape from your database schema, which pays off enormously when either evolves. For read endpoints, <strong>projection is the default best practice</strong>.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ One Constraint</span>
+    <p>You can't <code>SaveChanges</code> a DTO. Projections are for the read path. For the update path, load the tracked entity (only the one you'll modify) and change it — different tools for different halves of the job.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>⏳ Async Queries</h2>
+
+  <p>Every terminal operator has an async twin — <code>ToList</code> → <code>ToListAsync</code>, <code>First</code> → <code>FirstAsync</code>, <code>Count</code> → <code>CountAsync</code> — and in a web application you should <strong>always use the async ones</strong>. Here's why it matters even though the query takes the same time either way:</p>
+
+  <p>A database call is mostly <em>waiting</em> — for the network, for the disk, for the query plan. A synchronous call makes the request thread <strong>stand still and hold its place</strong> while waiting. An async call <strong>releases the thread</strong> back to the pool to serve other requests, and resumes when the data arrives. One request finishes in the same time; a <em>thousand concurrent</em> requests is where the difference shows — sync blocks a thousand threads, async needs only a handful.</p>
+
+  <div class="callout analogy">
+    <span class="tag">☎️ Analogy</span>
+    <p>Sync is a receptionist who <strong>stays on hold</strong> with a supplier, ignoring the ringing front desk until the supplier answers. Async is the receptionist who says "call me back when you have it," hangs up, and serves the queue — resuming the supplier conversation the moment the callback comes. Same supplier delay; wildly different throughput at the desk.</p>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Async patterns done right</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// Accept a CancellationToken — ASP.NET provides one per request, and EF</span>
+<span class="cmt">// passes it to SQL Server so abandoned requests stop wasting database time.</span>
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">OrderSummaryDto</span>?&gt; <span class="fn">GetSummaryAsync</span>(<span class="kw">int</span> id, <span class="ty">CancellationToken</span> ct)
+{
+    <span class="kw">return await</span> db.Orders
+        .<span class="fn">Where</span>(o =&gt; o.Id == id)
+        .<span class="fn">Select</span>(o =&gt; <span class="kw">new</span> <span class="ty">OrderSummaryDto</span>(o.Id, o.PlacedAt, o.Total))
+        .<span class="fn">FirstOrDefaultAsync</span>(ct);
+}
+
+<span class="cmt">// ❌ NEVER: two awaits "in flight" on the SAME context —</span>
+<span class="cmt">// DbContext forbids parallel operations (Day 7!).</span>
+<span class="kw">var</span> t1 = db.Orders.<span class="fn">CountAsync</span>();
+<span class="kw">var</span> t2 = db.Customers.<span class="fn">CountAsync</span>();
+<span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">WhenAll</span>(t1, t2);          <span class="cmt">// 💥 InvalidOperationException</span>
+
+<span class="cmt">// ✅ Sequential awaits on one context are fine:</span>
+<span class="kw">var</span> orderCount    = <span class="kw">await</span> db.Orders.<span class="fn">CountAsync</span>(ct);
+<span class="kw">var</span> customerCount = <span class="kw">await</span> db.Customers.<span class="fn">CountAsync</span>(ct);
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Habits</span>
+    <p>(1) The async method names come from <code>Microsoft.EntityFrameworkCore</code> — add the using. (2) Await immediately; don't stash EF tasks for later. (3) Thread a <code>CancellationToken</code> from your endpoint down through services into every EF call. (4) Never block with <code>.Result</code> or <code>.Wait()</code> — that combines the costs of both worlds and risks deadlocks.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>Async doesn't make one query faster — it makes your <strong>server scale</strong>. Database time is wait time; async lets threads serve other users while the database works.</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>🧩 Include &amp; ThenInclude: Loading Related Data</h2>
+
+  <p>Navigation properties (<code>order.Customer</code>, <code>customer.Orders</code>) are <strong>not loaded automatically</strong>. Query an order and its <code>Items</code> list will simply be empty — EF only fetches what you ask for. <code>Include</code> is how you ask:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Eager loading</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// Order + its Customer (reference) + its Items (collection), one query:</span>
+<span class="kw">var</span> order = <span class="kw">await</span> db.Orders
+    .<span class="fn">Include</span>(o =&gt; o.Customer)                 <span class="cmt">// reference nav → LEFT JOIN</span>
+    .<span class="fn">Include</span>(o =&gt; o.Items)                    <span class="cmt">// collection nav → JOIN + grouping</span>
+        .<span class="fn">ThenInclude</span>(i =&gt; i.Product)          <span class="cmt">// one level deeper: Item → Product</span>
+    .<span class="fn">FirstOrDefaultAsync</span>(o =&gt; o.Id == id);
+
+<span class="cmt">// Filtered include (EF Core 5+): load only SOME children —</span>
+<span class="cmt">// e.g., each customer with just their orders from this year:</span>
+<span class="kw">var</span> customers = <span class="kw">await</span> db.Customers
+    .<span class="fn">Include</span>(c =&gt; c.Orders.<span class="fn">Where</span>(o =&gt; o.PlacedAt.Year == <span class="num">2026</span>)
+                          .<span class="fn">OrderByDescending</span>(o =&gt; o.PlacedAt))
+    .<span class="fn">AsNoTracking</span>()
+    .<span class="fn">ToListAsync</span>();
+</code></pre>
+  </div>
+
+  <h3>The N+1 problem — the bug you'll actually meet 🐛</h3>
+  <p>Forget <code>Include</code> and touch navigations in a loop (with lazy loading enabled, or by querying per item), and you get the infamous pattern: <strong>1 query for the parents + N queries for children</strong>, one per parent. 200 customers = 201 database round trips.</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell neg"><div class="val">1 + N queries</div><div class="idx">loop over navigations</div></div>
+      <div class="arr-cell highlight-green"><div class="val">1 query</div><div class="idx">Include (JOIN)</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">1 query</div><div class="idx">projection (JOIN)</div></div>
+      <div class="arr-cell highlight"><div class="val">1 + k queries</div><div class="idx">split query (k = includes)</div></div>
+    </div>
+    <div class="arr-caption">Round trips for "customers with their orders" · N = number of customers · fewer, chunkier queries win</div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · N+1 and its fixes</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// ❌ N+1: one query per customer inside the loop</span>
+<span class="kw">var</span> customers = <span class="kw">await</span> db.Customers.<span class="fn">ToListAsync</span>();
+<span class="kw">foreach</span> (<span class="kw">var</span> c <span class="kw">in</span> customers)
+{
+    <span class="kw">var</span> orders = <span class="kw">await</span> db.Orders
+        .<span class="fn">Where</span>(o =&gt; o.CustomerId == c.Id).<span class="fn">ToListAsync</span>();   <span class="cmt">// 💥 ×N</span>
+}
+
+<span class="cmt">// ✅ Fix 1 — Include: fetch the graph up front</span>
+<span class="kw">var</span> withOrders = <span class="kw">await</span> db.Customers
+    .<span class="fn">Include</span>(c =&gt; c.Orders)
+    .<span class="fn">ToListAsync</span>();
+
+<span class="cmt">// ✅ Fix 2 (often better for reads) — projection does the JOIN too:</span>
+<span class="kw">var</span> summaries = <span class="kw">await</span> db.Customers
+    .<span class="fn">Select</span>(c =&gt; <span class="kw">new</span> { c.Name, Orders = c.Orders.<span class="fn">Select</span>(o =&gt; o.Total).<span class="fn">ToList</span>() })
+    .<span class="fn">ToListAsync</span>();
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Include vs Projection</span>
+    <p>Use <code>Include</code> when you need <strong>real, tracked entities with their graph</strong> — typically the update path. Use a <strong>projection</strong> when you just need related <em>data</em> for display — it fetches fewer columns and skips tracking. Many teams' rule: projections for queries, Include for commands.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Lazy Loading — Handle With Care</span>
+    <p>EF supports lazy loading (navigations that auto-load when first touched, via proxies), but it turns every forgotten Include into a silent N+1 at runtime. Most teams leave it off and load explicitly — a missing Include that shows up as an obvious empty list is easier to catch than 201 hidden queries.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>🍱 Split Queries &amp; the Cartesian Explosion</h2>
+
+  <p>One more trap hides inside <code>Include</code>. A single SQL statement returns a <strong>flat rectangle of rows</strong> — so when one query includes <em>multiple collections</em>, the JOINs multiply. A customer with 10 orders and 5 addresses becomes 10 × 5 = <strong>50 rows</strong>, with the customer's columns duplicated on every one. That's the <strong>cartesian explosion</strong>: network and memory wasted on redundant copies.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · AsSplitQuery</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// Two COLLECTION includes → cartesian risk in a single query:</span>
+<span class="kw">var</span> customers = <span class="kw">await</span> db.Customers
+    .<span class="fn">Include</span>(c =&gt; c.Orders)
+    .<span class="fn">Include</span>(c =&gt; c.Addresses)
+    .<span class="fn">AsSplitQuery</span>()                <span class="cmt">// → 3 simple queries instead of 1 giant JOIN</span>
+    .<span class="fn">AsNoTracking</span>()
+    .<span class="fn">ToListAsync</span>();
+
+<span class="cmt">// Roughly what EF sends:</span>
+<span class="cmt">//   SELECT ... FROM Customers ...</span>
+<span class="cmt">//   SELECT ... FROM Orders    WHERE CustomerId IN (…) ...</span>
+<span class="cmt">//   SELECT ... FROM Addresses WHERE CustomerId IN (…) ...</span>
+</code></pre>
+  </div>
+
+  <h3>Single vs split — the honest trade-off</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Aspect</th><th>Single query (default)</th><th>Split query (<code>AsSplitQuery</code>)</th></tr></thead>
+    <tbody>
+      <tr><td>Round trips</td><td>1</td><td>1 per included collection (+1)</td></tr>
+      <tr><td>Data duplication</td><td>Multiplies with each collection include</td><td>None — each table fetched once</td></tr>
+      <tr><td>Consistency</td><td>One statement = one consistent snapshot</td><td>Data can change between the queries</td></tr>
+      <tr><td>Best when</td><td>0–1 collection includes, small graphs</td><td>2+ collection includes, large children</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Rule of Thumb</span>
+    <p><strong>Reference</strong> includes (<code>o.Customer</code>) never multiply rows — they just add columns; no split needed. One <strong>collection</strong> include: single query is fine. Two or more collection includes: reach for <code>AsSplitQuery()</code>. You can also make splitting the default for the whole context (<code>UseQuerySplittingBehavior</code>) and opt back with <code>AsSingleQuery()</code> per query.</p>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">🍱 Analogy</span>
+    <p>A single giant JOIN is one <strong>enormous thali plate</strong> where the rice gets re-served next to every single curry so everything shares one tray — massive and repetitive. Split queries are a <strong>bento box</strong>: each dish in its own compartment, delivered together, nothing duplicated. Three small trips beat one absurd platter.</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>🔬 Inspecting the Generated SQL</h2>
+
+  <p>The single habit that separates confident EF developers from hopeful ones: <strong>read the SQL</strong>. Never guess what a query does — look. You have three tools, from quickest to most thorough:</p>
+
+  <h3>1 — <code>ToQueryString()</code>: instant peek 👀</h3>
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Print the SQL without running it</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">var</span> query = db.Orders
+    .<span class="fn">Where</span>(o =&gt; o.Total &gt; <span class="num">1000</span>)
+    .<span class="fn">OrderByDescending</span>(o =&gt; o.PlacedAt)
+    .<span class="fn">Take</span>(<span class="num">10</span>);
+
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(query.<span class="fn">ToQueryString</span>());   <span class="cmt">// works before executing — great in debugger</span>
+</code></pre>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">SQL · What it prints (SQL Server)</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">-- Parameters are declared, not inlined — EF always parameterizes:</span>
+DECLARE @__p_0 <span class="ty">int</span> = <span class="num">10</span>;
+
+SELECT TOP(@__p_0) [o].[Id], [o].[CustomerId], [o].[PlacedAt], [o].[Status], [o].[Total]
+FROM [Orders] AS [o]
+WHERE [o].[Total] &gt; <span class="num">1000.0</span>
+ORDER BY [o].[PlacedAt] DESC
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Small Caveat</span>
+    <p>For a query using <code>AsSplitQuery()</code>, <code>ToQueryString()</code> shows only the <em>first</em> of the split statements. To see them all, use logging (below), which prints every command actually sent.</p>
+  </div>
+
+  <h3>2 — Command logging: see everything the app really runs 📋</h3>
+  <p>Day 6 pays off here. EF logs every executed command under the category <code>Microsoft.EntityFrameworkCore.Database.Command</code> — raise it to <code>Information</code> in development and the SQL (with timings!) streams into your console:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">JSON · appsettings.Development.json</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  <span class="str">"Logging"</span>: {
+    <span class="str">"LogLevel"</span>: {
+      <span class="str">"Default"</span>: <span class="str">"Information"</span>,
+      <span class="str">"Microsoft.EntityFrameworkCore.Database.Command"</span>: <span class="str">"Information"</span>
+    }
+  }
+}
+</code></pre>
+  </div>
+
+  <h3>3 — Dev-only extras: <code>LogTo</code> + sensitive data 🔧</h3>
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Program.cs (Development only)</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services.<span class="fn">AddDbContext</span>&lt;<span class="ty">ShopContext</span>&gt;(options =&gt;
+{
+    options.<span class="fn">UseSqlServer</span>(connectionString);
+
+    <span class="kw">if</span> (builder.Environment.<span class="fn">IsDevelopment</span>())
+    {
+        options.<span class="fn">EnableSensitiveDataLogging</span>();   <span class="cmt">// show parameter VALUES in logs</span>
+        options.<span class="fn">EnableDetailedErrors</span>();          <span class="cmt">// richer materialization errors</span>
+    }
+});
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Sensitive Means Sensitive</span>
+    <p>By default EF logs <code>?</code> placeholders instead of parameter values — deliberately, because values can be personal data (emails, names). <code>EnableSensitiveDataLogging()</code> reveals them, which is invaluable for debugging and unacceptable in production logs. Gate it behind an environment check, always.</p>
+  </div>
+
+  <h3>What to look for when you read the SQL 🔎</h3>
+  <ul>
+    <li>✅ Is the <code>WHERE</code> there? A missing filter means it ran client-side — your app fetched too much.</li>
+    <li>✅ Is there a <code>TOP</code>/<code>OFFSET…FETCH</code> when you paginated?</li>
+    <li>✅ Does the <code>SELECT</code> list only your projected columns, or every column?</li>
+    <li>🚩 The same parameterized query repeating many times in a burst → N+1.</li>
+    <li>🚩 A wall of JOINs returning huge row counts → cartesian explosion; consider <code>AsSplitQuery</code>.</li>
+    <li>🚩 Warnings about client evaluation or untranslatable expressions → rewrite the condition.</li>
+  </ul>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: Query Your DbContext, Read Your SQL</h2>
+
+  <p>Today's <strong>Do</strong>: write LINQ queries against yesterday's <code>ShopContext</code> and inspect the generated SQL for each. Seed ~5 customers, ~20 orders, and a few products first, then work through:</p>
+
+  <ol>
+    <li>📋 Turn on SQL visibility: set <code>Microsoft.EntityFrameworkCore.Database.Command</code> to <code>Information</code> and add <code>EnableSensitiveDataLogging()</code> for Development.</li>
+    <li>🔎 <strong>Filter + sort + page:</strong> orders over some total, newest first, page 1 of 10. Confirm in the SQL that <code>WHERE</code>, <code>ORDER BY</code>, and <code>OFFSET…FETCH</code> all appear.</li>
+    <li>🕵️ <strong>Tracking experiment:</strong> load an order tracked, change its status, save — watch the UPDATE list only the changed column. Then repeat with <code>AsNoTracking()</code> and observe that SaveChanges does nothing.</li>
+    <li>🎯 <strong>Projection:</strong> a customer summary (name, order count, total spent) via <code>Select</code>. Compare its SELECT column list against the whole-entity version of the same query.</li>
+    <li>🧩 <strong>Include:</strong> one order with <code>Customer</code> and <code>Items.ThenInclude(Product)</code>. Read the JOINs. Then deliberately write the N+1 loop version and count the queries in your log.</li>
+    <li>🍱 <strong>Split it:</strong> a query with two collection includes — run once as a single query, once with <code>AsSplitQuery()</code>, and compare the logged statements and row shapes.</li>
+    <li>👀 Use <code>query.ToQueryString()</code> in the debugger on your favorite query — no execution needed.</li>
+    <li>⏳ Confirm every terminal call in your services is the <code>…Async</code> version and accepts a <code>CancellationToken</code>.</li>
+  </ol>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · A worthy target query</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// "Top customers this year" — everything from today in one query:</span>
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">TopCustomerDto</span>&gt;&gt; <span class="fn">GetTopCustomersAsync</span>(<span class="ty">CancellationToken</span> ct)
+{
+    <span class="kw">return await</span> db.Customers
+        .<span class="fn">Where</span>(c =&gt; c.Orders.<span class="fn">Any</span>(o =&gt; o.PlacedAt.Year == <span class="num">2026</span>))
+        .<span class="fn">Select</span>(c =&gt; <span class="kw">new</span> <span class="ty">TopCustomerDto</span>(
+            c.Id,
+            c.Name,
+            c.Orders.<span class="fn">Count</span>(o =&gt; o.PlacedAt.Year == <span class="num">2026</span>),
+            c.Orders.<span class="fn">Where</span>(o =&gt; o.PlacedAt.Year == <span class="num">2026</span>).<span class="fn">Sum</span>(o =&gt; o.Total)))
+        .<span class="fn">OrderByDescending</span>(x =&gt; x.TotalSpent)
+        .<span class="fn">Take</span>(<span class="num">5</span>)
+        .<span class="fn">ToListAsync</span>(ct);    <span class="cmt">// projection → no tracking, minimal columns, 1 query</span>
+}
+
+<span class="kw">public record</span> <span class="ty">TopCustomerDto</span>(<span class="kw">int</span> Id, <span class="kw">string</span> Name, <span class="kw">int</span> OrderCount, <span class="kw">decimal</span> TotalSpent);
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>For each query you wrote today, answer without running it: How many round trips? Which columns come back? Is anything tracked? Then verify against the log. When your predictions match the SQL three times in a row, you've got it.</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>🌳 IQueryable</b>A query is a recipe (expression tree) until a terminal operator runs it — keep filters on the IQueryable side so they become SQL.</div>
+    <div class="recap-card"><b>🎬 Deferred execution</b><code>ToListAsync</code>, <code>FirstOrDefaultAsync</code>, <code>CountAsync</code> trigger translation + execution; each enumeration re-runs the query.</div>
+    <div class="recap-card"><b>🕵️ Tracking</b>Default queries snapshot every entity for later SaveChanges; use <code>AsNoTracking()</code> on read-only paths for real speed/memory wins.</div>
+    <div class="recap-card"><b>🎯 Projections</b><code>Select</code> into DTOs fetches only needed columns, skips tracking, and can aggregate across navigations — the read-path default.</div>
+    <div class="recap-card"><b>⏳ Async</b>Async queries free threads while the database works; await immediately, pass CancellationTokens, never parallelize one context.</div>
+    <div class="recap-card"><b>🧩 Include</b><code>Include</code>/<code>ThenInclude</code> eagerly load navigations (filtered includes since EF Core 5); forgetting them = empty lists or N+1.</div>
+    <div class="recap-card"><b>🍱 Split queries</b>Multiple collection includes multiply rows (cartesian explosion); <code>AsSplitQuery()</code> trades one giant JOIN for a few clean queries.</div>
+    <div class="recap-card"><b>🔬 Inspect SQL</b><code>ToQueryString()</code> for a peek, Database.Command logging for the real stream — read the SQL, don't guess.</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Technique</th><th>Call</th><th>Use when</th><th>Watch out</th></tr></thead>
+    <tbody>
+      <tr><td>🕵️ No-tracking read</td><td><code>AsNoTracking()</code></td><td>Any query you won't SaveChanges</td><td>Edits to no-tracked entities silently don't save</td></tr>
+      <tr><td>🪞 Identity-resolved read</td><td><code>AsNoTrackingWithIdentityResolution()</code></td><td>Read-only, but shared instances matter</td><td>Slightly slower than plain no-tracking</td></tr>
+      <tr><td>🎯 Projection</td><td><code>Select(x =&gt; new Dto(...))</code></td><td>Read endpoints, reports, lists</td><td>DTOs can't be saved — read path only</td></tr>
+      <tr><td>⏳ Async terminal</td><td><code>ToListAsync(ct)</code> etc.</td><td>Always, in web apps</td><td>No parallel operations on one DbContext</td></tr>
+      <tr><td>🧩 Eager load</td><td><code>Include / ThenInclude</code></td><td>You need the entity graph (updates)</td><td>Forgotten Include = empty navs; loops = N+1</td></tr>
+      <tr><td>🪟 Filtered include</td><td><code>Include(c =&gt; c.Orders.Where(...))</code></td><td>Only some children needed</td><td>Filter applies to the include, not the parents</td></tr>
+      <tr><td>🍱 Split query</td><td><code>AsSplitQuery()</code></td><td>2+ collection includes / big graphs</td><td>Multiple statements = snapshot consistency loosened</td></tr>
+      <tr><td>🔬 SQL peek</td><td><code>ToQueryString()</code></td><td>Debugging a single query</td><td>Shows only the first statement of a split query</td></tr>
+      <tr><td>📋 SQL stream</td><td><code>Database.Command</code> → Information</td><td>Watching real traffic in dev</td><td><code>EnableSensitiveDataLogging</code> is dev-only</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is deferred execution in EF Core?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Writing a LINQ query doesn't run anything — it builds a description of the query (an expression tree). The database is only contacted when a terminal operator like <code>ToListAsync()</code>, <code>FirstOrDefaultAsync()</code>, or <code>CountAsync()</code> is called, at which point EF translates the whole chain into one SQL statement and executes it. The benefit: you can compose a query in steps (add filters conditionally) and still get a single efficient SQL statement at the end.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What's the difference between IQueryable&lt;T&gt; and IEnumerable&lt;T&gt; in practice?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>IQueryable</code> is a query description that EF can still translate to SQL — operations on it run <em>in the database</em>. <code>IEnumerable</code> is an in-memory sequence — operations run in your app, item by item. The practical consequence: call <code>ToList()</code> too early and every later <code>Where</code> or <code>Take</code> happens in memory after fetching far too many rows. Keep the query as <code>IQueryable</code> until the final terminal call.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What does change tracking do during a query?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>By default, every entity a query returns is registered with the context's change tracker, which stores a snapshot of its property values. Later, when you call <code>SaveChangesAsync()</code>, EF compares current values against the snapshots to figure out exactly which columns changed and generates the matching UPDATE statements. It's what makes "load, modify, save" work without you writing any SQL.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What does AsNoTracking() do and when should you use it?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It tells EF: "I'm only reading — don't track these entities." EF skips creating tracker entries and snapshots, which makes the query faster and lighter on memory (often dramatically so for large result sets). Use it for any read-only path: GET endpoints, lists, reports, dashboards. Don't use it when you plan to modify and save the loaded entities in the same context — untracked changes are silently ignored by SaveChanges.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What is a projection and why is it useful?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A projection uses <code>Select</code> to shape the result into exactly the fields you need — typically a small DTO — instead of returning whole entities. EF translates it to a SQL statement selecting only those columns. Benefits: less data over the network, no change-tracking overhead (DTOs aren't entities), and your API's response shape stops being welded to your database schema.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">Why should EF Core queries in a web app be async?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Database calls are mostly waiting. A synchronous call blocks the request thread for that whole wait; an async call (<code>ToListAsync</code> instead of <code>ToList</code>) releases the thread to serve other requests and resumes when the data arrives. One query isn't faster — but the server handles far more concurrent users with far fewer threads. In web applications, async data access is the default, not an optimization.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What does Include do, and what happens if you forget it?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>Include</code> eagerly loads a navigation property along with the main entity — <code>db.Orders.Include(o =&gt; o.Items)</code> fetches each order together with its items, via a SQL JOIN. If you forget it (and lazy loading is off, the common setup), the navigation simply stays empty: <code>order.Items</code> is an empty list, with no error. <code>ThenInclude</code> continues one level deeper, e.g. items → their products.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">How can you see the SQL that EF Core generates?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Two easy ways. (1) <code>query.ToQueryString()</code> returns the SQL for a query without executing it — handy in the debugger. (2) Logging: set the category <code>Microsoft.EntityFrameworkCore.Database.Command</code> to Information and every executed command is printed with its parameters and timing. In development you can additionally call <code>EnableSensitiveDataLogging()</code> to see actual parameter values.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">Explain the N+1 query problem and two ways to fix it.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>N+1 happens when you load N parent rows with one query and then trigger one additional query <em>per parent</em> for its children — typically by touching navigation properties in a loop, or querying inside a loop. 200 customers become 201 round trips, and latency multiplies. Fixes: (1) eager-load the children up front with <code>Include</code>, turning it into one (or a few) queries; (2) better for read paths, use a <strong>projection</strong> whose <code>Select</code> reaches into the navigation — EF generates the JOIN and you also skip tracking and extra columns. You spot N+1 in logs as the same parameterized query repeating in rapid bursts.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">What is a cartesian explosion, and how does AsSplitQuery help?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>A single SQL statement returns flat rows, so including <em>multiple collections</em> multiplies them: a customer with 10 orders and 5 addresses produces 10×5 = 50 rows, with the customer's data duplicated in each — wasted network, memory, and materialization work. <code>AsSplitQuery()</code> makes EF issue separate simple queries instead (customers; their orders; their addresses) and stitch results in memory: no duplication, at the cost of extra round trips and a slightly looser consistency guarantee (data may change between the statements). Rule of thumb: 2+ collection includes → split.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">When is tracked loading the right choice, given no-tracking is faster?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Whenever the point of loading is to <em>modify and save</em>. The tracker is what lets you write <code>entity.Status = X; await SaveChangesAsync();</code> and get a precise UPDATE of just the changed columns — implementing that by hand (attach, mark properties modified) is more code and more error-prone. Tracked loading also gives identity resolution (one instance per row), which matters when your logic navigates a graph and expects shared references. In short: commands/updates → tracked; queries/reads → no-tracking or projection.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">Why must you never run two EF operations in parallel on the same DbContext, and what's the correct alternative?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>DbContext is not thread-safe: it has single-instance state (the change tracker, the open connection) that concurrent operations would corrupt, so EF throws an <code>InvalidOperationException</code> if a second operation starts while one is in flight — e.g., two un-awaited queries combined with <code>Task.WhenAll</code>. Correct alternatives: await each call sequentially on the one context (fine for most cases), or, when true parallelism is worth it, give each parallel operation its <em>own</em> context instance via <code>IDbContextFactory&lt;T&gt;</code>.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">What is a filtered Include and where does its filter apply?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Since EF Core 5 you can filter and order the children being included: <code>Include(c =&gt; c.Orders.Where(o =&gt; o.PlacedAt.Year == 2026))</code> loads each customer with only their 2026 orders. Crucially, the filter applies to <em>which children are loaded</em>, not to which parents are returned — customers with zero 2026 orders still appear, just with empty collections. To filter the parents too, add a normal <code>Where</code> on the root query.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">EF throws "the LINQ expression could not be translated." What's going on and how do you fix it?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Your query contains something EF can't express in SQL — commonly a call to your own C# method inside a <code>Where</code>/<code>Select</code>, or an unsupported construct. Since EF Core 3, EF refuses to silently fetch everything and filter in memory; it throws instead. Fixes, in order of preference: rewrite the condition using translatable building blocks (basic operators, supported string/date methods, <code>EF.Functions.Like</code> and friends); precompute values into local variables that become parameters; or — consciously and last — materialize a narrowed result with <code>ToListAsync()</code> and finish the untranslatable part in memory, accepting the cost explicitly.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">FirstOrDefaultAsync vs SingleOrDefaultAsync vs FindAsync — when do you use which?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><code>FirstOrDefaultAsync</code> returns the first match or null — use with an ordering or when several matches are acceptable; SQL gets <code>TOP(1)</code>. <code>SingleOrDefaultAsync</code> asserts <em>at most one</em> match — it fetches up to 2 rows and throws if it finds a second; use it when duplicates would indicate a data bug you want surfaced. <code>FindAsync(id)</code> looks up by primary key and checks the change tracker first — if the entity is already loaded in this context, it returns it with <strong>no database round trip</strong>; ideal for key lookups on the update path.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">Why does EF Core parameterize queries, and what does that protect against?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Values from your LINQ (variables, method arguments) become SQL <em>parameters</em> (<code>@__p_0</code>) rather than being pasted into the SQL text. Two big wins: (1) <strong>security</strong> — user input can never change the query's structure, which is the defense against SQL injection; (2) <strong>performance</strong> — the SQL text stays identical across calls with different values, so the database reuses one cached execution plan instead of compiling a new one each time. You can see the parameters yourself in <code>ToQueryString()</code> output or command logs.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Your API endpoint is slow. Walk me through diagnosing an EF query performance issue.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>First, get evidence: enable command logging (with timings) or tracing and identify which query dominates — is it one slow statement, or many fast ones (N+1)? For many-fast: find the loop, fix with Include or projection. For one-slow: capture the SQL via <code>ToQueryString()</code>/logs and examine it — is the WHERE translated or is the app filtering in memory? Is it selecting every column when a projection would do? Huge row counts from multiple collection includes → cartesian explosion, consider <code>AsSplitQuery</code>. Then look below EF: run the SQL in SSMS with the actual execution plan — missing index? scan instead of seek? Fix at the right layer (query shape first, then indexes via <code>HasIndex</code>), and verify with the same measurements. Also check the cheap wins: <code>AsNoTracking</code> on reads and pagination on unbounded lists.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">Compare eager, explicit, and lazy loading. What's your default policy and why?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p><strong>Eager</strong> (<code>Include</code>): related data fetched with the main query — explicit at the query site, predictable SQL. <strong>Explicit</strong> (<code>context.Entry(e).Collection(...).LoadAsync()</code>): load navigations on demand with a visible, deliberate call — useful for conditional loading. <strong>Lazy</strong> (proxy-based auto-loading on first property access): convenient but dangerous — every forgotten Include becomes a silent extra query, and a loop over entities becomes an invisible N+1; it also tempts data access from layers that shouldn't touch the database. My default: lazy loading off; projections for read paths; Include for command paths; explicit loading for the rare conditional case. Predictability beats convenience in data access.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">How do split queries interact with consistency, and when would you refuse to use them?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>A split query executes several statements; by default each sees the database as of its own execution, so a concurrent write can land between them — parents fetched before the change, children after, yielding a graph that never existed at any single moment. Usually acceptable for display data. I'd avoid splitting (or wrap the operation in an explicit transaction with an appropriate isolation level, e.g. snapshot) when the read feeds a business decision that must see one consistent state — financial calculations, stock allocation, anything audited. Also not worth it when the graph is small or latency per round trip is high; the default single query is one consistent snapshot, and that property is sometimes exactly what you're paying for.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">When would you drop to raw SQL from EF Core, and how do you do it safely?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Drop down when the query is clearer or faster expressed as SQL than as LINQ: exotic constructs EF won't translate, hand-tuned reporting queries, hints, or calling stored procedures. Safely means: use <code>FromSql($"...{param}...")</code> / <code>SqlQuery</code>, whose interpolation is converted into <em>parameters</em> (never string-concatenate user input — that's the injection hole); keep the raw SQL composable where possible (<code>FromSql</code> results can still have <code>Where</code>/<code>OrderBy</code> LINQ appended and translated); and keep such queries few, well-named, and covered by integration tests since the compiler no longer validates them against the model. Raw SQL is a scalpel, not the default knife.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">What are ExecuteUpdateAsync / ExecuteDeleteAsync, and how do they change the classic load-modify-save pattern?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>They're set-based write operations (EF Core 7+): <code>db.Orders.Where(o =&gt; o.Status == Stale).ExecuteDeleteAsync()</code> or <code>.ExecuteUpdateAsync(s =&gt; s.SetProperty(o =&gt; o.Status, Archived))</code> run a single UPDATE/DELETE in the database — no entities loaded, no tracking, no SaveChanges. For bulk operations this replaces the painful "load 50,000 rows, mutate, save" pattern with one statement. Caveats: they execute <em>immediately</em> and independently of SaveChanges (so they don't participate in the unit of work unless you open an explicit transaction), they bypass the change tracker (already-tracked entities can become stale), and they skip EF-level cascade logic — database-level constraints govern. I use them for archiving, purging, counters, and other set-shaped writes; classic tracked updates remain right for rich per-entity business logic.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">A code review shows `.Where(o =&gt; o.PlacedAt.ToString("yyyy-MM") == month)`. Critique it.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Multiple problems. It may fail to translate (or translate into a string-formatting expression evaluated per row), and even when it produces SQL, wrapping the <em>column</em> in a function makes the predicate non-sargable — the database can't use an index on PlacedAt and must scan every row, converting each date to a string to compare. Culture/format subtleties add correctness risk. The fix is a range predicate on the raw column: compute <code>var start = new DateTime(y, m, 1); var end = start.AddMonths(1);</code> and write <code>Where(o =&gt; o.PlacedAt &gt;= start &amp;&amp; o.PlacedAt &lt; end)</code> — index-friendly, translation-safe, and timezone-explicit. General principle: manipulate the <em>parameters</em>, not the <em>column</em>, in filter conditions.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">How would you establish query-quality guardrails for a team new to EF Core?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Make the good path the easy path. Conventions: projections for all read endpoints, <code>AsNoTracking</code> where entities are returned read-only, mandatory pagination on list queries, async-only terminal operators with CancellationTokens, lazy loading disabled. Visibility: command logging on in dev, and developers expected to read their SQL before merging (a PR habit: paste the generated SQL for any non-trivial query). Automation where possible: analyzer rules or code review checklists for <code>.Result</code>/<code>.Wait()</code>, <code>ToList()</code> mid-query, and unbounded queries; integration tests that assert query <em>counts</em> for hot endpoints, which catches N+1 regressions mechanically. Finally, a short "query cookbook" in the repo with the team's blessed patterns — people copy what's nearest.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">Compiled queries: what problem do they solve and when are they worth it?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Every EF query pays a small cost to process its expression tree and look up (or produce) the cached translation. For most apps that cost is noise. In extremely hot paths — the same query shape executed thousands of times per second — <code>EF.CompileAsyncQuery</code> lets you pre-compile a query into a delegate once and invoke it with parameters, skipping per-call expression handling entirely. Worth it only after measurement shows query <em>compilation/lookup</em> overhead matters (rare), and it carries ergonomics costs: fixed parameters, stored delegates, less flexibility. Order of optimization: fix N+1 and over-fetching first, add indexes second, no-tracking and projections third — compiled queries are the last few percent, not the first fix.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Get Q1–Q8 solid first — deferred execution and tracking are the concepts every other answer leans on. Then drill Q9 and Q10 until you can sketch N+1 and the cartesian explosion on a whiteboard; those two are the most-asked EF performance questions at every level. The senior set (Q17–Q24) clicks best <em>after</em> the hands-on task — read your own generated SQL first, then the diagnosis stories will feel like memories instead of theory.</p>
+  </div>
+</section>
+
+<footer>Day 8 of the .NET series · EF Core Querying: Tracking, Projections, Async &amp; Include · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

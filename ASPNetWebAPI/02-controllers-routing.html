@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 2 — Controllers &amp; Routing: Action Methods, Attribute Routing, Templates &amp; Constraints</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">🎛️ Day 2 · Controllers &amp; Routing</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Controllers</div>
+    <a href="#s01"><span class="n">01</span>What Is a Controller?</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>Action Methods</a>
+    <a href="#s04"><span class="n">04</span>[ApiController]</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Routing</div>
+    <a href="#s05"><span class="n">05</span>Attribute Routing</a>
+    <a href="#s06"><span class="n">06</span>Route Templates</a>
+    <a href="#s07"><span class="n">07</span>Route Constraints</a>
+    <a href="#s08"><span class="n">08</span>How a Request Is Matched</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Practice</div>
+    <a href="#s09"><span class="n">09</span>A Full Controller</a>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 02 · ASP.NET Core Web API</div>
+  <h1>🎛️ Controllers &amp; Routing: Directing the Traffic</h1>
+  <p class="lede">Yesterday you learned the <em>rules</em> of the web — verbs, URLs, status codes. Today you learn how ASP.NET Core connects an incoming request to <em>your code</em>. A controller groups related endpoints; action methods are the endpoints; and routing is the address system that decides which method answers which URL. You'll build a real controller with GET routes for the shop's products.</p>
+  <div class="agenda">
+    <span class="chip">🎛️ Controllers</span>
+    <span class="chip">⚡ Action methods</span>
+    <span class="chip">🏷️ Attribute routing</span>
+    <span class="chip">🧩 Route templates</span>
+    <span class="chip">🚧 Constraints</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>🎛️ What Is a Controller?</h2>
+
+  <p>A <strong>controller</strong> is a class that groups together the endpoints for one <em>resource</em>. All the operations on products — list them, fetch one, filter them — live together in a <code>ProductsController</code>. It's the organizing unit of a Web API: one controller per resource, each holding the actions for that resource.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🏢 Analogy</span>
+    <p>Think of your API as an <strong>office building</strong>, and routing as the <strong>front-desk receptionist</strong>. A visitor (request) arrives asking for "Products, please." The receptionist checks the directory and sends them to the right <strong>department</strong> (the controller) and the right <strong>person</strong> in it (the action method) who handles that exact request. The controller is the department; each action is a specialist at a desk; routing is the receptionist reading the directory to route each visitor.</p>
+  </div>
+
+  <p>In ASP.NET Core, a Web API controller is a class that inherits from <code>ControllerBase</code> and (by convention) ends its name in <code>Controller</code>:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · the smallest controller</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.AspNetCore.Mvc;
+
+[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/[controller]"</span>)]
+<span class="kw">public class</span> <span class="ty">ProductsController</span> : <span class="ty">ControllerBase</span>
+{
+    [<span class="ty">HttpGet</span>]                        <span class="cmt">// GET /api/products</span>
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetAll</span>() =&gt; <span class="fn">Ok</span>(<span class="str">"all products"</span>);
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 ControllerBase, Not Controller</span>
+    <p>For a Web API you inherit from <code>ControllerBase</code>, which gives you everything an API needs — model binding, routing, and helper methods like <code>Ok()</code>, <code>NotFound()</code>, <code>BadRequest()</code>, <code>CreatedAtAction()</code> that return proper HTTP responses. Its cousin <code>Controller</code> adds <em>view</em> support (for returning HTML pages via Razor), which an API doesn't need. APIs return data, so <code>ControllerBase</code> is the right base class.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Controllers Are Discovered Automatically</span>
+    <p>You don't register each controller by hand. In <code>Program.cs</code> you call <code>builder.Services.AddControllers()</code> and <code>app.MapControllers()</code> once, and ASP.NET Core scans your assembly at startup, finds every controller class, reads its route attributes, and wires up all the endpoints. Add a new controller and it just works — no central list to maintain.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <div class="mindmap">
+    <div class="mm-core">Controllers &amp; Routing<small>request → your method</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-blue">
+        <h4>🎛️ Controller</h4>
+        <ul>
+          <li>Groups a resource's endpoints</li>
+          <li>Inherits <code>ControllerBase</code></li>
+          <li>Auto-discovered</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-accent">
+        <h4>⚡ Action method</h4>
+        <ul>
+          <li>One endpoint = one method</li>
+          <li>Returns <code>IActionResult</code></li>
+          <li>Tagged with a verb</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>🏷️ Attribute routing</h4>
+        <ul>
+          <li><code>[Route]</code>, <code>[HttpGet]</code></li>
+          <li>URL lives on the code</li>
+          <li>Controller + action combine</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-rose">
+        <h4>🧩 Templates</h4>
+        <ul>
+          <li><code>{id}</code> route params</li>
+          <li>Literals + tokens</li>
+          <li>Bind to method args</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>🚧 Constraints</h4>
+        <ul>
+          <li><code>{id:int}</code>, <code>:guid</code></li>
+          <li>Disambiguate routes</li>
+          <li>Reject bad URLs early</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p>The chain to hold in mind: a request's URL + verb are matched by <strong>routing</strong> to a specific <strong>action method</strong> inside a <strong>controller</strong>; the URL's variable parts (<strong>route parameters</strong>) are handed to the method as arguments; and <strong>constraints</strong> filter which URLs even qualify. Everything today is about making that match precise and predictable.</p>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>⚡ Action Methods</h2>
+
+  <p>An <strong>action method</strong> is a public method on a controller that handles one endpoint. It's tagged with an HTTP verb attribute (<code>[HttpGet]</code>, <code>[HttpPost]</code>, …) so routing knows which verb it answers, and it returns a result that becomes the HTTP response.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · two actions, two verbs</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">HttpGet</span>]                     <span class="cmt">// GET /api/products</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetAll</span>()
+{
+    <span class="kw">return</span> <span class="fn">Ok</span>(_products);       <span class="cmt">// 200 OK + the list as JSON</span>
+}
+
+[<span class="ty">HttpGet</span>(<span class="str">"{id}"</span>)]              <span class="cmt">// GET /api/products/42</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetById</span>(<span class="kw">int</span> id)
+{
+    <span class="kw">var</span> product = _products.<span class="fn">FirstOrDefault</span>(p =&gt; p.Id == id);
+    <span class="kw">return</span> product <span class="kw">is null</span>
+        ? <span class="fn">NotFound</span>()          <span class="cmt">// 404 if it doesn't exist</span>
+        : <span class="fn">Ok</span>(product);         <span class="cmt">// 200 + the product</span>
+}
+</code></pre>
+  </div>
+
+  <h3>What an action returns 🎁</h3>
+  <p>Those helper methods (<code>Ok()</code>, <code>NotFound()</code>) come from <code>ControllerBase</code> and produce the right status code plus body. You have three common return-type styles:</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Return type</th><th>Use for</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td><code>IActionResult</code></td><td>When you return different results (Ok, NotFound…) from one action</td><td><code>return NotFound();</code></td></tr>
+      <tr><td><code>ActionResult&lt;T&gt;</code></td><td>Same, but documents the success type <code>T</code> for tooling/Swagger</td><td><code>ActionResult&lt;Product&gt;</code></td></tr>
+      <tr><td><code>T</code> (the data itself)</td><td>Simple cases — the framework wraps it in <code>200 OK</code></td><td><code>return product;</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 The Helper Methods Map to Status Codes</span>
+    <p>This is where Day 1's status codes become code. <code>Ok()</code> → 200, <code>CreatedAtAction()</code> → 201, <code>NoContent()</code> → 204, <code>BadRequest()</code> → 400, <code>NotFound()</code> → 404, <code>Conflict()</code> → 409. You don't hand-write status numbers; you call the named helper and it produces the correct code and shape. Choosing the right helper <em>is</em> choosing the right status code.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ One Action per Verb + Route</span>
+    <p>Keep each action focused: one HTTP verb, one clear route, one job. <code>GetAll</code> answers <code>GET /api/products</code>; <code>GetById</code> answers <code>GET /api/products/{id}</code>. Resist cramming multiple behaviors into one method with <code>if</code> branches on the verb — separate actions are clearer, easier to route, and show up cleanly in your OpenAPI docs (Day 1).</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>✨ The [ApiController] Attribute</h2>
+
+  <p>You'll see <code>[ApiController]</code> on every Web API controller. It's a small attribute that switches on a bundle of API-friendly behaviors so you write less boilerplate. It's opt-in, and for APIs you always want it.</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">✅</span><b>Automatic 400s</b><p>If model validation fails (a required field missing, a bad type), it returns <code>400 Bad Request</code> automatically — you don't write the check.</p></div>
+    <div class="card"><span class="glyph">🔌</span><b>Binding inference</b><p>It infers where each parameter comes from — route, query, or body — so you rarely need explicit <code>[FromBody]</code>/<code>[FromQuery]</code> attributes.</p></div>
+    <div class="card"><span class="glyph">📋</span><b>ProblemDetails errors</b><p>Error responses follow the standard <code>ProblemDetails</code> (RFC 9457) JSON shape, so clients parse errors consistently.</p></div>
+    <div class="card"><span class="glyph">📎</span><b>Attribute routing required</b><p>It requires attribute routing (next section) — which is exactly what you want for a clean, explicit API.</p></div>
+  </div>
+
+  <h3>Binding source inference 🔌</h3>
+  <p>Thanks to <code>[ApiController]</code>, the framework guesses where each argument comes from, so typical actions need no <code>[From…]</code> attributes:</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Parameter kind</th><th>Inferred source</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Matches a route token (<code>{id}</code>)</td><td><code>[FromRoute]</code></td><td>Comes from the URL path</td></tr>
+      <tr><td>Simple type, not in route</td><td><code>[FromQuery]</code></td><td>Comes from the query string</td></tr>
+      <tr><td>Complex type (a class/record)</td><td><code>[FromBody]</code></td><td>Comes from the request body (JSON)</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Be Explicit When It Helps</span>
+    <p>Inference removes noise from ordinary CRUD actions, but add the explicit attribute when a parameter's name doesn't match its route token, when you need a <code>[FromHeader]</code> value, or simply when you want the binding intent obvious to the next reader. Clarity beats cleverness — the inference is a convenience, not a rule you must hide behind.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 [ApiController] = Less Boilerplate, More Convention</span>
+    <p>Without it, you'd manually check <code>ModelState.IsValid</code> and return 400s in every action, and annotate every parameter's source. With it, those become automatic. It encodes the sensible defaults for HTTP APIs so your controllers stay focused on logic, not plumbing — which is why it's on essentially every ASP.NET Core Web API controller.</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>🏷️ Attribute Routing</h2>
+
+  <p><strong>Attribute routing</strong> means you declare each endpoint's URL right on the code, using attributes like <code>[Route(...)]</code> and <code>[HttpGet(...)]</code>. The route lives next to the method it belongs to — read the code, know the URL. It's the standard, preferred approach for Web APIs.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · controller route + action routes combine</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/[controller]"</span>)]      <span class="cmt">// prefix for every action → "api/products"</span>
+<span class="kw">public class</span> <span class="ty">ProductsController</span> : <span class="ty">ControllerBase</span>
+{
+    [<span class="ty">HttpGet</span>]                    <span class="cmt">// GET  api/products</span>
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetAll</span>() =&gt; ...;
+
+    [<span class="ty">HttpGet</span>(<span class="str">"{id}"</span>)]             <span class="cmt">// GET  api/products/42</span>
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetById</span>(<span class="kw">int</span> id) =&gt; ...;
+
+    [<span class="ty">HttpGet</span>(<span class="str">"featured"</span>)]         <span class="cmt">// GET  api/products/featured</span>
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetFeatured</span>() =&gt; ...;
+}
+</code></pre>
+  </div>
+
+  <p>The <code>[Route]</code> on the <em>controller</em> sets a prefix; the template on each <em>action</em> is appended to it. So the controller-level <code>api/[controller]</code> plus an action's <code>{id}</code> yields <code>api/products/{id}</code>. They <strong>combine</strong>.</p>
+
+  <div class="callout key">
+    <span class="tag">🔑 The [controller] Token</span>
+    <p><code>[controller]</code> in a route template is a placeholder that's replaced with the controller's name minus the "Controller" suffix — <code>ProductsController</code> becomes <code>products</code>. So <code>[Route("api/[controller]")]</code> produces <code>api/products</code> automatically. Rename the class and the route follows. (There's also <code>[action]</code>, but hard-coding action names in URLs is discouraged for REST APIs — your URLs should be resource nouns, per Day 1.)</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Attribute Routing vs Conventional Routing</span>
+    <p>There's an older style, <strong>conventional routing</strong>, where you define one global pattern like <code>{controller}/{action}/{id?}</code> in <code>Program.cs</code>. It's still supported and common in MVC apps that render pages, but for <strong>Web APIs the standard is attribute routing</strong> — it's explicit, per-endpoint, RESTful, and required by <code>[ApiController]</code>. Know conventional routing exists; reach for attribute routing.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Relative vs Absolute</span>
+    <p>An action route without a leading slash is <em>relative</em> — it's appended to the controller's prefix (<code>[HttpGet("featured")]</code> → <code>api/products/featured</code>). A leading <code>/</code> or <code>~/</code> makes it <em>absolute</em>, ignoring the controller prefix entirely. Relative is the norm; reach for absolute only when an endpoint genuinely belongs outside its controller's path.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>🧩 Route Templates &amp; Parameters</h2>
+
+  <p>A <strong>route template</strong> is the pattern string inside the attribute. It mixes fixed <em>literal</em> segments with <em>route parameters</em> in curly braces. When a URL matches, each <code>{parameter}</code> is captured and handed to your action method's argument of the same name.</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell"><div class="val">api</div><div class="idx">literal</div></div>
+      <div class="arr-cell"><div class="val">products</div><div class="idx">literal</div></div>
+      <div class="arr-cell highlight"><div class="val">{id}</div><div class="idx">parameter → int id</div></div>
+    </div>
+    <div class="arr-caption">Template <code>api/products/{id}</code> · literals must match exactly · <code>{id}</code> captures &amp; binds to the method's <code>id</code> argument</div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · templates that mix literals &amp; parameters</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id}"</span>)]                          <span class="cmt">// api/products/42       → id = 42</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetById</span>(<span class="kw">int</span> id) =&gt; ...;
+
+[<span class="ty">HttpGet</span>(<span class="str">"{category}/{id}"</span>)]               <span class="cmt">// api/products/audio/7  → category, id</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetInCategory</span>(<span class="kw">string</span> category, <span class="kw">int</span> id) =&gt; ...;
+
+[<span class="ty">HttpGet</span>(<span class="str">"{id}/reviews"</span>)]                  <span class="cmt">// api/products/42/reviews</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetReviews</span>(<span class="kw">int</span> id) =&gt; ...;
+</code></pre>
+  </div>
+
+  <h3>Optional parameters &amp; defaults</h3>
+  <p>Add <code>?</code> to make a route parameter optional, or <code>=value</code> to give it a default:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · optional &amp; default</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id?}"</span>)]        <span class="cmt">// id is optional — matches api/products AND api/products/42</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Get</span>(<span class="kw">int</span>? id) =&gt; ...;
+
+[<span class="ty">HttpGet</span>(<span class="str">"page/{page=1}"</span>)]   <span class="cmt">// page defaults to 1 if omitted</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetPage</span>(<span class="kw">int</span> page) =&gt; ...;
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Route Parameter vs Query String</span>
+    <p>A <strong>route parameter</strong> (<code>{id}</code>) is part of the path and usually identifies <em>which</em> resource — <code>api/products/42</code>. A <strong>query string</strong> value (<code>?sort=price&amp;page=2</code>) refines <em>how</em> you want a collection and is bound from <code>[FromQuery]</code> arguments. This is Day 1's path-vs-query distinction, now in code: identity → route parameter; filtering/sorting/paging → query string.</p>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · query string binding</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">HttpGet</span>]   <span class="cmt">// GET api/products?category=audio&amp;sort=price&amp;page=2</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Search</span>(
+    [<span class="ty">FromQuery</span>] <span class="kw">string</span>? category,
+    [<span class="ty">FromQuery</span>] <span class="kw">string</span>? sort,
+    [<span class="ty">FromQuery</span>] <span class="kw">int</span> page = <span class="num">1</span>) =&gt; ...;
+</code></pre>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>🚧 Route Constraints</h2>
+
+  <p>A <strong>route constraint</strong> restricts what a route parameter will match, written as <code>{parameter:constraint}</code>. <code>{id:int}</code> only matches if the segment is an integer. Constraints do two valuable jobs: they <strong>disambiguate</strong> similar routes, and they <strong>reject invalid URLs early</strong> — before your action even runs.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · constraints in action</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id:int}"</span>)]                <span class="cmt">// only matches api/products/42</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetById</span>(<span class="kw">int</span> id) =&gt; ...;
+
+[<span class="ty">HttpGet</span>(<span class="str">"{slug}"</span>)]                 <span class="cmt">// matches api/products/wireless-mouse</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetBySlug</span>(<span class="kw">string</span> slug) =&gt; ...;
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ The Ambiguity Problem Constraints Solve</span>
+    <p>Imagine two GET actions both mapped to <code>{id}</code> — one taking an <code>int</code>, one a <code>string</code>. A request to <code>api/products/42</code> matches <em>both</em> templates, and ASP.NET Core throws an <strong>AmbiguousMatchException</strong> — it can't decide. Add <code>{id:int}</code> to the numeric one and <code>{slug}</code> to the other, and the routing engine can tell them apart: <code>42</code> only fits the int route, <code>wireless-mouse</code> only fits the slug route. Constraints resolve the tie.</p>
+  </div>
+
+  <h3>Common built-in constraints</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Constraint</th><th>Matches</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td><code>:int</code></td><td>An integer</td><td><code>{id:int}</code></td></tr>
+      <tr><td><code>:guid</code></td><td>A GUID</td><td><code>{id:guid}</code></td></tr>
+      <tr><td><code>:alpha</code></td><td>Alphabetic characters</td><td><code>{name:alpha}</code></td></tr>
+      <tr><td><code>:bool</code>, <code>:datetime</code></td><td>A bool / date</td><td><code>{active:bool}</code></td></tr>
+      <tr><td><code>:min(n)</code> / <code>:max(n)</code></td><td>Number ≥ / ≤ n</td><td><code>{id:int:min(1)}</code></td></tr>
+      <tr><td><code>:range(a,b)</code></td><td>Number within a range</td><td><code>{page:int:range(1,1000)}</code></td></tr>
+      <tr><td><code>:minlength(n)</code> / <code>:maxlength(n)</code></td><td>String length limits</td><td><code>{code:minlength(3)}</code></td></tr>
+      <tr><td><code>:regex(...)</code></td><td>A custom pattern</td><td><code>{sku:regex(^PRD\\d+$)}</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>You can <strong>chain</strong> constraints with more colons: <code>{id:int:min(1)}</code> means "an integer, and at least 1." A request like <code>api/products/0</code> or <code>api/products/abc</code> simply won't match — the client gets a <code>404</code> without your code running.</p>
+
+  <div class="callout key">
+    <span class="tag">🔑 Constraints Run Before Your Action</span>
+    <p>A constraint is checked during routing, <em>before</em> model binding or your action executes. If the URL fails the constraint, the request never reaches your method — it's rejected at the door. That's good for both <strong>performance</strong> (no wasted work on invalid input) and <strong>clarity</strong> (your action can assume <code>id</code> is a valid int). Constraints are a routing-level filter, not a substitute for real validation (Day 14) of request <em>bodies</em> — but for URL segments they're the first line of defense.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Constraints Validate Format, Not Existence</span>
+    <p><code>{id:int}</code> guarantees <code>id</code> is a number — it does <em>not</em> guarantee product 42 exists. That's still your action's job: look it up and return <code>NotFound()</code> if it's missing. Constraints filter <em>shape</em>; your code checks <em>reality</em>.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>🧭 How a Request Finds Its Action</h2>
+
+  <p>Put the pieces in motion. A request arrives; here's how ASP.NET Core routes it to exactly one action method:</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="emoji">📥</span>
+      <div><b>1. Request arrives</b><span class="desc">e.g. <code>GET /api/products/42</code> — a verb and a URL path.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🔎</span>
+      <div><b>2. Match candidate routes</b><span class="desc">Routing compares the path against every action's template, keeping those whose literals and parameters fit.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🚧</span>
+      <div><b>3. Apply constraints &amp; verb</b><span class="desc">Drop candidates that fail a constraint (<code>{id:int}</code>) or whose HTTP verb doesn't match (GET vs POST).</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="emoji">🎯</span>
+      <div><b>4. Pick the most specific</b><span class="desc">If several still match, the most specific template wins (a literal or constrained segment beats a bare parameter). A true tie throws AmbiguousMatchException.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🔌</span>
+      <div><b>5. Bind &amp; invoke</b><span class="desc">Route values (<code>id = 42</code>) and query/body are bound to the method's parameters, then your action runs and returns a result.</span></div>
+    </div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Specificity Wins</span>
+    <p>When templates compete, routing prefers the <strong>more specific</strong> one. <code>featured</code> (a literal) beats <code>{id}</code> (a parameter), so <code>api/products/featured</code> hits <code>GetFeatured()</code>, not <code>GetById()</code>. A constrained parameter (<code>{id:int}</code>) beats a bare one (<code>{slug}</code>). This precedence is why you rarely need to think about ordering — the engine picks the tightest fit automatically. Only genuine, un-distinguishable ties error out.</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>🧱 A Full Products Controller</h2>
+
+  <p>Here's a complete, runnable controller with several GET routes for the shop's products — using an in-memory list so it works without a database (that comes in Days 7–9). Read it as a summary of everything today:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · ProductsController.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.AspNetCore.Mvc;
+
+[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/[controller]"</span>)]                         <span class="cmt">// → api/products</span>
+<span class="kw">public class</span> <span class="ty">ProductsController</span> : <span class="ty">ControllerBase</span>
+{
+    <span class="cmt">// Stand-in data until we add EF Core (Days 7–9)</span>
+    <span class="kw">private static readonly</span> <span class="ty">List</span>&lt;<span class="ty">Product</span>&gt; _products =
+    [
+        <span class="kw">new</span>(<span class="num">1</span>, <span class="str">"Mechanical Keyboard"</span>, <span class="str">"audio"</span>, <span class="num">4999m</span>),
+        <span class="kw">new</span>(<span class="num">2</span>, <span class="str">"Wireless Mouse"</span>, <span class="str">"audio"</span>, <span class="num">1499m</span>),
+        <span class="kw">new</span>(<span class="num">3</span>, <span class="str">"Desk Lamp"</span>, <span class="str">"home"</span>, <span class="num">899m</span>),
+    ];
+
+    <span class="cmt">// GET api/products            → the whole collection</span>
+    [<span class="ty">HttpGet</span>]
+    <span class="kw">public</span> <span class="ty">ActionResult</span>&lt;<span class="ty">IEnumerable</span>&lt;<span class="ty">Product</span>&gt;&gt; <span class="fn">GetAll</span>(
+        [<span class="ty">FromQuery</span>] <span class="kw">string</span>? category)               <span class="cmt">// optional ?category=audio</span>
+    {
+        <span class="kw">var</span> result = category <span class="kw">is null</span>
+            ? _products
+            : _products.<span class="fn">Where</span>(p =&gt; p.Category == category).<span class="fn">ToList</span>();
+        <span class="kw">return</span> <span class="fn">Ok</span>(result);                            <span class="cmt">// 200</span>
+    }
+
+    <span class="cmt">// GET api/products/42         → one product by id (int only)</span>
+    [<span class="ty">HttpGet</span>(<span class="str">"{id:int}"</span>)]
+    <span class="kw">public</span> <span class="ty">ActionResult</span>&lt;<span class="ty">Product</span>&gt; <span class="fn">GetById</span>(<span class="kw">int</span> id)
+    {
+        <span class="kw">var</span> product = _products.<span class="fn">FirstOrDefault</span>(p =&gt; p.Id == id);
+        <span class="kw">return</span> product <span class="kw">is null</span> ? <span class="fn">NotFound</span>() : <span class="fn">Ok</span>(product);   <span class="cmt">// 404 or 200</span>
+    }
+
+    <span class="cmt">// GET api/products/featured   → literal beats {id}, so this wins for "featured"</span>
+    [<span class="ty">HttpGet</span>(<span class="str">"featured"</span>)]
+    <span class="kw">public</span> <span class="ty">ActionResult</span>&lt;<span class="ty">IEnumerable</span>&lt;<span class="ty">Product</span>&gt;&gt; <span class="fn">GetFeatured</span>() =&gt;
+        <span class="fn">Ok</span>(_products.<span class="fn">Take</span>(<span class="num">2</span>));
+
+    <span class="cmt">// GET api/products/42/reviews → nested sub-resource</span>
+    [<span class="ty">HttpGet</span>(<span class="str">"{id:int}/reviews"</span>)]
+    <span class="kw">public</span> <span class="ty">ActionResult</span>&lt;<span class="ty">IEnumerable</span>&lt;<span class="kw">string</span>&gt;&gt; <span class="fn">GetReviews</span>(<span class="kw">int</span> id) =&gt;
+        <span class="fn">Ok</span>(<span class="kw">new</span>[] { $<span class="str">"Great product #{id}!"</span>, <span class="str">"Would buy again."</span> });
+}
+
+<span class="kw">public record</span> <span class="ty">Product</span>(<span class="kw">int</span> Id, <span class="kw">string</span> Name, <span class="kw">string</span> Category, <span class="kw">decimal</span> Price);
+</code></pre>
+  </div>
+
+  <p>And the one-time wiring in <code>Program.cs</code> so controllers are found and served:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Program.cs — enable controllers</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+builder.Services.<span class="fn">AddControllers</span>();          <span class="cmt">// register controller services</span>
+builder.Services.<span class="fn">AddOpenApi</span>();             <span class="cmt">// OpenAPI doc (Day 1)</span>
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+<span class="kw">if</span> (app.Environment.<span class="fn">IsDevelopment</span>()) app.<span class="fn">MapOpenApi</span>();
+app.<span class="fn">MapControllers</span>();                        <span class="cmt">// wire up every controller's routes</span>
+app.<span class="fn">Run</span>();
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ This Maps Straight to Day 1</span>
+    <p>Every route here is a <strong>noun</strong> (<code>products</code>, not <code>getProducts</code>), the verb is <code>GET</code> via <code>[HttpGet]</code>, filtering rides in the <strong>query string</strong> (<code>?category=</code>), identity rides in the <strong>path</strong> (<code>{id:int}</code>), and results carry proper <strong>status codes</strong> (200 via <code>Ok</code>, 404 via <code>NotFound</code>). Day 1 gave you the rules; today wires them to real methods.</p>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: A Controller with GET Routes</h2>
+
+  <p>Today's <strong>Do</strong>: create a controller with GET routes for a resource. Use the <code>MyShop.Api</code> project from Day 1 (or a fresh <code>dotnet new webapi --use-controllers</code>). The path:</p>
+
+  <ol>
+    <li>🎛️ Create <code>Controllers/ProductsController.cs</code>: a class inheriting <code>ControllerBase</code>, decorated with <code>[ApiController]</code> and <code>[Route("api/[controller]")]</code>.</li>
+    <li>🗃️ Add a <code>Product</code> record and a <code>static</code> in-memory list of a few products so you have data without a database yet.</li>
+    <li>📋 Add <code>GetAll</code> — <code>[HttpGet]</code> returning <code>Ok(_products)</code> — and confirm <code>GET /api/products</code> returns the JSON array.</li>
+    <li>🔎 Add <code>GetById</code> — <code>[HttpGet("{id:int}")]</code> — returning the product or <code>NotFound()</code>. Test both a real id and a missing one; confirm 200 vs 404.</li>
+    <li>🚧 Prove the constraint: request <code>/api/products/abc</code> and confirm you get a <code>404</code> (the <code>:int</code> constraint rejected it before your code ran).</li>
+    <li>⭐ Add a literal route <code>[HttpGet("featured")]</code> and confirm <code>/api/products/featured</code> hits it — <em>not</em> <code>GetById</code> — because a literal beats a parameter.</li>
+    <li>🔗 Add a nested route <code>[HttpGet("{id:int}/reviews")]</code> returning some placeholder reviews, and hit <code>/api/products/1/reviews</code>.</li>
+    <li>🎚️ Add query filtering: a <code>[FromQuery] string? category</code> parameter on <code>GetAll</code>, and test <code>/api/products?category=audio</code>.</li>
+    <li>📖 Open your Swagger/Scalar UI (Day 1) and confirm all your GET routes appear and can be tried in the browser.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>From your running controller: (1) Why does <code>/api/products/featured</code> reach <code>GetFeatured</code> and not <code>GetById</code>? (2) What status code comes back for <code>/api/products/999</code> (a valid-but-missing id) versus <code>/api/products/abc</code> (a non-int) — and <em>why are they different code paths</em>? (3) Where did <code>category</code> come from — route or query — and how did the framework know? (4) What does <code>[controller]</code> in your route expand to, and what happens to the URL if you rename the class?</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>🎛️ Controller</b>A class grouping one resource's endpoints; inherits <code>ControllerBase</code> (not <code>Controller</code>) for APIs; auto-discovered via <code>AddControllers</code> + <code>MapControllers</code>.</div>
+    <div class="recap-card"><b>⚡ Action method</b>A public method = one endpoint, tagged with a verb (<code>[HttpGet]</code>), returning <code>IActionResult</code> / <code>ActionResult&lt;T&gt;</code>. Helpers like <code>Ok()</code>/<code>NotFound()</code> set the status code.</div>
+    <div class="recap-card"><b>✨ [ApiController]</b>Turns on automatic 400s on invalid models, binding-source inference, and ProblemDetails errors. On every API controller.</div>
+    <div class="recap-card"><b>🏷️ Attribute routing</b>URLs declared on the code via <code>[Route]</code> / <code>[HttpGet(...)]</code>; controller prefix + action template combine. <code>[controller]</code> = class name minus "Controller".</div>
+    <div class="recap-card"><b>🧩 Route templates</b>Literals + <code>{parameters}</code>; captured values bind to method args by name. <code>{id?}</code> optional, <code>{page=1}</code> default.</div>
+    <div class="recap-card"><b>🚧 Constraints</b><code>{id:int}</code>, <code>:guid</code>, <code>:min</code>, <code>:regex</code>… restrict matches, disambiguate routes, and reject bad URLs before your action runs.</div>
+    <div class="recap-card"><b>🧭 Matching</b>Routing keeps candidates matching the path + verb + constraints, then picks the most specific; a true tie throws AmbiguousMatchException.</div>
+    <div class="recap-card"><b>🔌 Binding</b>Route token → <code>[FromRoute]</code>, simple non-route → <code>[FromQuery]</code>, complex type → <code>[FromBody]</code> (inferred by <code>[ApiController]</code>).</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Piece</th><th>Syntax</th><th>Does</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>Controller base</td><td><code>: ControllerBase</code></td><td>API base class</td><td>Not <code>Controller</code> (that's for views)</td></tr>
+      <tr><td>Enable API behaviors</td><td><code>[ApiController]</code></td><td>Auto 400s, inference, ProblemDetails</td><td>Requires attribute routing</td></tr>
+      <tr><td>Controller prefix</td><td><code>[Route("api/[controller]")]</code></td><td>Base path for all actions</td><td><code>[controller]</code> → class name</td></tr>
+      <tr><td>Action verb + route</td><td><code>[HttpGet("{id:int}")]</code></td><td>One endpoint</td><td>Combines with controller prefix</td></tr>
+      <tr><td>Route parameter</td><td><code>{id}</code></td><td>Captures a path segment</td><td>Binds to same-named arg</td></tr>
+      <tr><td>Constraint</td><td><code>{id:int:min(1)}</code></td><td>Restricts what matches</td><td>Runs before your action</td></tr>
+      <tr><td>Query binding</td><td><code>[FromQuery] int page</code></td><td>Reads the query string</td><td>For filter/sort/page</td></tr>
+      <tr><td>Success / not found</td><td><code>Ok(x)</code> / <code>NotFound()</code></td><td>200 / 404</td><td>Helpers → status codes</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is a controller in ASP.NET Core Web API?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A controller is a class that groups together the endpoints (action methods) for one resource — for example, a <code>ProductsController</code> holds all the operations on products: list them, get one, and so on. For a Web API it inherits from <code>ControllerBase</code> and by convention its name ends in "Controller." ASP.NET Core discovers controllers automatically at startup (once you call <code>AddControllers</code>/<code>MapControllers</code>), reads their route attributes, and wires up the endpoints. It's the main organizing unit of an API — roughly one controller per resource.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is an action method?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>An action method is a public method on a controller that handles one endpoint. It's tagged with an HTTP verb attribute like <code>[HttpGet]</code> or <code>[HttpPost]</code> so routing knows which verb it answers, and it returns a result (often <code>IActionResult</code> or <code>ActionResult&lt;T&gt;</code>) that becomes the HTTP response. For example, a <code>GetById(int id)</code> method decorated with <code>[HttpGet("{id}")]</code> handles requests like <code>GET /api/products/42</code> and returns that product (or a 404 if it's missing).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What's the difference between ControllerBase and Controller?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>ControllerBase</code> is the base class for Web API controllers — it provides everything an API needs: routing, model binding, and helper methods like <code>Ok()</code>, <code>NotFound()</code>, and <code>CreatedAtAction()</code> that return proper HTTP responses. <code>Controller</code> inherits from <code>ControllerBase</code> and adds support for <em>views</em> (rendering HTML pages with Razor), which is for MVC web apps, not APIs. Since a Web API returns data (JSON) rather than pages, you inherit from <code>ControllerBase</code> and skip the extra view machinery.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What does the [ApiController] attribute do?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It opts a controller into a set of API-friendly behaviors so you write less boilerplate: automatic <code>400 Bad Request</code> responses when model validation fails, binding-source inference (so you don't have to annotate every parameter with <code>[FromBody]</code>/<code>[FromQuery]</code>), standardized <code>ProblemDetails</code> error responses, and a requirement to use attribute routing. It's on essentially every ASP.NET Core Web API controller because it encodes the sensible defaults for HTTP APIs.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What is attribute routing?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Attribute routing means you define each endpoint's URL directly on the code using attributes — <code>[Route("api/products")]</code> on the controller and <code>[HttpGet("{id}")]</code> on the action. The route lives right next to the method it maps to, so reading the code tells you the URL. The controller-level route acts as a prefix that combines with each action's template. It's the standard, preferred approach for Web APIs because it's explicit and per-endpoint, unlike the older conventional routing that defines one global pattern centrally.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What is a route parameter, and how does it reach my method?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A route parameter is a variable part of the URL template written in curly braces, like <code>{id}</code> in <code>api/products/{id}</code>. When a request URL matches, the value in that segment (say <code>42</code>) is captured and automatically passed to your action method's argument of the same name (<code>int id</code>). This is model binding: the framework maps the URL segment to your parameter by matching names. So <code>GET /api/products/42</code> calls <code>GetById(int id)</code> with <code>id = 42</code>.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What does {id:int} mean in a route?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It's a route parameter <code>id</code> with an <code>int</code> constraint — the route only matches if that URL segment is an integer. So <code>api/products/42</code> matches, but <code>api/products/abc</code> does not (the client gets a 404, and your action never runs). Constraints like this restrict what a parameter accepts; other examples are <code>:guid</code>, <code>:alpha</code>, and <code>:min(1)</code>. They help ensure your action only receives well-formed values.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">How do you return a 404 from an action?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Return the <code>NotFound()</code> helper method from <code>ControllerBase</code>: <code>return NotFound();</code>. It produces a <code>404 Not Found</code> response. Similarly, <code>Ok(data)</code> returns 200 with a body, <code>CreatedAtAction(...)</code> returns 201, <code>BadRequest()</code> returns 400, and <code>NoContent()</code> returns 204. You don't write raw status numbers — you call the named helper for the outcome, and it sets the correct status code and response shape. A typical pattern is <code>return product is null ? NotFound() : Ok(product);</code>.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">How does binding source inference work under [ApiController]?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>With <code>[ApiController]</code>, the framework infers where each action parameter comes from, so you rarely need explicit <code>[From…]</code> attributes. The rules: a parameter whose name matches a route template token (<code>{id}</code>) is bound from the route (<code>[FromRoute]</code>); a complex type (a class or record) is bound from the request body (<code>[FromBody]</code>); and a simple type that isn't in the route is bound from the query string (<code>[FromQuery]</code>). This removes most annotations from typical CRUD actions. You'd still add an explicit attribute when a parameter name doesn't match its route token, when you need a header (<code>[FromHeader]</code>), or when you want the binding intent to be obvious to readers.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">When would you use a route parameter versus a query string parameter?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Use a <strong>route parameter</strong> when the value identifies <em>which</em> resource — it's part of the resource's identity and belongs in the path: <code>api/products/42</code>, <code>api/customers/7/orders/3</code>. Use a <strong>query string</strong> parameter when the value refines <em>how</em> you want a collection returned — filtering, sorting, paging, searching — which are modifiers, not identity: <code>api/products?category=audio&amp;sort=price&amp;page=2</code>. Rule of thumb: identity and hierarchy go in the path (route parameters, often constrained like <code>{id:int}</code>); optional result-shaping goes in the query string (bound via <code>[FromQuery]</code>, frequently with defaults). This mirrors REST's path-vs-query distinction.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What is an AmbiguousMatchException and how do route constraints prevent it?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>It's thrown at request time when a URL matches two or more actions equally and routing can't decide which to invoke. Classic example: two GET actions both mapped to <code>{id}</code>, one taking <code>int</code> and one taking <code>string</code> — a request to <code>api/products/42</code> fits both templates identically, so the engine can't choose. Route constraints break the tie by making the templates distinguishable: mark the numeric one <code>{id:int}</code> and the other <code>{slug}</code>. Now <code>42</code> only matches the int route and <code>wireless-mouse</code> only matches the slug route — no ambiguity. More broadly, routing prefers the most <em>specific</em> template, and constraints (plus literal segments) are how you make one candidate more specific than another.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">If you have GET /products/{id} and GET /products/featured, why doesn't "featured" get treated as an id?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Because routing ranks candidates by <strong>specificity</strong>, and a <em>literal</em> segment is more specific than a <em>parameter</em> segment. The template <code>featured</code> is a fixed literal, while <code>{id}</code> is a variable placeholder, so for the URL <code>api/products/featured</code> the literal route wins and <code>GetFeatured()</code> is invoked. If you'd also constrained the id route as <code>{id:int}</code>, that reinforces it — <code>featured</code> isn't an int, so it couldn't match <code>GetById</code> at all. Either way, you don't have to worry about ordering the actions; the routing engine automatically prefers the tightest, most specific match.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">What's the difference between attribute routing and conventional routing? Which do you use for APIs?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><strong>Attribute routing</strong> declares routes with attributes directly on controllers and actions (<code>[Route]</code>, <code>[HttpGet("{id}")]</code>) — explicit, per-endpoint, and local to the code it maps. <strong>Conventional routing</strong> defines one or more global URL patterns centrally in <code>Program.cs</code> (like <code>{controller}/{action}/{id?}</code>) that apply across all controllers. For <strong>Web APIs, attribute routing is the standard</strong>: it gives precise control over RESTful URLs, keeps each route beside its action, supports constraints and versioning cleanly, and is required by <code>[ApiController]</code>. Conventional routing is more common in MVC apps that render views with predictable controller/action URLs. They can coexist, but for an API you reach for attribute routing.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">What does the [controller] token in a route template do, and why is it useful?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><code>[controller]</code> is a token replaced at startup with the controller's name minus the "Controller" suffix — so in <code>ProductsController</code>, <code>[Route("api/[controller]")]</code> becomes <code>api/products</code>. It's useful because it keeps the route in sync with the class name automatically: rename the class and the URL follows, and it enforces a consistent naming convention across controllers without repeating the literal path. There's also an <code>[action]</code> token, but hard-coding action names into API URLs is discouraged — REST URLs should be resource nouns, with the HTTP verb (not the URL) expressing the action.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">When should you return IActionResult versus ActionResult&lt;T&gt; versus the raw type?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><code>IActionResult</code> is the flexible choice when an action can return different result kinds (<code>Ok</code>, <code>NotFound</code>, <code>BadRequest</code>) — it doesn't tie the signature to a data type. <code>ActionResult&lt;T&gt;</code> gives you that same flexibility <em>and</em> documents the success payload type <code>T</code>, which improves OpenAPI/Swagger output and lets you return either an <code>ActionResult</code> (like <code>NotFound()</code>) or a <code>T</code> directly — it's often the best default for a typed API. Returning the raw type <code>T</code> is simplest for actions that always succeed with data (the framework wraps it in 200), but you lose the ability to return other status codes cleanly. In practice <code>ActionResult&lt;T&gt;</code> is a common sweet spot: type information for tooling plus the freedom to return status-code results.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">Route constraints run before your action. Why does that matter, and what are their limits?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Constraints are evaluated during routing, before model binding and before your action executes. That matters for two reasons: <strong>performance</strong> — a URL that fails a constraint (e.g. <code>abc</code> against <code>{id:int}</code>) is rejected immediately with a 404, so the server doesn't waste work binding and running the action; and <strong>clarity/safety</strong> — your action can assume the parameter already has the right shape, so there's less defensive code. The limits: constraints only validate the <em>format</em> of URL segments, not business reality — <code>{id:int}</code> guarantees <code>id</code> is a number but not that product 42 exists (your action still checks and returns <code>NotFound()</code>). They also aren't a substitute for validating request <em>bodies</em>, which is model validation's job. Think of constraints as a fast, routing-level filter on URL shape, not full input validation.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Walk through how ASP.NET Core selects an action for an incoming request.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>At startup, the framework scans controllers and builds an endpoint table from the route attributes. Per request: the routing middleware takes the URL path and finds all endpoint templates whose literal segments and parameter positions match. It then removes candidates that fail their route constraints (e.g. <code>{id:int}</code> against a non-numeric segment) and those whose HTTP method constraint doesn't match the request verb (GET vs POST — the verb attributes implement action constraints). From the survivors it ranks by <strong>route precedence</strong>: more specific templates win — a literal segment beats a parameter, a constrained parameter beats a bare one, and catch-all parameters are least specific. The highest-priority match is selected. If two survivors have identical precedence and both still match, it throws an <code>AmbiguousMatchException</code>. Once an action is chosen, model binding populates its parameters from route values, query string, and body (per <code>[ApiController]</code> inference), any filters run, and the action executes. The key senior insight is that selection is a filter-then-rank pipeline, and specificity — not declaration order — decides the winner.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">How would you design the routes for a nested resource like a customer's orders and an order's items?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Model the ownership hierarchy in the path, but keep nesting shallow and constrain identity segments. A dedicated <code>OrdersController</code> could use a controller route like <code>[Route("api/customers/{customerId:int}/orders")]</code> so every action is scoped to a customer: <code>GET</code> (list that customer's orders), <code>GET {orderId:int}</code> (one order), <code>POST</code> (create under the customer). For an order's line items, either an <code>OrderItemsController</code> with <code>[Route("api/orders/{orderId:int}/items")]</code> or item actions on the orders controller — but I'd stop nesting at one or two levels. Deeper relationships (an item's product) are better expressed as a link to the top-level resource (<code>/api/products/{id}</code>) than as <code>/customers/x/orders/y/items/z/product</code>, which is unwieldy and couples URLs to a rigid hierarchy. Constrain every id (<code>:int</code>/<code>:guid</code>) both to disambiguate and to reject malformed URLs early. And validate that the nested resource actually belongs to its parent (order Y really is customer X's) rather than trusting the path — a common security gap. The judgment: reflect genuine ownership in the URL, cap depth for usability, and don't let routing structure substitute for authorization checks.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">Controllers vs minimal APIs — how do you choose?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Both are first-class and current. <strong>Minimal APIs</strong> define endpoints as lambdas mapped directly in <code>Program.cs</code> (or grouped with <code>MapGroup</code>) — less ceremony, lower overhead, and great for small services, microservices, and focused endpoints; the trade-off is that as an app grows, cramming logic into <code>Program.cs</code> gets unwieldy without disciplined organization, and some MVC features (certain filters, model-binding conveniences, conventions) historically came more naturally to controllers, though minimal APIs have closed much of that gap. <strong>Controllers</strong> give structured grouping of related endpoints, a mature filter pipeline, attribute-based conventions, and a familiar organization that scales well for large APIs with many resources and cross-cutting concerns. My rule of thumb: reach for minimal APIs for small or performance-sensitive services and simple endpoints; prefer controllers for larger applications where grouping, conventions, and the filter pipeline pay off — and it's fine to mix them in one app. The decision is about team familiarity, app size, and how much you lean on MVC's conventions, not about one being obsolete.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How would you keep controllers thin as an application grows?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The controller's job is HTTP concerns only: bind and validate input, call into the domain, and translate the result into an HTTP response with the right status code. Everything else — business logic, data access, orchestration — belongs behind an injected service (Day 3's dependency injection). So a <code>ProductsController</code> action should be a few lines: take the request, call <code>_productService.GetAsync(id)</code>, and return <code>Ok</code>/<code>NotFound</code>. Techniques to hold that line: inject services rather than doing work in the controller; use DTOs/request-response models rather than exposing domain entities directly, mapping at the boundary; push validation into model attributes or FluentValidation; centralize error handling (a global exception handler / ProblemDetails) rather than try/catch in every action; and consider a mediator pattern (like MediatR) for larger apps so actions dispatch a command/query and stay trivial. The payoff is testability (the logic lives in services you can unit-test without HTTP — Day 13), reusability (the same service serves multiple endpoints or a background worker), and clarity (the controller reads as a thin HTTP adapter). "Fat controllers" that mix HTTP, business rules, and data access are the anti-pattern this avoids.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">How do you handle API versioning with controllers and routing?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Once external clients depend on your routes, breaking changes need a new version while the old keeps working, and routing is one place versioning lives. Common approaches: <strong>URL path versioning</strong> — embed the version in the route, e.g. <code>[Route("api/v{version:apiVersion}/[controller]")]</code> producing <code>/api/v1/products</code> and <code>/api/v2/products</code>; most visible and easy for clients. <strong>Query string</strong> (<code>?api-version=2</code>) or <strong>header</strong>-based versioning keep URLs clean but are less discoverable. The <code>Asp.Versioning</code> (formerly <code>Microsoft.AspNetCore.Mvc.Versioning</code>) libraries support all of these: you decorate controllers with <code>[ApiVersion("1.0")]</code>, can have two controller classes for v1 and v2, map versions to actions, and integrate with OpenAPI to produce per-version docs. Beyond the mechanism, the senior concerns are process: deprecation policy and timelines, communicating changes, supporting old versions for a defined window, and — importantly — designing DTOs so internal model changes don't force external version bumps (don't expose entities directly). Version as rarely as possible by favoring additive, non-breaking changes; when you must break, the routing scheme is the least interesting part compared to the client-migration strategy.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">A teammate writes GET api/products/getAll and POST api/products/createProduct. What's wrong and how do you fix it?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The problem is verbs in the URL — those routes duplicate the HTTP method's meaning in the path, which violates REST conventions (Day 1: URLs are nouns, the HTTP verb is the action). It produces redundant, non-idiomatic URLs (<code>POST .../createProduct</code> says "create" twice) that are harder to predict and don't leverage HTTP semantics — caching, idempotency, and tooling all key off the method. The fix is resource-noun routes with the verb expressed by the HTTP method: <code>GET /api/products</code> (list), <code>GET /api/products/{id}</code> (one), <code>POST /api/products</code> (create), <code>PUT/PATCH /api/products/{id}</code> (update), <code>DELETE /api/products/{id}</code> (remove) — all on a <code>ProductsController</code> with <code>[Route("api/[controller]")]</code> and verb attributes carrying the (nounless) templates. I'd also note this is exactly what the <code>[action]</code> route token encourages if misused, which is why it's discouraged for APIs. The teammate's instinct likely came from RPC-style or older conventional-routing habits; the coaching point is that in REST the method <em>is</em> the verb, so the URL should name only the resource. Beyond correctness, consistent noun-based routes make the whole API predictable, which is REST's core value.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">When and why would you write a custom route constraint?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>When the built-in constraints (<code>int</code>, <code>guid</code>, <code>alpha</code>, <code>range</code>, <code>regex</code>, etc.) can't express a domain-specific URL-segment rule you want enforced at the routing layer — for example, a product SKU with a specific checksum/format, a tenant code drawn from a known set, or a slug pattern too complex or reused too often to inline as a regex everywhere. You implement <code>IRouteConstraint</code> (a <code>Match</code> method returning whether the value qualifies) and register it in routing options with a name, then use it as <code>{sku:sku}</code>. The benefits mirror built-in constraints: it disambiguates routes and rejects malformed URLs before the action runs, and centralizing the rule keeps it DRY and readable versus copy-pasted regexes. The caveats: keep custom constraints cheap and side-effect-free — they run on the hot path during matching for potentially many candidate routes, so they must not hit a database or do heavy work (existence checks belong in the action, not a constraint). And don't overuse them; if the rule is really business validation rather than URL <em>shape</em>, it belongs in validation (Day 14), not routing. So: custom constraints are for reusable, cheap, format-level URL rules the built-ins can't express — not for business logic or data lookups.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">Why does separating HTTP concerns (controllers/routing) from business logic matter architecturally?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Because it's what keeps an API maintainable, testable, and adaptable as it grows, and it's the natural consequence of treating the controller as a thin HTTP adapter. When controllers only handle HTTP (routing, binding, validation, status-code translation) and delegate real work to injected domain services, several things follow. <strong>Testability</strong>: the business logic lives in plain services you can unit-test without spinning up the HTTP stack (Day 13), while controllers stay trivial enough to need little testing. <strong>Reusability</strong>: the same service can back a controller endpoint, a minimal API, a background worker (Day 12), or a gRPC method — the logic isn't trapped in the web layer. <strong>Adaptability</strong>: you can change the transport (add a new API version, swap controllers for minimal APIs, expose the same logic over a message queue) without rewriting business rules, and change business rules without touching routing. <strong>Clarity and single responsibility</strong>: routing/controllers answer "how does this reach the web?", services answer "what does the business do?" — mixing them produces fat controllers that are hard to read, test, and reuse. This layering is why the series moves from controllers (the HTTP edge) into dependency injection and services next: the edge should be thin, and the value should live behind it. The architectural principle is that the delivery mechanism (HTTP, controllers, routes) is a detail that should be swappable around a stable core of business logic.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Lock in Q1–Q8 first — controller vs action, <code>ControllerBase</code> vs <code>Controller</code>, what <code>[ApiController]</code> does, and <code>{id:int}</code> constraints are the guaranteed openers, and they're the mechanics you'll use in every single endpoint. Then own Q10 and Q11 together: route-vs-query and the AmbiguousMatchException/specificity story are the mid-level questions that show you actually understand <em>how</em> routing decides, not just that it works. Save the senior set (Q19 controllers-vs-minimal-APIs, Q20 thin controllers, Q21 versioning) for after the hands-on — once you've felt a literal beat a parameter and a constraint reject a bad URL live, the design-level answers land with real conviction. The one-line takeaway for Day 2: routing maps <em>verb + URL</em> to <em>one action method</em>, and constraints plus specificity make that mapping unambiguous.</p>
+  </div>
+</section>
+
+<footer>Day 2 of the .NET series · Controllers &amp; Routing: Action Methods, Attribute Routing, Templates &amp; Constraints · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

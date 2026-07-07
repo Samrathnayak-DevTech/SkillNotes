@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Bit Manipulation I</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;
+  --line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;
+  --blue:#3a6ea5;--blue-soft:#dde9f3;
+  --rose:#b0496b;--rose-soft:#f6e2ea;
+  --green:#5a7d5a;--green-soft:#e2ede0;
+  --purple:#7a5c9e;--purple-soft:#ece4f3;
+  --code-bg:#2b2a33;--code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;border-radius:0 2px 2px 0;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+/* SIDEBAR */
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem}
+.nav-group{margin-bottom:.2rem}
+.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft)}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--accent);opacity:.7;flex-shrink:0}
+/* MOBILE */
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s}
+.nav-toggle:hover{transform:scale(1.08)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px)}
+.sidebar-overlay.open{display:block}
+/* MAIN */
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px}
+/* HERO */
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft)}
+/* SECTIONS */
+.section{margin-bottom:5rem;scroll-margin-top:2rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem}
+p{margin-bottom:1rem}
+/* CALLOUTS */
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+/* INLINE CODE */
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em}
+/* CODE BLOCKS */
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:.85rem}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980}
+.copy-btn.copied{color:#89d185;border-color:#89d185}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink)}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+/* TABLES */
+.table-wrap{overflow-x:auto;margin:1.5rem 0}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+thead th{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;font-family:"JetBrains Mono",monospace;font-size:.85rem}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--bg-soft)}
+/* TRUTH TABLE special */
+.truth-table tbody td{text-align:center}
+.truth-table thead th{text-align:center}
+.td-1{color:var(--accent);font-weight:600}
+.td-0{color:var(--ink-soft)}
+/* COMPLEXITY */
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.complexity-badge .label{color:var(--ink-soft)}
+.complexity-badge .val{color:var(--accent);font-weight:600}
+/* CARDS */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.3rem;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 4px 16px rgba(45,42,38,.07);transform:translateY(-2px)}
+.card-glyph{font-family:"Fraunces",serif;font-size:1.6rem;margin-bottom:.4rem;display:block}
+.card h4{font-family:"Fraunces",serif;font-size:1rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .35rem}
+.card p{font-size:.88rem;color:var(--ink-soft);margin:0;line-height:1.5}
+
+/* BIT DIAGRAM */
+.bit-row{display:flex;align-items:center;gap:.25rem;font-family:"JetBrains Mono",monospace;font-size:.82rem;flex-wrap:nowrap;overflow-x:auto;padding:.2rem 0}
+.bit-cell{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:4px;font-weight:600;flex-shrink:0}
+.bit-cell.b1{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.bit-cell.b0{background:var(--bg-soft);color:var(--ink-soft)}
+.bit-cell.bh{background:var(--blue-soft);color:var(--blue);border-color:var(--blue)}
+.bit-idx{font-family:"JetBrains Mono",monospace;font-size:.58rem;color:var(--blue);text-align:center;margin-top:2px}
+.bit-col{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.bit-diagram{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.4rem;margin:1.5rem 0;overflow-x:auto}
+.bit-op-row{display:flex;align-items:center;gap:.8rem;margin:.3rem 0;font-family:"JetBrains Mono",monospace;font-size:.82rem}
+.bit-op-label{width:80px;flex-shrink:0;color:var(--ink-soft);font-size:.75rem}
+.bit-op-result{font-weight:600;color:var(--green)}
+.bit-separator{height:1px;background:var(--line);margin:.4rem 0;flex:1}
+
+/* SHIFT TABLE */
+.shift-table{overflow-x:auto;margin:1.5rem 0}
+.shift-table table{font-size:.78rem}
+.shift-table td,.shift-table th{padding:.4rem .7rem;font-family:"JetBrains Mono",monospace}
+
+/* PROPERTY PILLS */
+.prop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.6rem;margin:1.2rem 0}
+.prop-pill{font-family:"JetBrains Mono",monospace;font-size:.82rem;padding:.55rem 1rem;border-radius:8px;border:1px solid var(--line);background:var(--bg);display:flex;align-items:center;gap:.6rem}
+.prop-pill .lhs{color:var(--ink-soft)}.prop-pill .eq{color:var(--line)}.prop-pill .rhs{color:var(--accent);font-weight:600}
+
+/* FORMULA BOX */
+.formula-box{background:var(--blue-soft);border:2px solid var(--blue);border-radius:10px;padding:1rem 1.4rem;margin:1rem 0;font-family:"JetBrains Mono",monospace;font-size:.9rem;color:var(--blue);text-align:center}
+.formula-box .f-label{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:.4rem}
+.formula-big{font-size:1rem;font-weight:600}
+
+/* RECAP */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent)}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5}
+/* LEETCODE */
+.lc-list{list-style:none;padding:0;margin:1rem 0}
+.lc-list li{display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem}
+.lc-list li:last-child{border-bottom:none}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;margin-top:.15rem}
+.lc-diff.easy{background:var(--green-soft);color:var(--green)}
+.lc-diff.medium{background:var(--accent-soft);color:var(--accent)}
+.lc-diff.hard{background:var(--rose-soft);color:var(--rose)}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.lc-why{color:var(--ink-soft);font-size:.82rem}
+@media(max-width:768px){
+  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12)}
+  .sidebar.open{transform:translateX(0)}
+  .nav-toggle{display:flex}
+  .main{padding:0 1.2rem 4rem}
+}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+<div class="layout">
+
+<nav class="sidebar">
+  <div class="sidebar-logo">DSA Notes · Series 4<strong>Bit Manipulation I</strong></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Operators</div>
+    <a class="nav-link" href="#operators"><span class="nav-num">01</span>Bitwise Operators</a>
+    <a class="nav-link" href="#properties"><span class="nav-num">02</span>Basic Properties</a>
+    <a class="nav-link" href="#commutative"><span class="nav-num">03</span>Commutative &amp; Associative</a>
+    <a class="nav-link" href="#xor-tricks"><span class="nav-num">04</span>XOR Tricks &amp; Unique Element</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Shift Operators</div>
+    <a class="nav-link" href="#left-shift"><span class="nav-num">05</span>Left Shift ( &lt;&lt; )</a>
+    <a class="nav-link" href="#right-shift"><span class="nav-num">06</span>Right Shift ( &gt;&gt; )</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Bit Operations</div>
+    <a class="nav-link" href="#set-check-toggle"><span class="nav-num">07</span>Set · Check · Toggle · Unset</a>
+    <a class="nav-link" href="#count-bits"><span class="nav-num">08</span>Count Set Bits</a>
+    <a class="nav-link" href="#bits-in-range"><span class="nav-num">09</span>Set Bits in a Range</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">10</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">11</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 4</p>
+  <h1>Bit<br>Manipulation I</h1>
+  <p class="hero-lede">Master the six bitwise operators, their algebraic properties, shift arithmetic, and five essential bit tricks — set, check, toggle, unset a bit, count set bits, and construct a number with bits set in a given range.</p>
+  <div class="chips">
+    <span class="chip">&amp; | ^ ~ &lt;&lt; &gt;&gt;</span>
+    <span class="chip">XOR Unique Element</span>
+    <span class="chip">Set / Unset / Toggle</span>
+    <span class="chip">Count Set Bits</span>
+    <span class="chip">Bits in a Range</span>
+  </div>
+</header>
+
+<!-- ─── 01: OPERATORS ─── -->
+<section class="section" id="operators">
+  <div class="section-header"><span class="section-num">01</span><h2>Bitwise Operators</h2></div>
+
+  <p>Bitwise operators work on the individual <strong>binary digits (bits)</strong> of integers rather than their numeric values. Java, C, and C++ all support the six operators below.</p>
+
+  <div class="table-wrap">
+    <table class="truth-table">
+      <thead>
+        <tr><th>a</th><th>b</th><th>a &amp; b<br/>(AND)</th><th>a | b<br/>(OR)</th><th>a ^ b<br/>(XOR)</th><th>~a<br/>(NOT)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="td-0">0</td><td class="td-0">0</td><td class="td-0">0</td><td class="td-0">0</td><td class="td-0">0</td><td class="td-1">1</td></tr>
+        <tr><td class="td-0">0</td><td class="td-1">1</td><td class="td-0">0</td><td class="td-1">1</td><td class="td-1">1</td><td class="td-1">1</td></tr>
+        <tr><td class="td-1">1</td><td class="td-0">0</td><td class="td-0">0</td><td class="td-1">1</td><td class="td-1">1</td><td class="td-0">0</td></tr>
+        <tr><td class="td-1">1</td><td class="td-1">1</td><td class="td-1">1</td><td class="td-1">1</td><td class="td-0">0</td><td class="td-0">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Memory Hook — "Same Same Puppy Shame"</span>
+    The class mnemonic helps recall XOR (^): XOR gives <strong>1 when the bits are different</strong> and <strong>0 when they are the same</strong>. Think: "same → shame (0)". AND gives 1 only when both are 1; OR gives 0 only when both are 0.
+  </div>
+
+  <div class="cards-grid">
+    <div class="card">
+      <span class="card-glyph">&amp;</span>
+      <h4>AND — Both must be 1</h4>
+      <p>Output is 1 only when both input bits are 1. Used to <strong>check</strong> or <strong>clear</strong> specific bits.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">|</span>
+      <h4>OR — At least one is 1</h4>
+      <p>Output is 1 when either input bit is 1. Used to <strong>set</strong> specific bits.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">^</span>
+      <h4>XOR — Exactly one is 1</h4>
+      <p>Output is 1 when the bits differ. Used to <strong>toggle</strong> bits and cancel paired values.</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">~</span>
+      <h4>NOT — Flip every bit</h4>
+      <p>Inverts all 32 bits. In Java, <code>~a = -(a+1)</code> due to two's complement representation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─── 02: BASIC PROPERTIES ─── -->
+<section class="section" id="properties">
+  <div class="section-header"><span class="section-num">02</span><h2>Basic Properties</h2></div>
+
+  <p>Seven fundamental identities form the bedrock of all bit manipulation. Memorize these — they appear constantly in interview problems.</p>
+
+  <div class="prop-grid">
+    <div class="prop-pill"><span class="lhs">A &amp; 0</span><span class="eq">→</span><span class="rhs">0</span></div>
+    <div class="prop-pill"><span class="lhs">A &amp; A</span><span class="eq">→</span><span class="rhs">A</span></div>
+    <div class="prop-pill"><span class="lhs">A | 0</span><span class="eq">→</span><span class="rhs">A</span></div>
+    <div class="prop-pill"><span class="lhs">A | A</span><span class="eq">→</span><span class="rhs">A</span></div>
+    <div class="prop-pill"><span class="lhs">A ^ 0</span><span class="eq">→</span><span class="rhs">A</span></div>
+    <div class="prop-pill"><span class="lhs">A ^ A</span><span class="eq">→</span><span class="rhs">0</span></div>
+    <div class="prop-pill"><span class="lhs">A &amp; 1</span><span class="eq">→</span><span class="rhs">odd/even check</span></div>
+  </div>
+
+  <h3>Property 1 — Even / Odd Check</h3>
+  <p>The 0th (least significant) bit determines parity. If it is 1 the number is odd; if 0 it is even.</p>
+  <div class="formula-box">
+    <span class="f-label">Even / Odd</span>
+    <span class="formula-big">if (a &amp; 1) == 1 → odd &nbsp;|&nbsp; if (a &amp; 1) == 0 → even</span>
+  </div>
+  <p>Demonstration with 11 (odd) and 10 (even) in binary:</p>
+  <div class="bit-diagram">
+    <div style="display:flex;gap:2.5rem;flex-wrap:wrap">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);margin-bottom:.4rem">11 = 1011 &amp; 0001 = 1 → ODD</div>
+        <div class="bit-row" id="odd-demo"></div>
+      </div>
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);margin-bottom:.4rem">10 = 1010 &amp; 0001 = 0 → EVEN</div>
+        <div class="bit-row" id="even-demo"></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Property 6 — XOR Self-Cancellation</h3>
+  <p>XOR-ing any number with itself always yields 0, because every bit position has the same value on both sides.</p>
+  <div class="formula-box">
+    <span class="f-label">Self-cancellation</span>
+    <span class="formula-big">A ^ A = 0</span>
+  </div>
+  <p>This is the key insight behind finding a unique element — all paired values XOR to zero and disappear, leaving only the unpaired one.</p>
+</section>
+
+<!-- ─── 03: COMMUTATIVE & ASSOCIATIVE ─── -->
+<section class="section" id="commutative">
+  <div class="section-header"><span class="section-num">03</span><h2>Commutative &amp; Associative Properties</h2></div>
+
+  <h3>Commutative Property</h3>
+  <p>The order of operands does not matter for AND, OR, or XOR.</p>
+  <div class="prop-grid">
+    <div class="prop-pill"><span class="lhs">A &amp; B</span><span class="eq">=</span><span class="rhs">B &amp; A</span></div>
+    <div class="prop-pill"><span class="lhs">A | B</span><span class="eq">=</span><span class="rhs">B | A</span></div>
+    <div class="prop-pill"><span class="lhs">A ^ B</span><span class="eq">=</span><span class="rhs">B ^ A</span></div>
+  </div>
+
+  <h3>Associative Property</h3>
+  <p>Grouping does not matter when chaining the same operator.</p>
+  <div class="prop-grid">
+    <div class="prop-pill"><span class="lhs">(A&amp;B)&amp;C</span><span class="eq">=</span><span class="rhs">A&amp;(B&amp;C)</span></div>
+    <div class="prop-pill"><span class="lhs">(A|B)|C</span><span class="eq">=</span><span class="rhs">A|(B|C)</span></div>
+    <div class="prop-pill"><span class="lhs">(A^B)^C</span><span class="eq">=</span><span class="rhs">A^(B^C)</span></div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Why This Matters</span>
+    Because XOR is both commutative and associative, you can freely reorder and regroup XOR terms. This lets us simplify an expression like <code>a^b^a^d^b</code> by grouping pairs: <code>(a^a)^(b^b)^d = 0^0^d = d</code>.
+  </div>
+
+  <h3>Practice Questions</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Expression</th><th>Simplification Steps</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>a ^ b ^ a ^ d ^ b</td>
+          <td>(a^a) ^ (b^b) ^ d = 0 ^ 0 ^ d</td>
+          <td><strong>d</strong></td>
+        </tr>
+        <tr>
+          <td>1 ^ 3 ^ 5 ^ 3 ^ 2 ^ 1 ^ 5</td>
+          <td>Regroup: (1^1) ^ (3^3) ^ (5^5) ^ 2 = 0^0^0^2</td>
+          <td><strong>2</strong></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── 04: XOR TRICKS ─── -->
+<section class="section" id="xor-tricks">
+  <div class="section-header"><span class="section-num">04</span><h2>XOR Tricks — Find the Unique Element</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given <code>arr[N]</code> where every element appears exactly twice except one unique element, find that unique element. The array length N is always odd.
+  </div>
+
+  <p><strong>Idea:</strong> XOR all elements together. Every pair cancels to 0 (using A^A=0). The unique element XORs with 0 and remains (using A^0=A).</p>
+
+  <p>Example: arr = [2, 7, 2, 7, 4, 6, 4]</p>
+  <p>2^7^2^7^4^6^4 = (2^2)^(7^7)^(4^4)^6 = 0^0^0^6 = <strong>6</strong></p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — find unique element O(N)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">findUnique</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="ty">int</span> ans = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        ans = ans ^ arr[i];   <span class="cmt">// paired values cancel; unique survives</span>
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    Imagine a room where everyone walks in wearing a numbered jersey. Whenever two people with the same number meet, they cancel out and both leave. The one person left standing at the end is the unique element.
+  </div>
+</section>
+
+<!-- ─── 05: LEFT SHIFT ─── -->
+<section class="section" id="left-shift">
+  <div class="section-header"><span class="section-num">05</span><h2>Left Shift Operator ( &lt;&lt; )</h2></div>
+
+  <p>Left shift (<code>&lt;&lt;</code>) shifts all bits toward the most significant (left) end. Zeros fill in from the right. Each shift left is equivalent to multiplying by 2.</p>
+
+  <div class="formula-box">
+    <span class="f-label">Left shift formula</span>
+    <span class="formula-big">a &lt;&lt; n  =  a × 2ⁿ &nbsp;&nbsp;|&nbsp;&nbsp; 1 &lt;&lt; n  =  2ⁿ</span>
+  </div>
+
+  <h3>Trace — a = 10 (binary 00001010), 8-bit integers</h3>
+  <div class="shift-table">
+    <table>
+      <thead><tr><th>Expression</th><th>Binary (8 bits)</th><th>Decimal</th><th>× factor</th></tr></thead>
+      <tbody>
+        <tr><td>a</td><td>0000 1010</td><td>10</td><td>—</td></tr>
+        <tr><td>a &lt;&lt; 1</td><td>0001 0100</td><td>20</td><td>×2</td></tr>
+        <tr><td>a &lt;&lt; 2</td><td>0010 1000</td><td>40</td><td>×4</td></tr>
+        <tr><td>a &lt;&lt; 3</td><td>0101 0000</td><td>80</td><td>×8</td></tr>
+        <tr><td>a &lt;&lt; 4</td><td>1010 0000</td><td>160</td><td>×16</td></tr>
+        <tr><td>a &lt;&lt; 5</td><td>0100 0000</td><td>64</td><td class="td-1">OVERFLOW — 320 &gt; 255</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Overflow Warning</span>
+    An 8-bit integer can hold at most 255. Shifting 10 left by 5 would give 320, which overflows and wraps around to 64 (the high bit is lost). In Java, an <code>int</code> is 32 bits (max ≈ 2.1 billion) and a <code>long</code> is 64 bits. Always check for overflow when using left shift, especially when generating masks like <code>1 &lt;&lt; 31</code> — use <code>1L &lt;&lt; 31</code> to avoid sign-bit issues.
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Power-of-Two Trick</span>
+    <code>1 &lt;&lt; n</code> gives exactly 2ⁿ. This is the fastest way to generate powers of two and to build bit masks with a single 1 at position n.
+  </div>
+</section>
+
+<!-- ─── 06: RIGHT SHIFT ─── -->
+<section class="section" id="right-shift">
+  <div class="section-header"><span class="section-num">06</span><h2>Right Shift Operator ( &gt;&gt; )</h2></div>
+
+  <p>Right shift (<code>&gt;&gt;</code>) shifts all bits toward the least significant (right) end. For non-negative integers, zeros fill in from the left. Each right shift is equivalent to integer division by 2 (floor division).</p>
+
+  <div class="formula-box">
+    <span class="f-label">Right shift formula</span>
+    <span class="formula-big">a &gt;&gt; n  =  ⌊a ÷ 2ⁿ⌋ &nbsp;&nbsp;|&nbsp;&nbsp; 1 &gt;&gt; n  =  ⌊1 ÷ 2ⁿ⌋</span>
+  </div>
+
+  <h3>Trace — a = 10 (binary 00001010)</h3>
+  <div class="shift-table">
+    <table>
+      <thead><tr><th>Expression</th><th>Binary (8 bits)</th><th>Decimal</th><th>÷ factor</th></tr></thead>
+      <tbody>
+        <tr><td>a</td><td>0000 1010</td><td>10</td><td>—</td></tr>
+        <tr><td>a &gt;&gt; 1</td><td>0000 0101</td><td>5</td><td>÷2</td></tr>
+        <tr><td>a &gt;&gt; 2</td><td>0000 0010</td><td>2</td><td>÷4</td></tr>
+        <tr><td>a &gt;&gt; 3</td><td>0000 0001</td><td>1</td><td>÷8</td></tr>
+        <tr><td>a &gt;&gt; 4</td><td>0000 0000</td><td>0</td><td>÷16</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Halving Trick</span>
+    <code>N &gt;&gt; 1</code> and <code>N / 2</code> produce identical results for non-negative integers. Bit shifting is marginally faster on some hardware and is commonly used in binary search to compute mid: <code>int mid = lo + ((hi - lo) &gt;&gt; 1)</code>.
+  </div>
+</section>
+
+<!-- ─── 07: SET CHECK TOGGLE UNSET ─── -->
+<section class="section" id="set-check-toggle">
+  <div class="section-header"><span class="section-num">07</span><h2>Set · Check · Toggle · Unset the i-th Bit</h2></div>
+
+  <p>The expression <code>1 &lt;&lt; i</code> produces a <strong>mask</strong> — a number with exactly one 1 bit at position i and 0s everywhere else. Combining this mask with OR, AND, or XOR lets us manipulate any single bit of a number N.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">The Mask Pattern</span>
+    <code>mask = 1 &lt;&lt; i</code> → a number like 00001000 (for i=3). This mask is the key to all four operations below.
+  </div>
+
+  <div class="cards-grid">
+    <div class="card">
+      <span class="card-glyph">✦</span>
+      <h4>Set i-th Bit (OR)</h4>
+      <p>Force bit i to 1 regardless of its current value. OR with the mask: any bit OR'd with 1 becomes 1.</p>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent);margin-top:.4rem">N = N | (1 &lt;&lt; i)</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">🔍</span>
+      <h4>Check i-th Bit (AND)</h4>
+      <p>Test whether bit i is set. AND with the mask: result is non-zero if bit i was 1, zero if it was 0.</p>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent);margin-top:.4rem">N &amp; (1 &lt;&lt; i) == 0 → unset<br/>N &amp; (1 &lt;&lt; i) != 0 → set</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">⇄</span>
+      <h4>Toggle i-th Bit (XOR)</h4>
+      <p>Flip bit i: 0→1 or 1→0. XOR with the mask: any bit XOR'd with 1 flips.</p>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent);margin-top:.4rem">N = N ^ (1 &lt;&lt; i)</p>
+    </div>
+    <div class="card">
+      <span class="card-glyph">✗</span>
+      <h4>Unset i-th Bit (AND + NOT)</h4>
+      <p>Force bit i to 0 only if it is currently 1. Check first, then XOR to clear.</p>
+      <p style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent);margin-top:.4rem">if (N &amp; (1&lt;&lt;i)) != 0:<br/>&nbsp;&nbsp;N = N ^ (1 &lt;&lt; i)</p>
+    </div>
+  </div>
+
+  <h3>Visual — Set bit 3 of N = 10110 (= 22)</h3>
+  <div class="bit-diagram">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.75rem;margin-bottom:.8rem">
+      N &nbsp;&nbsp;&nbsp;= 1 0 1 1 0 &nbsp;(bit 3 is 0 — unset)<br/>
+      1&lt;&lt;3 = 0 1 0 0 0<br/>
+      ──────────────────<br/>
+      N|mask= 1 1 1 1 0 &nbsp;(bit 3 is now 1 — set) &nbsp;→ 30
+    </div>
+  </div>
+
+  <h3>Visual — Check bit 3 of N = 101101 and N = 101001</h3>
+  <div class="bit-diagram">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.75rem">
+      N = 101101 &amp; 1&lt;&lt;3 (=001000) = 001000 ≠ 0 → bit 3 is <strong style="color:var(--accent)">SET</strong><br/>
+      N = 101001 &amp; 1&lt;&lt;3 (=010000) = 000000 = 0 → bit 4 is <strong style="color:var(--rose)">UNSET</strong>
+    </div>
+  </div>
+
+  <h3>Code — All Four Operations</h3>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — set, check, toggle, unset bit i</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Set the i-th bit of N</span>
+N = N | (<span class="num">1</span> &lt;&lt; i);
+
+<span class="cmt">// Check if the i-th bit of N is set</span>
+<span class="kw">if</span> ((N &amp; (<span class="num">1</span> &lt;&lt; i)) == <span class="num">0</span>) {
+    <span class="cmt">// bit i is unset (0)</span>
+} <span class="kw">else</span> {
+    <span class="cmt">// bit i is set (1)</span>
+}
+
+<span class="cmt">// Toggle the i-th bit of N</span>
+N = N ^ (<span class="num">1</span> &lt;&lt; i);
+
+<span class="cmt">// Unset the i-th bit of N (clear it to 0)</span>
+<span class="kw">if</span> ((N &amp; (<span class="num">1</span> &lt;&lt; i)) != <span class="num">0</span>) {   <span class="cmt">// only if it's currently set</span>
+    N = N ^ (<span class="num">1</span> &lt;&lt; i);
+}</pre>
+  </div>
+</section>
+
+<!-- ─── 08: COUNT SET BITS ─── -->
+<section class="section" id="count-bits">
+  <div class="section-header"><span class="section-num">08</span><h2>Count Set Bits</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given an integer N, count the number of 1-bits (set bits) in its 32-bit binary representation. Also known as the <strong>popcount</strong> or Hamming weight.
+  </div>
+
+  <p>Example: N = 12 → binary <code>00000000 00000000 00000000 00001100</code> → 2 set bits.</p>
+
+  <h3>Approach 1 — Check All 32 Bits</h3>
+  <p>Iterate over all 32 bit positions (0 to 31). At each position i, check if bit i is set using the mask <code>1 &lt;&lt; i</code>.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — check all 32 positions</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">countSetBits</span>(<span class="ty">int</span> n) {
+    <span class="ty">int</span> count = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; <span class="num">32</span>; i++) {
+        <span class="kw">if</span> ((n &amp; (<span class="num">1</span> &lt;&lt; i)) != <span class="num">0</span>) count++;
+    }
+    <span class="kw">return</span> count;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(1)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+  <p>O(1) because it always runs exactly 32 iterations regardless of N's value.</p>
+
+  <h3>Approach 2 — Right-Shift Until Zero (Faster in Practice)</h3>
+  <p>Instead of scanning all 32 positions, repeatedly check the least significant bit and right-shift. The loop ends as soon as N becomes 0, which happens after at most 32 iterations — but typically far fewer for small numbers.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — right-shift method</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">countSetBitsShift</span>(<span class="ty">int</span> n) {
+    <span class="ty">int</span> count = <span class="num">0</span>;
+    <span class="kw">while</span> (n != <span class="num">0</span>) {
+        <span class="kw">if</span> ((n &amp; <span class="num">1</span>) == <span class="num">1</span>) count++;  <span class="cmt">// check LSB</span>
+        n = (n &gt;&gt; <span class="num">1</span>);              <span class="cmt">// n = n/2, drop LSB</span>
+    }
+    <span class="kw">return</span> count;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(1)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <h3>Dry Run — N = 26 (binary 11010)</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>N (binary)</th><th>N &amp; 1</th><th>count</th><th>N after &gt;&gt; 1</th></tr></thead>
+      <tbody>
+        <tr><td>11010</td><td>0</td><td>0</td><td>1101</td></tr>
+        <tr><td>01101</td><td>1</td><td>1</td><td>0110</td></tr>
+        <tr><td>00110</td><td>0</td><td>1</td><td>0011</td></tr>
+        <tr><td>00011</td><td>1</td><td>2</td><td>0001</td></tr>
+        <tr><td>00001</td><td>1</td><td>3</td><td>0000 → loop ends</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--green)">Answer: 3 set bits in 26.</p>
+
+  <div class="callout tip">
+    <span class="callout-tag">Brian Kernighan's Trick (Bonus)</span>
+    The expression <code>n &amp; (n-1)</code> clears the lowest set bit of n in one operation. Repeatedly applying this until n = 0 counts set bits in exactly O(k) iterations where k is the number of set bits — faster than O(32) for sparse integers.
+  </div>
+</section>
+
+<!-- ─── 09: BITS IN RANGE ─── -->
+<section class="section" id="bits-in-range">
+  <div class="section-header"><span class="section-num">09</span><h2>Set Bits in a Range — A, B, C Problem</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given three integers A, B, C (1 ≤ A, B, C ≤ 20), construct a decimal number whose binary representation has:
+    <ul style="margin:.4rem 0 0 1.2rem">
+      <li>A zeros in the most significant section</li>
+      <li>B ones in the middle section</li>
+      <li>C zeros in the least significant section</li>
+    </ul>
+    The number has A+B+C total bits (excluding leading zeros in the A section).
+  </div>
+
+  <h3>Structure of the Binary Number</h3>
+  <div class="bit-diagram">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:2">
+      <span style="color:var(--ink-soft)">← A zeros →</span> &nbsp; <span style="color:var(--accent)">← B ones →</span> &nbsp; <span style="color:var(--ink-soft)">← C zeros →</span><br/>
+      The B ones occupy bit positions C through B+C−1 (0-indexed from right).
+    </div>
+  </div>
+
+  <h3>Example 1 — A=4, B=3, C=2</h3>
+  <div class="bit-diagram">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.78rem">
+      0 0 0 0 <span style="color:var(--accent);font-weight:700">1 1 1</span> 0 0 &nbsp;→ bits 2,3,4 are set → decimal <strong>28</strong><br/>
+      (positions: 8 7 6 5 <span style="color:var(--accent)">4 3 2</span> 1 0)
+    </div>
+  </div>
+
+  <h3>Example 2 — A=5, B=4, C=3</h3>
+  <div class="bit-diagram">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.78rem">
+      0 0 0 0 0 <span style="color:var(--accent);font-weight:700">1 1 1 1</span> 0 0 0 &nbsp;→ bits 3,4,5,6 are set → decimal <strong>120</strong>
+    </div>
+  </div>
+
+  <p>The key insight: set bits at positions C, C+1, C+2, … C+B−1, which is exactly the loop <code>for i = C; i &lt; B+C; i++</code>.</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — construct number with B ones starting at bit C</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">setBitsInRange</span>(<span class="ty">int</span> A, <span class="ty">int</span> B, <span class="ty">int</span> C) {
+    <span class="ty">int</span> ans = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = C; i &lt; B + C; i++) {
+        ans = ans | (<span class="num">1</span> &lt;&lt; i);   <span class="cmt">// set bit at position i</span>
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(B)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <h3>Variant — A = 4, B = 2, C = 3 (ones in the low section)</h3>
+  <p>The problem can also be described with ones at both the low and high ends and zeros in the middle. In that case, use two loops:</p>
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — ones at low C positions and high A positions</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> ans = <span class="num">0</span>;
+<span class="cmt">// Set bits 0 to C-1 (low block of 1s)</span>
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; C; i++)   ans = ans | (<span class="num">1</span> &lt;&lt; i);
+<span class="cmt">// Set bits B+C to B+C+A-1 (high block of 1s)</span>
+<span class="kw">for</span> (<span class="ty">int</span> i = B + C; i &lt; B + C + A; i++) ans = ans | (<span class="num">1</span> &lt;&lt; i);</pre>
+  </div>
+  <p>Example A=4, B=2, C=3: result binary = <code>1111 00 111</code> = <strong>487</strong>.</p>
+</section>
+
+<!-- ─── 10: RECAP ─── -->
+<section class="section" id="recap">
+  <div class="section-header"><span class="section-num">10</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><h4>&amp; AND</h4><p>Output 1 only when both bits are 1. Checks bits, clears bits (with NOT mask).</p></div>
+    <div class="recap-card"><h4>| OR</h4><p>Output 1 when at least one bit is 1. Used to set specific bits.</p></div>
+    <div class="recap-card"><h4>^ XOR</h4><p>Output 1 when bits differ. Toggles bits; cancels pairs (A^A=0); preserves with zero (A^0=A).</p></div>
+    <div class="recap-card"><h4>Even / Odd Check</h4><p><code>a &amp; 1 == 1</code> → odd. <code>a &amp; 1 == 0</code> → even. The 0th bit is the parity bit.</p></div>
+    <div class="recap-card"><h4>Left Shift</h4><p><code>a &lt;&lt; n = a × 2ⁿ</code>. <code>1 &lt;&lt; n = 2ⁿ</code>. Fills zeros from the right. Beware overflow.</p></div>
+    <div class="recap-card"><h4>Right Shift</h4><p><code>a &gt;&gt; n = a ÷ 2ⁿ</code> (floor). Fills zeros from the left (for non-negative integers).</p></div>
+    <div class="recap-card"><h4>Set i-th Bit</h4><p><code>N | (1&lt;&lt;i)</code> — OR with mask forces bit i to 1.</p></div>
+    <div class="recap-card"><h4>Check i-th Bit</h4><p><code>N &amp; (1&lt;&lt;i)</code> — non-zero means set, zero means unset.</p></div>
+    <div class="recap-card"><h4>Toggle i-th Bit</h4><p><code>N ^ (1&lt;&lt;i)</code> — XOR with mask flips bit i.</p></div>
+    <div class="recap-card"><h4>Count Set Bits</h4><p>32-loop with AND, or right-shift while N≠0. Both O(1). Kernighan's trick: O(k) where k = count.</p></div>
+    <div class="recap-card"><h4>XOR Unique Element</h4><p>XOR all elements. Pairs cancel to 0; the lone unpaired value remains. O(N) time, O(1) space.</p></div>
+    <div class="recap-card"><h4>Set Bits in Range</h4><p>Loop from i=C to i&lt;B+C, OR with <code>1&lt;&lt;i</code> each time. Constructs a number with B ones starting at position C.</p></div>
+  </div>
+
+  <h3>Operator Quick Reference</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Operation</th><th>Expression</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Set bit i</td><td><code>N | (1&lt;&lt;i)</code></td><td>Bit i becomes 1</td></tr>
+        <tr><td>Check bit i</td><td><code>N &amp; (1&lt;&lt;i)</code></td><td>0 = unset, non-zero = set</td></tr>
+        <tr><td>Toggle bit i</td><td><code>N ^ (1&lt;&lt;i)</code></td><td>Bit i flips</td></tr>
+        <tr><td>Unset bit i</td><td><code>if set: N ^ (1&lt;&lt;i)</code></td><td>Bit i becomes 0</td></tr>
+        <tr><td>Even/Odd</td><td><code>N &amp; 1</code></td><td>1 = odd, 0 = even</td></tr>
+        <tr><td>Multiply by 2ⁿ</td><td><code>N &lt;&lt; n</code></td><td>N × 2ⁿ (watch overflow)</td></tr>
+        <tr><td>Divide by 2ⁿ</td><td><code>N &gt;&gt; n</code></td><td>⌊N / 2ⁿ⌋</td></tr>
+        <tr><td>Power of 2</td><td><code>1 &lt;&lt; n</code></td><td>2ⁿ</td></tr>
+        <tr><td>Clear lowest set bit</td><td><code>N &amp; (N-1)</code></td><td>Removes lowest 1 bit</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── 11: LEETCODE ─── -->
+<section class="section" id="leetcode">
+  <div class="section-header"><span class="section-num">11</span><h2>Related LeetCode Problems</h2></div>
+
+  <h3>XOR &amp; Unique Element</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff easy">Easy</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/single-number/" target="_blank" rel="noopener">#136 — Single Number ↗</a><br/>
+      <span class="lc-why">Exact problem from Section 04 — XOR all elements; the unique one survives.</span>
+    </span></li>
+    <li><span class="lc-diff medium">Medium</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/single-number-ii/" target="_blank" rel="noopener">#137 — Single Number II ↗</a><br/>
+      <span class="lc-why">Every element appears three times except one. Requires bit counting per position — harder XOR variant.</span>
+    </span></li>
+    <li><span class="lc-diff medium">Medium</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/single-number-iii/" target="_blank" rel="noopener">#260 — Single Number III ↗</a><br/>
+      <span class="lc-why">Two unique elements; XOR + partition by a differing bit to separate the two.</span>
+    </span></li>
+    <li><span class="lc-diff easy">Easy</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/find-the-difference/" target="_blank" rel="noopener">#389 — Find the Difference ↗</a><br/>
+      <span class="lc-why">XOR all characters of both strings; the extra character survives.</span>
+    </span></li>
+  </ul>
+
+  <h3>Count Set Bits &amp; Bit Properties</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff easy">Easy</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/number-of-1-bits/" target="_blank" rel="noopener">#191 — Number of 1 Bits ↗</a><br/>
+      <span class="lc-why">Exact problem from Section 08 — Hamming weight / popcount.</span>
+    </span></li>
+    <li><span class="lc-diff easy">Easy</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/counting-bits/" target="_blank" rel="noopener">#338 — Counting Bits ↗</a><br/>
+      <span class="lc-why">Count set bits for all numbers 0 to n. DP with right-shift: <code>dp[i] = dp[i&gt;&gt;1] + (i&amp;1)</code>.</span>
+    </span></li>
+    <li><span class="lc-diff easy">Easy</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/power-of-two/" target="_blank" rel="noopener">#231 — Power of Two ↗</a><br/>
+      <span class="lc-why">Uses <code>n &amp; (n-1) == 0</code> — a power of two has exactly one set bit, so clearing it gives 0.</span>
+    </span></li>
+    <li><span class="lc-diff easy">Easy</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/reverse-bits/" target="_blank" rel="noopener">#190 — Reverse Bits ↗</a><br/>
+      <span class="lc-why">Extract each bit, place it in the mirror position — direct application of check + set.</span>
+    </span></li>
+  </ul>
+
+  <h3>Shift Operators &amp; Masks</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff easy">Easy</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/missing-number/" target="_blank" rel="noopener">#268 — Missing Number ↗</a><br/>
+      <span class="lc-why">Solvable with XOR: XOR 0..n then XOR all array elements; missing number is left.</span>
+    </span></li>
+    <li><span class="lc-diff medium">Medium</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/sum-of-two-integers/" target="_blank" rel="noopener">#371 — Sum of Two Integers ↗</a><br/>
+      <span class="lc-why">Add without + operator using XOR (sum without carry) and AND + left-shift (carry).</span>
+    </span></li>
+    <li><span class="lc-diff medium">Medium</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/bitwise-and-of-numbers-range/" target="_blank" rel="noopener">#201 — Bitwise AND of Numbers Range ↗</a><br/>
+      <span class="lc-why">Right-shift both numbers until equal — the common prefix is the AND of the entire range.</span>
+    </span></li>
+    <li><span class="lc-diff medium">Medium</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/subsets/" target="_blank" rel="noopener">#78 — Subsets ↗</a><br/>
+      <span class="lc-why">Enumerate all 2ⁿ subsets using bitmasks — each bit in 0..2ⁿ−1 represents include/exclude for each element.</span>
+    </span></li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Recommended Study Order</span>
+    136 → 268 → 191 → 338 → 231 → 190 → 389 → 137 → 260 → 371 → 201 → 78. Start with pure XOR problems, then move to bit counting and finally masks with shifts.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+function copyCode(btn){
+  const pre=btn.closest('.code-block').querySelector('pre');
+  const ok=()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)};
+  if(navigator.clipboard)navigator.clipboard.writeText(pre.innerText).then(ok);
+  else{const t=document.createElement('textarea');t.value=pre.innerText;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);ok()}
+}
+const bar=document.getElementById('progress-bar');
+function upP(){const d=document.documentElement.scrollHeight-window.innerHeight;bar.style.width=(d>0?(window.scrollY/d)*100:0)+'%'}
+window.addEventListener('scroll',upP,{passive:true});upP();
+const sb=document.querySelector('.sidebar'),ov=document.getElementById('nav-overlay'),tg=document.getElementById('nav-toggle');
+tg.addEventListener('click',()=>{const o=sb.classList.toggle('open');ov.classList.toggle('open',o);tg.textContent=o?'✕':'☰'});
+ov.addEventListener('click',()=>{sb.classList.remove('open');ov.classList.remove('open');tg.textContent='☰'});
+document.querySelectorAll('.nav-link').forEach(l=>{
+  l.addEventListener('click',e=>{
+    const h=l.getAttribute('href');if(!h||!h.startsWith('#'))return;e.preventDefault();
+    const t=document.querySelector(h);if(!t)return;
+    window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-24,behavior:'smooth'});
+    sb.classList.remove('open');ov.classList.remove('open');tg.textContent='☰';
+  });
+});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('.section');
+function setAct(id){navLinks.forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${id}"]`);if(a){a.classList.add('active');const s=document.querySelector('.sidebar');const t=a.offsetTop,h=s.clientHeight;if(t<s.scrollTop+60||t>s.scrollTop+h-60)s.scrollTo({top:t-h/2,behavior:'smooth'})}}
+const spy=new IntersectionObserver(en=>{const v=en.filter(e=>e.isIntersecting).map(e=>e.target);if(!v.length)return;v.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top);setAct(v[0].id)},{rootMargin:'-10% 0px -55% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+const rev=new IntersectionObserver(en=>{en.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})},{threshold:.06});
+sections.forEach(s=>rev.observe(s));
+
+/* ── Bit diagrams for even/odd demo ── */
+function makeBitRow(containerId, bits){
+  const c=document.getElementById(containerId);if(!c)return;
+  bits.forEach((b,i)=>{
+    const col=document.createElement('div');col.className='bit-col';
+    const cell=document.createElement('div');cell.className='bit-cell '+(b?'b1':'b0');cell.textContent=b;
+    const idx=document.createElement('div');idx.className='bit-idx';idx.textContent=bits.length-1-i;
+    col.appendChild(cell);col.appendChild(idx);c.appendChild(col);
+  });
+}
+makeBitRow('odd-demo', [1,0,1,1]);   // 11
+makeBitRow('even-demo',[1,0,1,0]);   // 10
+</script>
+</body>
+</html>

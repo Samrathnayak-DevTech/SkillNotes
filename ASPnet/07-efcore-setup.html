@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 7 — EF Core Setup: DbContext, SQL Server &amp; Entity Configuration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">🗄️ Day 7 · EF Core Setup</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Foundations</div>
+    <a href="#s01"><span class="n">01</span>What Is EF Core?</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>Packages &amp; Connection</a>
+    <a href="#s04"><span class="n">04</span>DbContext &amp; DbSet</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Configuring Entities</div>
+    <a href="#s05"><span class="n">05</span>Conventions First</a>
+    <a href="#s06"><span class="n">06</span>Data Annotations</a>
+    <a href="#s07"><span class="n">07</span>Fluent API</a>
+    <a href="#s08"><span class="n">08</span>Annotations vs Fluent</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Getting a Database</div>
+    <a href="#s09"><span class="n">09</span>Migrations &amp; Scaffolding</a>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 07 · ASP.NET Core Fundamentals</div>
+  <h1>🗄️ EF Core: Talking to SQL Server in C#</h1>
+  <p class="lede">Databases speak SQL; your application speaks C# objects. Entity Framework Core is the translator that sits between them. Today you'll set up a <code>DbContext</code>, connect it to SQL Server, and learn the two ways of telling EF exactly how your classes map to tables — data annotations and the Fluent API.</p>
+  <div class="agenda">
+    <span class="chip">🧠 ORM Concept</span>
+    <span class="chip">🗄️ DbContext</span>
+    <span class="chip">🔌 SQL Server Connection</span>
+    <span class="chip">🏷️ Data Annotations</span>
+    <span class="chip">🪄 Fluent API</span>
+    <span class="chip">🧬 Migrations</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>🧠 What Is EF Core?</h2>
+
+  <p><strong>Entity Framework Core (EF Core)</strong> is Microsoft's <strong>ORM</strong> — an <em>Object-Relational Mapper</em>. That's a mouthful for a simple idea: it lets you work with database rows as ordinary C# objects, and it writes the SQL for you.</p>
+
+  <p>Without an ORM, saving a customer means hand-writing an <code>INSERT</code> statement, opening a connection, binding parameters, and copying results back into objects field by field. With EF Core, the same job is:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Life with EF Core</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// EF Core translates this into parameterized SQL, runs it,</span>
+<span class="cmt">// and fills in the generated Id — no SQL written by you.</span>
+<span class="kw">var</span> customer = <span class="kw">new</span> <span class="ty">Customer</span> { Name = <span class="str">"Priya Sharma"</span>, Email = <span class="str">"priya@example.com"</span> };
+db.Customers.<span class="fn">Add</span>(customer);
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();
+
+<span class="cmt">// Querying uses LINQ — EF turns it into a SELECT with a WHERE clause:</span>
+<span class="kw">var</span> recent = <span class="kw">await</span> db.Orders
+    .<span class="fn">Where</span>(o =&gt; o.CustomerId == customer.Id)
+    .<span class="fn">OrderByDescending</span>(o =&gt; o.PlacedAt)
+    .<span class="fn">ToListAsync</span>();
+</code></pre>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">🗣️ Analogy</span>
+    <p>EF Core is a <strong>professional interpreter</strong> between two people who speak different languages. You (C#) say "save this customer"; the interpreter turns it into fluent SQL for the database, listens to the reply, and translates it back into objects you understand. You <em>could</em> learn the other language and speak directly (raw SQL — sometimes worth it!), but for everyday conversation the interpreter is faster and makes fewer grammar mistakes.</p>
+  </div>
+
+  <h3>The vocabulary you'll use all week</h3>
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">🧱</span><b>Entity</b><p>A plain C# class that represents a table — e.g., a <code>Customer</code> class mapping to a <code>Customers</code> table. One object = one row.</p></div>
+    <div class="card"><span class="glyph">🗄️</span><b>DbContext</b><p>Your session with the database: it holds the entity sets, tracks changes, and turns <code>SaveChanges</code> into SQL. The heart of EF Core.</p></div>
+    <div class="card"><span class="glyph">📇</span><b>DbSet&lt;T&gt;</b><p>A property on the context representing one table — the thing you query (<code>db.Customers</code>) and add to.</p></div>
+    <div class="card"><span class="glyph">🔌</span><b>Provider</b><p>A NuGet package teaching EF one database's dialect: SQL Server, SQLite, PostgreSQL, Cosmos… Today: SQL Server.</p></div>
+    <div class="card"><span class="glyph">🗺️</span><b>The model</b><p>EF's internal map of how classes, properties, and relationships correspond to tables, columns, and foreign keys.</p></div>
+    <div class="card"><span class="glyph">🧬</span><b>Migration</b><p>A generated script of schema changes, so your database structure evolves in step with your C# classes.</p></div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>EF Core doesn't replace SQL — it <strong>generates</strong> SQL. Everything it does ends up as ordinary <code>SELECT</code>/<code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code> statements against your database. Good EF developers can always answer: "what SQL will this produce?"</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <p>Today's setup has five moving parts. Here's how they hang together before we build each one:</p>
+
+  <div class="mindmap">
+    <div class="mm-core">EF Core Setup<small>C# classes ↔ SQL Server tables</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-accent">
+        <h4>🗄️ DbContext</h4>
+        <ul>
+          <li>One class per database</li>
+          <li><code>DbSet&lt;T&gt;</code> per table</li>
+          <li>Registered scoped via DI</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-blue">
+        <h4>🔌 Connection</h4>
+        <ul>
+          <li>Provider package</li>
+          <li>Connection string in config</li>
+          <li><code>UseSqlServer(...)</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>📐 Conventions</h4>
+        <ul>
+          <li>Sensible defaults</li>
+          <li><code>Id</code> → primary key</li>
+          <li>Zero configuration</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-rose">
+        <h4>🏷️ Data Annotations</h4>
+        <ul>
+          <li>Attributes on the class</li>
+          <li><code>[Required]</code>, <code>[MaxLength]</code></li>
+          <li>Simple, visible, limited</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>🪄 Fluent API</h4>
+        <ul>
+          <li><code>OnModelCreating</code></li>
+          <li>Full power, wins conflicts</li>
+          <li>Keeps entities clean</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h3>How a query travels</h3>
+  <p>When your service asks for data, the request flows down through layers and the data flows back up:</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell"><div class="val">🧑‍💻 Service</div><div class="idx">LINQ query</div></div>
+      <div class="arr-cell highlight"><div class="val">🗄️ DbContext</div><div class="idx">builds + tracks</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">🔌 Provider</div><div class="idx">translates to T-SQL</div></div>
+      <div class="arr-cell"><div class="val">🛣️ SqlClient</div><div class="idx">sends over the wire</div></div>
+      <div class="arr-cell highlight-green"><div class="val">🏛️ SQL Server</div><div class="idx">executes, returns rows</div></div>
+    </div>
+    <div class="arr-caption">Request goes left → right · rows come back and are "materialized" into your entity objects</div>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Connecting the Days</span>
+    <p>Notice the pattern from Day 3 (DI) and Day 6 (logging) repeating: your code depends on an abstraction (<code>DbContext</code> + LINQ), while a pluggable piece (the provider) handles the messy specifics. Swap SQL Server for PostgreSQL and your services barely change.</p>
+  </div>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>🔌 Packages &amp; the Connection String</h2>
+
+  <h3>Step 1 — install the provider 📦</h3>
+  <p>EF Core ships as NuGet packages. The SQL Server provider pulls in the EF Core runtime with it:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># The SQL Server provider (brings EF Core core packages along):</span>
+dotnet add package Microsoft.EntityFrameworkCore.SqlServer
+
+<span class="cmt"># Needed later for migrations/scaffolding commands:</span>
+dotnet add package Microsoft.EntityFrameworkCore.Design
+
+<span class="cmt"># The command-line tool itself (one-time, global):</span>
+dotnet tool install --global dotnet-ef
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Version Pairing</span>
+    <p>EF Core providers generally <strong>do not work across major versions</strong> — a provider built for EF Core 8 won't work with EF Core 9. Keep the provider's major version matched to your EF Core (and usually your .NET) version, and keep all EF packages on the same version number.</p>
+  </div>
+
+  <h3>Step 2 — the connection string 🧾</h3>
+  <p>A connection string is the database's <strong>address plus entry instructions</strong>: which server, which database, and how to prove who you are. It lives in configuration, never hard-coded:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">JSON · appsettings.json</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  <span class="str">"ConnectionStrings"</span>: {
+    <span class="str">"DefaultConnection"</span>: <span class="str">"Server=localhost;Database=MyShop;Trusted_Connection=True;TrustServerCertificate=True"</span>
+  }
+}
+</code></pre>
+  </div>
+
+  <p>Dissecting the parts:</p>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Segment</th><th>Meaning</th><th>Common values</th></tr></thead>
+    <tbody>
+      <tr><td><code>Server=</code></td><td>Which SQL Server instance to talk to.</td><td><code>localhost</code> · <code>.\SQLEXPRESS</code> · <code>(localdb)\mssqllocaldb</code> · a hostname</td></tr>
+      <tr><td><code>Database=</code></td><td>Which database on that server.</td><td>Your app's DB name, e.g. <code>MyShop</code></td></tr>
+      <tr><td><code>Trusted_Connection=True</code></td><td>Log in as the current Windows user (integrated security).</td><td>Alternative: <code>User Id=...;Password=...</code> for SQL logins</td></tr>
+      <tr><td><code>TrustServerCertificate=True</code></td><td>Accept the server's TLS certificate without validation — fine for <em>local dev only</em>.</td><td>In production, use a real certificate instead</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ The Classic First-Run Error</span>
+    <p>Recent versions of the underlying driver (<code>Microsoft.Data.SqlClient</code>) <strong>encrypt connections by default</strong>. Against a local SQL Server with no proper certificate you'll hit "The certificate chain was issued by an authority that is not trusted." The dev-machine fix is adding <code>TrustServerCertificate=True</code> — but never ship that to production, where certificate validation is your protection against man-in-the-middle attacks.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Secrets Hygiene</span>
+    <p>A connection string with a password is a secret. Locally, keep it out of source control with <strong>user secrets</strong> (<code>dotnet user-secrets set "ConnectionStrings:DefaultConnection" "..."</code>); in production, use environment variables or a vault (e.g., Azure Key Vault). Configuration layering means the same <code>GetConnectionString</code> call works everywhere.</p>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">📮 Analogy</span>
+    <p>Think of the connection string as a <strong>courier's delivery instruction card</strong>: building address (Server), apartment number (Database), and the door code (credentials). You wouldn't print the door code on the outside of every parcel — that's why it lives in secrets, not in code.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>🗄️ DbContext &amp; DbSet</h2>
+
+  <p>The <code>DbContext</code> is your <strong>session with the database</strong>. You create a class inheriting from it, expose one <code>DbSet&lt;T&gt;</code> per table you care about, and give it a constructor that accepts options (so DI can configure it):</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Data/ShopContext.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.EntityFrameworkCore;
+
+<span class="kw">public class</span> <span class="ty">ShopContext</span> : <span class="ty">DbContext</span>
+{
+    <span class="cmt">// The options carry the provider + connection string, supplied by DI.</span>
+    <span class="kw">public</span> <span class="fn">ShopContext</span>(<span class="ty">DbContextOptions</span>&lt;<span class="ty">ShopContext</span>&gt; options) : <span class="kw">base</span>(options) { }
+
+    <span class="cmt">// One DbSet per table you want to work with:</span>
+    <span class="kw">public</span> <span class="ty">DbSet</span>&lt;<span class="ty">Customer</span>&gt; Customers =&gt; <span class="fn">Set</span>&lt;<span class="ty">Customer</span>&gt;();
+    <span class="kw">public</span> <span class="ty">DbSet</span>&lt;<span class="ty">Product</span>&gt;  Products  =&gt; <span class="fn">Set</span>&lt;<span class="ty">Product</span>&gt;();
+    <span class="kw">public</span> <span class="ty">DbSet</span>&lt;<span class="ty">Order</span>&gt;    Orders    =&gt; <span class="fn">Set</span>&lt;<span class="ty">Order</span>&gt;();
+}
+</code></pre>
+  </div>
+
+  <h3>Registering it in Program.cs 🔧</h3>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Program.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">var</span> connectionString = builder.Configuration.<span class="fn">GetConnectionString</span>(<span class="str">"DefaultConnection"</span>)
+    ?? <span class="kw">throw new</span> <span class="ty">InvalidOperationException</span>(<span class="str">"Connection string 'DefaultConnection' not found."</span>);
+
+builder.Services.<span class="fn">AddDbContext</span>&lt;<span class="ty">ShopContext</span>&gt;(options =&gt;
+    options.<span class="fn">UseSqlServer</span>(connectionString,
+        sql =&gt; sql.<span class="fn">EnableRetryOnFailure</span>()));   <span class="cmt">// retries transient network errors</span>
+</code></pre>
+  </div>
+
+  <p><code>AddDbContext</code> registers your context with a <strong>scoped lifetime</strong>: in a web app, each HTTP request gets its own fresh <code>ShopContext</code>, which is disposed when the request ends. That maps perfectly onto EF's design — a context is meant to be a <strong>short-lived unit of work</strong>, not a long-lived shared object.</p>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Not Thread-Safe</span>
+    <p>A <code>DbContext</code> instance must never be used by two operations at the same time. That means: always <code>await</code> EF's async methods immediately (don't fire off two queries in parallel on one context), and never store a context in a singleton service. Scoped lifetime + one request at a time keeps you safe by default.</p>
+  </div>
+
+  <h3>Using it in a service 💉</h3>
+  <p>Because the context is in the DI container, any service can simply ask for it — the same pattern as <code>ILogger&lt;T&gt;</code> yesterday:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Services/ProductService.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">ProductService</span>(<span class="ty">ShopContext</span> db, <span class="ty">ILogger</span>&lt;<span class="ty">ProductService</span>&gt; logger)
+{
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Product</span>&gt;&gt; <span class="fn">GetActiveAsync</span>()
+    {
+        logger.<span class="fn">LogInformation</span>(<span class="str">"Loading active products"</span>);
+        <span class="kw">return await</span> db.Products
+            .<span class="fn">Where</span>(p =&gt; p.IsActive)
+            .<span class="fn">OrderBy</span>(p =&gt; p.Name)
+            .<span class="fn">ToListAsync</span>();
+    }
+}
+</code></pre>
+  </div>
+
+  <h3>The change tracker: how SaveChanges knows what to do 🕵️</h3>
+  <p>The context quietly watches every entity it hands out or receives. Each tracked entity is in one of five states, and <code>SaveChanges</code> generates SQL based on that state:</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-green"><div class="val">Added</div><div class="idx">→ INSERT</div></div>
+      <div class="arr-cell"><div class="val">Unchanged</div><div class="idx">→ nothing</div></div>
+      <div class="arr-cell highlight"><div class="val">Modified</div><div class="idx">→ UPDATE</div></div>
+      <div class="arr-cell neg"><div class="val">Deleted</div><div class="idx">→ DELETE</div></div>
+      <div class="arr-cell"><div class="val">Detached</div><div class="idx">not tracked</div></div>
+    </div>
+    <div class="arr-caption">EntityState · SaveChanges walks all tracked entities and emits SQL per state</div>
+  </div>
+
+  <p>
+    <span class="complexity-badge"><span class="lbl">Lifetime</span><span class="valb">Scoped (per request)</span></span>
+    <span class="complexity-badge"><span class="lbl">Thread-safe?</span><span class="valb">No</span></span>
+    <span class="complexity-badge"><span class="lbl">Unit of work</span><span class="valb">SaveChanges = 1 transaction</span></span>
+  </p>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>You don't tell EF <em>how</em> to update the database — you change objects and call <code>SaveChangesAsync()</code>. The change tracker computes the difference and wraps all resulting statements in a single transaction: either everything saves or nothing does.</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>📐 Conventions First: What EF Assumes for Free</h2>
+
+  <p>Before you write a single configuration line, EF Core builds a complete mapping from <strong>conventions</strong> — sensible rules applied to your class shapes. Meet today's three entities in their plainest form:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Models (convention-only)</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">Customer</span>
+{
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }              <span class="cmt">// convention: primary key + identity</span>
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="str">""</span>;   <span class="cmt">// non-nullable → NOT NULL column</span>
+    <span class="kw">public string</span>? Phone { <span class="kw">get</span>; <span class="kw">set</span>; }        <span class="cmt">// nullable → NULL column</span>
+    <span class="kw">public</span> <span class="ty">List</span>&lt;<span class="ty">Order</span>&gt; Orders { <span class="kw">get</span>; <span class="kw">set</span>; } = [];  <span class="cmt">// navigation → 1-to-many</span>
+}
+
+<span class="kw">public class</span> <span class="ty">Order</span>
+{
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public</span> <span class="ty">DateTime</span> PlacedAt { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public int</span> CustomerId { <span class="kw">get</span>; <span class="kw">set</span>; }        <span class="cmt">// convention: foreign key to Customer</span>
+    <span class="kw">public</span> <span class="ty">Customer</span> Customer { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;
+}
+</code></pre>
+  </div>
+
+  <h3>The convention cheat sheet</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>You write…</th><th>EF assumes…</th></tr></thead>
+    <tbody>
+      <tr><td>Property named <code>Id</code> or <code>CustomerId</code> (TypeName + Id)</td><td>Primary key; for <code>int</code>/<code>long</code>, values generated by the database (identity).</td></tr>
+      <tr><td><code>DbSet&lt;Customer&gt; Customers</code></td><td>Table named <code>Customers</code> (the DbSet property name).</td></tr>
+      <tr><td>Property <code>Name</code> of type <code>string</code></td><td>Column <code>Name</code>, type <code>nvarchar(max)</code>.</td></tr>
+      <tr><td>Non-nullable type (<code>int</code>, <code>string</code> with NRT on)</td><td><code>NOT NULL</code> column; nullable types (<code>int?</code>, <code>string?</code>) allow NULL.</td></tr>
+      <tr><td><code>Customer</code> navigation + <code>CustomerId</code> property</td><td>A one-to-many relationship with <code>CustomerId</code> as the foreign key, plus an index on it.</td></tr>
+      <tr><td><code>decimal</code> property</td><td>SQL <code>decimal(18,2)</code> on SQL Server — often you'll want to set precision yourself.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">🏨 Analogy</span>
+    <p>Conventions are like a hotel's <strong>default room setup</strong> — bed made, towels folded, thermostat at 22°. Most guests never call reception. Data annotations are quick requests on the door card ("extra pillow, please"). The Fluent API is calling the manager to rearrange the furniture. Same room, three levels of customization.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Defaults Aren't Always Right</span>
+    <p>Two conventions bite people in production: <code>string</code> → <code>nvarchar(max)</code> (unbounded columns hurt indexing and invite junk data) and <code>decimal</code> → <code>decimal(18,2)</code> (may silently truncate values needing more scale — EF warns about this). Fixing those two is often your first configuration job.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>🏷️ Data Annotations</h2>
+
+  <p><strong>Data annotations</strong> are attributes placed directly on your entity classes and properties — small square-bracketed labels that override conventions where they stand:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Models/Product.cs (annotated)</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> System.ComponentModel.DataAnnotations;
+<span class="kw">using</span> System.ComponentModel.DataAnnotations.Schema;
+
+[<span class="ty">Table</span>(<span class="str">"Products"</span>, Schema = <span class="str">"catalog"</span>)]       <span class="cmt">// map to catalog.Products</span>
+<span class="kw">public class</span> <span class="ty">Product</span>
+{
+    [<span class="ty">Key</span>]                                       <span class="cmt">// explicit primary key</span>
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }
+
+    [<span class="ty">Required</span>]                                  <span class="cmt">// NOT NULL (matters pre-NRT)</span>
+    [<span class="ty">MaxLength</span>(<span class="num">120</span>)]                            <span class="cmt">// nvarchar(120), not (max)</span>
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="str">""</span>;
+
+    [<span class="ty">Column</span>(<span class="str">"UnitPrice"</span>, TypeName = <span class="str">"decimal(10,2)"</span>)]  <span class="cmt">// rename + exact SQL type</span>
+    <span class="kw">public decimal</span> Price { <span class="kw">get</span>; <span class="kw">set</span>; }
+
+    [<span class="ty">MaxLength</span>(<span class="num">40</span>)]
+    <span class="kw">public string</span>? Sku { <span class="kw">get</span>; <span class="kw">set</span>; }
+
+    [<span class="ty">NotMapped</span>]                                 <span class="cmt">// exists in C# only, no column</span>
+    <span class="kw">public string</span> DisplayLabel =&gt; $<span class="str">"{Name} (₹{Price})"</span>;
+}
+</code></pre>
+  </div>
+
+  <h3>The annotations you'll actually use</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Attribute</th><th>Effect on the database</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>[Key]</code></td><td>Marks the primary key.</td><td>Only needed when the name isn't <code>Id</code>/<code>TypeId</code>.</td></tr>
+      <tr><td><code>[Required]</code></td><td>Column becomes <code>NOT NULL</code>.</td><td>With nullable reference types on, non-nullable <code>string</code> already implies this.</td></tr>
+      <tr><td><code>[MaxLength(n)]</code> / <code>[StringLength(n)]</code></td><td><code>nvarchar(n)</code> instead of <code>nvarchar(max)</code>.</td><td>Also used by input validation — double duty.</td></tr>
+      <tr><td><code>[Table("Name", Schema="s")]</code></td><td>Maps the class to a specific table/schema.</td><td>Essential when matching an <em>existing</em> database.</td></tr>
+      <tr><td><code>[Column("Name", TypeName="...")]</code></td><td>Renames a column / sets its exact SQL type.</td><td>Great for legacy column names.</td></tr>
+      <tr><td><code>[Precision(10, 2)]</code></td><td>Sets decimal precision/scale.</td><td>Cleaner than TypeName for decimals.</td></tr>
+      <tr><td><code>[NotMapped]</code></td><td>Property gets no column at all.</td><td>For computed, C#-only helpers.</td></tr>
+      <tr><td><code>[ForeignKey("Nav")]</code></td><td>Declares which property is the FK for a navigation.</td><td>Only when names don't follow convention.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Strength</span>
+    <p>Annotations are <strong>self-documenting</strong>: anyone reading the entity sees its rules right there. Several (like <code>[Required]</code> and <code>[MaxLength]</code>) also feed ASP.NET Core's model validation, so one attribute guards both the API input and the database column.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Limitation</span>
+    <p>Annotations can't express everything: composite keys, most index definitions, relationship delete behavior, value conversions, and many mapping tricks are <strong>Fluent-API-only</strong>. They also couple your entity classes to persistence concerns — which some teams prefer to keep out of domain models.</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>🪄 The Fluent API</h2>
+
+  <p>The <strong>Fluent API</strong> configures the model in code, inside your context's <code>OnModelCreating</code> method, by chaining method calls (hence "fluent"). It can do everything annotations can — and everything they can't:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · ShopContext.OnModelCreating</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">protected override void</span> <span class="fn">OnModelCreating</span>(<span class="ty">ModelBuilder</span> modelBuilder)
+{
+    modelBuilder.<span class="fn">Entity</span>&lt;<span class="ty">Customer</span>&gt;(e =&gt;
+    {
+        e.<span class="fn">ToTable</span>(<span class="str">"Customers"</span>);
+        e.<span class="fn">HasKey</span>(c =&gt; c.Id);
+
+        e.<span class="fn">Property</span>(c =&gt; c.Name)
+            .<span class="fn">IsRequired</span>()
+            .<span class="fn">HasMaxLength</span>(<span class="num">120</span>);
+
+        e.<span class="fn">HasIndex</span>(c =&gt; c.Email)          <span class="cmt">// unique index — annotations can't do this well</span>
+            .<span class="fn">IsUnique</span>();
+    });
+
+    modelBuilder.<span class="fn">Entity</span>&lt;<span class="ty">Order</span>&gt;(e =&gt;
+    {
+        e.<span class="fn">ToTable</span>(<span class="str">"Orders"</span>);
+
+        e.<span class="fn">Property</span>(o =&gt; o.Total)
+            .<span class="fn">HasPrecision</span>(<span class="num">10</span>, <span class="num">2</span>);
+
+        e.<span class="fn">HasOne</span>(o =&gt; o.Customer)          <span class="cmt">// relationship, spelled out:</span>
+            .<span class="fn">WithMany</span>(c =&gt; c.Orders)
+            .<span class="fn">HasForeignKey</span>(o =&gt; o.CustomerId)
+            .<span class="fn">OnDelete</span>(<span class="ty">DeleteBehavior</span>.Restrict);  <span class="cmt">// don't cascade-delete orders</span>
+    });
+}
+</code></pre>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">🪄 Analogy</span>
+    <p>If annotations are sticky notes on each piece of furniture, the Fluent API is the <strong>architect's master blueprint</strong> kept in one office. The furniture (entities) stays clean and label-free; every layout decision lives in a single, authoritative document that can express far more detail.</p>
+  </div>
+
+  <h3>Keeping it tidy: IEntityTypeConfiguration 🗂️</h3>
+  <p>With many entities, <code>OnModelCreating</code> becomes a monster. The standard fix: one small configuration class per entity, auto-discovered by assembly scanning:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Data/Configurations/ProductConfiguration.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.EntityFrameworkCore;
+<span class="kw">using</span> Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+<span class="kw">public class</span> <span class="ty">ProductConfiguration</span> : <span class="ty">IEntityTypeConfiguration</span>&lt;<span class="ty">Product</span>&gt;
+{
+    <span class="kw">public void</span> <span class="fn">Configure</span>(<span class="ty">EntityTypeBuilder</span>&lt;<span class="ty">Product</span>&gt; builder)
+    {
+        builder.<span class="fn">ToTable</span>(<span class="str">"Products"</span>, <span class="str">"catalog"</span>);
+
+        builder.<span class="fn">Property</span>(p =&gt; p.Name)
+            .<span class="fn">IsRequired</span>()
+            .<span class="fn">HasMaxLength</span>(<span class="num">120</span>);
+
+        builder.<span class="fn">Property</span>(p =&gt; p.Price)
+            .<span class="fn">HasColumnName</span>(<span class="str">"UnitPrice"</span>)
+            .<span class="fn">HasPrecision</span>(<span class="num">10</span>, <span class="num">2</span>);
+
+        builder.<span class="fn">HasIndex</span>(p =&gt; p.Sku).<span class="fn">IsUnique</span>();
+    }
+}
+
+<span class="cmt">// In ShopContext.OnModelCreating — one line finds every configuration class:</span>
+modelBuilder.<span class="fn">ApplyConfigurationsFromAssembly</span>(<span class="kw">typeof</span>(<span class="ty">ShopContext</span>).Assembly);
+</code></pre>
+  </div>
+
+  <p>
+    <span class="complexity-badge"><span class="lbl">Coverage</span><span class="valb">everything</span></span>
+    <span class="complexity-badge"><span class="lbl">Runs</span><span class="valb">once per app (model is cached)</span></span>
+    <span class="complexity-badge"><span class="lbl">Best practice</span><span class="valb">1 config class per entity</span></span>
+  </p>
+
+  <div class="callout key">
+    <span class="tag">🔑 Fluent-Only Superpowers</span>
+    <p>Reach for the Fluent API when you need: <strong>composite keys</strong> (<code>HasKey(x =&gt; new { x.A, x.B })</code>), <strong>unique or filtered indexes</strong>, <strong>delete behavior</strong> (<code>Cascade</code>/<code>Restrict</code>/<code>SetNull</code>), <strong>value conversions</strong> (store an enum as a string), <strong>seed data</strong> (<code>HasData</code>), and <strong>global query filters</strong> (auto-apply "not deleted" to every query).</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>⚖️ Annotations vs Fluent: Choosing &amp; Precedence</h2>
+
+  <p>Both techniques feed the same model, so the real questions are <em>which wins a conflict</em> and <em>which should your team prefer</em>. The precedence rule is simple — more explicit beats less explicit:</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell"><div class="val">📐 Conventions</div><div class="idx">weakest · free defaults</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">🏷️ Annotations</div><div class="idx">override conventions</div></div>
+      <div class="arr-cell highlight"><div class="val">🪄 Fluent API</div><div class="idx">strongest · final say</div></div>
+    </div>
+    <div class="arr-caption">Configuration precedence · if Fluent and an annotation disagree, Fluent wins</div>
+  </div>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Aspect</th><th>🏷️ Data Annotations</th><th>🪄 Fluent API</th></tr></thead>
+    <tbody>
+      <tr><td>Where it lives</td><td>On the entity class itself</td><td>In <code>OnModelCreating</code> / config classes</td></tr>
+      <tr><td>Readability</td><td>Rules visible next to each property</td><td>Rules centralized, entities stay clean</td></tr>
+      <tr><td>Power</td><td>Common cases only</td><td>Everything EF supports</td></tr>
+      <tr><td>Composite keys, indexes, delete behavior, conversions, seed data</td><td>❌ Mostly impossible</td><td>✅ Fully supported</td></tr>
+      <tr><td>Extra benefit</td><td>Some attributes double as input validation</td><td>Keeps persistence details out of domain classes</td></tr>
+      <tr><td>Conflict outcome</td><td>Loses</td><td>Wins</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ A Sane Team Policy</span>
+    <p>Pick one primary home for configuration and stay consistent. A common, pragmatic split: use annotations for simple, validation-adjacent facts (<code>[MaxLength]</code>, <code>[Required]</code>) and the Fluent API for all real mapping decisions (tables, keys, relationships, indexes, precision). Many teams go further and put <em>everything</em> in Fluent configuration classes — one obvious place to look.</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>🧬 Getting a Database: Migrations &amp; Scaffolding</h2>
+
+  <p>You've described the model — now the database schema must match it. There are two directions, depending on which side already exists:</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">🧑‍🎨</span><b>Code First → new tables</b><p>Your C# classes are the source of truth. <strong>Migrations</strong> generate and apply SQL to create/evolve the schema. Best for new projects.</p></div>
+    <div class="card"><span class="glyph">🏛️</span><b>Database First → existing tables</b><p>An existing database is the source of truth. <strong>Scaffolding</strong> (reverse engineering) generates entity classes and a context from it.</p></div>
+  </div>
+
+  <h3>The migrations loop (Code First) 🔁</h3>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="emoji">✏️</span>
+      <div><b>1. Change the model</b><span class="desc">Add a property, a new entity, or a Fluent rule — e.g., give <code>Product</code> a <code>Sku</code>.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🧬</span>
+      <div><b>2. Add a migration</b><span class="desc"><code>dotnet ef migrations add AddProductSku</code> — EF compares the new model with a snapshot of the old one and writes C# Up/Down steps.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="emoji">🔍</span>
+      <div><b>3. Review the generated code</b><span class="desc">Open the migration file and read it. Renames can be misread as drop-and-recreate — catching that here saves your data.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🚀</span>
+      <div><b>4. Update the database</b><span class="desc"><code>dotnet ef database update</code> — EF runs pending migrations as SQL and records each in the <code>__EFMigrationsHistory</code> table.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">✅</span>
+      <div><b>5. Commit migration + model together</b><span class="desc">Migrations are code: version-controlled, repeatable on teammates' machines and in deployment pipelines.</span></div>
+    </div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal · Code First commands</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># Create the first migration (generates Migrations/xxxx_InitialCreate.cs):</span>
+dotnet ef migrations add InitialCreate
+
+<span class="cmt"># Apply all pending migrations to the connected database:</span>
+dotnet ef database update
+
+<span class="cmt"># Peek at the SQL a migration will run (great for review):</span>
+dotnet ef migrations script
+
+<span class="cmt"># Made a mistake before applying? Remove the last migration:</span>
+dotnet ef migrations remove
+</code></pre>
+  </div>
+
+  <h3>Scaffolding an existing database (Database First) 🏛️</h3>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal · Reverse engineering</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># Generate entities + context from an existing SQL Server database:</span>
+dotnet ef dbcontext scaffold \
+  <span class="str">"Server=localhost;Database=LegacyShop;Trusted_Connection=True;TrustServerCertificate=True"</span> \
+  Microsoft.EntityFrameworkCore.SqlServer \
+  --output-dir Models --context-dir Data --context LegacyShopContext \
+  --tables Customers --tables Orders --tables Products
+</code></pre>
+  </div>
+
+  <p>Scaffolding writes classes whose annotations/Fluent config mirror the real tables — column names, lengths, keys, and relationships included. From there you can keep re-scaffolding when the DB changes, or adopt the generated code and switch to migrations.</p>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Mapping to Existing Tables by Hand</span>
+    <p>When you write entities against an existing database yourself (today's exercise!), the names must line up exactly: use <code>[Table]</code>/<code>ToTable</code> and <code>[Column]</code>/<code>HasColumnName</code> wherever your C# names differ from the real table and column names. A mismatch shows up at runtime as "Invalid object name" or "Invalid column name" errors from SQL Server.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Sanity-Check the Mapping</span>
+    <p>Fastest verification loop: run the app with EF's SQL visible (Day 6 skill! set <code>Microsoft.EntityFrameworkCore.Database.Command</code> to <code>Information</code>) and read the generated <code>SELECT</code> — the table and column names EF uses are printed right there.</p>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: Map 2–3 Entities to Tables</h2>
+
+  <p>Today's <strong>Do</strong>: map two or three entities to tables — new ones via a migration, or existing ones if you already have a database. Suggested path:</p>
+
+  <ol>
+    <li>📦 Install <code>Microsoft.EntityFrameworkCore.SqlServer</code> + <code>Microsoft.EntityFrameworkCore.Design</code>, and the <code>dotnet-ef</code> tool.</li>
+    <li>🧱 Create 2–3 entities with a relationship between two of them — e.g., <code>Customer</code>, <code>Order</code> (many orders per customer), and <code>Product</code>.</li>
+    <li>🗄️ Create a <code>ShopContext</code> with one <code>DbSet&lt;T&gt;</code> per entity; register it with <code>AddDbContext</code> + <code>UseSqlServer</code>, reading the connection string from configuration.</li>
+    <li>🏷️ Configure one entity with <strong>data annotations</strong> (<code>[MaxLength]</code>, <code>[Required]</code>, <code>[Table]</code>) — feel how it reads.</li>
+    <li>🪄 Configure another with a <strong>Fluent</strong> <code>IEntityTypeConfiguration&lt;T&gt;</code> class — set a max length, a <code>HasPrecision</code> on a decimal, a unique index, and the relationship with <code>OnDelete(DeleteBehavior.Restrict)</code>.</li>
+    <li>🧬 New tables: <code>dotnet ef migrations add InitialCreate</code>, <em>read the generated migration</em>, then <code>dotnet ef database update</code>. Existing tables: match names with <code>ToTable</code>/<code>HasColumnName</code> instead, no migration.</li>
+    <li>🔎 Prove it works: insert one row of each entity and query them back; open the database (SSMS / Azure Data Studio) and look at the created columns, types, and the FK index.</li>
+    <li>📋 Bonus (Day 6 crossover): log <code>"Created customer {CustomerId}"</code> after <code>SaveChangesAsync</code> — the generated ID is already populated on the object.</li>
+  </ol>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Minimal end-to-end smoke test</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// e.g. in a temporary minimal-API endpoint:</span>
+app.<span class="fn">MapPost</span>(<span class="str">"/seed"</span>, <span class="kw">async</span> (<span class="ty">ShopContext</span> db) =&gt;
+{
+    <span class="kw">var</span> customer = <span class="kw">new</span> <span class="ty">Customer</span> { Name = <span class="str">"Priya Sharma"</span>, Email = <span class="str">"priya@example.com"</span> };
+    customer.Orders.<span class="fn">Add</span>(<span class="kw">new</span> <span class="ty">Order</span> { PlacedAt = <span class="ty">DateTime</span>.UtcNow, Total = <span class="num">1499.50m</span> });
+
+    db.Customers.<span class="fn">Add</span>(customer);          <span class="cmt">// the related Order is tracked too</span>
+    <span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();          <span class="cmt">// 2 INSERTs, 1 transaction</span>
+
+    <span class="kw">return</span> <span class="ty">Results</span>.<span class="fn">Ok</span>(<span class="kw">new</span> { customer.Id });
+});
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>Can you answer these three from your own project? (1) Which column types did <code>Name</code> and your decimal get, and why? (2) What happens if you delete a customer that has orders — and which line of configuration decides that? (3) Where exactly does the connection string live, and why not in the code?</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>🧠 ORM</b>EF Core maps C# objects to relational tables and generates the SQL, so you write LINQ instead of INSERT/SELECT by hand.</div>
+    <div class="recap-card"><b>🗄️ DbContext</b>Your short-lived database session: holds <code>DbSet&lt;T&gt;</code>s, tracks changes, and turns <code>SaveChangesAsync</code> into one transaction.</div>
+    <div class="recap-card"><b>💉 Registration</b><code>AddDbContext&lt;T&gt;(o =&gt; o.UseSqlServer(cs))</code> registers a scoped context; the connection string comes from configuration.</div>
+    <div class="recap-card"><b>🔌 Provider</b><code>Microsoft.EntityFrameworkCore.SqlServer</code> speaks T-SQL; keep its major version matched to EF Core's.</div>
+    <div class="recap-card"><b>📐 Conventions</b><code>Id</code> → key, DbSet name → table, nullability → NULL/NOT NULL — free defaults you override only when needed.</div>
+    <div class="recap-card"><b>🏷️ Data annotations</b>Attributes on entities for simple rules — visible and validation-friendly, but limited in power.</div>
+    <div class="recap-card"><b>🪄 Fluent API</b><code>OnModelCreating</code> + <code>IEntityTypeConfiguration&lt;T&gt;</code>: full control (keys, indexes, relationships) and it wins conflicts.</div>
+    <div class="recap-card"><b>🧬 Migrations / scaffolding</b>Code First evolves the DB from your classes; scaffolding generates classes from an existing DB.</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Concept</th><th>What it does</th><th>Where you touch it</th><th>Remember</th></tr></thead>
+    <tbody>
+      <tr><td>🗄️ <code>DbContext</code></td><td>Session + change tracker + SaveChanges</td><td>Your <code>ShopContext</code> class</td><td>Scoped lifetime; never share across threads</td></tr>
+      <tr><td>📇 <code>DbSet&lt;T&gt;</code></td><td>Queryable handle to one table</td><td>Properties on the context</td><td>Property name → default table name</td></tr>
+      <tr><td>🔌 <code>UseSqlServer</code></td><td>Picks provider + connection</td><td><code>AddDbContext</code> in Program.cs</td><td>Add <code>EnableRetryOnFailure()</code> for resilience</td></tr>
+      <tr><td>🧾 Connection string</td><td>Server + database + credentials</td><td><code>ConnectionStrings</code> config / user secrets</td><td><code>TrustServerCertificate=True</code> is dev-only</td></tr>
+      <tr><td>🏷️ Annotations</td><td>Per-property mapping hints</td><td><code>[Required]</code>, <code>[MaxLength]</code>, <code>[Table]</code>…</td><td>Beat conventions, lose to Fluent</td></tr>
+      <tr><td>🪄 Fluent API</td><td>Complete model configuration</td><td><code>OnModelCreating</code> / config classes</td><td>Composite keys, indexes, delete behavior live here</td></tr>
+      <tr><td>🕵️ Change tracker</td><td>Knows each entity's state</td><td>Automatic</td><td>Added/Modified/Deleted → INSERT/UPDATE/DELETE</td></tr>
+      <tr><td>🧬 Migrations</td><td>Versioned schema changes</td><td><code>dotnet ef migrations add</code> / <code>database update</code></td><td>Always review the generated migration</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is an ORM, and what problem does EF Core solve?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>An ORM (Object-Relational Mapper) is a translator between two worlds: object-oriented code (classes, properties, references) and relational databases (tables, columns, foreign keys). EF Core lets you read and write database rows as ordinary C# objects, writing the SQL for you. It removes the repetitive plumbing of hand-written SQL, connections, and copying values between rows and objects — while still producing normal SQL underneath.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is a DbContext and what are its main jobs?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A <code>DbContext</code> is your session with the database. Its jobs: expose <code>DbSet&lt;T&gt;</code> properties you query and add entities to; translate LINQ queries into SQL through the provider; track changes to the entities it knows about; and, when you call <code>SaveChanges</code>, write all pending inserts, updates, and deletes to the database in one transaction. Think of it as a short-lived "unit of work" — created, used, disposed.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What is a DbSet&lt;T&gt;?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A <code>DbSet&lt;T&gt;</code> is the context's handle to one table. <code>db.Customers</code> is where you start queries (<code>Where</code>, <code>OrderBy</code>, <code>ToListAsync</code>) and where you register new rows (<code>Add</code>) or removals (<code>Remove</code>). By convention, the DbSet property's name also becomes the default table name.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">How does EF Core decide which property is the primary key without any configuration?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>By convention: a property named <code>Id</code> or <code>&lt;TypeName&gt;Id</code> (like <code>CustomerId</code> on the <code>Customer</code> class) is treated as the primary key automatically. If it's an <code>int</code> or <code>long</code>, EF also assumes the database generates the value (an identity column). If your key has a different name, you mark it with <code>[Key]</code> or configure it with <code>HasKey</code> in the Fluent API.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What is a connection string and where should it be stored?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It's the set of instructions for reaching the database: which server, which database, and how to authenticate. It should live in configuration, never hard-coded: <code>appsettings.json</code> for harmless local settings, <strong>user secrets</strong> for anything with credentials during development, and environment variables or a secret vault in production. Code just calls <code>Configuration.GetConnectionString("Name")</code> and works in every environment.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What are data annotations? Give three examples.</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Data annotations are attributes written directly on entity classes and properties that adjust how EF maps them. Examples: <code>[Required]</code> makes the column NOT NULL; <code>[MaxLength(120)]</code> limits a string column to 120 characters instead of unlimited; <code>[Table("Products")]</code> maps the class to a specific table name. Others include <code>[Key]</code>, <code>[Column]</code>, and <code>[NotMapped]</code>.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What is the Fluent API in one sentence, and where does it live?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>The Fluent API is EF Core's code-based configuration language — chained method calls like <code>Property(p =&gt; p.Name).IsRequired().HasMaxLength(120)</code> — and it lives in the context's <code>OnModelCreating(ModelBuilder)</code> method (often split into one <code>IEntityTypeConfiguration&lt;T&gt;</code> class per entity for tidiness).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What is a migration?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A migration is a generated, versioned recipe for changing the database schema so it matches your current C# model. When you run <code>dotnet ef migrations add SomeName</code>, EF compares your model to a snapshot of the previous one and writes the difference as code (with Up and Down steps). <code>dotnet ef database update</code> then applies pending migrations, and EF records which ones ran in a history table so they're never applied twice.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">Why is DbContext registered with a scoped lifetime, and why would singleton be wrong?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Scoped means one context per HTTP request — each request gets a fresh, isolated unit of work that's disposed when the request ends. That fits DbContext's design: it accumulates tracked entities and isn't thread-safe. A singleton context would be shared by all concurrent requests, causing two problems: concurrent access (crashes or corrupted state, since one instance mustn't run parallel operations) and unbounded growth of the change tracker, effectively a memory leak with increasingly stale data.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">What happens, step by step, when you call SaveChangesAsync?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>The change tracker walks every entity the context knows and checks its state: Added, Modified, Deleted, or Unchanged. For each non-Unchanged entity it generates the matching SQL (INSERT, UPDATE with only the changed columns, DELETE), orders the statements to respect foreign-key dependencies, wraps them in a single transaction, and executes them. Database-generated values (like new identity IDs) are read back and written onto your objects, and the saved entities are reset to Unchanged. If anything fails, the transaction rolls back and nothing is persisted.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">Conventions, annotations, and Fluent API all configure the model. Who wins a conflict?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Precedence goes from least to most explicit: <strong>conventions</strong> are the baseline defaults, <strong>data annotations</strong> override conventions, and the <strong>Fluent API</strong> overrides both. So if an attribute says <code>[MaxLength(50)]</code> but Fluent configuration says <code>HasMaxLength(120)</code>, the column ends up as 120. Practical takeaway: when debugging a surprising mapping, check Fluent configuration first — it has the final word.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">Name three things you can only do with the Fluent API, not with annotations.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Common Fluent-only capabilities: <strong>composite primary keys</strong> (<code>HasKey(x =&gt; new { x.OrderId, x.ProductId })</code>); <strong>configuring relationship delete behavior</strong> (<code>OnDelete(DeleteBehavior.Restrict)</code> vs cascade); <strong>unique or filtered indexes</strong> via <code>HasIndex(...).IsUnique()</code>. Others include value conversions (enum ↔ string), seed data with <code>HasData</code>, and global query filters.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">How do you map an entity to an existing table whose names don't match your C# names?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Override the naming conventions explicitly. Point the class at the real table with <code>[Table("tbl_customer", Schema = "sales")]</code> or <code>ToTable("tbl_customer", "sales")</code>, and map individual properties to real column names with <code>[Column("cust_name")]</code> or <code>HasColumnName("cust_name")</code>. Also match types and nullability (<code>HasColumnType</code>, <code>IsRequired</code>). If names don't line up, you'll get runtime errors like "Invalid object name" or "Invalid column name" from SQL Server.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">What is scaffolding (reverse engineering) and when do you use it?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Scaffolding generates C# entity classes and a DbContext <em>from an existing database</em>: <code>dotnet ef dbcontext scaffold "&lt;connection&gt;" Microsoft.EntityFrameworkCore.SqlServer</code>. EF reads the tables, columns, keys, and foreign keys and writes matching code, including the configuration needed to mirror them exactly. You use it when the database already exists and is the source of truth — legacy systems, DBA-managed schemas — instead of the code-first migrations flow.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">How does EF Core's convention treat a C# string property, and why can that be a problem?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>By default a <code>string</code> becomes <code>nvarchar(max)</code> — an unlimited-length Unicode column — nullable or not depending on nullable reference types. Unlimited columns are a problem because they can't be efficiently indexed, invite unbounded junk input, and hide the real business rule ("a name is at most ~120 characters"). The fix is one line: <code>[MaxLength(120)]</code> or <code>HasMaxLength(120)</code>. Similarly, <code>decimal</code> defaults to <code>decimal(18,2)</code>, which may silently truncate values needing more scale — set <code>HasPrecision</code> deliberately for money and measurements.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">What does EnableRetryOnFailure do and why enable it?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>It turns on an execution strategy that automatically retries operations that fail with known <em>transient</em> errors — brief network blips, database failovers, throttling (especially common with cloud databases like Azure SQL). Instead of one unlucky packet loss becoming a user-facing 500 error, EF waits briefly and retries a few times. You enable it in the provider options: <code>UseSqlServer(cs, sql =&gt; sql.EnableRetryOnFailure())</code>. One caveat: with a retry strategy, user-initiated transactions need special handling since the whole unit must be retriable.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Your team debates annotations vs Fluent API. What policy do you propose, and why?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The goal is predictability: a developer must know where to look for mapping truth. My default proposal: <strong>Fluent configuration classes as the primary home</strong> (one <code>IEntityTypeConfiguration&lt;T&gt;</code> per entity, applied via <code>ApplyConfigurationsFromAssembly</code>), because they cover 100% of EF's features, keep persistence concerns out of domain classes, and win precedence anyway — so nothing can silently override them. Annotations remain acceptable for validation-adjacent facts that ASP.NET also uses (<code>[Required]</code>, <code>[MaxLength]</code>) if the team values that dual use. The anti-pattern to ban is mixing both for the <em>same</em> concern on the same entity — that's where "why is this column 120 chars?" archaeology begins.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">Walk me through how you'd manage migrations safely across a team and in deployment.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Team side: migrations are code — committed together with the model change, reviewed in PRs (actually reading the Up method — renames can scaffold as drop-and-recreate, which destroys data), and kept linear by regenerating when two branches both added migrations. Deployment side: don't auto-run <code>Database.Migrate()</code> from every app instance at startup in a multi-instance production environment (race conditions, surprise locks at boot). Prefer generating an idempotent SQL script (<code>dotnet ef migrations script --idempotent</code>) or a migrations bundle, reviewed and applied as an explicit deployment step by the pipeline, with a backup taken first and destructive changes split into safe multi-release phases (add new column → migrate data → drop old column).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">How do you decide the delete behavior (cascade vs restrict) for a relationship?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Ask: if the parent disappears, is the child <em>meaningless</em> or <em>valuable evidence</em>? Cascade fits true composition — order lines without their order are meaningless, so deleting the order deleting its lines is correct. Restrict (or SetNull) fits association with independent value — deleting a customer should <em>not</em> silently erase their order history, which may be needed for accounting or legal reasons; better to block the delete or use soft-delete flags. EF's convention cascades required relationships by default, so I set <code>OnDelete</code> explicitly for every relationship rather than inheriting a default someone will discover in production. SQL Server adds a wrinkle: it rejects schemas with multiple cascade paths, which forces Restrict in diamond-shaped models anyway.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">What is the difference between AddDbContext and AddDbContextPool, and when does pooling matter?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Both give you a scoped context per request. <code>AddDbContextPool</code> additionally <em>recycles instances</em>: instead of constructing and disposing a context object per request, finished contexts are reset and returned to a pool (default max 1024) for reuse, cutting allocation and setup cost. It matters in high-throughput APIs where thousands of contexts per second are created. Constraints: the context must be stateless apart from EF's own machinery — no per-request fields set in the constructor, since instances are reused across requests. For most apps it's a safe, cheap win; for low-traffic apps the difference is negligible.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">Where do value conversions fit, and what trade-offs do they carry?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>A value conversion (Fluent: <code>Property(...).HasConversion(...)</code>) translates between the C# type and the stored type — classic uses: enum stored as a readable string, a strongly-typed ID wrapper stored as an int, encrypted-at-rest strings. Trade-offs: the database only sees the converted value, so queries can only use operations valid on that stored form (an enum-as-string orders alphabetically, not by enum value); some LINQ constructs can't translate and will fail or fall back; and indexes work on the stored representation. Rule of thumb: conversions are for representation, not for hiding heavy logic — keep them cheap, deterministic, and both-ways.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">The app throws "Invalid column name 'X'" in production but works locally. Diagnose.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>That error means EF's model and the actual database disagree — EF generated SQL referencing a column the target database doesn't have. Systematic diagnosis: (1) confirm which database production actually connects to (connection string per environment — very often the real culprit is pointing at an old or wrong DB); (2) check pending migrations: does <code>__EFMigrationsHistory</code> on that database contain the latest migration? If not, the deployment step that applies migrations didn't run; (3) check for drift — did someone hand-edit the production schema or does a scaffolded model no longer match after a DBA change; (4) reproduce by pointing a local run (read-only!) at a copy of the production schema and comparing <code>dotnet ef migrations script</code> output against reality. Fix the process, not just the column: schema changes must flow through migrations applied by the pipeline.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">When would you NOT use EF Core, or bypass it within an EF-based app?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>EF earns its keep for typical transactional CRUD with a rich object model. I'd bypass or skip it when: queries are heavily set-based/analytical (complex reporting, window functions, bulk aggregation) where hand-written SQL or a lightweight mapper like Dapper is clearer and faster; for <strong>bulk operations</strong> on many thousands of rows (though EF's <code>ExecuteUpdate</code>/<code>ExecuteDelete</code> now cover many set-based cases without loading entities); when the schema is exotic or DBA-controlled with heavy stored-procedure conventions; or in ultra-hot paths where materialization overhead measurably matters. These aren't either/or — a common architecture is EF for commands and workflows, raw SQL (via <code>FromSql</code> or Dapper) for the handful of read paths that need it.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">How do you keep EF Core from becoming a performance problem as an app grows?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Principles I enforce early: know your SQL (log <code>Database.Command</code> at Information in dev and read what EF generates); use <code>AsNoTracking</code> for read-only queries so the change tracker doesn't pay for entities you'll never modify; project with <code>Select</code> into DTOs instead of loading whole entities with all columns; watch for the N+1 pattern (a query in a loop) and fix it with <code>Include</code> or better, a single projected query; use pagination rather than unbounded <code>ToList</code>; consider split queries for wide Include trees; add the indexes your real query patterns need via <code>HasIndex</code>; and enable context pooling on hot services. Most "EF is slow" incidents are actually "we accidentally asked for 40,000 rows and tracked them all."</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Lock in Q1–Q8 first — DbContext, conventions, and the two configuration styles are the foundation everything else references. Then drill Q10 and Q11 hard: "what does SaveChanges do?" and "who wins a configuration conflict?" are the two most common EF screening questions. Leave migrations strategy (Q18) and performance (Q24) for last — they make far more sense after you've run the hands-on task and seen a real migration file.</p>
+  </div>
+</section>
+
+<footer>Day 7 of the .NET series · EF Core Setup: DbContext, SQL Server, Data Annotations &amp; Fluent API · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 15 — Consolidation Project: DI + Config + Options + Logging + EF Core, Shipped to GitHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">🚀 Day 15 · Consolidation Project</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Plan</div>
+    <a href="#s01"><span class="n">01</span>The Capstone</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>Project &amp; Host Setup</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wiring It Up</div>
+    <a href="#s04"><span class="n">04</span>Configuration</a>
+    <a href="#s05"><span class="n">05</span>Options Pattern</a>
+    <a href="#s06"><span class="n">06</span>Logging</a>
+    <a href="#s07"><span class="n">07</span>EF Core + SQL Server</a>
+    <a href="#s08"><span class="n">08</span>The Worker + DI</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Ship It</div>
+    <a href="#s09"><span class="n">09</span>Ship to GitHub</a>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 15 · ASP.NET Core Fundamentals · Capstone</div>
+  <h1>🚀 Consolidation: Build It, Wire It, Ship It</h1>
+  <p class="lede">Two weeks of pieces — dependency injection, configuration, options, logging, EF Core, async, background services — now become one real thing. Today you build a worker application that uses <em>all</em> of them together against SQL Server, then ship it to GitHub with a README a stranger could follow. This is where isolated lessons turn into an engineer's instinct.</p>
+  <div class="agenda">
+    <span class="chip">🧩 DI</span>
+    <span class="chip">⚙️ Configuration</span>
+    <span class="chip">🎛️ Options</span>
+    <span class="chip">📋 Logging</span>
+    <span class="chip">🗄️ EF Core</span>
+    <span class="chip">🐙 GitHub</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>🎓 The Capstone</h2>
+
+  <p>Every day so far taught one instrument. Today you conduct the orchestra. The goal isn't to learn something new — it's to feel how the pieces <strong>compose</strong>, because that composition <em>is</em> what a real .NET application is. A production service isn't "the EF Core part" plus "the logging part"; it's one host where configuration flows into options, options into services, services resolved by DI, all observable through logging, persisting through EF Core.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🍽️ Analogy</span>
+    <p>You've spent two weeks learning knife skills, sauces, timing, plating — each in its own lesson. Today is <strong>cooking an entire dinner service</strong>. Nobody hands you "the julienne module"; you just need dinner on the pass, hot and correct, using everything at once. The skill being tested isn't any single technique — it's <em>orchestration under one roof</em>, which is the only skill that actually ships food.</p>
+  </div>
+
+  <h3>What we'll build 🏗️</h3>
+  <p>A <strong>worker application</strong> (a console/Worker Service, from Day 12) that, on a schedule, does real work against our shop database — say, an <strong>order-stats reporter</strong>: every N seconds it queries the <code>ShopContext</code> for order counts and today's revenue, logs a structured summary, and records a snapshot row. Small enough to finish, complete enough to exercise the whole stack.</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Ingredient</th><th>From day</th><th>Role in the project</th></tr></thead>
+    <tbody>
+      <tr><td>🧩 Dependency injection</td><td>Day 3</td><td>The backbone — everything is registered and resolved through the container.</td></tr>
+      <tr><td>⚙️ Configuration</td><td>Day 4/5</td><td>Connection string + settings from <code>appsettings.json</code>, environment, secrets.</td></tr>
+      <tr><td>🎛️ Options pattern</td><td>today's focus</td><td>Strongly-typed, validated settings (the interval, batch size) via <code>IOptions</code>.</td></tr>
+      <tr><td>📋 Logging</td><td>Day 6</td><td>Structured logs of every run, its outcome, and any failure.</td></tr>
+      <tr><td>🗄️ EF Core + SQL Server</td><td>Days 7–9</td><td>Query and write the shop database through <code>ShopContext</code>.</td></tr>
+      <tr><td>⏳ Async + ⚙️ background service</td><td>Days 10, 12</td><td>A <code>BackgroundService</code> looping on a <code>PeriodicTimer</code>, fully async.</td></tr>
+      <tr><td>🛡️ Errors + 🧪 tests</td><td>Days 13–14</td><td>Guarded, validated, resilient per tick — and unit-tested logic.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 The Real Lesson</span>
+    <p>When you've wired these together <em>once</em>, from empty folder to running app to a repo someone else can clone, the whole framework stops feeling like a pile of features and starts feeling like a <strong>coherent platform</strong>. That shift — from "I know the parts" to "I can build the thing" — is the entire point of a capstone.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <div class="mindmap">
+    <div class="mm-core">Consolidation Project<small>one host · every piece</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-blue">
+        <h4>🏠 The Host</h4>
+        <ul>
+          <li><code>CreateApplicationBuilder</code></li>
+          <li>DI + config + logging preset</li>
+          <li><code>builder.Build().RunAsync()</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch b-accent">
+        <h4>⚙️ Config → 🎛️ Options</h4>
+        <ul>
+          <li>appsettings + env + secrets</li>
+          <li>Bind &amp; validate to a class</li>
+          <li>Inject <code>IOptions&lt;T&gt;</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>🗄️ Data</h4>
+        <ul>
+          <li><code>AddDbContext</code> (scoped)</li>
+          <li>Migrations + seeding</li>
+          <li>Scope-per-tick in the worker</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-rose">
+        <h4>⚙️ The Worker</h4>
+        <ul>
+          <li><code>BackgroundService</code></li>
+          <li><code>PeriodicTimer</code> loop</li>
+          <li>Guarded, logged, resilient</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>🐙 Ship It</h4>
+        <ul>
+          <li>git + .gitignore</li>
+          <li>Secrets kept out</li>
+          <li>README that runs</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p>The flow through the app, top to bottom: the <strong>host builder</strong> assembles configuration, logging, and the DI container; <strong>configuration</strong> feeds <strong>options</strong> and the EF <strong>connection string</strong>; the <strong>worker</strong> is resolved by DI, loops on a timer, opens a <strong>scope</strong> each tick to use the <strong>DbContext</strong>, and <strong>logs</strong> what it did. Then you wrap it in a repo and README so it's not just <em>yours</em>.</p>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>🏗️ Project &amp; Host Setup</h2>
+
+  <p>Start from an empty folder. The Worker Service template gives you a host preconfigured with DI, configuration, and logging already wired — the same generic host you met in Day 12.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal · scaffold the solution</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># Create the worker project and a solution to hold it:</span>
+dotnet new worker -n ShopReporter
+dotnet new sln -n ShopReporter
+dotnet sln add ShopReporter
+
+<span class="cmt"># EF Core + SQL Server provider (Days 7–9):</span>
+dotnet add ShopReporter package Microsoft.EntityFrameworkCore.SqlServer
+dotnet add ShopReporter package Microsoft.EntityFrameworkCore.Design
+
+<span class="cmt"># A test project for the logic (Day 13):</span>
+dotnet new xunit -n ShopReporter.Tests
+dotnet sln add ShopReporter.Tests
+dotnet add ShopReporter.Tests reference ShopReporter
+dotnet add ShopReporter.Tests package Moq
+</code></pre>
+  </div>
+
+  <h3>The host builder: everything starts here 🏠</h3>
+  <p>Modern .NET uses <code>Host.CreateApplicationBuilder</code> — a single builder that presets the DI container, configuration (appsettings + environment + more), and logging. Your <code>Program.cs</code> is where you register every piece the rest of the app will resolve:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Program.cs — the composition root</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.EntityFrameworkCore;
+<span class="kw">using</span> Microsoft.Extensions.Hosting;
+
+<span class="ty">HostApplicationBuilder</span> builder = <span class="ty">Host</span>.<span class="fn">CreateApplicationBuilder</span>(args);
+
+<span class="cmt">// 🎛️ OPTIONS — bind &amp; validate a settings section (section 05)</span>
+builder.Services
+    .<span class="fn">AddOptions</span>&lt;<span class="ty">ReporterOptions</span>&gt;()
+    .<span class="fn">Bind</span>(builder.Configuration.<span class="fn">GetSection</span>(<span class="ty">ReporterOptions</span>.SectionName))
+    .<span class="fn">ValidateDataAnnotations</span>()
+    .<span class="fn">ValidateOnStart</span>();
+
+<span class="cmt">// 🗄️ EF CORE — connection string from configuration (section 07)</span>
+builder.Services.<span class="fn">AddDbContext</span>&lt;<span class="ty">ShopContext</span>&gt;(options =&gt;
+    options.<span class="fn">UseSqlServer</span>(
+        builder.Configuration.<span class="fn">GetConnectionString</span>(<span class="str">"ShopDb"</span>)));
+
+<span class="cmt">// ⚙️ THE WORKER — a hosted BackgroundService (section 08)</span>
+builder.Services.<span class="fn">AddHostedService</span>&lt;<span class="ty">OrderStatsWorker</span>&gt;();
+
+<span class="ty">IHost</span> host = builder.<span class="fn">Build</span>();
+<span class="kw">await</span> host.<span class="fn">RunAsync</span>();
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 This File Is the "Composition Root"</span>
+    <p><code>Program.cs</code> is the one place where the whole object graph is assembled — every dependency registered, every setting bound, every service wired. Everything else in the app just <em>declares</em> what it needs in a constructor and trusts DI to provide it (Day 3). A clean composition root is the map of your entire application; read it and you know how the app is built.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ CreateApplicationBuilder Gives You a Lot for Free</span>
+    <p>Out of the box it loads <code>appsettings.json</code> and <code>appsettings.{Environment}.json</code>, environment variables, and command-line args into configuration; sets up console logging; enables the DI container; and reads the <code>DOTNET_ENVIRONMENT</code> variable so Development vs Production behavior just works. You're customizing a working host, not assembling one from scratch.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>⚙️ Configuration</h2>
+
+  <p>Configuration is the app's external settings — connection strings, intervals, feature flags — kept <em>out</em> of code so they can change per environment without a recompile. The host layers several <strong>sources</strong>, each overriding the last, so the same build behaves correctly on your laptop and in production.</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell"><div class="val">appsettings.json</div><div class="idx">base defaults</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">appsettings.{Env}.json</div><div class="idx">per-environment</div></div>
+      <div class="arr-cell highlight"><div class="val">User Secrets / env vars</div><div class="idx">machine / secrets</div></div>
+      <div class="arr-cell highlight-green"><div class="val">command line</div><div class="idx">highest priority</div></div>
+    </div>
+    <div class="arr-caption">Configuration precedence · later sources override earlier · same code, different environments</div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">JSON · appsettings.json</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  <span class="str">"ConnectionStrings"</span>: {
+    <span class="cmt">// Local dev only. TrustServerCertificate for first-run localhost (Day 7).</span>
+    <span class="str">"ShopDb"</span>: <span class="str">"Server=localhost;Database=Shop;Trusted_Connection=True;TrustServerCertificate=True"</span>
+  },
+  <span class="str">"Reporter"</span>: {
+    <span class="str">"IntervalSeconds"</span>: <span class="num">30</span>,
+    <span class="str">"BatchSize"</span>: <span class="num">100</span>,
+    <span class="str">"Enabled"</span>: <span class="kw">true</span>
+  },
+  <span class="str">"Logging"</span>: {
+    <span class="str">"LogLevel"</span>: {
+      <span class="str">"Default"</span>: <span class="str">"Information"</span>,
+      <span class="str">"Microsoft.EntityFrameworkCore.Database.Command"</span>: <span class="str">"Warning"</span>
+    }
+  }
+}
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Secrets Never Go in appsettings.json</span>
+    <p>A real connection string with a password, an API key, a token — these must <strong>never</strong> be committed to source control. For local dev use the <strong>User Secrets</strong> manager (<code>dotnet user-secrets set "ConnectionStrings:ShopDb" "..."</code>), which stores them outside the project folder. In production, use environment variables or a secrets vault. This matters doubly today because we're about to push to a <em>public</em> GitHub repo (section 09) — a leaked credential is scraped by bots within minutes.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Enable User Secrets</span>
+    <p>Run <code>dotnet user-secrets init</code> in the project, then <code>dotnet user-secrets set "ConnectionStrings:ShopDb" "Server=...;Password=..."</code>. The host reads them automatically in Development, layered <em>over</em> appsettings.json — so your committed <code>appsettings.json</code> can hold a harmless placeholder while your machine uses the real secret. Clean separation, nothing sensitive in the repo.</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>🎛️ The Options Pattern</h2>
+
+  <p>You <em>could</em> read settings by string keys everywhere (<code>Configuration["Reporter:IntervalSeconds"]</code>), but that's stringly-typed, un-validated, and scattered. The <strong>options pattern</strong> binds a configuration section to a strongly-typed class once, validates it, and injects it wherever needed. It's the idiomatic way to consume config in .NET.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · ReporterOptions.cs — a validated settings class</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> System.ComponentModel.DataAnnotations;
+
+<span class="kw">public class</span> <span class="ty">ReporterOptions</span>
+{
+    <span class="kw">public const string</span> SectionName = <span class="str">"Reporter"</span>;   <span class="cmt">// avoids a magic string</span>
+
+    [<span class="ty">Range</span>(<span class="num">1</span>, <span class="num">3600</span>)]
+    <span class="kw">public int</span> IntervalSeconds { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="num">30</span>;
+
+    [<span class="ty">Range</span>(<span class="num">1</span>, <span class="num">10000</span>)]
+    <span class="kw">public int</span> BatchSize { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="num">100</span>;
+
+    <span class="kw">public bool</span> Enabled { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">true</span>;
+}
+</code></pre>
+  </div>
+
+  <p>You registered it in <code>Program.cs</code> already (section 03) with <code>Bind</code> + <code>ValidateDataAnnotations</code> + <code>ValidateOnStart</code>. Now inject it — the worker asks for <code>IOptions&lt;ReporterOptions&gt;</code> and reads <code>.Value</code>:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Injecting options</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.Extensions.Options;
+
+<span class="kw">public class</span> <span class="ty">OrderStatsWorker</span>(
+    <span class="ty">IOptions</span>&lt;<span class="ty">ReporterOptions</span>&gt; options,
+    <span class="ty">IServiceScopeFactory</span> scopeFactory,
+    <span class="ty">ILogger</span>&lt;<span class="ty">OrderStatsWorker</span>&gt; logger) : <span class="ty">BackgroundService</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">ReporterOptions</span> _opts = options.Value;   <span class="cmt">// strongly typed!</span>
+    <span class="cmt">// ... _opts.IntervalSeconds, _opts.BatchSize, _opts.Enabled</span>
+}
+</code></pre>
+  </div>
+
+  <h3>Which options interface? 🎚️</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Interface</th><th>Lifetime</th><th>Use when</th></tr></thead>
+    <tbody>
+      <tr><td><code>IOptions&lt;T&gt;</code></td><td>Singleton</td><td>Settings read once at startup, never change. The default, most performant.</td></tr>
+      <tr><td><code>IOptionsSnapshot&lt;T&gt;</code></td><td>Scoped</td><td>Recomputed per scope/request; picks up changes. Can't inject into a singleton.</td></tr>
+      <tr><td><code>IOptionsMonitor&lt;T&gt;</code></td><td>Singleton</td><td>Live updates via <code>.CurrentValue</code>; usable in singletons (like our worker) when settings may reload.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Validate at Startup, Fail Fast</span>
+    <p><code>ValidateDataAnnotations().ValidateOnStart()</code> means a bad setting (interval of 0, negative batch size) crashes the app <strong>at boot</strong> with a clear message — not silently at 3 a.m. mid-run. This is the guard-clause philosophy from Day 14 applied to configuration: fail fast, loudly, where it's cheap to notice. Misconfiguration is a deploy-time problem, not a runtime surprise.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ IOptions in a Singleton</span>
+    <p>Our worker is a singleton (Day 12). <code>IOptions&lt;T&gt;</code> is a singleton too, so injecting it is fine. But you can't inject the <em>scoped</em> <code>IOptionsSnapshot&lt;T&gt;</code> into a singleton worker — same lifetime rule as the DbContext. If you need live-reloading settings inside the worker, use <code>IOptionsMonitor&lt;T&gt;</code> and read <code>.CurrentValue</code> each tick.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>📋 Logging</h2>
+
+  <p>The host wires up <code>ILogger&lt;T&gt;</code> for free (Day 6) — inject it and log. The discipline that matters is <strong>structured logging</strong>: named placeholders, not string concatenation, so logs are queryable and every run leaves a clear trail.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Structured logging in the worker</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// ✅ Structured — {OrderCount} and {Revenue} become queryable fields</span>
+logger.<span class="fn">LogInformation</span>(
+    <span class="str">"Report complete: {OrderCount} orders, {Revenue:C} today"</span>,
+    totalOrders, todayRevenue);
+
+<span class="cmt">// ✅ On failure, pass the EXCEPTION OBJECT (Day 6 + Day 14)</span>
+logger.<span class="fn">LogError</span>(ex, <span class="str">"Report tick failed; will retry next interval"</span>);
+
+<span class="cmt">// ❌ Don't concatenate — loses structure, harder to search &amp; filter</span>
+logger.<span class="fn">LogInformation</span>(<span class="str">"Report complete: "</span> + totalOrders + <span class="str">" orders"</span>);
+</code></pre>
+  </div>
+
+  <p>Log levels are controlled from configuration (the <code>Logging</code> section you saw in section 04), so you can turn EF Core's SQL command logging up in development and down in production without touching code. That's the config-drives-behavior principle again.</p>
+
+  <div class="callout tip">
+    <span class="tag">✅ For This Project, Console Is Enough</span>
+    <p>The built-in console logger is perfect for a worker you run locally. If you later want files, structured JSON sinks, or log aggregation, add <strong>Serilog</strong> (Day 6) — but don't over-engineer the capstone. Log the start, the outcome (with counts), and every failure with its exception; that's a genuinely observable service, and it's what your README will tell people to watch in the console.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Logs Are How You Know It Works</span>
+    <p>A background worker has no UI — the log <em>is</em> its user interface. When you run the finished app, a clean stream of "Report complete: 42 orders, ₹18,500.00 today" every 30 seconds is your proof the whole stack — config, options, DI, EF, async — is working end to end. Ship a service you can't observe and you've shipped a black box.</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>🗄️ EF Core + SQL Server</h2>
+
+  <p>The data layer is the <code>ShopContext</code> from Days 7–9, unchanged. You registered it in <code>Program.cs</code> with the connection string pulled from configuration. Two setup steps remain: making sure the database exists, and using the context correctly from a <em>singleton</em> worker.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal · create &amp; apply the migration (Day 9)</span><button class="copy-btn">Copy</button></div>
+<pre><code>dotnet tool install --global dotnet-ef        <span class="cmt"># once per machine</span>
+dotnet ef migrations add InitialCreate --project ShopReporter
+dotnet ef database update --project ShopReporter
+</code></pre>
+  </div>
+
+  <h3>The scope-per-tick pattern (the key integration point) 🔑</h3>
+  <p>This is where Day 7 (<code>DbContext</code> is scoped) meets Day 12 (hosted services are singletons). A singleton worker can't hold a scoped <code>DbContext</code> — so each tick it opens a fresh scope, resolves the context there, and disposes the scope when the tick ends. This is the single most important detail of the whole project:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Using EF Core from the worker</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">await using var</span> scope = scopeFactory.<span class="fn">CreateAsyncScope</span>();      <span class="cmt">// Day 12</span>
+<span class="kw">var</span> db = scope.ServiceProvider.<span class="fn">GetRequiredService</span>&lt;<span class="ty">ShopContext</span>&gt;();
+
+<span class="kw">int</span> totalOrders = <span class="kw">await</span> db.Orders.<span class="fn">CountAsync</span>(ct);           <span class="cmt">// async, Day 10</span>
+<span class="kw">decimal</span> todayRevenue = <span class="kw">await</span> db.Orders
+    .<span class="fn">Where</span>(o =&gt; o.PlacedAt.Date == <span class="ty">DateTime</span>.UtcNow.Date)
+    .<span class="fn">SumAsync</span>(o =&gt; o.Total, ct);
+
+db.ReportSnapshots.<span class="fn">Add</span>(<span class="kw">new</span> <span class="ty">ReportSnapshot</span>(<span class="ty">DateTime</span>.UtcNow, totalOrders, todayRevenue));
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>(ct);                              <span class="cmt">// Day 9</span>
+<span class="cmt">// scope disposes here → DbContext disposed, connection released</span>
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Applying Migrations: Dev vs Prod</span>
+    <p>For local dev you can call <code>db.Database.MigrateAsync()</code> once at startup to auto-create/update the schema — convenient. But as Day 9 warned, that's risky in multi-instance production (migration races, DDL permissions). For the capstone, running <code>dotnet ef database update</code> manually (or a one-time startup migrate gated to Development) is the honest choice, and your README should tell users to run it.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Every Prior Day Shows Up Here</span>
+    <p>Look at that snippet: scoped context (Day 7), a fresh scope per tick from a singleton (Day 12), async queries with a cancellation token (Day 10), a write with <code>SaveChangesAsync</code> (Day 9). Four lessons converge in eight lines. <em>This</em> is what consolidation means — the patterns aren't separate anymore, they're just how you write the code.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>⚙️ The Worker, Fully Assembled</h2>
+
+  <p>Now everything lands in one class. Read it as a summary of the whole fortnight — every dependency arrives by constructor injection, options and logging are used throughout, the loop is async and cancellable, each tick is scoped and guarded:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · OrderStatsWorker.cs — the whole stack in one file</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.EntityFrameworkCore;
+<span class="kw">using</span> Microsoft.Extensions.DependencyInjection;
+<span class="kw">using</span> Microsoft.Extensions.Hosting;
+<span class="kw">using</span> Microsoft.Extensions.Logging;
+<span class="kw">using</span> Microsoft.Extensions.Options;
+
+<span class="kw">public class</span> <span class="ty">OrderStatsWorker</span>(
+    <span class="ty">IOptions</span>&lt;<span class="ty">ReporterOptions</span>&gt; options,          <span class="cmt">// 🎛️ Day 15 (options)</span>
+    <span class="ty">IServiceScopeFactory</span> scopeFactory,          <span class="cmt">// 🧩 Day 3 / 12 (DI, scope)</span>
+    <span class="ty">ILogger</span>&lt;<span class="ty">OrderStatsWorker</span>&gt; logger)        <span class="cmt">// 📋 Day 6 (logging)</span>
+    : <span class="ty">BackgroundService</span>                           <span class="cmt">// ⚙️ Day 12 (worker)</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">ReporterOptions</span> _opts = options.Value;
+
+    <span class="kw">protected override async</span> <span class="ty">Task</span> <span class="fn">ExecuteAsync</span>(<span class="ty">CancellationToken</span> stoppingToken)
+    {
+        <span class="kw">if</span> (!_opts.Enabled)
+        {
+            logger.<span class="fn">LogInformation</span>(<span class="str">"Reporter disabled by configuration; idling."</span>);
+            <span class="kw">return</span>;
+        }
+
+        logger.<span class="fn">LogInformation</span>(
+            <span class="str">"OrderStatsWorker started; interval {Interval}s"</span>, _opts.IntervalSeconds);
+
+        <span class="kw">using</span> <span class="ty">PeriodicTimer</span> timer = <span class="kw">new</span>(<span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(_opts.IntervalSeconds));
+
+        <span class="kw">while</span> (<span class="kw">await</span> timer.<span class="fn">WaitForNextTickAsync</span>(stoppingToken))   <span class="cmt">// ⏳ Day 10</span>
+        {
+            <span class="kw">try</span>
+            {
+                <span class="kw">await using var</span> scope = scopeFactory.<span class="fn">CreateAsyncScope</span>();   <span class="cmt">// 🔑 Day 12</span>
+                <span class="kw">var</span> db = scope.ServiceProvider.<span class="fn">GetRequiredService</span>&lt;<span class="ty">ShopContext</span>&gt;();
+
+                <span class="kw">int</span> total = <span class="kw">await</span> db.Orders.<span class="fn">CountAsync</span>(stoppingToken);   <span class="cmt">// 🗄️ Day 8</span>
+                <span class="kw">decimal</span> today = <span class="kw">await</span> db.Orders
+                    .<span class="fn">Where</span>(o =&gt; o.PlacedAt.Date == <span class="ty">DateTime</span>.UtcNow.Date)
+                    .<span class="fn">SumAsync</span>(o =&gt; o.Total, stoppingToken);
+
+                db.ReportSnapshots.<span class="fn">Add</span>(
+                    <span class="kw">new</span> <span class="ty">ReportSnapshot</span>(<span class="ty">DateTime</span>.UtcNow, total, today));  <span class="cmt">// 🗄️ Day 9</span>
+                <span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>(stoppingToken);
+
+                logger.<span class="fn">LogInformation</span>(
+                    <span class="str">"Report: {OrderCount} orders, {Revenue:C} today"</span>, total, today);
+            }
+            <span class="kw">catch</span> (<span class="ty">OperationCanceledException</span>) <span class="kw">when</span> (stoppingToken.IsCancellationRequested)
+            {
+                <span class="kw">break</span>;   <span class="cmt">// 🛑 graceful shutdown, Day 12</span>
+            }
+            <span class="kw">catch</span> (<span class="ty">Exception</span> ex)
+            {
+                logger.<span class="fn">LogError</span>(ex, <span class="str">"Report tick failed; continuing"</span>);  <span class="cmt">// 🛡️ Day 14</span>
+            }
+        }
+
+        logger.<span class="fn">LogInformation</span>(<span class="str">"OrderStatsWorker stopping"</span>);
+    }
+}
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Test the Logic (Day 13)</span>
+    <p>Keep the worker thin and push the real work into a scoped service (<code>IReportService.RunAsync</code>) so you can unit-test it with a mocked repository — asserting it computes the right totals and handles an empty database. The worker then only owns timing and scope creation. That separation is exactly what made yesterday's tests easy, and it applies here unchanged.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Read the Constructor Like a Résumé</span>
+    <p>Those three constructor parameters tell the entire story: this class needs settings (options), a way to make scopes (DI), and a way to log. It declares its needs and DI satisfies them. Nothing is <code>new</code>ed up, nothing is a hidden global. That's the design discipline the whole series was building toward — and it's why this class is testable, configurable, and observable without a single change to its logic.</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>🐙 Ship It to GitHub</h2>
+
+  <p>Code that lives only on your laptop isn't shipped. Getting it onto GitHub with a README that a stranger can follow is a real, valued engineering skill — it's how you collaborate, how you build a portfolio, and how you prove you can finish.</p>
+
+  <h3>Step 1 — A proper .gitignore 🚫</h3>
+  <p>Before the first commit, make sure build junk and — critically — secrets never enter history. The .NET gitignore template handles <code>bin/</code>, <code>obj/</code>, and user secrets:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal · git init with a .NET gitignore</span><button class="copy-btn">Copy</button></div>
+<pre><code>dotnet new gitignore        <span class="cmt"># drops in a comprehensive .NET .gitignore</span>
+git init
+git add .
+git status                  <span class="cmt"># 👀 CHECK: no appsettings with real secrets, no bin/obj</span>
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Check for Secrets Before You Commit — Not After</span>
+    <p>Once a secret is committed and pushed, it's in the git <em>history</em> forever, even if you delete it in a later commit — and public-repo scanners find leaked keys within minutes. <strong>Before</strong> the first push: confirm your real connection string lives in User Secrets (not <code>appsettings.json</code>), that <code>appsettings.json</code> holds only a placeholder, and that <code>git status</code> shows nothing sensitive staged. If you ever do leak one, rotate the credential immediately — deleting the commit isn't enough.</p>
+  </div>
+
+  <h3>Step 2 — A README that runs 📄</h3>
+  <p>The README is the front door. A good one lets a stranger go from "cloned" to "running" without asking you anything. The essential sections:</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">📌</span><b>What &amp; why</b><p>One paragraph: what the app does (a scheduled order-stats reporter) and what it demonstrates (DI, config, options, logging, EF Core).</p></div>
+    <div class="card"><span class="glyph">🧰</span><b>Prerequisites</b><p>.NET SDK version, SQL Server (or LocalDB / a Docker command), the EF CLI tool.</p></div>
+    <div class="card"><span class="glyph">▶️</span><b>Getting started</b><p>Clone → set the connection string in User Secrets → run migrations → <code>dotnet run</code>. Exact copy-pasteable commands.</p></div>
+    <div class="card"><span class="glyph">⚙️</span><b>Configuration</b><p>Table of every setting (interval, batch size, Enabled) with defaults and what it does.</p></div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Markdown · README.md skeleton</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw"># ShopReporter</span>
+
+A .NET worker service that reports order statistics from a SQL Server
+database on a schedule. Built to demonstrate DI, configuration, the
+options pattern, structured logging, and EF Core.
+
+<span class="kw">## Prerequisites</span>
+- .NET 9 SDK
+- SQL Server (or LocalDB / `docker run ... mssql`)
+- EF Core CLI: `dotnet tool install --global dotnet-ef`
+
+<span class="kw">## Getting started</span>
+```bash
+git clone https://github.com/you/ShopReporter.git
+cd ShopReporter
+dotnet user-secrets set "ConnectionStrings:ShopDb" "Server=...;..."
+dotnet ef database update --project ShopReporter
+dotnet run --project ShopReporter
+```
+
+<span class="kw">## Configuration</span>
+| Setting                  | Default | Description                    |
+|--------------------------|---------|--------------------------------|
+| `Reporter:IntervalSeconds` | 30    | Seconds between report runs    |
+| `Reporter:BatchSize`       | 100   | Rows processed per run         |
+| `Reporter:Enabled`         | true  | Master on/off switch           |
+
+<span class="kw">## Running the tests</span>
+```bash
+dotnet test
+```
+</code></pre>
+  </div>
+
+  <h3>Step 3 — Commit &amp; push 🚀</h3>
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal · first commit &amp; push</span><button class="copy-btn">Copy</button></div>
+<pre><code>git add .
+git commit -m <span class="str">"Initial commit: ShopReporter worker service"</span>
+
+<span class="cmt"># Create an empty repo on GitHub first, then:</span>
+git remote add origin https://github.com/you/ShopReporter.git
+git branch -M main
+git push -u origin main
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Signs of a Repo Someone Respects</span>
+    <p>A clear README with runnable commands; a sensible <code>.gitignore</code> (no <code>bin/</code>/<code>obj/</code> noise); no secrets anywhere; meaningful commit messages; and a project that actually builds and runs from a fresh clone. Bonus polish: a LICENSE file, a short "Architecture" note pointing at <code>Program.cs</code> as the composition root, and a GitHub Actions workflow running <code>dotnet build</code> + <code>dotnet test</code> on every push. These small things are exactly what a reviewer or hiring manager scans for.</p>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: Build &amp; Ship the Project</h2>
+
+  <p>Today's <strong>Do</strong> is the whole project, end to end. Take your time — this is the day it all clicks. The path:</p>
+
+  <ol>
+    <li>🏗️ <strong>Scaffold:</strong> <code>dotnet new worker</code>, add a solution, add the EF Core SQL Server + Design packages and an xUnit test project.</li>
+    <li>🎛️ <strong>Options:</strong> create a <code>ReporterOptions</code> class with data-annotation validation; register it in <code>Program.cs</code> with <code>Bind().ValidateDataAnnotations().ValidateOnStart()</code>.</li>
+    <li>⚙️ <strong>Config:</strong> put settings in <code>appsettings.json</code>; move the real connection string to User Secrets (<code>dotnet user-secrets set ...</code>) so nothing sensitive is in the repo.</li>
+    <li>🗄️ <strong>EF Core:</strong> bring in your <code>ShopContext</code> (or a small one with <code>Order</code> + a <code>ReportSnapshot</code> entity); register it with <code>AddDbContext</code> + <code>UseSqlServer</code>; add and apply a migration.</li>
+    <li>⚙️ <strong>Worker:</strong> write the <code>BackgroundService</code> from section 08 — <code>PeriodicTimer</code> loop, scope-per-tick, async EF queries + a write, structured logging, per-tick try/catch, graceful shutdown.</li>
+    <li>🧪 <strong>Test:</strong> extract the report logic into a scoped service and unit-test it with a mocked dependency (Day 13) — happy path plus an empty-database edge case.</li>
+    <li>▶️ <strong>Run it:</strong> <code>dotnet run</code>, watch the structured log lines appear every N seconds, press Ctrl+C, confirm it stops cleanly. Change <code>IntervalSeconds</code> to 0 and confirm it fails fast at startup (validation!).</li>
+    <li>🐙 <strong>Ship it:</strong> <code>dotnet new gitignore</code>, verify no secrets are staged, write the README, <code>git init</code> → commit → create the GitHub repo → push. Then clone it into a <em>fresh</em> folder and follow your own README to prove it works.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="tag">✅ The Ultimate Self-Check</span>
+    <p>Delete your local clone, re-clone from GitHub into a new folder, and follow your README exactly — nothing from memory. If it builds, migrates, and runs, you've shipped something real. Then trace one report run in your head and name the day each piece came from: host (12), options (15), config (4), DI scope (3/12), EF query (8), write (9), async (10), log (6), error handling (14). If you can narrate that flow, you don't just know .NET's parts — you can build with them.</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>🎓 Consolidation</b>A real app is the composition of the pieces, not the pieces themselves — one host where config, options, DI, logging, and EF Core work together.</div>
+    <div class="recap-card"><b>🏠 The host</b><code>Host.CreateApplicationBuilder</code> presets DI, configuration, and logging; <code>Program.cs</code> is the composition root where everything is registered.</div>
+    <div class="recap-card"><b>⚙️ Configuration</b>Layered sources (appsettings → env → secrets → CLI) override in order; secrets go in User Secrets/env vars, never in the repo.</div>
+    <div class="recap-card"><b>🎛️ Options</b>Bind a config section to a validated class; inject <code>IOptions&lt;T&gt;</code>. <code>ValidateOnStart</code> fails fast on bad settings at boot.</div>
+    <div class="recap-card"><b>📋 Logging</b>The host wires <code>ILogger&lt;T&gt;</code>; use structured placeholders; the log is a headless worker's only UI.</div>
+    <div class="recap-card"><b>🗄️ EF Core</b>Register scoped with <code>AddDbContext</code>; from the singleton worker, open a fresh scope per tick and resolve the context there.</div>
+    <div class="recap-card"><b>⚙️ The worker</b>A <code>BackgroundService</code> on a <code>PeriodicTimer</code>, async, guarded per tick, gracefully stopping — every dependency by constructor injection.</div>
+    <div class="recap-card"><b>🐙 Ship it</b>.gitignore first, no secrets, a README that takes a stranger from clone to running, meaningful commits, then push.</div>
+  </div>
+
+  <h3>Summary table — the full stack in one project</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Concern</th><th>Tool</th><th>Registered / used in</th><th>Day</th></tr></thead>
+    <tbody>
+      <tr><td>Composition root</td><td><code>Host.CreateApplicationBuilder</code></td><td><code>Program.cs</code></td><td>12/15</td></tr>
+      <tr><td>Dependency injection</td><td><code>builder.Services.Add*</code> + ctor injection</td><td>everywhere</td><td>3</td></tr>
+      <tr><td>Configuration</td><td>appsettings + User Secrets + env</td><td><code>builder.Configuration</code></td><td>4</td></tr>
+      <tr><td>Options</td><td><code>AddOptions().Bind().Validate*</code></td><td><code>IOptions&lt;ReporterOptions&gt;</code></td><td>15</td></tr>
+      <tr><td>Logging</td><td><code>ILogger&lt;T&gt;</code>, structured</td><td>the worker</td><td>6</td></tr>
+      <tr><td>Data access</td><td><code>AddDbContext</code> + <code>UseSqlServer</code></td><td>scope per tick</td><td>7–9</td></tr>
+      <tr><td>Async loop</td><td><code>PeriodicTimer</code> + <code>await</code></td><td><code>ExecuteAsync</code></td><td>10/12</td></tr>
+      <tr><td>Robustness</td><td>guard + try/catch + validation</td><td>each tick</td><td>14</td></tr>
+      <tr><td>Tests</td><td>xUnit + Moq</td><td>the report service</td><td>13</td></tr>
+      <tr><td>Delivery</td><td>git + README + GitHub</td><td>the repo</td><td>15</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is the "generic host" / HostApplicationBuilder, and what does it give you?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It's the standard startup object for .NET apps — <code>Host.CreateApplicationBuilder(args)</code> — that presets the essentials so you don't wire them by hand: the dependency injection container, configuration (loading appsettings.json, environment-specific files, environment variables, and command-line args), and logging. You register your own services and settings on it, call <code>Build()</code>, then <code>RunAsync()</code>. It works for console apps, worker services, and (as WebApplicationBuilder) web apps, giving every .NET app the same consistent foundation.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is a "composition root"?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It's the single place in an application where the whole object graph is assembled — where you register every service, bind every setting, and configure the DI container. In a .NET app that's <code>Program.cs</code>. Everything else just declares its dependencies in its constructor and lets DI provide them. Keeping all the wiring in one composition root means you can look at that one file and understand how the entire app is put together, rather than hunting for <code>new</code> statements scattered across the codebase.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What is the options pattern and why use it over reading config keys directly?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>The options pattern binds a section of configuration to a strongly-typed C# class, which you then inject as <code>IOptions&lt;T&gt;</code>. It's better than reading <code>Configuration["Section:Key"]</code> everywhere because: it's strongly typed (no typos in magic strings, real types instead of strings), it centralizes the settings in one class, it supports validation, and it makes classes testable (you can pass a plain options object in a test). You define a POCO with properties matching the config, register it with <code>Bind</code>, and inject it where needed.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">Where should a database connection string live, and where should it NOT?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It should live in configuration that's appropriate to each environment: for local development, User Secrets (stored outside the project folder) or a local appsettings that isn't committed; in production, environment variables or a secrets vault. It should <strong>not</strong> be hard-coded in source, and a connection string containing a real password should never be committed to <code>appsettings.json</code> or any file in the repository — because anything in git history is effectively permanent, and secrets in public repos get scraped by bots within minutes.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">Why do you create a DI scope inside a background worker to use a DbContext?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Because a hosted background service is registered as a singleton (one instance for the app's life), but <code>DbContext</code> is registered as scoped (meant to live briefly, one per unit of work). A singleton can't hold a scoped service, so you inject <code>IServiceScopeFactory</code> and, each time you do work (each timer tick), create a fresh scope, resolve the <code>DbContext</code> from it, use it, and dispose the scope. Each tick gets its own clean context, just like each web request would.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What belongs in a .gitignore for a .NET project, and why?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Build output (<code>bin/</code>, <code>obj/</code>), IDE files (<code>.vs/</code>, <code>.idea/</code>), and anything containing secrets or machine-specific settings. You generate it with <code>dotnet new gitignore</code>, which produces a comprehensive template. The reasons: build output is regenerated from source so committing it just adds noise and merge conflicts; and keeping secrets/user-specific files out prevents leaking credentials and avoids polluting the repo with things that differ per developer. A clean repo contains source and config templates, not derived artifacts or secrets.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What makes a good README?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>One that lets a stranger go from cloning the repo to running the app without asking the author anything. Essentials: a short description of what the project does and why; prerequisites (SDK version, database, tools); step-by-step getting-started commands they can copy-paste (clone, set secrets, run migrations, run); a configuration reference (the settings and their defaults); and how to run the tests. Clear, runnable, and honest about what's needed. The README is the project's front door.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">Name the pieces you'd wire together in a typical worker service.</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>The host (CreateApplicationBuilder) as the foundation; configuration (appsettings + secrets) for external settings; the options pattern for strongly-typed, validated settings; dependency injection to register and resolve everything; logging (ILogger) for observability; a DbContext via AddDbContext for data access; and a BackgroundService (usually on a PeriodicTimer) as the actual worker that runs the loop. They all come together in Program.cs, and the worker uses them through constructor injection.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">Explain configuration precedence. If a value is in appsettings.json and an environment variable, which wins?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Configuration sources are layered in order, and later sources override earlier ones for the same key. The default host order is roughly: <code>appsettings.json</code> → <code>appsettings.{Environment}.json</code> → User Secrets (in Development) → environment variables → command-line arguments. So an environment variable overrides <code>appsettings.json</code>, and a command-line argument overrides everything. This is what lets the same build behave differently per environment — base defaults in appsettings, environment-specific overrides layered on top, and secrets/deployment values injected via environment variables in production without changing any committed file.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">Compare IOptions, IOptionsSnapshot, and IOptionsMonitor. When do you use each?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><code>IOptions&lt;T&gt;</code> is a singleton, computed once at startup — use it for settings that don't change during the app's life; it's the simplest and most performant, and injectable anywhere. <code>IOptionsSnapshot&lt;T&gt;</code> is scoped, recomputed per scope/request, so it picks up config changes — good for web requests that should see updated values, but it can't be injected into a singleton. <code>IOptionsMonitor&lt;T&gt;</code> is a singleton that provides the current value at any time via <code>.CurrentValue</code> and can notify on change — use it when a long-lived/singleton service (like a background worker) needs to react to configuration reloads at runtime. Rule of thumb: static settings → IOptions; per-request refresh → IOptionsSnapshot; live updates in a singleton → IOptionsMonitor.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">Why validate options at startup, and how do you do it?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Because misconfiguration should fail loudly at deploy time, not silently at runtime. If the interval is 0 or a required setting is missing, you want the app to refuse to start with a clear message — not to discover it hours later when the worker misbehaves or crashes mid-operation. You do it by chaining validation onto the options registration: <code>AddOptions&lt;T&gt;().Bind(section).ValidateDataAnnotations().ValidateOnStart()</code>. <code>ValidateDataAnnotations</code> enforces attributes like <code>[Range]</code> and <code>[Required]</code> on the options class; <code>ValidateOnStart</code> runs that validation during host startup rather than lazily on first access. It's the guard-clause / fail-fast principle applied to configuration.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">How do lifetimes interact in this project — singleton worker, scoped DbContext, singleton options?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>The worker (a hosted service) is a singleton; <code>IOptions&lt;T&gt;</code> is a singleton, so injecting it into the worker is fine. <code>DbContext</code> is scoped, so it <em>cannot</em> be injected into the singleton worker directly — the container would throw (or you'd keep one context alive forever). The resolution is to inject the singleton <code>IServiceScopeFactory</code> and create a scope per tick, resolving the scoped DbContext inside it. The general rule: a longer-lived service must not capture a shorter-lived one via constructor injection; when it needs one, it creates a scope. Getting this wrong is the single most common bug when combining background services with EF Core, which is exactly why it's the project's key integration point.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">A teammate committed a connection string with a password to the public repo. What do you do?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Treat the credential as compromised immediately — the fix is not just to remove it from the file. First, <strong>rotate the secret</strong> (change the password / regenerate the key) so the leaked value is useless; assume bots have already scraped it. Then remove it from the current code (move it to User Secrets / environment variables), and if required, purge it from git history (e.g. with <code>git filter-repo</code> or BFG) and force-push — though history rewriting is disruptive and rotation is the real safety net. Going forward, prevent recurrence: a proper <code>.gitignore</code>, secrets in User Secrets/vaults, and ideally a pre-commit secret scanner or GitHub secret scanning enabled. The key mindset: once pushed, consider it public forever; rotation, not deletion, is what actually protects you.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">Should you run EF Core migrations automatically at app startup? Discuss.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>It's a convenience-versus-safety trade-off. Calling <code>db.Database.MigrateAsync()</code> at startup is lovely for local dev and single-instance apps — the schema is always current with one command. But in multi-instance production it's risky: several instances may race to apply migrations simultaneously, the app's runtime identity then needs schema-altering (DDL) permissions which is a security smell, and a bad migration takes the whole app down at boot with no review gate. The safer production approach is to apply migrations as an explicit deployment step (a migration script or bundle run once by the pipeline) before the new app version rolls out. For a capstone/dev project, startup-migrate gated to the Development environment, or a documented manual <code>dotnet ef database update</code>, is the honest middle ground — and the README should tell users which.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">Why is structured logging important, especially for a headless worker?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>A background worker has no UI, so its logs are the only window into whether it's working — structured logging makes that window useful. Using named placeholders (<code>LogInformation("Report: {OrderCount} orders", total)</code>) rather than string concatenation means each value is captured as a queryable field, so in a log system you can filter, aggregate, and alert on them (e.g. "show runs where OrderCount dropped to 0"). It also keeps a consistent message template for grouping. For a worker specifically, logging the start, each run's outcome with its key numbers, and every failure with the exception object is what turns an invisible process into an observable, debuggable service. Without it you've shipped a black box that either silently works or silently doesn't.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">How would you make this worker's logic unit-testable?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Keep the worker thin and push the actual work into a separate scoped service behind an interface (e.g. <code>IReportService.RunAsync</code>). The worker then only owns timing (the PeriodicTimer loop), scope creation, and top-level error handling — none of which needs a database to test. The report service takes its dependencies (a repository interface, a clock) by injection, so in tests you mock those with Moq and assert it computes the right totals, writes the right snapshot, and handles edge cases like an empty database — all without a real SQL Server. For the data-access layer itself, prefer integration tests against a real (containerized) database rather than mocking EF Core. This separation of "timing/orchestration" from "logic" is the same testability-through-DI principle from the testing lesson, applied to a worker.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Walk through the full lifecycle of this app from process start to a single report run.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>At process start, <code>Host.CreateApplicationBuilder</code> builds configuration by layering appsettings, environment files, User Secrets, and environment variables, and sets up logging and the DI container. <code>Program.cs</code> registers the options (bound and validated), the DbContext (scoped, with the connection string from config), and the worker (as a hosted singleton). <code>Build()</code> constructs the container; because we used <code>ValidateOnStart</code>, options are validated here and a bad setting aborts startup. <code>RunAsync()</code> starts the host, which calls the worker's <code>StartAsync</code>; <code>BackgroundService</code> kicks off <code>ExecuteAsync</code> without blocking startup. Inside, the worker reads its options, creates a PeriodicTimer, and enters the loop. Each tick: it creates a DI scope, resolves a fresh DbContext from it, runs async queries (passing the stopping token), computes the stats, writes a snapshot with SaveChangesAsync, logs the structured result, and disposes the scope (releasing the connection). On Ctrl+C/SIGTERM the host cancels the stopping token; the loop's await observes it, the worker logs and exits, StopAsync completes within the shutdown timeout, and the process ends. Every layer from the fortnight appears in that single trace.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">How would you take this from a dev capstone to genuinely production-ready?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Several dimensions. <strong>Config/secrets</strong>: connection strings and keys from a real secrets store (Azure Key Vault / environment) not User Secrets; environment-specific appsettings. <strong>Migrations</strong>: applied as a controlled deployment step, not at multi-instance startup. <strong>Resilience</strong>: retry-on-failure for transient DB errors (EF's <code>EnableRetryOnFailure</code>), and if it calls external services, the standard resilience handler (Day 11). <strong>Observability</strong>: structured logs to an aggregator, metrics (runs, failures, duration), and a health check exposing last-successful-run so a silently-dead worker is detected. <strong>Scale-out</strong>: decide if the job is per-instance or cluster-wide-singleton; if singleton, add a distributed lock/leader election or move to Hangfire/Quartz (Day 12). <strong>Shutdown</strong>: verified graceful shutdown within the orchestrator's grace period; idempotent work so a mid-run kill and restart is safe. <strong>Delivery</strong>: containerized, with a CI pipeline running build + tests, and CD applying migrations then deploying. <strong>Hardening</strong>: least-privilege DB account, no secrets in images/logs. The capstone proves the composition works; production-readiness is about operability, safety, and running unattended across restarts and instances.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">The worker occasionally does a long-running unit of work. How do you keep the timer, shutdown, and DB usage all correct?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Several interacting concerns. <strong>Timer</strong>: <code>PeriodicTimer</code> ticks don't overlap — a new tick won't start until you finish awaiting the current one — so long work naturally delays the next tick rather than piling up; that's usually what you want, but if strict cadence matters you'd decouple the work onto a separate task (accepting overlap and the concurrency it implies). <strong>Shutdown</strong>: the long work must be cancellation-aware — pass the stopping token into every async call (EF queries, HTTP) and check it in any long loops, so a shutdown during a long tick aborts promptly rather than blowing the shutdown timeout and getting force-killed; if it can't finish in time, make the work idempotent/resumable so an abrupt stop loses nothing. <strong>DB</strong>: keep the scope (and thus the DbContext and its connection) alive only for the work that needs it — for very long runs, avoid holding one context/connection and one transaction open the whole time; break work into batches, each in its own scope, so you're not pinning a connection or growing the change tracker unbounded. And guard each batch so one failure doesn't kill the worker. The theme: cooperate with cancellation, don't hold scoped resources longer than needed, and design for interruption.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">Design the configuration/secrets story across local, CI, and production for this repo.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>One consistent shape, different sources per environment, no secrets in git. <strong>Local dev</strong>: <code>appsettings.json</code> holds non-secret defaults and placeholders; the real connection string lives in User Secrets, layered over appsettings automatically in Development. <strong>CI</strong>: tests that need a database use a throwaway/containerized DB with a connection string injected via the pipeline's secret store as an environment variable; no real production credentials ever touch CI. <strong>Production</strong>: settings come from environment variables and a managed secrets store (Key Vault / Secrets Manager), injected at deploy/run time, with <code>appsettings.Production.json</code> for non-secret prod overrides. The key string (<code>ConnectionStrings:ShopDb</code>) is identical everywhere — only the <em>source</em> changes, thanks to the layered configuration system — so code never branches on environment for config. Add validation (<code>ValidateOnStart</code>) so a missing/blank required setting fails the boot in every environment. Enforce with a <code>.gitignore</code> that excludes secret files, and ideally secret-scanning in CI/GitHub to catch accidental commits. The principle: same keys, environment-appropriate sources, secrets injected at runtime, validated on start, and never committed.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">What would a good CI pipeline for this repository do, and why?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>On every push and pull request, it should at minimum <strong>restore, build, and run the tests</strong> — failing the check if any step fails — so broken or untested code can't merge. A solid pipeline (e.g. GitHub Actions) adds: running on the target SDK version; caching packages for speed; running unit tests always and integration tests (against a containerized SQL Server service) where present; reporting test results and optionally coverage; and static checks like formatting (<code>dotnet format --verify-no-changes</code>) and analyzers/warnings-as-errors. For delivery it can build and publish a container image on merge to main, and a separate deployment workflow applies migrations then rolls out. The <em>why</em>: automated, consistent verification on every change is what keeps main always releasable, catches regressions immediately, and removes "works on my machine" — it's the executable enforcement of the quality practices (tests, no secrets, it builds from clean) the whole series has been building toward. It also signals professionalism on a public repo: a green CI badge tells reviewers the project is real and maintained.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">If this worker ran in three instances behind a scheduler, what breaks and how do you fix it?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Background services run in <em>every</em> instance, so with three instances the report tick fires three times per interval, concurrently. Depending on the work that's anywhere from harmless-but-wasteful (three identical read-only reports) to corrupting (three writers racing to insert snapshots, or double-processing a queue). The fix depends on intent. If the work is genuinely per-instance (e.g. draining that instance's own in-memory queue), it's correct as-is. If it must run exactly once per interval cluster-wide, you need coordination: a distributed lock (a DB row/advisory lock or Redis lock) that only one instance acquires per tick; leader election so one instance owns the schedule; or moving scheduled work to a dedicated scheduler like Hangfire or Quartz.NET backed by a shared store that guarantees single execution and adds retries, history, and misfire handling. You also make the work idempotent so an accidental double-run (or a lock edge case) doesn't corrupt data — writing a snapshot keyed by a time bucket, say, so a duplicate is a no-op. The first question to ask is always "is this work per-instance or global?" — it determines everything.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">How do you structure a solution like this for maintainability as it grows?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Separate by responsibility so pieces can evolve and be tested independently. A common shape: a <em>host</em> project (Program.cs, worker, DI wiring — the composition root and thin orchestration); a <em>domain/application</em> project with the actual logic and service interfaces (no framework dependencies, easy to unit-test); an <em>infrastructure</em> project with the DbContext, repositories, and external integrations (the concrete implementations of the domain's interfaces); and a <em>tests</em> project. Dependencies point inward — infrastructure and host depend on the domain, not vice versa — so business logic doesn't know about EF Core or the host. Register infrastructure implementations against domain interfaces in the composition root. Keep options classes near what uses them, group registrations into extension methods (<code>services.AddShopData(config)</code>) so Program.cs stays readable, and keep the worker thin. This is essentially layered/clean architecture; you don't need its full ceremony for a small worker, but even lightly separating "logic" from "framework and IO" pays off the moment the project grows a second worker, an API front-end, or a second data source. The goal is that changing the database technology or adding a feature touches one project, not all of them.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">Reflecting on the whole stack: why is dependency injection the thread that ties it all together?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Because nearly every capability in modern .NET is delivered <em>through</em> the DI container, and every good property of the app flows from it. Configuration and options are registered and injected as services; logging is an injected <code>ILogger&lt;T&gt;</code>; EF Core is a registered scoped <code>DbContext</code>; the worker is a hosted service the container constructs; HTTP clients, background queues, resilience — all registered and resolved. That single mechanism is what makes the app <strong>testable</strong> (swap real dependencies for mocks by passing them to the same constructors), <strong>configurable</strong> (change what's registered without changing consumers), <strong>observable</strong> (cross-cutting concerns like logging injected uniformly), and <strong>composable</strong> (each class declares its needs and the container satisfies them, so wiring lives in one composition root rather than scattered <code>new</code> statements). The lifetime rules (singleton/scoped/transient) that felt like trivia on Day 3 turn out to govern the app's most subtle correctness issues — like the singleton-worker-versus-scoped-DbContext problem at the heart of this project. Master DI and the rest of the framework arranges itself around it; that's why it's day three <em>and</em> the through-line of day fifteen.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>For this capstone, the interview value is in the <em>connections</em>, not any single fact. Nail Q1–Q8 as the vocabulary (host, composition root, options, scopes, README), then focus hard on Q10 (the options interfaces) and Q12 (the lifetime interactions) — the singleton-worker-vs-scoped-DbContext story is the one thing interviewers use to check you've actually built one of these, not just read about it. Save Q17 (the full lifecycle walkthrough) for last and practice narrating it out loud: if you can trace a single report run from <code>Program.cs</code> to a logged line and name the day each piece came from, you've genuinely consolidated the whole series — which is the entire point of Day 15.</p>
+  </div>
+</section>
+
+<footer>Day 15 of the .NET series · Consolidation Project: DI + Config + Options + Logging + EF Core, Shipped to GitHub · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

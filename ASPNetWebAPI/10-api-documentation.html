@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Documentation — OpenAPI, Swagger &amp; XML Comments — Day 10</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:14px 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 10 · ASP.NET Core</div>
+    <div class="brand-title">API Documentation 📘</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>Why Document an API?</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>OpenAPI vs. Swagger</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Generating the Doc</div>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Native OpenAPI (.NET 9+)</span></a>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>Swashbuckle</span></a>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>Adding a UI</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Annotating</div>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>XML Comments</span></a>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>Documenting Responses</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Practice</div>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>A Fully Annotated Endpoint</span></a>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>The Doc Pipeline</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 10 — an undocumented API is a locked door</div>
+      <h1>API Documentation 📘</h1>
+      <p class="lede">Your API might be flawless, but if a client can't discover what endpoints exist, what to send, and what comes back, it's useless to them. Good docs turn your API into a self-service product. In .NET the machine-readable contract is an <strong>OpenAPI</strong> document, rendered by tools like <strong>Swagger UI</strong> or <strong>Scalar</strong>. Today we generate that document, enrich it with <strong>XML comments</strong>, and precisely describe every response — the difference between docs that merely exist and docs people actually enjoy using.</p>
+      <div class="chips">
+        <span class="chip">📄 OpenAPI</span>
+        <span class="chip">🧭 Swagger UI</span>
+        <span class="chip">📦 Swashbuckle</span>
+        <span class="chip">💬 XML comments</span>
+        <span class="chip">🎯 ProducesResponseType</span>
+        <span class="chip">✨ Scalar</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>Why Document an API? 📖</h2></div>
+      <p>An API is a contract between your server and everyone who calls it — front-end teams, mobile apps, partners, and increasingly AI agents. Documentation <em>is</em> that contract made visible: which endpoints exist, what parameters and bodies they accept, what shapes and status codes they return, and what each field means. Without it, callers resort to guesswork, trial and error, and messaging you on Slack.</p>
+
+      <p>The modern goal is <strong>machine-readable</strong> documentation. A structured spec doesn't just render nice web pages — it powers interactive test consoles, auto-generates client SDKs, seeds Postman collections, and gives LLM tools the context to call your API correctly.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🍴 Analogy — the menu, again</span>
+        <p>An API without docs is a restaurant with no menu: you'd have to walk into the kitchen and ask what's cookable. The OpenAPI document is the menu — every dish (endpoint), its ingredients (parameters), and what arrives on the plate (responses). Swagger UI and Scalar are the beautifully printed, laminated version the customer actually holds.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Two things, often confused</span>
+        <p>The <strong>document</strong> (the OpenAPI spec, usually JSON) is the data. The <strong>UI</strong> (Swagger UI, Scalar, Redoc) is a viewer that renders that data into an interactive page. Today's job is to produce a rich <em>document</em>, then point a <em>UI</em> at it.</p>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">API Documentation</div>
+          <div class="s">the visible contract</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch b-blue">
+            <h4>📄 OpenAPI</h4>
+            <ul>
+              <li>The spec / standard</li>
+              <li>Machine-readable JSON</li>
+              <li>Swagger = the toolset</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>⚙️ Generate</h4>
+            <ul>
+              <li>Native <code>AddOpenApi</code> (.NET 9+)</li>
+              <li>Swashbuckle (community)</li>
+              <li>From your code</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>🧭 Render</h4>
+            <ul>
+              <li>Swagger UI</li>
+              <li>Scalar / Redoc</li>
+              <li>Interactive "try it"</li>
+            </ul>
+          </div>
+          <div class="mm-branch">
+            <h4>💬 Annotate</h4>
+            <ul>
+              <li>XML doc comments</li>
+              <li>Summaries &amp; params</li>
+              <li>Examples</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h4>🎯 Responses</h4>
+            <ul>
+              <li><code>[ProducesResponseType]</code></li>
+              <li>All status codes</li>
+              <li>Body types</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>OpenAPI vs. Swagger — the Vocabulary 🏷️</h2></div>
+      <p>People use these words interchangeably, but they're distinct — and interviewers love the distinction.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Term</th><th>What it actually is</th></tr></thead>
+          <tbody>
+            <tr><td><strong>OpenAPI</strong></td><td>The open <em>specification</em> (standard) for describing REST APIs in a language-neutral format. The document itself.</td></tr>
+            <tr><td><strong>Swagger</strong></td><td>A <em>set of tools</em> built around OpenAPI (Swagger UI, Swagger Editor, Codegen). "Swagger" was the original name; the spec was renamed OpenAPI in 2015.</td></tr>
+            <tr><td><strong>Swagger UI</strong></td><td>The specific interactive web page that renders an OpenAPI document and lets you try requests.</td></tr>
+            <tr><td><strong>Swashbuckle</strong></td><td>A .NET <em>library</em> that generates OpenAPI docs (and bundles Swagger UI) for ASP.NET Core.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 One-liner to remember</span>
+        <p><strong>OpenAPI is the specification; Swagger is the tooling around it.</strong> An OpenAPI document is a JSON (or YAML) file describing your whole API. In .NET it's typically served at <code>/openapi/v1.json</code> (native) or <code>/swagger/v1/swagger.json</code> (Swashbuckle).</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">JSON — a tiny slice of an OpenAPI document</span><button class="copy-btn">Copy</button></div>
+        <pre><code>{
+  <span class="str">"openapi"</span>: <span class="str">"3.1.1"</span>,
+  <span class="str">"info"</span>: { <span class="str">"title"</span>: <span class="str">"Shop API"</span>, <span class="str">"version"</span>: <span class="str">"v1"</span> },
+  <span class="str">"paths"</span>: {
+    <span class="str">"/api/products/{id}"</span>: {
+      <span class="str">"get"</span>: {
+        <span class="str">"summary"</span>: <span class="str">"Gets a product by its id."</span>,
+        <span class="str">"responses"</span>: {
+          <span class="str">"200"</span>: { <span class="str">"description"</span>: <span class="str">"The product was found."</span> },
+          <span class="str">"404"</span>: { <span class="str">"description"</span>: <span class="str">"No product with that id exists."</span> }
+        }
+      }
+    }
+  }
+}</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Version note</span>
+        <p>.NET 10's native generator emits <strong>OpenAPI 3.1</strong> documents (and .NET 11 will default to 3.2); Swashbuckle historically emits 3.0. The version mostly matters for advanced schema features like nullable handling and JSON Schema alignment — the concepts you learn today carry across all of them.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Native OpenAPI (.NET 9+) ⚙️</h2></div>
+      <p>Here's the big change to internalize: for years the Web API template bundled Swashbuckle. Starting in <strong>.NET 9</strong>, ASP.NET Core dropped that dependency and shipped its own first-party package, <code>Microsoft.AspNetCore.OpenApi</code>. It's maintained by the ASP.NET Core team, is AoT-friendly, and generates the OpenAPI document natively — no third-party dependency.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs (the whole native setup)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// dotnet add package Microsoft.AspNetCore.OpenApi</span>
+<span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+
+builder.Services.<span class="fn">AddControllers</span>();
+builder.Services.<span class="fn">AddOpenApi</span>();          <span class="cmt">// register the generator</span>
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+<span class="kw">if</span> (app.Environment.<span class="fn">IsDevelopment</span>())
+    app.<span class="fn">MapOpenApi</span>();               <span class="cmt">// serves /openapi/v1.json</span>
+
+app.<span class="fn">MapControllers</span>();
+app.<span class="fn">Run</span>();</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The catch: the document, but no UI</span>
+        <p>The native package generates only the OpenAPI <em>document</em> — it does <strong>not</strong> include an interactive UI. Navigate to <code>/openapi/v1.json</code> and you'll see raw JSON, not a pretty page. To get a clickable interface, you add a renderer separately (section 05). This surprises people migrating from .NET 8, where the template gave you Swagger UI out of the box.</p>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🏛️</span><h4>First-party</h4><p>Maintained by the ASP.NET Core team and versioned with the framework, so it tracks new features.</p></div>
+        <div class="card"><span class="glyph">🪶</span><h4>AoT-friendly</h4><p>Uses source generation and <code>System.Text.Json</code> schema support, so it works with trimming and Native AOT.</p></div>
+        <div class="card"><span class="glyph">🧩</span><h4>Transformers</h4><p>Customize the output via document, operation, and schema <em>transformers</em> instead of Swashbuckle filters.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Build-time docs, too</span>
+        <p>Add the <code>Microsoft.Extensions.ApiDescription.Server</code> package to generate the OpenAPI JSON at <em>build</em> time — handy for committing the spec to source control, spec-based integration tests, or serving it statically.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>Swashbuckle — Still Here, Now Opt-In 📦</h2></div>
+      <p><strong>Swashbuckle</strong> was the default for years and remains a perfectly good, actively-published community package — it's just no longer bundled. You'd choose it when you have existing Swashbuckle configuration, need a specific filter/extension it provides, or want its bundled Swagger UI in one package. On .NET 10 you use Swashbuckle <strong>v10.x</strong>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the classic Swashbuckle setup</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// dotnet add package Swashbuckle.AspNetCore</span>
+builder.Services.<span class="fn">AddControllers</span>();
+builder.Services.<span class="fn">AddEndpointsApiExplorer</span>();  <span class="cmt">// needed for minimal APIs</span>
+builder.Services.<span class="fn">AddSwaggerGen</span>(options =&gt;
+{
+    options.<span class="fn">SwaggerDoc</span>(<span class="str">"v1"</span>, <span class="kw">new</span> <span class="ty">OpenApiInfo</span>
+    {
+        Title = <span class="str">"Shop API"</span>,
+        Version = <span class="str">"v1"</span>,
+        Description = <span class="str">"Manages products in the shop."</span>
+    });
+});
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+<span class="kw">if</span> (app.Environment.<span class="fn">IsDevelopment</span>())
+{
+    app.<span class="fn">UseSwagger</span>();      <span class="cmt">// serves /swagger/v1/swagger.json</span>
+    app.<span class="fn">UseSwaggerUI</span>();    <span class="cmt">// serves the Swagger UI at /swagger</span>
+}</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>Native OpenAPI</th><th>Swashbuckle</th></tr></thead>
+          <tbody>
+            <tr><td>Ships in template?</td><td>✅ Yes (.NET 9+)</td><td>❌ Opt-in package</td></tr>
+            <tr><td>Maintained by</td><td>ASP.NET Core team</td><td>Community</td></tr>
+            <tr><td>OpenAPI version</td><td>3.1 (.NET 10)</td><td>3.0 (opt-in 3.1 in v10)</td></tr>
+            <tr><td>Bundled UI?</td><td>❌ Add separately</td><td>✅ Swagger UI included</td></tr>
+            <tr><td>Native AOT</td><td>✅ Supported</td><td>Limited</td></tr>
+            <tr><td>Customization</td><td>Transformers</td><td>Filters</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Don't mix the two blindly</span>
+        <p>Adding both <code>Microsoft.AspNetCore.OpenApi</code> and Swashbuckle in one project can cause namespace/version conflicts (the <code>Microsoft.OpenApi</code> types moved between versions). Pick one generator per project. A common migration path is: keep Swashbuckle's Swagger UI, but generate the document with the native package.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The 2026 default recommendation</span>
+        <p>For a <em>new</em> project, prefer <strong>native OpenAPI</strong> for generation (it's first-party and future-proof) plus a modern UI like Scalar. Reach for <strong>Swashbuckle</strong> when you have an existing investment in its filters/extensions, or specifically want its all-in-one Swagger UI package. Both are valid; the choice is about your situation, not one being "wrong."</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>Adding an Interactive UI 🧭</h2></div>
+      <p>With native OpenAPI you get a JSON document but no viewer. Point one of these UIs at it. All three read the same OpenAPI document; they differ only in looks and features.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Scalar (the popular modern choice)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// dotnet add package Scalar.AspNetCore</span>
+<span class="kw">if</span> (app.Environment.<span class="fn">IsDevelopment</span>())
+{
+    app.<span class="fn">MapOpenApi</span>();                 <span class="cmt">// /openapi/v1.json</span>
+    app.<span class="fn">MapScalarApiReference</span>();       <span class="cmt">// interactive UI at /scalar/v1</span>
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — or Swagger UI against the native document</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// dotnet add package Swashbuckle.AspNetCore.SwaggerUI</span>
+<span class="kw">if</span> (app.Environment.<span class="fn">IsDevelopment</span>())
+{
+    app.<span class="fn">MapOpenApi</span>();
+    app.<span class="fn">UseSwaggerUI</span>(o =&gt;
+        o.<span class="fn">SwaggerEndpoint</span>(<span class="str">"/openapi/v1.json"</span>, <span class="str">"Shop API v1"</span>));
+}</code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🧭</span><h4>Swagger UI</h4><p>The classic, universally recognized "try it out" console. Great familiarity; served at <code>/swagger</code>.</p></div>
+        <div class="card"><span class="glyph">✨</span><h4>Scalar</h4><p>Modern, fast, readable by default, with a polished request builder. The popular .NET 9/10 pick; at <code>/scalar/v1</code>.</p></div>
+        <div class="card"><span class="glyph">📗</span><h4>Redoc</h4><p>Clean, read-only, three-panel reference — nice for polished public docs you show customers.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Gate the UI to non-production</span>
+        <p>Notice the <code>if (IsDevelopment())</code> around the UI mapping. Exposing an interactive API explorer publicly can reveal internal endpoints and invite probing. Many teams keep the UI to development/staging, and if the doc must be public, serve it read-only and protected. Generating the document is cheap; exposing a live "try it" console to the world is a choice, not a default.</p>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>XML Comments — Prose From Your Code 💬</h2></div>
+      <p>A generated document knows your <em>shapes</em> (types, status codes) but not your <em>intent</em>. XML documentation comments — the <code>///</code> triple-slash comments C# developers already write — fill that gap with human-readable summaries, parameter descriptions, and examples that flow straight into the OpenAPI document.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 This changed in .NET 10 — know it cold</span>
+        <p>Historically only Swashbuckle read XML comments; the native package ignored them. <strong>As of .NET 10</strong>, <code>Microsoft.AspNetCore.OpenApi</code> reads XML doc comments natively via a build-time <strong>source generator</strong>. It intercepts your <code>AddOpenApi()</code> call and injects transformers that pull <code>&lt;summary&gt;</code>, <code>&lt;remarks&gt;</code>, <code>&lt;param&gt;</code>, <code>&lt;returns&gt;</code>, and <code>&lt;example&gt;</code> into the document — with no runtime reflection cost.</p>
+      </div>
+
+      <h3>Step 1 — turn on the XML doc file 🔛</h3>
+      <p>For <em>either</em> generator, you must enable XML documentation output in the project file. This one property is the switch everyone forgets:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">XML — .csproj</span><button class="copy-btn">Copy</button></div>
+        <pre><code>&lt;<span class="ty">PropertyGroup</span>&gt;
+  &lt;<span class="ty">TargetFramework</span>&gt;net10.0&lt;/<span class="ty">TargetFramework</span>&gt;
+  &lt;<span class="ty">GenerateDocumentationFile</span>&gt;<span class="kw">true</span>&lt;/<span class="ty">GenerateDocumentationFile</span>&gt;
+&lt;/<span class="ty">PropertyGroup</span>&gt;</code></pre>
+      </div>
+
+      <p>With native OpenAPI (.NET 10) that's <em>all</em> you need — the source generator finds the comments in your assembly (and referenced projects that also set the property) automatically. With Swashbuckle you additionally wire the file in:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Swashbuckle only: include the XML file</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">AddSwaggerGen</span>(options =&gt;
+{
+    <span class="kw">var</span> xmlFile = <span class="str">$"{Assembly.GetExecutingAssembly().GetName().Name}.xml"</span>;
+    options.<span class="fn">IncludeXmlComments</span>(<span class="ty">Path</span>.<span class="fn">Combine</span>(<span class="ty">AppContext</span>.BaseDirectory, xmlFile));
+});</code></pre>
+      </div>
+
+      <h3>Step 2 — write the comments ✍️</h3>
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — XML doc comments on an action</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">/// &lt;summary&gt;Gets a single product by its id.&lt;/summary&gt;</span>
+<span class="cmt">/// &lt;remarks&gt;Returns 404 when no product with the id exists.&lt;/remarks&gt;</span>
+<span class="cmt">/// &lt;param name="id" example="42"&gt;The product's unique identifier.&lt;/param&gt;</span>
+<span class="cmt">/// &lt;returns&gt;The matching product.&lt;/returns&gt;</span>
+[<span class="ty">HttpGet</span>(<span class="str">"{id:int}"</span>)]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">ProductDto</span>&gt;&gt; <span class="fn">GetById</span>(<span class="kw">int</span> id) { <span class="cmt">/* ... */</span> }</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Minimal API gotcha — comments on lambdas are lost</span>
+        <p>The C# compiler doesn't capture XML doc comments placed on <em>lambda</em> expressions. So for a Minimal API endpoint, XML comments only work if you define the handler as a named <em>method</em>, put the comments on that method, and reference it from <code>MapGet(...)</code>. Comments written directly above an inline <code>() =&gt; ...</code> lambda simply won't appear.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Document the model, not just the endpoint</span>
+        <p>Put <code>&lt;summary&gt;</code> comments on your DTO <em>properties</em> too — they become field descriptions in the schema, so a client sees what each JSON field means. You can also add <code>&lt;example&gt;</code> values. Well-described schemas are what separate "technically documented" from "actually pleasant."</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>Documenting Responses Precisely 🎯</h2></div>
+      <p>The most valuable — and most skipped — part of API docs is describing <em>every</em> response an endpoint can return, with its status code and body type. Recall from Day 6 that a bare <code>IActionResult</code> hides the success type; you spell out the full picture with the <code>[ProducesResponseType]</code> attribute.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — declaring all responses</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id:int}"</span>)]
+[<span class="ty">ProducesResponseType</span>&lt;<span class="ty">ProductDto</span>&gt;(<span class="ty">StatusCodes</span>.Status200OK)]
+[<span class="ty">ProducesResponseType</span>(<span class="ty">StatusCodes</span>.Status404NotFound)]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">GetById</span>(<span class="kw">int</span> id) { <span class="cmt">/* ... */</span> }</code></pre>
+      </div>
+
+      <p>The generic form <code>[ProducesResponseType&lt;T&gt;(code)]</code> declares both the status code <em>and</em> the body type in one line (the older form is <code>[ProducesResponseType(typeof(ProductDto), StatusCodes.Status200OK)]</code>). List each outcome the endpoint can produce so the document is complete.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Attribute / helper</th><th>Documents…</th><th>Where</th></tr></thead>
+          <tbody>
+            <tr><td><code>[ProducesResponseType&lt;T&gt;(200)]</code></td><td>A status code + its body type</td><td>Controllers</td></tr>
+            <tr><td><code>[ProducesResponseType(404)]</code></td><td>A status code with no body</td><td>Controllers</td></tr>
+            <tr><td><code>[Produces("application/json")]</code></td><td>The response content type(s)</td><td>Controllers</td></tr>
+            <tr><td><code>[Consumes("application/json")]</code></td><td>The accepted request content type</td><td>Controllers</td></tr>
+            <tr><td><code>[Tags("Products")]</code></td><td>Grouping in the UI</td><td>Controllers</td></tr>
+            <tr><td><code>.Produces&lt;T&gt;(200)</code> / <code>.ProducesProblem(404)</code></td><td>Responses on a Minimal API endpoint</td><td>Minimal APIs</td></tr>
+            <tr><td><code>.WithSummary()</code> / <code>.WithDescription()</code> / <code>.WithTags()</code></td><td>Prose &amp; grouping</td><td>Minimal APIs</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 TypedResults documents itself</span>
+        <p>From Day 6: in Minimal APIs, returning <code>TypedResults</code> (e.g. via a <code>Results&lt;Ok&lt;ProductDto&gt;, NotFound&gt;</code> union) makes the framework infer the response metadata automatically — no <code>.Produces&lt;T&gt;()</code> needed. And <code>ActionResult&lt;T&gt;</code> in controllers lets OpenAPI infer the 200 body from <code>T</code>. Choosing self-documenting return types means less to annotate by hand.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Standardize the error shape</span>
+        <p>Document your failures as <code>ProblemDetails</code> (Day 6). For validation failures the framework already produces <code>ValidationProblemDetails</code> (Day 4). Declaring <code>[ProducesResponseType&lt;ProblemDetails&gt;(StatusCodes.Status404NotFound)]</code> tells clients not just <em>that</em> a 404 can happen but exactly what the error body looks like — so they can code against it.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Undocumented responses = broken trust</span>
+        <p>If your endpoint can return a 409 or 422 but the doc only lists 200, a client's generated SDK won't handle those cases and will break in production. The rule: the documented responses must match what the code actually returns — treat drift between them as a bug.</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>A Fully Annotated Endpoint 🧩</h2></div>
+      <p>Today's "Do," assembled: an endpoint whose documentation is complete, precise, and readable — XML prose plus every response declared.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the annotated action</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">/// &lt;summary&gt;Creates a new product.&lt;/summary&gt;</span>
+<span class="cmt">/// &lt;remarks&gt;</span>
+<span class="cmt">/// The server assigns the id. On success the response includes a</span>
+<span class="cmt">/// Location header pointing to the new resource.</span>
+<span class="cmt">/// &lt;/remarks&gt;</span>
+<span class="cmt">/// &lt;param name="request"&gt;The product's name and price.&lt;/param&gt;</span>
+<span class="cmt">/// &lt;response code="201"&gt;The product was created.&lt;/response&gt;</span>
+<span class="cmt">/// &lt;response code="400"&gt;The request failed validation.&lt;/response&gt;</span>
+<span class="cmt">/// &lt;response code="409"&gt;A product with that name already exists.&lt;/response&gt;</span>
+[<span class="ty">HttpPost</span>]
+[<span class="ty">Consumes</span>(<span class="ty">MediaTypeNames</span>.Application.Json)]
+[<span class="ty">ProducesResponseType</span>&lt;<span class="ty">ProductDto</span>&gt;(<span class="ty">StatusCodes</span>.Status201Created)]
+[<span class="ty">ProducesResponseType</span>&lt;<span class="ty">ValidationProblemDetails</span>&gt;(<span class="ty">StatusCodes</span>.Status400BadRequest)]
+[<span class="ty">ProducesResponseType</span>&lt;<span class="ty">ProblemDetails</span>&gt;(<span class="ty">StatusCodes</span>.Status409Conflict)]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">ProductDto</span>&gt;&gt; <span class="fn">Create</span>(<span class="ty">CreateProductRequest</span> request)
+{
+    <span class="kw">var</span> dto = <span class="kw">await</span> _service.<span class="fn">CreateAsync</span>(request);
+    <span class="kw">return</span> <span class="fn">CreatedAtAction</span>(<span class="kw">nameof</span>(GetById), <span class="kw">new</span> { id = dto.Id }, dto);
+}</code></pre>
+      </div>
+
+      <p>And the DTO, documented so its fields carry meaning and examples into the schema:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — a documented request DTO</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">/// &lt;summary&gt;The data needed to create a product.&lt;/summary&gt;</span>
+<span class="kw">public class</span> <span class="ty">CreateProductRequest</span>
+{
+    <span class="cmt">/// &lt;summary&gt;Display name, 2–100 characters.&lt;/summary&gt;</span>
+    <span class="cmt">/// &lt;example&gt;Wireless Mouse&lt;/example&gt;</span>
+    [<span class="ty">Required</span>, <span class="ty">StringLength</span>(<span class="num">100</span>, <span class="ty">MinimumLength</span> = <span class="num">2</span>)]
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;
+
+    <span class="cmt">/// &lt;summary&gt;Price in USD; must be non-negative.&lt;/summary&gt;</span>
+    <span class="cmt">/// &lt;example&gt;19.99&lt;/example&gt;</span>
+    [<span class="ty">Range</span>(<span class="num">0</span>, <span class="num">999.99</span>)]
+    <span class="kw">public decimal</span> Price { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Bonus — data annotations enrich the schema</span>
+        <p>Notice the validation attributes from Day 4 (<code>[Required]</code>, <code>[StringLength]</code>, <code>[Range]</code>) also feed the OpenAPI schema — they show up as <code>required</code>, <code>maxLength</code>, <code>minimum</code>/<code>maximum</code> constraints. So good validation and good docs reinforce each other for free. This one endpoint now tells a client exactly what to send, what constraints apply, and every response it might get back.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>The Documentation Pipeline 🔄</h2></div>
+      <p>Here's how your code becomes a browsable, interactive page — the journey from <code>///</code> comment to rendered UI.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · ✍️ you annotate</div>
+          <div class="sh">Code, attributes, XML comments</div>
+          <p>Return types, <code>[ProducesResponseType]</code>, data annotations, and <code>///</code> summaries describe intent and shape.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 2 · 🏭 build time</div>
+          <div class="sh">Source generator gathers XML</div>
+          <p>With <code>GenerateDocumentationFile</code> on, the generator caches your XML comments and injects transformers into <code>AddOpenApi</code>.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 3 · ⚙️ generation</div>
+          <div class="sh">Build the OpenAPI document</div>
+          <p>ASP.NET Core inspects endpoints, schemas, and metadata to produce the OpenAPI JSON, applying any transformers.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 4 · 🌐 serve</div>
+          <div class="sh">Expose the document</div>
+          <p><code>MapOpenApi()</code> serves it at <code>/openapi/v1.json</code> — the machine-readable contract, ready to consume.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 5 · 🧭 render</div>
+          <div class="sh">UI reads &amp; displays it</div>
+          <p>Scalar / Swagger UI / Redoc fetch that JSON and render the interactive, human-friendly reference.</p>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 One source of truth</span>
+        <p>The beauty of this pipeline: the docs are generated <em>from the code itself</em>, so they can't drift as far as hand-written docs do. Your job is to make the code expressive — accurate return types, complete <code>[ProducesResponseType]</code>, and clear XML comments — and the document (and every tool that reads it) stays in sync automatically.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>📄 OpenAPI = spec</h4><p>The machine-readable standard describing your API.</p></div>
+        <div class="recap-card"><h4>🧭 Swagger = tools</h4><p>Tooling around OpenAPI; Swagger UI renders the doc.</p></div>
+        <div class="recap-card"><h4>⚙️ Native (.NET 9+)</h4><p><code>AddOpenApi</code>/<code>MapOpenApi</code>; first-party, at <code>/openapi/v1.json</code>.</p></div>
+        <div class="recap-card"><h4>🚫 No UI included</h4><p>The native package makes the document, not a viewer.</p></div>
+        <div class="recap-card"><h4>📦 Swashbuckle</h4><p>Community package with bundled Swagger UI; opt-in now.</p></div>
+        <div class="recap-card"><h4>✨ Pick a UI</h4><p>Scalar, Swagger UI, or Redoc read the same document.</p></div>
+        <div class="recap-card"><h4>🔛 Doc file switch</h4><p><code>&lt;GenerateDocumentationFile&gt;true&lt;/&gt;</code> enables XML comments.</p></div>
+        <div class="recap-card"><h4>💬 XML comments (.NET 10)</h4><p>Native package reads them via a source generator.</p></div>
+        <div class="recap-card"><h4>🪝 Lambda caveat</h4><p>Minimal API comments need a named method, not a lambda.</p></div>
+        <div class="recap-card"><h4>🎯 Document responses</h4><p><code>[ProducesResponseType&lt;T&gt;(code)]</code> for every outcome.</p></div>
+        <div class="recap-card"><h4>🧊 Self-documenting types</h4><p><code>ActionResult&lt;T&gt;</code> / <code>TypedResults</code> infer metadata.</p></div>
+        <div class="recap-card"><h4>🔒 Gate the UI</h4><p>Keep the interactive explorer out of open production.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>Tool / syntax</th><th>Key detail</th></tr></thead>
+          <tbody>
+            <tr><td>The spec</td><td>OpenAPI (JSON)</td><td>3.1 in .NET 10; served at <code>/openapi/v1.json</code></td></tr>
+            <tr><td>Native generation</td><td><code>AddOpenApi</code> / <code>MapOpenApi</code></td><td>First-party, AoT-friendly, no bundled UI</td></tr>
+            <tr><td>Swashbuckle</td><td><code>AddSwaggerGen</code> / <code>UseSwaggerUI</code></td><td>Opt-in; bundles Swagger UI; v10 for .NET 10</td></tr>
+            <tr><td>UI</td><td>Scalar / Swagger UI / Redoc</td><td>All render the same document</td></tr>
+            <tr><td>Enable XML</td><td><code>GenerateDocumentationFile</code></td><td>Required for XML-comment integration</td></tr>
+            <tr><td>Prose</td><td><code>///</code> summary / remarks / param</td><td>Source generator (native, .NET 10) or Swashbuckle</td></tr>
+            <tr><td>Responses</td><td><code>[ProducesResponseType&lt;T&gt;(code)]</code></td><td>Declare every status code + body type</td></tr>
+            <tr><td>Content types</td><td><code>[Produces]</code> / <code>[Consumes]</code></td><td>Response / request media types</td></tr>
+            <tr><td>Minimal API</td><td><code>.Produces&lt;T&gt;()</code> / <code>.WithSummary()</code></td><td>Or let <code>TypedResults</code> infer it</td></tr>
+            <tr><td>Build-time doc</td><td><code>Microsoft.Extensions.ApiDescription.Server</code></td><td>Emit the JSON at build for source control/tests</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is the difference between OpenAPI and Swagger?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>OpenAPI is the <em>specification</em> — the open standard for describing a REST API in a machine-readable format. Swagger is the <em>set of tools</em> built around that spec (Swagger UI, Editor, Codegen). "Swagger" was the original name before the spec was renamed OpenAPI. In short: OpenAPI is the document; Swagger is the tooling.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is an OpenAPI document and where is it served?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>It's a JSON (or YAML) file describing every endpoint, its parameters, request/response shapes, and status codes. In .NET with the native package it's served at <code>/openapi/v1.json</code>; with Swashbuckle it's at <code>/swagger/v1/swagger.json</code>. Tools and UIs read this document to render docs, generate clients, and test the API.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What is Swashbuckle?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A .NET library that generates an OpenAPI document from your ASP.NET Core app and bundles Swagger UI to display it. For years it was included in the Web API template; since .NET 9 it's an opt-in community package rather than the default. You set it up with <code>AddSwaggerGen</code>, <code>UseSwagger</code>, and <code>UseSwaggerUI</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">How do you add API docs in a new .NET 9 or 10 project?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Add the <code>Microsoft.AspNetCore.OpenApi</code> package, call <code>builder.Services.AddOpenApi()</code>, and map it with <code>app.MapOpenApi()</code>. That serves the OpenAPI JSON. Since no UI is included, add one — e.g. Scalar via <code>MapScalarApiReference()</code> — to get an interactive page.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What are XML documentation comments used for here?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>The <code>///</code> comments on your methods, classes, and properties provide human-readable prose — summaries, parameter descriptions, examples — that gets pulled into the OpenAPI document. They turn a doc that only knows shapes and status codes into one that also explains intent and meaning.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What single project setting is needed to use XML comments?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p><code>&lt;GenerateDocumentationFile&gt;true&lt;/GenerateDocumentationFile&gt;</code> in the <code>.csproj</code>. It tells the compiler to emit the XML documentation file that both the native generator and Swashbuckle read. It's the step people most often forget, and without it the comments silently don't appear.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">How do you tell the docs what type a 200 response returns?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Use the <code>[ProducesResponseType&lt;T&gt;(StatusCodes.Status200OK)]</code> attribute on the action, where <code>T</code> is the body type. Or return <code>ActionResult&lt;T&gt;</code> and the framework infers the 200 body from <code>T</code> automatically. For non-body codes like 404 you use <code>[ProducesResponseType(StatusCodes.Status404NotFound)]</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What is Swagger UI?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>An interactive web page that reads an OpenAPI document and renders it as browsable docs with a "try it out" console, so you can send real requests to each endpoint from the browser. It's just a viewer for the document — alternatives that do the same job include Scalar and Redoc.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">What changed about API docs in .NET 9?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>ASP.NET Core dropped the Swashbuckle dependency from the Web API template and introduced its own first-party generator, <code>Microsoft.AspNetCore.OpenApi</code> (<code>AddOpenApi</code>/<code>MapOpenApi</code>). It generates the OpenAPI document but includes no UI, so you now add a renderer like Scalar or Swagger UI separately. Swashbuckle still exists as an opt-in community package.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">Does the native OpenAPI package read XML comments?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Not originally — in .NET 9 it ignored them. As of <strong>.NET 10</strong> it does: a build-time source generator discovers your XML comments (when <code>GenerateDocumentationFile</code> is on), intercepts <code>AddOpenApi()</code>, and injects transformers that add the summaries, descriptions, and examples to the document — with no runtime reflection cost.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">Why don't XML comments work on Minimal API lambdas?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>The C# compiler doesn't emit XML doc comments for lambda expressions, so comments above an inline <code>() =&gt; ...</code> handler are never captured. To document a Minimal API endpoint, define the handler as a named method, put the XML comments on that method, and reference it from <code>MapGet</code>/<code>MapPost</code>. Then the comments flow into the document.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">How do you document all the responses an endpoint can return?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Add one <code>[ProducesResponseType]</code> per outcome — e.g. <code>[ProducesResponseType&lt;ProductDto&gt;(201)]</code>, <code>[ProducesResponseType&lt;ValidationProblemDetails&gt;(400)]</code>, <code>[ProducesResponseType&lt;ProblemDetails&gt;(409)]</code>. In Minimal APIs the equivalents are <code>.Produces&lt;T&gt;(code)</code> and <code>.ProducesProblem(code)</code>. The documented set must match what the code actually returns.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">How do return types like ActionResult&lt;T&gt; and TypedResults help documentation?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>They're self-documenting. <code>ActionResult&lt;T&gt;</code> lets OpenAPI infer the success body from <code>T</code> without a <code>Type</code> on the attribute. In Minimal APIs, returning concrete <code>TypedResults</code> (e.g. via a <code>Results&lt;Ok&lt;T&gt;, NotFound&gt;</code> union) makes the framework infer the response metadata automatically. Choosing these types means less manual annotation.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">How do data annotations affect the generated schema?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Validation attributes double as schema documentation: <code>[Required]</code> marks a field required, <code>[StringLength]</code> becomes <code>maxLength</code>/<code>minLength</code>, <code>[Range]</code> becomes <code>minimum</code>/<code>maximum</code>. So the same annotations that enforce validation (Day 4) also tell clients the constraints on each field — good validation and good docs reinforce each other.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">Can you use both Swashbuckle and the native package together?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>You should pick one <em>generator</em> per project — mixing them can cause version/namespace conflicts (the <code>Microsoft.OpenApi</code> types moved between versions). A supported hybrid is to generate the document with the native package and use Swashbuckle's <em>Swagger UI</em> package purely as the viewer, pointing it at <code>/openapi/v1.json</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">Should Swagger UI be exposed in production?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Usually not openly. An interactive explorer reveals your internal endpoints and invites probing, so many teams gate the UI behind <code>IsDevelopment()</code> or authentication, or restrict it to staging. If a public spec is genuinely needed, serve a read-only rendering (e.g. Redoc) and consider protecting the document endpoint. Generating the document is fine; exposing a live "try it" console publicly is a deliberate choice.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">How do you customize the generated document in the native package?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Through <strong>transformers</strong> registered on <code>AddOpenApi</code>: document transformers (modify the whole doc — e.g. add contact info, security schemes), operation transformers (per-endpoint tweaks), and schema transformers (adjust type schemas). This is the native equivalent of Swashbuckle's filters (<code>IOperationFilter</code>, <code>ISchemaFilter</code>, <code>IDocumentFilter</code>), and it's how you add things the framework can't infer, like global auth requirements.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">Why generate the OpenAPI document at build time?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Adding <code>Microsoft.Extensions.ApiDescription.Server</code> emits the JSON during the build rather than at runtime. That lets you commit the spec to source control (so contract changes show up in code review as diffs), run spec-based integration/contract tests in CI, generate client SDKs in the pipeline, and serve the doc statically — all without booting the app to hit a live endpoint.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">How would you document a versioned API?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Produce a separate OpenAPI document per version (the native package supports multiple documents from one app, and API versioning integrates with the API Explorer). Each version's endpoints map to its own doc name (<code>v1</code>, <code>v2</code>), served at <code>/openapi/v1.json</code>, <code>/openapi/v2.json</code>, and the UI exposes a version selector. This keeps each version's contract stable and independently documented for its consumers.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How do you keep docs from drifting out of sync with the code?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Generate the docs <em>from</em> the code (attributes, return types, XML comments) rather than maintaining them by hand, so most drift is impossible. Then enforce the rest in CI: generate the spec at build time and diff it against the committed version to catch unintended contract changes, and add contract tests that assert each endpoint returns the documented status codes. Treat a mismatch between documented and actual responses as a build-failing bug.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">How do you document authentication in the OpenAPI document?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Define a <em>security scheme</em> (e.g. JWT bearer, OAuth2) and apply it to operations. In the native package you add it via a document transformer that sets the security scheme and requirement; in Swashbuckle you use <code>AddSecurityDefinition</code> + <code>AddSecurityRequirement</code>. This makes the UI show an "Authorize" button and lets generated clients know which endpoints need credentials and how to supply them.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">Why is a good OpenAPI document valuable beyond human docs?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Because it's machine-readable, it drives automation: generating strongly-typed client SDKs (NSwag, Kiota), scaffolding server stubs, seeding Postman/Bruno collections, contract and fuzz testing, API gateways, and increasingly giving LLM/agent tools the structured context to call your API correctly. The richer and more accurate the document — precise response types, descriptions, examples — the better every one of those downstream tools works.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">When would you choose native OpenAPI vs. Swashbuckle vs. NSwag today?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p><strong>Native OpenAPI</strong>: the default for new projects — first-party, AoT-friendly, OpenAPI 3.1, tracks the framework. <strong>Swashbuckle</strong>: when you have significant existing configuration (custom filters, security setup) or specifically want its bundled Swagger UI in one package. <strong>NSwag</strong>: when your workflow centers on generating typed C#/TypeScript <em>clients</em> from the spec, where it remains the strongest tool. A common combo is native generation + Scalar for docs, and NSwag or Kiota for client generation.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Lock down the <strong>vocabulary</strong> first (Q1–Q3) — the OpenAPI-vs-Swagger distinction is the single most common opener. Then the <strong>.NET 9/10 shift</strong> (Q9–Q10) since it's current and interviewers probe whether you're up to date. Practice <strong>annotating</strong> — XML comments and <code>[ProducesResponseType]</code> (Q5–Q7, Q11–Q13) — because that's the day's "Do." Finish with the <strong>senior automation angle</strong> (Q17–Q23): transformers, build-time generation, versioning, security, and why the document powers SDKs and tools. If you can produce the fully annotated endpoint in section 08 from memory, you own this topic.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prototype &amp; Registry Patterns — Session 17</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* notebook card */
+.nb-card{border:1.5px solid var(--line);border-radius:6px;padding:.8rem 1rem;display:inline-block;min-width:160px;font-family:'JetBrains Mono',monospace;font-size:.72rem;background:var(--bg);margin:.4rem}
+.nb-card .nb-title{font-weight:600;margin-bottom:.4rem;color:var(--accent)}
+.nb-row{display:flex;gap:.5rem;align-items:center;margin:.1rem 0;color:var(--ink-soft)}
+.nb-row .check{color:var(--green)}
+.nb-row .cross{color:var(--rose)}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 17</div>
+  <div class="nav-group"><span class="nav-group-label">Overview</span><a class="nav-link" href="#hero">Introduction</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">Prototype</span>
+    <a class="nav-link" href="#s01">01 The Problem: Copying Objects</a>
+    <a class="nav-link" href="#s02">02 Copy Constructor</a>
+    <a class="nav-link" href="#s03">03 Why the Client Shouldn't Copy</a>
+    <a class="nav-link" href="#s04">04 The copy() / clone() Method</a>
+    <a class="nav-link" href="#s05">05 Runtime Polymorphism</a>
+    <a class="nav-link" href="#s06">06 The Prototype Definition</a>
+    <a class="nav-link" href="#s07">07 Bulk Object Creation Example</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Registry</span>
+    <a class="nav-link" href="#s08">08 The Registry Pattern</a>
+    <a class="nav-link" href="#s09">09 Full Implementation</a>
+    <a class="nav-link" href="#s10">10 Implementation Steps</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 17</p>
+  <h1>Prototype &amp; Registry Patterns</h1>
+  <p class="hero-lede">Two complementary creational patterns: Prototype lets objects clone themselves cleanly without exposing internals; Registry stores named prototypes so new objects are created by copying a pre-configured template.</p>
+  <div class="agenda-chips">
+    <span class="chip">Prototype</span><span class="chip">Registry</span><span class="chip">clone()</span><span class="chip">copy()</span><span class="chip">Copy Constructor</span><span class="chip">Deep Copy</span><span class="chip">HashMap</span>
+  </div>
+</section>
+
+<!-- 01 -->
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>The Problem: Copying Objects</h2></div>
+  <p>Sometimes you have an existing object and need to create a new one in memory with the exact same attribute values — a <strong>deep copy</strong>. The naïve approach is to write copy code in the client:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Naïve copy at the call site</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// st1 is an existing Student object</span>
+<span class="ty">Student</span> st2 = <span class="kw">new</span> <span class="ty">Student</span>();
+st2.name = st1.name;
+st2.age  = st1.age;
+<span class="cmt">// … repeat for every field</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Cons</span>
+    <p><strong>1. Too much boilerplate code.</strong> Every field must be copied manually; adding a new field to the class means updating all copy sites. <strong>2. Private fields are inaccessible.</strong> The client cannot copy fields marked <code>private</code>, so a complete copy is impossible from outside the class.</p>
+  </div>
+</section>
+
+<!-- 02 -->
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>Copy Constructor</h2></div>
+  <p>A better step: add a <strong>copy constructor</strong> — a constructor that takes an existing instance of the same class and copies all fields into the new instance.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Copy Constructor</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Student</span> {
+    <span class="ty">String</span> name;
+    <span class="kw">int</span> age;
+
+    <span class="cmt">// Copy constructor</span>
+    <span class="ty">Student</span>(<span class="ty">Student</span> st) {
+        <span class="kw">this</span>.name = st.name;
+        <span class="kw">this</span>.age  = st.age;
+        <span class="cmt">// private fields are accessible here — inside the class</span>
+    }
+}
+<span class="cmt">// Usage</span>
+<span class="ty">Student</span> copy = <span class="kw">new</span> <span class="ty">Student</span>(st1);  <span class="cmt">// clean, no manual field access</span></pre>
+  </div>
+
+  <p>This is good but still has a problem when inheritance is involved.</p>
+</section>
+
+<!-- 03 -->
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Why the Client Shouldn't Copy</h2></div>
+  <p>Suppose <code>Student</code> has a subclass <code>IntelligentStudent</code>. If the client holds a <code>Student</code> reference that may actually point to an <code>IntelligentStudent</code> object, it must check the runtime type to make the right copy:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Client-side type checking violates OCP</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">Student</span> st;  <span class="cmt">// could be Student or IntelligentStudent at runtime</span>
+
+<span class="ty">Student</span> copy;
+<span class="kw">if</span> (st <span class="kw">instanceof</span> <span class="ty">Student</span>) {
+    copy = <span class="kw">new</span> <span class="ty">Student</span>(st);
+} <span class="kw">else if</span> (st <span class="kw">instanceof</span> <span class="ty">IntelligentStudent</span>) {
+    copy = <span class="kw">new</span> <span class="ty">IntelligentStudent</span>((<span class="ty">IntelligentStudent</span>) st);
+}
+<span class="cmt">// Adding a new subclass (e.g., ScholarStudent) forces editing this block — OCP violation</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Problems</span>
+    <p>Putting the copy logic on the client is error-prone and violates OCP. Every new subclass forces the client code to be updated. The internal details of the class are also leaked to the client.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Ideal Solution</span>
+    <p>The object itself should know how to copy itself. Expose a simple <code>copy()</code> (or <code>clone()</code>) method to the client, and let all the complex logic be handled inside the class hierarchy.</p>
+  </div>
+</section>
+
+<!-- 04 -->
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>The copy() / clone() Method</h2></div>
+  <p>Move the copy logic <em>into</em> the class. Each class provides a <code>copy()</code> method that creates and returns a complete copy of itself — including private fields.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — copy() inside the class</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Student</span> {
+    <span class="kw">private</span> <span class="ty">String</span> name;
+    <span class="kw">private</span> <span class="kw">int</span>    age;
+
+    <span class="ty">Student</span> <span class="fn">copy</span>() {
+        <span class="ty">Student</span> copyObj = <span class="kw">new</span> <span class="ty">Student</span>();
+        copyObj.name = <span class="kw">this</span>.name;  <span class="cmt">// private field — accessible inside own class</span>
+        copyObj.age  = <span class="kw">this</span>.age;
+        <span class="kw">return</span> copyObj;
+    }
+}
+
+<span class="cmt">// Client code — clean and simple</span>
+<span class="ty">Student</span> copyObj = st.<span class="fn">copy</span>();  <span class="cmt">// no type checks, no instanceof</span></pre>
+  </div>
+
+  <p><strong>Pros:</strong> no OCP violation — adding a new subclass only requires adding a <code>copy()</code> to the new class; the client never changes. Private fields are never exposed externally.</p>
+</section>
+
+<!-- 05 -->
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>Runtime Polymorphism &amp; the Critical Note</h2></div>
+  <p>The magic is in runtime polymorphism. When the client calls <code>st.copy()</code> on a reference of type <code>Student</code> that actually holds an <code>IntelligentStudent</code>, Java dispatches to <code>IntelligentStudent.copy()</code> — producing the correct subtype copy automatically.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — IntelligentStudent overrides copy()</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">IntelligentStudent</span> <span class="kw">extends</span> <span class="ty">Student</span> {
+    <span class="kw">private</span> <span class="kw">int</span> iq;
+
+    <span class="ty">IntelligentStudent</span> <span class="fn">copy</span>() {         <span class="cmt">// override with covariant return type</span>
+        <span class="ty">IntelligentStudent</span> is = <span class="kw">new</span> <span class="ty">IntelligentStudent</span>();
+        is.name = <span class="kw">this</span>.name;
+        is.age  = <span class="kw">this</span>.age;
+        is.iq   = <span class="kw">this</span>.iq;
+        <span class="kw">return</span> is;
+    }
+}</pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Critical Note</span>
+    <p>All child classes <strong>must</strong> override the <code>copy()</code> method. If a subclass forgets to override it, calling <code>copy()</code> on that subclass will invoke the parent's <code>copy()</code>, which only copies the parent's fields — silently producing an incomplete, partially-copied object. This is a common and subtle bug.</p>
+  </div>
+</section>
+
+<!-- 06 -->
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>The Prototype Design Pattern</h2></div>
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>The <strong>Prototype</strong> pattern uses an existing object (the <em>prototype</em>) as a blueprint for creating new objects by copying it. The prototype knows how to clone itself, hiding the cloning complexity from the client.</p>
+  </div>
+
+  <p>The name "prototype" comes from the industrial concept: you create one master template (the prototype), then stamp out copies of it. In software terms, it is a blueprint-and-copy mechanism.</p>
+
+  <p>Use Prototype when:</p>
+  <p>You need to create many objects that share most of their attributes, with only a few differences. Constructing the object from scratch each time would be expensive or complex. You want to decouple the client from the concrete classes it instantiates.</p>
+</section>
+
+<!-- 07 -->
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>Bulk Object Creation — A Real Example</h2></div>
+  <p>Consider a printing company that needs to create 100,000 notebooks of a specific type: A4 size, ruled, 100 pages. The <code>Notebook</code> class has many attributes, some shared across all copies and some unique per notebook.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:flex-start">
+      <div class="nb-card">
+        <div class="nb-title">Notebook</div>
+        <div class="nb-row"><span class="check">✓</span> width</div>
+        <div class="nb-row"><span class="check">✓</span> height</div>
+        <div class="nb-row"><span class="check">✓</span> numPages</div>
+        <div class="nb-row"><span class="check">✓</span> type</div>
+        <div class="nb-row"><span class="check">✓</span> mrp</div>
+        <div class="nb-row"><span class="cross">✗</span> frontPage (unique)</div>
+        <div class="nb-row"><span class="cross">✗</span> lastPage (unique)</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem">
+        <div class="nb-card" style="background:var(--accent-soft);border-color:var(--accent)">
+          <div class="nb-title" style="color:var(--accent)">A4_ruled_nb (Prototype)</div>
+          <div style="font-size:.7rem;color:var(--ink-soft)">width = 100<br>height = 50<br>numPages = 100<br>type = Ruled<br>mrp = 60</div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);text-align:center">↓ .copy() × 100,000</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--green);border:1px solid var(--green);border-radius:4px;padding:.3rem .6rem;background:var(--green-soft)">100,000 copy objects</div>
+      </div>
+    </div>
+  </div>
+
+  <p><strong>Way 1 (Naïve):</strong> Create each of the 100,000 notebooks from scratch with <code>new Notebook()</code> and set all 5 common fields every single time — 500,000 setter calls of repetitive code.</p>
+
+  <p><strong>Way 2 (Prototype):</strong> Create one prototype object with all the common fields set. Then create each notebook as <code>prototype.copy()</code> and only set the unique fields (frontPage, lastPage) on the individual copy. Common fields come along for free.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Prototype approach</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Build the prototype once</span>
+<span class="ty">Notebook</span> a4RuledPrototype = <span class="kw">new</span> <span class="ty">Notebook</span>();
+a4RuledPrototype.<span class="fn">setWidth</span>(<span class="num">100</span>);
+a4RuledPrototype.<span class="fn">setHeight</span>(<span class="num">50</span>);
+a4RuledPrototype.<span class="fn">setNumPages</span>(<span class="num">100</span>);
+a4RuledPrototype.<span class="fn">setType</span>(<span class="str">"Ruled"</span>);
+a4RuledPrototype.<span class="fn">setMrp</span>(<span class="num">60.0</span>);
+
+<span class="cmt">// Mass-produce copies — only set the unique fields</span>
+<span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; <span class="num">100_000</span>; i++) {
+    <span class="ty">Notebook</span> nb = a4RuledPrototype.<span class="fn">copy</span>();
+    nb.<span class="fn">setFrontPage</span>(<span class="fn">generateFrontPage</span>(i));
+    nb.<span class="fn">setLastPage</span>(<span class="fn">generateLastPage</span>(i));
+    <span class="fn">printNotebook</span>(nb);
+}</pre>
+  </div>
+</section>
+
+<!-- 08 -->
+<section id="s08" class="section">
+  <div class="section-header"><span class="section-num">08</span><h2>The Registry Pattern</h2></div>
+  <p>Prototype tells objects how to copy themselves. <strong>Registry</strong> is the companion pattern that answers: <em>where do you store the prototypes so they can be found efficiently?</em></p>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>A <strong>Registry</strong> is a centralised store (typically a <code>HashMap&lt;String, PrototypeObject&gt;</code>) that maps string keys (the prototype's name) to pre-configured prototype objects. When you need a new object, you look up the appropriate prototype by key, call <code>copy()</code>, and customise the result.</p>
+  </div>
+
+  <p>The Registry supports two operations:</p>
+  <p><strong>register(key, prototype)</strong> — saves a named prototype into the map.</p>
+  <p><strong>get(key)</strong> — retrieves the prototype for copying.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>Think of a stamp collection office. Each named stamp design (prototype) is stored in a drawer labelled with its name. When you need 500 "First Class" envelopes, you pull the "First Class" stamp from the drawer and press it 500 times, personalising each envelope's address separately. The drawer is the Registry; the stamp is the prototype.</p>
+  </div>
+</section>
+
+<!-- 09 -->
+<section id="s09" class="section">
+  <div class="section-header"><span class="section-num">09</span><h2>Full Implementation — Registry with Student</h2></div>
+  <p>Consider a learning platform with multiple course batches. Each batch has a fixed university name, batch name, and average PSP — but each individual student has their own name and age. Instead of setting the common fields for every new student, we store one prototype per batch in a Registry.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Registry Implementation</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// ── Registry class ───────────────────────────────────────────</span>
+<span class="kw">class</span> <span class="ty">StudentRegistry</span> {
+    <span class="kw">private</span> <span class="ty">HashMap</span>&lt;<span class="ty">String</span>, <span class="ty">Student</span>&gt; map = <span class="kw">new</span> <span class="ty">HashMap</span>&lt;&gt;();
+
+    <span class="kw">void</span> <span class="fn">register</span>(<span class="ty">String</span> key, <span class="ty">Student</span> st) {
+        map.<span class="fn">put</span>(key, st);
+    }
+
+    <span class="ty">Student</span> <span class="fn">get</span>(<span class="ty">String</span> key) {
+        <span class="kw">return</span> map.<span class="fn">get</span>(key);   <span class="cmt">// caller should call .copy() on result</span>
+    }
+}
+
+<span class="cmt">// ── Setup: create one prototype per batch ────────────────────</span>
+<span class="ty">Student</span> mar24Prototype = <span class="kw">new</span> <span class="ty">Student</span>();
+mar24Prototype.<span class="fn">setBatch</span>(<span class="str">"Mar24-MWFLLD"</span>);
+mar24Prototype.<span class="fn">setAvgBatchPsp</span>(<span class="num">65.0</span>);
+mar24Prototype.<span class="fn">setUnivName</span>(<span class="str">"Scaler"</span>);
+
+<span class="ty">StudentRegistry</span> registry = <span class="kw">new</span> <span class="ty">StudentRegistry</span>();
+registry.<span class="fn">register</span>(<span class="str">"Mar24MWFLLD"</span>, mar24Prototype);
+
+<span class="cmt">// ── Usage: create individual student from batch prototype ─────</span>
+<span class="ty">Student</span> shubham = registry.<span class="fn">get</span>(<span class="str">"Mar24MWFLLD"</span>).<span class="fn">copy</span>();
+shubham.<span class="fn">setName</span>(<span class="str">"Shubham"</span>);
+shubham.<span class="fn">setAge</span>(<span class="num">24</span>);
+<span class="cmt">// batch, avgBatchPsp, univName are already set — came from the prototype copy</span></pre>
+  </div>
+
+  <p>Another example using a Search API — building multiple search requests that share protocol, domain, and type, differing only in the query string:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — SearchAPI with Registry</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Way 1: repetitive setup for each request (bad)</span>
+<span class="ty">SearchAPI</span> api1 = <span class="kw">new</span> <span class="ty">SearchAPI</span>();
+api1.<span class="fn">setProtocol</span>(<span class="str">"https"</span>); api1.<span class="fn">setDomain</span>(<span class="str">"google.com"</span>);
+api1.<span class="fn">setType</span>(<span class="str">"search"</span>);    api1.<span class="fn">setQuery</span>(<span class="str">"India"</span>);
+
+<span class="ty">SearchAPI</span> api2 = <span class="kw">new</span> <span class="ty">SearchAPI</span>(); <span class="cmt">// exact same three setup lines duplicated</span>
+api2.<span class="fn">setProtocol</span>(<span class="str">"https"</span>); api2.<span class="fn">setDomain</span>(<span class="str">"google.com"</span>);
+api2.<span class="fn">setType</span>(<span class="str">"search"</span>);    api2.<span class="fn">setQuery</span>(<span class="str">"World Cup"</span>);
+
+<span class="cmt">// Way 2: Registry + Prototype (good)</span>
+<span class="ty">SearchAPI</span> googleSearchPrototype = <span class="kw">new</span> <span class="ty">SearchAPI</span>();
+googleSearchPrototype.<span class="fn">setProtocol</span>(<span class="str">"https"</span>);
+googleSearchPrototype.<span class="fn">setDomain</span>(<span class="str">"google.com"</span>);
+googleSearchPrototype.<span class="fn">setType</span>(<span class="str">"search"</span>);
+<span class="cmt">// Store this prototype in a Registry …</span>
+
+<span class="ty">SearchAPI</span> api = googleSearchPrototype.<span class="fn">copy</span>();
+api.<span class="fn">setQuery</span>(<span class="str">"India"</span>);   <span class="cmt">// only the unique field</span></pre>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="s10" class="section">
+  <div class="section-header"><span class="section-num">10</span><h2>Implementation Steps</h2></div>
+  <p>Follow these three steps to apply the Prototype + Registry pattern:</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <div style="display:flex;gap:1rem;align-items:flex-start">
+        <div style="background:var(--accent);color:var(--bg);font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;padding:.3rem .7rem;border-radius:4px;flex-shrink:0">Step 1</div>
+        <div><strong>Identify the class</strong> for which you want to use Prototype, and implement a <code>copy()</code> (or <code>clone()</code>) method inside it. Remember: all child classes must also implement the method.</div>
+      </div>
+      <div style="display:flex;gap:1rem;align-items:flex-start">
+        <div style="background:var(--blue);color:var(--bg);font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;padding:.3rem .7rem;border-radius:4px;flex-shrink:0">Step 2</div>
+        <div><strong>Create a Registry</strong> (a <code>HashMap&lt;String, T&gt;</code> wrapper) to store prototype objects by a meaningful string key. Populate it with one pre-configured prototype per variant.</div>
+      </div>
+      <div style="display:flex;gap:1rem;align-items:flex-start">
+        <div style="background:var(--green);color:var(--bg);font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;padding:.3rem .7rem;border-radius:4px;flex-shrink:0">Step 3</div>
+        <div>When a new object is needed, <strong>fetch the appropriate prototype from the Registry</strong>, call <code>.copy()</code> on it, then set only the attributes that differ for this specific instance.</div>
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Approach</th><th>OCP-safe</th><th>Exposes private fields?</th><th>Code duplication</th><th>Scales to bulk creation?</th></tr></thead>
+    <tbody>
+      <tr><td>Client copies manually</td><td>✗</td><td>✓ (must be public)</td><td>High</td><td>✗</td></tr>
+      <tr><td>Copy constructor</td><td>✗ (instanceof checks)</td><td>✗ (in-class)</td><td>Medium</td><td>Limited</td></tr>
+      <tr><td><strong>Prototype copy() method</strong></td><td><strong>✓</strong></td><td><strong>✗</strong></td><td><strong>Low</strong></td><td><strong>✓</strong></td></tr>
+      <tr><td><strong>Prototype + Registry</strong></td><td><strong>✓</strong></td><td><strong>✗</strong></td><td><strong>Minimal</strong></td><td><strong>✓ Excellent</strong></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- Recap -->
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Prototype Pattern</div><p>Objects clone themselves via a <code>copy()</code> method. Hides copy complexity, supports polymorphism, keeps private fields internal.</p></div>
+    <div class="recap-card"><div class="recap-card-title">copy() / clone()</div><p>Implemented inside the class. Creates a new object with all the same field values. All child classes must override it.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Copy Constructor</div><p>A constructor that takes an instance of the same class and copies its fields. Works well for a single class, but falls apart with inheritance.</p></div>
+    <div class="recap-card"><div class="recap-card-title">OCP &amp; Prototype</div><p>With copy() on the class itself, adding a new subclass never requires changes to client code — the client always just calls .copy().</p></div>
+    <div class="recap-card"><div class="recap-card-title">When to Use Prototype</div><p>When you need many objects with only a few different attributes and many shared ones. Avoids expensive re-construction from scratch each time.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Registry Pattern</div><p>A HashMap&lt;String, Prototype&gt; that stores named prototype objects. Clients look up a prototype by key, copy it, then set unique fields.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Registry Operations</div><p><code>register(key, prototype)</code> saves a template. <code>get(key).copy()</code> retrieves and clones it. Clean separation between template management and object creation.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Critical Warning</div><p>Every subclass must override <code>copy()</code>. Forgetting results in a partially copied object — a silent, hard-to-debug error.</p></div>
+  </div>
+</section>
+
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

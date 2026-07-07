@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · Bit Manipulation II</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;
+  --line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;
+  --blue:#3a6ea5;--blue-soft:#dde9f3;
+  --rose:#b0496b;--rose-soft:#f6e2ea;
+  --green:#5a7d5a;--green-soft:#e2ede0;
+  --purple:#7a5c9e;--purple-soft:#ece4f3;
+  --code-bg:#2b2a33;--code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;border-radius:0 2px 2px 0;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem}
+.nav-group{margin-bottom:.2rem}
+.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft)}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--accent);opacity:.7;flex-shrink:0}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s}
+.nav-toggle:hover{transform:scale(1.08)}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px)}
+.sidebar-overlay.open{display:block}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:"JetBrains Mono",monospace;font-size:.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft)}
+.section{margin-bottom:5rem;scroll-margin-top:2rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem}
+p{margin-bottom:1rem}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:.85rem}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980}.copy-btn.copied{color:#89d185;border-color:#89d185}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink)}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+.table-wrap{overflow-x:auto;margin:1.5rem 0}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+thead th{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.55rem 1rem;border-bottom:1px solid var(--line);vertical-align:top;font-family:"JetBrains Mono",monospace;font-size:.82rem}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--bg-soft)}
+.td-acc{color:var(--accent);font-weight:700}
+.td-blue{color:var(--blue);font-weight:700}
+.td-green{color:var(--green);font-weight:700}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.complexity-badge .label{color:var(--ink-soft)}.complexity-badge .val{color:var(--accent);font-weight:600}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.2rem 1.3rem;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 4px 16px rgba(45,42,38,.07);transform:translateY(-2px)}
+.card-glyph{font-family:"Fraunces",serif;font-size:1.6rem;margin-bottom:.4rem;display:block}
+.card h4{font-family:"Fraunces",serif;font-size:1rem;font-weight:600;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .35rem}
+.card p{font-size:.88rem;color:var(--ink-soft);margin:0;line-height:1.5}
+/* BIT MATRIX */
+.bit-matrix{font-family:"JetBrains Mono",monospace;font-size:.78rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:1rem 1.4rem;margin:1.5rem 0;overflow-x:auto}
+.bm-row{display:flex;align-items:center;gap:.2rem;margin:.18rem 0}
+.bm-label{width:60px;color:var(--ink-soft);font-size:.72rem;flex-shrink:0}
+.bm-sep{width:100%;height:1px;background:var(--line);margin:.4rem 0}
+.bm-bit{width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:3px;font-size:.75rem;font-weight:600}
+.b1{background:var(--accent-soft);color:var(--accent)}
+.b0{background:var(--bg);color:var(--ink-soft)}
+.bm-total{font-weight:700;color:var(--blue)}
+.bm-answer{font-weight:700;color:var(--green)}
+/* BUCKET VIS */
+.bucket-row{display:flex;gap:1.5rem;flex-wrap:wrap;margin:1.5rem 0}
+.bucket{background:var(--bg);border:2px solid var(--line);border-radius:10px;padding:1rem 1.2rem;flex:1;min-width:200px}
+.bucket.s1{border-color:var(--blue)}
+.bucket.s2{border-color:var(--rose)}
+.bucket-label{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem;font-weight:600}
+.bucket.s1 .bucket-label{color:var(--blue)}
+.bucket.s2 .bucket-label{color:var(--rose)}
+.bucket-vals{font-family:"JetBrains Mono",monospace;font-size:.82rem;color:var(--ink);line-height:1.8}
+/* ZERO GROUPS VIS */
+.arr-vis{display:flex;flex-wrap:wrap;gap:.3rem;align-items:center;padding:1rem 1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;margin:1.5rem 0;overflow-x:auto}
+.av-cell{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;border:2px solid var(--line)}
+.av-cell.av0{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.av-cell.av1{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.av-cell.av-sep{width:2px;height:36px;background:var(--rose);border:none;border-radius:2px}
+/* FORMULA BOX */
+.formula-box{background:var(--blue-soft);border:2px solid var(--blue);border-radius:10px;padding:1rem 1.4rem;margin:1rem 0;font-family:"JetBrains Mono",monospace;font-size:.9rem;color:var(--blue);text-align:center}
+.formula-box .f-label{font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:.4rem}
+.formula-big{font-size:1rem;font-weight:600}
+/* STEP CARDS */
+.step-list{display:flex;flex-direction:column;gap:.5rem;margin:1.2rem 0}
+.step-item{display:flex;align-items:flex-start;gap:.9rem;padding:.75rem 1rem;background:var(--bg);border:1px solid var(--line);border-radius:8px}
+.step-item.hi{background:var(--accent-soft);border-color:var(--accent)}
+.step-num{font-family:"JetBrains Mono",monospace;font-size:.65rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:.2rem .5rem;flex-shrink:0;border:1px solid var(--accent)}
+.step-item.hi .step-num{background:var(--bg);border-color:var(--accent)}
+.step-body{font-size:.9rem;color:var(--ink);line-height:1.45}
+/* RECAP */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent)}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5}
+/* LEETCODE */
+.lc-list{list-style:none;padding:0;margin:1rem 0}
+.lc-list li{display:flex;align-items:flex-start;gap:.75rem;padding:.65rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem}
+.lc-list li:last-child{border-bottom:none}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600;margin-top:.15rem}
+.lc-diff.easy{background:var(--green-soft);color:var(--green)}
+.lc-diff.medium{background:var(--accent-soft);color:var(--accent)}
+.lc-diff.hard{background:var(--rose-soft);color:var(--rose)}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.lc-why{color:var(--ink-soft);font-size:.82rem}
+@media(max-width:768px){
+  .sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12)}
+  .sidebar.open{transform:translateX(0)}
+  .nav-toggle{display:flex}
+  .main{padding:0 1.2rem 4rem}
+}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+<div class="layout">
+
+<nav class="sidebar">
+  <div class="sidebar-logo">DSA Notes · Series 5<strong>Bit Manipulation II</strong></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Single Element × 3</div>
+    <a class="nav-link" href="#single3-problem"><span class="nav-num">01</span>Problem &amp; Brute Force</a>
+    <a class="nav-link" href="#single3-bitcount"><span class="nav-num">02</span>Bit-Count Method O(N)</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Two Unique Elements</div>
+    <a class="nav-link" href="#two-unique-problem"><span class="nav-num">03</span>Problem Statement</a>
+    <a class="nav-link" href="#two-unique-algo"><span class="nav-num">04</span>4-Step XOR + Partition</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Binary Subarray OR</div>
+    <a class="nav-link" href="#or0-problem"><span class="nav-num">05</span>Subarrays with OR = 0</a>
+    <a class="nav-link" href="#or1-problem"><span class="nav-num">06</span>Subarrays with OR = 1</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Bonus</div>
+    <a class="nav-link" href="#alex-sam"><span class="nav-num">07</span>Alex &amp; Sam (Set Bits)</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">08</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">09</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 5</p>
+  <h1>Bit<br>Manipulation II</h1>
+  <p class="hero-lede">Three harder bit manipulation problems that build on XOR and bit-counting fundamentals — find a unique element among triples, separate two unique elements from pairs, and count binary subarrays by their OR value.</p>
+  <div class="chips">
+    <span class="chip">Single Element in Triples</span>
+    <span class="chip">Two Unique Elements</span>
+    <span class="chip">XOR + Partition</span>
+    <span class="chip">Binary Subarray OR</span>
+    <span class="chip">Consecutive Zeros</span>
+  </div>
+</header>
+
+<!-- ─── 01: SINGLE×3 PROBLEM ─── -->
+<section class="section" id="single3-problem">
+  <div class="section-header"><span class="section-num">01</span><h2>Single Element Among Triples — Problem &amp; Brute Force</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given an integer array of size N (1 ≤ N ≤ 10⁶) where every element appears exactly three times except one unique element, find that unique element. Must run in O(N) time and O(1) space.
+  </div>
+
+  <p>Example: arr = [4, 5, 5, 4, 11, 6, 6, 4, 5, 6] → answer is <strong>11</strong></p>
+
+  <h3>Why Simple XOR Fails Here</h3>
+  <p>XOR works when elements repeat an <em>even</em> number of times (pairs cancel). Here elements repeat three times, so <code>A^A^A = A</code> — the triple does not cancel to zero. A different approach is needed.</p>
+
+  <h3>Approach 1 — Brute Force O(N²)</h3>
+  <p>For every element, scan the entire array to count its frequency. If frequency is 1, that is the answer.</p>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N²)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <h3>Approach 2 — Sort O(N log N)</h3>
+  <p>Sort the array. Elements appear in groups of three. Scan and skip each triplet; the group of size one is the answer.</p>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N log N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(depends on sort)</span></div>
+  </div>
+  <p>Sorted: [4, 4, 4, 5, 5, 5, 6, 6, 6, <strong>11</strong>]. The triplets are skipped; 11 is left.</p>
+</section>
+
+<!-- ─── 02: SINGLE×3 BIT-COUNT ─── -->
+<section class="section" id="single3-bitcount">
+  <div class="section-header"><span class="section-num">02</span><h2>Bit-Count Method — O(N) Time, O(1) Space</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Core Insight</span>
+    For each bit position i, count how many numbers in the array have bit i set. If all non-unique elements appear exactly 3 times, their contribution to position i is always a <strong>multiple of 3</strong>. Any remainder (count % 3 ≠ 0) must come from the unique element. Set those bits in the answer.
+  </div>
+
+  <h3>Bit Column Sums for [5, 7, 5, 4, 7, 11, 11, 9, 11, 7, 5, 4, 4]</h3>
+  <p>Write every element in binary and sum each column vertically:</p>
+
+  <div class="bit-matrix" id="bm-demo">
+    <!-- populated by JS -->
+  </div>
+
+  <p>Column sums: [4, 9, 6, 10] (for bit positions 3, 2, 1, 0). Each mod 3: 4%3=<strong>1</strong>, 9%3=<strong>0</strong>, 6%3=<strong>0</strong>, 10%3=<strong>1</strong>. Reading the surviving bits: <code>1001</code> in binary = <strong>9</strong> ✓</p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — bit-count O(N)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">singleInTriples</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="ty">int</span> ans = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; <span class="num">32</span>; i++) {
+        <span class="ty">int</span> countSetBits = <span class="num">0</span>;
+        <span class="kw">for</span> (<span class="ty">int</span> j = <span class="num">0</span>; j &lt; n; j++) {
+            <span class="kw">if</span> ((arr[j] &amp; (<span class="num">1</span> &lt;&lt; i)) != <span class="num">0</span>)
+                countSetBits++;
+        }
+        <span class="kw">if</span> (countSetBits % <span class="num">3</span> != <span class="num">0</span>)          <span class="cmt">// this bit belongs to the unique element</span>
+            ans = ans | (<span class="num">1</span> &lt;&lt; i);
+    }
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Generalization</span>
+    This technique works for any k-times repetition problem. If every element repeats k times, count each bit position modulo k. Any non-zero remainder identifies a bit belonging to the unique element.
+  </div>
+</section>
+
+<!-- ─── 03: TWO UNIQUE PROBLEM ─── -->
+<section class="section" id="two-unique-problem">
+  <div class="section-header"><span class="section-num">03</span><h2>Two Unique Elements — Problem Statement</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given an integer array of size N where every element repeats exactly twice except two elements, find those two unique elements. O(N) time, O(1) space required.
+  </div>
+
+  <p>Example: arr = [4, 5, 4, 1, 6, 6, 5, 2] → answers are <strong>1 and 2</strong></p>
+
+  <h3>First Step — XOR All Elements</h3>
+  <p>XOR all elements together. Paired elements cancel out, leaving <code>val = unique₁ ^ unique₂</code>.</p>
+  <p>For the example: 4^5^4^1^6^6^5^2 = (4^4)^(5^5)^(6^6)^(1^2) = 0^0^0^(1^2) = <strong>1^2 = 3</strong></p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Why Can't We Stop Here?</span>
+    The XOR result <code>val = 3 = 011</code> tells us the two unique numbers differ — but it does not tell us what they are individually. We need to use the differing bits to <em>separate</em> the two values.
+  </div>
+
+  <h3>Key Insight — The Set Bits in val</h3>
+  <p>Any bit that is set in <code>val</code> is a position where the two unique numbers <em>differ</em>. For val = 3 (011), bits 0 and 1 are set — meaning unique₁ and unique₂ differ at those positions. We can use any one of these differing bit positions to split the entire array into two groups, where each group contains exactly one of the unique elements.</p>
+</section>
+
+<!-- ─── 04: TWO UNIQUE ALGO ─── -->
+<section class="section" id="two-unique-algo">
+  <div class="section-header"><span class="section-num">04</span><h2>4-Step XOR + Partition Algorithm</h2></div>
+
+  <div class="step-list">
+    <div class="step-item hi">
+      <span class="step-num">Step 1</span>
+      <div class="step-body"><strong>XOR all elements.</strong> <code>val = arr[0]^arr[1]^…^arr[N-1]</code>. The result is <code>unique₁ ^ unique₂</code> (pairs cancel).</div>
+    </div>
+    <div class="step-item hi">
+      <span class="step-num">Step 2</span>
+      <div class="step-body"><strong>Find any set bit position in val.</strong> Scan bit positions 0–31 until <code>val &amp; (1&lt;&lt;i) != 0</code>. Call this position <code>pos</code>. This is a bit where the two uniques differ.</div>
+    </div>
+    <div class="step-item hi">
+      <span class="step-num">Step 3</span>
+      <div class="step-body"><strong>Partition the array by bit <code>pos</code>.</strong> Elements with bit <code>pos</code> set go into group S1; all others into group S2. Each unique element lands in a different group. Paired elements also split — but their pairs end up in the same group and cancel via XOR.</div>
+    </div>
+    <div class="step-item hi">
+      <span class="step-num">Step 4</span>
+      <div class="step-body"><strong>XOR within each group.</strong> S1 = XOR of all elements with bit pos set. S2 = XOR of all others. The pair-mates cancel within their groups, leaving S1 = unique₁ and S2 = unique₂.</div>
+    </div>
+  </div>
+
+  <h3>Worked Example — arr = [10, 8, 8, 9, 12, 9, 6, 11, 10, 6, 12, 17]</h3>
+
+  <p>Step 1: XOR all → 11^17 = <code>01011</code> ^ <code>10001</code> = <code>11010</code> = <strong>26</strong></p>
+
+  <p>Step 2: val = 26 = <code>11010</code>. The 1st bit (position 1) is set. Use <code>pos = 1</code>.</p>
+
+  <p>Step 3: Partition on bit 1:</p>
+  <div class="bucket-row">
+    <div class="bucket s1">
+      <div class="bucket-label">S1 — bit 1 SET</div>
+      <div class="bucket-vals">10 (1010 ✓)<br/>10 (1010 ✓)<br/>6 (0110 ✓)<br/>11 (1011 ✓)<br/>6 (0110 ✓)</div>
+    </div>
+    <div class="bucket s2">
+      <div class="bucket-label">S2 — bit 1 UNSET</div>
+      <div class="bucket-vals">8 (1000 ✗)<br/>8 (1000 ✗)<br/>9 (1001 ✗)<br/>12 (1100 ✗)<br/>9 (1001 ✗)<br/>12 (1100 ✗)<br/>17 (10001 ✗)</div>
+    </div>
+  </div>
+
+  <p>Step 4: S1 = 10^10^6^11^6 = (10^10)^(6^6)^11 = 0^0^11 = <strong>11</strong> &nbsp;|&nbsp; S2 = 8^8^9^12^9^12^17 = 0^0^0^17 = <strong>17</strong></p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — two unique elements O(N)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span>[] <span class="fn">twoUniqueElements</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="cmt">// Step 1 — XOR all elements</span>
+    <span class="ty">int</span> val = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> x : arr) val ^= x;
+
+    <span class="cmt">// Step 2 — find any set bit in val</span>
+    <span class="ty">int</span> pos = -<span class="num">1</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; <span class="num">32</span>; i++) {
+        <span class="kw">if</span> ((val &amp; (<span class="num">1</span> &lt;&lt; i)) != <span class="num">0</span>) { pos = i; <span class="kw">break</span>; }
+    }
+
+    <span class="cmt">// Step 3 & 4 — partition and XOR within each group</span>
+    <span class="ty">int</span> s1 = <span class="num">0</span>, s2 = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> x : arr) {
+        <span class="kw">if</span> ((x &amp; (<span class="num">1</span> &lt;&lt; pos)) == <span class="num">0</span>) s1 ^= x;  <span class="cmt">// bit pos unset → group 1</span>
+        <span class="kw">else</span>                              s2 ^= x;  <span class="cmt">// bit pos set   → group 2</span>
+    }
+    <span class="kw">return new</span> <span class="ty">int</span>[]{s1, s2};
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Why Any Set Bit Works</span>
+    The two unique numbers are guaranteed to differ at every set bit of <code>val</code> (since val = u1^u2, a set bit means the corresponding bits of u1 and u2 are opposite). Any one of those positions cleanly separates them into different buckets.
+  </div>
+</section>
+
+<!-- ─── 05: OR = 0 ─── -->
+<section class="section" id="or0-problem">
+  <div class="section-header"><span class="section-num">05</span><h2>Subarrays with OR = 0</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given a binary array (containing only 0s and 1s), count the number of subarrays whose bitwise OR equals 0.
+  </div>
+
+  <h3>Key Observation</h3>
+  <p>OR is 0 only when every element in the subarray is 0. A single 1 anywhere makes the OR at least 1. Therefore we need to count subarrays made entirely of 0s.</p>
+
+  <p>Example: arr = [1, 0, 0, 1, 1, 0, 0, 0, 1]</p>
+  <div class="arr-vis">
+    <div class="av-cell av1">1</div>
+    <div class="av-cell av0">0</div>
+    <div class="av-cell av0">0</div>
+    <div class="av-cell av-sep"></div>
+    <div class="av-cell av1">1</div>
+    <div class="av-cell av1">1</div>
+    <div class="av-cell av-sep"></div>
+    <div class="av-cell av0">0</div>
+    <div class="av-cell av0">0</div>
+    <div class="av-cell av0">0</div>
+    <div class="av-cell av-sep"></div>
+    <div class="av-cell av1">1</div>
+  </div>
+  <p style="font-size:.85rem;color:var(--ink-soft)">Consecutive zero groups: size 2 and size 3 (separated by the vertical bars).</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Counting Subarrays from a Group of k Zeros</span>
+    A run of k consecutive zeros can form exactly k×(k+1)/2 all-zero subarrays (the triangular number). For k=2: subarrays are [0], [0], [0,0] = 3. For k=3: [0],[0],[0],[0,0],[0,0],[0,0,0] = 6.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — count subarrays with OR = 0</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">long</span> <span class="fn">subarraysWithORZero</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="ty">long</span> count = <span class="num">0</span>, ans = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="kw">if</span> (arr[i] == <span class="num">0</span>) {
+            count++;
+        } <span class="kw">else</span> {
+            ans += (count * (count + <span class="num">1</span>)) / <span class="num">2</span>;
+            count = <span class="num">0</span>;
+        }
+    }
+    ans += (count * (count + <span class="num">1</span>)) / <span class="num">2</span>;  <span class="cmt">// handle trailing zero group</span>
+    <span class="kw">return</span> ans;
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <h3>Dry Run — arr = [0, 0, 1, 1, 0, 1, 0, 0]</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>i</th><th>arr[i]</th><th>count</th><th>ans added</th><th>ans total</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td class="td-blue">0</td><td>1</td><td>—</td><td>0</td></tr>
+        <tr><td>1</td><td class="td-blue">0</td><td>2</td><td>—</td><td>0</td></tr>
+        <tr><td>2</td><td class="td-acc">1</td><td>0</td><td>2×3/2 = <strong>3</strong></td><td>3</td></tr>
+        <tr><td>3</td><td class="td-acc">1</td><td>0</td><td>0</td><td>3</td></tr>
+        <tr><td>4</td><td class="td-blue">0</td><td>1</td><td>—</td><td>3</td></tr>
+        <tr><td>5</td><td class="td-acc">1</td><td>0</td><td>1×2/2 = <strong>1</strong></td><td>4</td></tr>
+        <tr><td>6</td><td class="td-blue">0</td><td>1</td><td>—</td><td>4</td></tr>
+        <tr><td>7</td><td class="td-blue">0</td><td>2</td><td>—</td><td>4</td></tr>
+        <tr><td>end</td><td>—</td><td>—</td><td>2×3/2 = <strong>3</strong></td><td><strong>7</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── 06: OR = 1 ─── -->
+<section class="section" id="or1-problem">
+  <div class="section-header"><span class="section-num">06</span><h2>Subarrays with OR = 1</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Given a binary array, count the number of subarrays whose bitwise OR equals 1.
+  </div>
+
+  <h3>The Complement Trick</h3>
+  <p>Every subarray has an OR of either 0 or 1 (since the array is binary). Therefore:</p>
+
+  <div class="formula-box">
+    <span class="f-label">Complement Identity</span>
+    <span class="formula-big">subarrays(OR=1)  =  total subarrays  −  subarrays(OR=0)</span>
+  </div>
+
+  <p>Total subarrays of length N = N×(N+1)/2. We already know how to count subarrays with OR = 0 from Section 05.</p>
+
+  <h3>Example — arr = [1, 0, 1]</h3>
+  <p>All subarrays: [1], [0], [1], [1,0], [0,1], [1,0,1] → 6 total.</p>
+  <p>Subarrays with OR=0: only [0] → 1 subarray.</p>
+  <p>Subarrays with OR=1: 6 − 1 = <strong>5</strong></p>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — count subarrays with OR = 1</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">long</span> <span class="fn">subarraysWithOROne</span>(<span class="ty">int</span>[] arr, <span class="ty">int</span> n) {
+    <span class="ty">long</span> count = <span class="num">0</span>, zeroSubarrays = <span class="num">0</span>;
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; n; i++) {
+        <span class="kw">if</span> (arr[i] == <span class="num">0</span>) {
+            count++;
+        } <span class="kw">else</span> {
+            zeroSubarrays += (count * (count + <span class="num">1</span>)) / <span class="num">2</span>;
+            count = <span class="num">0</span>;
+        }
+    }
+    zeroSubarrays += (count * (count + <span class="num">1</span>)) / <span class="num">2</span>;
+
+    <span class="ty">long</span> total = (<span class="ty">long</span>) n * (n + <span class="num">1</span>) / <span class="num">2</span>;
+    <span class="kw">return</span> total - zeroSubarrays;
+}</pre>
+  </div>
+
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(N)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+
+  <h3>Verification — arr = [0, 0, 1, 1, 0, 1, 0, 0]</h3>
+  <p>N=8, total = 8×9/2 = 36. Subarrays with OR=0 = 7 (from dry run in §05). Subarrays with OR=1 = 36 − 7 = <strong>29</strong>.</p>
+</section>
+
+<!-- ─── 07: ALEX AND SAM ─── -->
+<section class="section" id="alex-sam">
+  <div class="section-header"><span class="section-num">07</span><h2>Alex &amp; Sam — Minimum Set Bits</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Problem Statement</span>
+    Alex starts with a score of 0. He can either <strong>double his score</strong> (free) or <strong>add 1</strong> (costs one "help" from Sam). Find the minimum number of times Alex needs to add 1 to reach exactly score A.
+  </div>
+
+  <h3>Insight</h3>
+  <p>Think of it in binary. Starting from 0, doubling is a left shift (appends a 0). Adding 1 sets the lowest bit. To build any number A in binary from scratch, you need exactly as many "+1" operations as there are <strong>1-bits in A</strong>. The doublings are free and reconstruct the position of each 1-bit.</p>
+
+  <p>Example: A = 52 = <code>110101</code></p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Score (binary)</th><th>Action</th><th>Sam's help?</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>+1</td><td class="td-acc">Yes ①</td></tr>
+        <tr><td>1</td><td>×2</td><td>No</td></tr>
+        <tr><td>10</td><td>+1</td><td class="td-acc">Yes ②</td></tr>
+        <tr><td>11</td><td>×2</td><td>No</td></tr>
+        <tr><td>110</td><td>×2</td><td>No</td></tr>
+        <tr><td>1100</td><td>+1</td><td class="td-acc">Yes ③</td></tr>
+        <tr><td>1101</td><td>×2</td><td>No</td></tr>
+        <tr><td>11010</td><td>×2</td><td>No</td></tr>
+        <tr><td>110100</td><td>+1</td><td class="td-acc">Yes ④</td></tr>
+        <tr><td>110101 = 53 ✓ (wait — A=52=110100)</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>52 = <code>110100</code> → 3 set bits → minimum <strong>3</strong> helps. (The table above traces A=53 for illustration; adjust the last step for A=52.)</p>
+
+  <div class="formula-box">
+    <span class="f-label">Solution</span>
+    <span class="formula-big">answer = count of set bits in A = Integer.bitCount(A)</span>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — Alex &amp; Sam</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span> <span class="fn">minHelp</span>(<span class="ty">int</span> a) {
+    <span class="ty">int</span> count = <span class="num">0</span>;
+    <span class="kw">while</span> (a > <span class="num">0</span>) {
+        <span class="kw">if</span> ((a &amp; <span class="num">1</span>) == <span class="num">1</span>) count++;
+        a >>= <span class="num">1</span>;
+    }
+    <span class="kw">return</span> count;
+    <span class="cmt">// Or equivalently: return Integer.bitCount(a);</span>
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <div class="complexity-badge"><span class="label">Time: </span><span class="val">O(log A)</span></div>
+    <div class="complexity-badge"><span class="label">Space: </span><span class="val">O(1)</span></div>
+  </div>
+</section>
+
+<!-- ─── 08: RECAP ─── -->
+<section class="section" id="recap">
+  <div class="section-header"><span class="section-num">08</span><h2>Quick Recap</h2></div>
+
+  <div class="recap-grid">
+    <div class="recap-card">
+      <h4>Single Among Triples — Bit-Count</h4>
+      <p>For each of 32 bit positions, count how many elements have that bit set. If count % 3 ≠ 0, the unique element has that bit set. O(N) time, O(1) space.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Why XOR Fails for Triples</h4>
+      <p>A^A^A = A (not 0). XOR cancels pairs, not triples. The bit-count approach is needed instead.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Two Unique — Step 1: XOR All</h4>
+      <p>val = XOR of all elements = u1^u2. Pairs cancel. The result encodes the differences between the two uniques.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Two Unique — Step 2: Find Diff Bit</h4>
+      <p>Any set bit in val is a position where u1 and u2 differ. Use the lowest set bit: <code>pos</code> = first i where val &amp; (1&lt;&lt;i) ≠ 0.</p>
+    </div>
+    <div class="recap-card">
+      <h4>Two Unique — Steps 3 &amp; 4: Partition</h4>
+      <p>Split array by bit <code>pos</code>. XOR within each group. Pairs cancel within their group; each group yields one unique element.</p>
+    </div>
+    <div class="recap-card">
+      <h4>OR = 0 Subarrays</h4>
+      <p>Only all-zero subarrays have OR = 0. Count consecutive zeros of length k and add k(k+1)/2 for each run.</p>
+    </div>
+    <div class="recap-card">
+      <h4>OR = 1 Subarrays</h4>
+      <p>Complement trick: total subarrays − subarrays(OR=0). Total = N(N+1)/2. O(N), O(1).</p>
+    </div>
+    <div class="recap-card">
+      <h4>Alex &amp; Sam — Set Bits</h4>
+      <p>Minimum "+1" operations = number of set bits in A. Doubling is free (left shift), adding 1 sets a bit. Answer = Integer.bitCount(A).</p>
+    </div>
+  </div>
+
+  <h3>Complexity Summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Algorithm</th><th>Time</th><th>Space</th><th>Key Idea</th></tr></thead>
+      <tbody>
+        <tr><td>Single in Triples — BF</td><td>O(N²)</td><td>O(1)</td><td>Count frequency per element</td></tr>
+        <tr><td>Single in Triples — Sort</td><td>O(N log N)</td><td>O(log N)</td><td>Scan sorted groups of 3</td></tr>
+        <tr><td><strong>Single in Triples — Bit-Count</strong></td><td><strong>O(N)</strong></td><td><strong>O(1)</strong></td><td>Column sums mod 3</td></tr>
+        <tr><td><strong>Two Unique Elements</strong></td><td><strong>O(N)</strong></td><td><strong>O(1)</strong></td><td>XOR + partition by diff bit</td></tr>
+        <tr><td>Subarrays OR = 0</td><td>O(N)</td><td>O(1)</td><td>Consecutive zero groups k(k+1)/2</td></tr>
+        <tr><td>Subarrays OR = 1</td><td>O(N)</td><td>O(1)</td><td>Total − subarrays(OR=0)</td></tr>
+        <tr><td>Alex &amp; Sam</td><td>O(log A)</td><td>O(1)</td><td>Count set bits of A</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── 09: LEETCODE ─── -->
+<section class="section" id="leetcode">
+  <div class="section-header"><span class="section-num">09</span><h2>Related LeetCode Problems</h2></div>
+
+  <h3>Single Element Variants</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff hard">Hard</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/single-number-ii/" target="_blank" rel="noopener">#137 — Single Number II ↗</a><br/>
+      <span class="lc-why">Exact problem from §01–02 — every element appears 3 times except one. Use the bit-count % 3 approach.</span>
+    </span></li>
+    <li><span class="lc-diff medium">Medium</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/single-number-iii/" target="_blank" rel="noopener">#260 — Single Number III ↗</a><br/>
+      <span class="lc-why">Exact problem from §03–04 — two unique elements among pairs. XOR all, find a set bit, partition, XOR each group.</span>
+    </span></li>
+    <li><span class="lc-diff easy">Easy</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/single-number/" target="_blank" rel="noopener">#136 — Single Number ↗</a><br/>
+      <span class="lc-why">The foundational case — one unique among pairs. Simple XOR of all elements.</span>
+    </span></li>
+  </ul>
+
+  <h3>Subarray OR / AND Counting</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff medium">Medium</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/number-of-subarrays-with-bounded-maximum/" target="_blank" rel="noopener">#795 — Subarrays with Bounded Maximum ↗</a><br/>
+      <span class="lc-why">Complement counting pattern — same total − excluded structure as the OR=1 problem.</span>
+    </span></li>
+    <li><span class="lc-diff medium">Medium</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/count-number-of-texts/" target="_blank" rel="noopener">#2266 — Count Number of Texts ↗</a><br/>
+      <span class="lc-why">Consecutive-group counting with the k(k+1)/2 triangular number pattern.</span>
+    </span></li>
+    <li><span class="lc-diff hard">Hard</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/bitwise-ors-of-subarrays/" target="_blank" rel="noopener">#898 — Bitwise ORs of Subarrays ↗</a><br/>
+      <span class="lc-why">Count distinct OR values across all subarrays — extends the OR-subarray concept significantly.</span>
+    </span></li>
+    <li><span class="lc-diff medium">Medium</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/subarray-product-less-than-k/" target="_blank" rel="noopener">#713 — Subarray Product Less Than K ↗</a><br/>
+      <span class="lc-why">Two-pointer subarray counting — same "count valid subarrays" pattern, different predicate.</span>
+    </span></li>
+  </ul>
+
+  <h3>Set Bits &amp; Score Building</h3>
+  <ul class="lc-list">
+    <li><span class="lc-diff easy">Easy</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/number-of-1-bits/" target="_blank" rel="noopener">#191 — Number of 1 Bits ↗</a><br/>
+      <span class="lc-why">Core set-bit count — the direct solution to the Alex &amp; Sam bonus problem.</span>
+    </span></li>
+    <li><span class="lc-diff easy">Easy</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/minimum-number-of-operations-to-make-array-xor-equal-to-k/" target="_blank" rel="noopener">#2997 — Min Operations to Make XOR Equal K ↗</a><br/>
+      <span class="lc-why">Count differing bits between target and XOR of array — same set-bit-count thinking.</span>
+    </span></li>
+    <li><span class="lc-diff medium">Medium</span><span>
+      <a class="lc-name" href="https://leetcode.com/problems/find-the-original-array-of-prefix-xor/" target="_blank" rel="noopener">#2433 — Find the Original Array of Prefix XOR ↗</a><br/>
+      <span class="lc-why">XOR cancellation applied in reverse — builds on the pair-cancellation property.</span>
+    </span></li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Recommended Study Order</span>
+    136 → 137 → 260 → 191 → 2997 → 795 → 713 → 898. Master the single-number variants first, then move to subarray counting.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+function copyCode(btn){
+  const pre=btn.closest('.code-block').querySelector('pre');
+  const ok=()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)};
+  if(navigator.clipboard)navigator.clipboard.writeText(pre.innerText).then(ok);
+  else{const t=document.createElement('textarea');t.value=pre.innerText;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);ok()}
+}
+const bar=document.getElementById('progress-bar');
+function upP(){const d=document.documentElement.scrollHeight-window.innerHeight;bar.style.width=(d>0?(window.scrollY/d)*100:0)+'%'}
+window.addEventListener('scroll',upP,{passive:true});upP();
+const sb=document.querySelector('.sidebar'),ov=document.getElementById('nav-overlay'),tg=document.getElementById('nav-toggle');
+tg.addEventListener('click',()=>{const o=sb.classList.toggle('open');ov.classList.toggle('open',o);tg.textContent=o?'✕':'☰'});
+ov.addEventListener('click',()=>{sb.classList.remove('open');ov.classList.remove('open');tg.textContent='☰'});
+document.querySelectorAll('.nav-link').forEach(l=>{
+  l.addEventListener('click',e=>{
+    const h=l.getAttribute('href');if(!h||!h.startsWith('#'))return;e.preventDefault();
+    const t=document.querySelector(h);if(!t)return;
+    window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-24,behavior:'smooth'});
+    sb.classList.remove('open');ov.classList.remove('open');tg.textContent='☰';
+  });
+});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('.section');
+function setAct(id){navLinks.forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${id}"]`);if(a){a.classList.add('active');const s=document.querySelector('.sidebar');const t=a.offsetTop,h=s.clientHeight;if(t<s.scrollTop+60||t>s.scrollTop+h-60)s.scrollTo({top:t-h/2,behavior:'smooth'})}}
+const spy=new IntersectionObserver(en=>{const v=en.filter(e=>e.isIntersecting).map(e=>e.target);if(!v.length)return;v.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top);setAct(v[0].id)},{rootMargin:'-10% 0px -55% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+const rev=new IntersectionObserver(en=>{en.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})},{threshold:.06});
+sections.forEach(s=>rev.observe(s));
+
+/* ── Build bit matrix ── */
+(function(){
+  const nums = [5,7,5,4,7,11,11,9,11,7,5,4,4];
+  const bits = 4;
+  const container = document.getElementById('bm-demo');
+  if(!container) return;
+
+  // header
+  const hdr = document.createElement('div');
+  hdr.className = 'bm-row';
+  const hl = document.createElement('div'); hl.className='bm-label'; hl.textContent=''; hdr.appendChild(hl);
+  for(let b=bits-1;b>=0;b--){
+    const bc=document.createElement('div');bc.className='bm-bit';bc.style.color='var(--blue)';bc.style.fontWeight='700';bc.textContent=b;hdr.appendChild(bc);
+  }
+  container.appendChild(hdr);
+
+  const sep0=document.createElement('div');sep0.className='bm-sep';container.appendChild(sep0);
+
+  // rows
+  const colSums = new Array(bits).fill(0);
+  nums.forEach(n=>{
+    const row=document.createElement('div');row.className='bm-row';
+    const lbl=document.createElement('div');lbl.className='bm-label';lbl.textContent=n+'[ ]';row.appendChild(lbl);
+    for(let b=bits-1;b>=0;b--){
+      const bit=(n>>b)&1;
+      if(bit) colSums[b]++;
+      const bc=document.createElement('div');bc.className='bm-bit '+(bit?'b1':'b0');bc.textContent=bit;row.appendChild(bc);
+    }
+    container.appendChild(row);
+  });
+
+  // separator
+  const sep=document.createElement('div');sep.className='bm-sep';container.appendChild(sep);
+
+  // sum row
+  const sumRow=document.createElement('div');sumRow.className='bm-row';
+  const sl=document.createElement('div');sl.className='bm-label';sl.textContent='Sum';sl.style.fontWeight='700';sumRow.appendChild(sl);
+  for(let b=bits-1;b>=0;b--){
+    const bc=document.createElement('div');bc.className='bm-bit bm-total';bc.textContent=colSums[b];sumRow.appendChild(bc);
+  }
+  container.appendChild(sumRow);
+
+  // mod row
+  const modRow=document.createElement('div');modRow.className='bm-row';
+  const ml=document.createElement('div');ml.className='bm-label';ml.textContent='% 3';ml.style.fontWeight='700';modRow.appendChild(ml);
+  let ansNum=0;
+  for(let b=bits-1;b>=0;b--){
+    const m=colSums[b]%3;
+    if(m) ansNum|=(1<<b);
+    const bc=document.createElement('div');bc.className='bm-bit';bc.textContent=m;
+    bc.style.background=m?'var(--green-soft)':'var(--bg)';
+    bc.style.color=m?'var(--green)':'var(--ink-soft)';
+    bc.style.fontWeight=m?'700':'400';
+    modRow.appendChild(bc);
+  }
+  container.appendChild(modRow);
+
+  // answer
+  const ansRow=document.createElement('div');ansRow.className='bm-row';ansRow.style.marginTop='.5rem';
+  ansRow.innerHTML=`<div class="bm-label" style="color:var(--green);font-weight:700">Answer</div><div style="font-family:'JetBrains Mono',monospace;font-size:.85rem;font-weight:700;color:var(--green)">${ansNum}</div>`;
+  container.appendChild(ansRow);
+})();
+</script>
+</body>
+</html>

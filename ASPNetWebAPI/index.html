@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Web API · Samrath's Coding Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --ink-mute:    #8a8478;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: radial-gradient(ellipse 120% 80% at 15% 20%, #f5ede8 0%, transparent 60%),
+              radial-gradient(ellipse 80% 60% at 90% 80%, #e8e4f2 0%, transparent 55%),
+              var(--bg);
+  color: var(--ink);
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 18px; line-height: 1.7; min-height: 100vh;
+}
+#progress-bar {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width .1s linear; border-radius: 0 2px 2px 0;
+}
+.shell { max-width: 1080px; margin: 0 auto; padding: 4rem 2rem 6rem; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 2rem; border-bottom: 1px solid var(--line); margin-bottom: 2.5rem;
+}
+.brand {
+  font-family: "JetBrains Mono", monospace; font-size: .72rem;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--accent);
+}
+.brand strong {
+  display: block; font-family: "Fraunces", serif; font-weight: 600;
+  letter-spacing: 0; font-size: 1rem; color: var(--ink); margin-top: .15rem;
+}
+.topnav-links { display: flex; gap: .5rem; }
+.topnav-links a {
+  font-family: "JetBrains Mono", monospace; font-size: .66rem;
+  letter-spacing: .12em; text-transform: uppercase;
+  display: inline-flex; align-items: center; gap: .35rem;
+  background: var(--bg); border: 1px solid var(--line); color: var(--ink-soft);
+  padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+  transition: all .18s ease;
+}
+.topnav-links a:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+
+.crumb {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .7rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-mute); margin-bottom: 1.5rem;
+}
+.crumb a { color: var(--ink-soft); text-decoration: none; }
+.crumb a:hover { color: var(--accent); }
+.crumb span { color: var(--accent); }
+
+.hero { padding: 1rem 0 3.5rem; border-bottom: 1px solid var(--line); margin-bottom: 3.5rem; }
+.hero-eyebrow {
+  font-family: "JetBrains Mono", monospace; font-size: .72rem;
+  letter-spacing: .16em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 1rem;
+}
+.hero h1 {
+  font-family: "Fraunces", serif; font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 600; line-height: 1.1; color: var(--ink); margin-bottom: 1.1rem;
+}
+.hero-lede { font-size: 1.1rem; color: var(--ink-soft); max-width: 620px; margin-bottom: 1.6rem; }
+.chips { display: flex; flex-wrap: wrap; gap: .5rem; }
+.chip {
+  font-family: "JetBrains Mono", monospace; font-size: .7rem;
+  letter-spacing: .04em; padding: .3rem .75rem; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink-soft);
+}
+
+.section-header {
+  display: flex; align-items: baseline; gap: 1rem; margin-bottom: 2rem;
+  padding-bottom: .75rem; border-bottom: 1px solid var(--line);
+}
+.section-num {
+  font-family: "JetBrains Mono", monospace; font-size: .72rem;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+  background: var(--accent-soft); padding: .2rem .55rem; border-radius: 4px;
+}
+.section-header h2 {
+  font-family: "Fraunces", serif; font-size: 1.9rem; font-weight: 600;
+  color: var(--ink); line-height: 1.2;
+}
+
+.notes-list { display: flex; flex-direction: column; gap: .9rem; }
+.note-row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1.1rem 1.4rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.note-row:hover {
+  transform: translateX(4px);
+  border-color: var(--accent);
+  box-shadow: 0 10px 28px -16px rgba(45,42,38,.22);
+}
+.note-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .75rem; letter-spacing: .08em;
+  color: var(--accent); background: var(--accent-soft);
+  text-align: center; padding: .4rem 0; border-radius: 6px;
+}
+.note-body h3 {
+  font-family: "Fraunces", serif; font-size: 1.2rem; font-weight: 600;
+  color: var(--ink); margin-bottom: .15rem; line-height: 1.3;
+}
+.note-body p { font-size: .92rem; color: var(--ink-soft); margin: 0; }
+.note-go {
+  font-family: "JetBrains Mono", monospace; font-size: 1.05rem;
+  color: var(--accent); transition: transform .2s ease;
+}
+.note-row:hover .note-go { transform: translateX(3px); }
+
+.note-group { margin-bottom: 3rem; }
+.note-group-label {
+  font-family: "JetBrains Mono", monospace; font-size: .66rem;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-mute); margin-bottom: .9rem; padding-left: .25rem;
+}
+
+.foot {
+  margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--line);
+  display: flex; justify-content: space-between;
+  font-family: "JetBrains Mono", monospace; font-size: .68rem;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--ink-mute);
+}
+
+@media (max-width: 640px) {
+  .shell { padding: 2rem 1.25rem 4rem; }
+  .topbar { flex-direction: column; gap: 1rem; align-items: flex-start; }
+  .note-row { grid-template-columns: 50px 1fr auto; gap: .8rem; padding: .9rem 1rem; }
+  .note-body h3 { font-size: 1.05rem; }
+  .foot { flex-direction: column; gap: .75rem; }
+}
+
+.note-row { opacity: 0; transform: translateY(10px); transition: opacity .5s ease, transform .35s ease, border-color .25s ease, box-shadow .25s ease, background .2s ease; }
+.note-row.visible { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div class="shell">
+
+  <header class="topbar">
+    <div class="brand">
+      Samrath's Coding Notes · .NET Developer
+      <strong>Series 04 · Web API</strong>
+    </div>
+    <nav class="topnav-links">
+      <a href="../index.html"><span>⌂</span>Home</a>
+      <a href="../dotnet.html"><span>←</span>.NET</a>
+    </nav>
+  </header>
+
+  <div class="crumb">
+    <a href="../index.html">Home</a> &nbsp;›&nbsp;
+    <a href="../dotnet.html">.NET Developer</a> &nbsp;›&nbsp;
+    <span>Web API</span>
+  </div>
+
+  <section class="hero">
+    <p class="hero-eyebrow">.NET · Series 04 · ASP.NET Core Web API</p>
+    <h1>Web API — REST, right<br>from the routing table.</h1>
+    <p class="hero-lede">
+      Fifteen days of shipping HTTP APIs — controllers and routing, model
+      binding and validation, DTOs and result shaping, real CRUD against
+      SQL Server, and the cross-cutting concerns that separate a demo from a service.
+    </p>
+    <div class="chips">
+      <span class="chip">15 Notes</span>
+      <span class="chip">REST</span>
+      <span class="chip">Controllers</span>
+      <span class="chip">DTOs</span>
+      <span class="chip">EF Core</span>
+      <span class="chip">Auth</span>
+      <span class="chip">OpenAPI</span>
+      <span class="chip">Minimal APIs</span>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <span class="section-num">Notes</span>
+      <h2>All chapters in this track</h2>
+    </div>
+
+    <!-- BASICS -->
+    <div class="note-group">
+      <div class="note-group-label">Part 01 · REST Basics &amp; Binding</div>
+      <div class="notes-list">
+        <a class="note-row" href="01-webapi-rest-basics.html">
+          <div class="note-num">01</div>
+          <div class="note-body">
+            <h3>Web API &amp; REST Basics</h3>
+            <p>Resources, HTTP verbs, status codes and Swagger — the mental model behind every endpoint.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="02-controllers-routing.html">
+          <div class="note-num">02</div>
+          <div class="note-body">
+            <h3>Controllers &amp; Routing</h3>
+            <p>Action methods, attribute routing, route templates and constraints.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="03-model-binding.html">
+          <div class="note-num">03</div>
+          <div class="note-body">
+            <h3>Model Binding</h3>
+            <p>Route, query, body, headers and form — where each value comes from and how to control it.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="04-model-validation.html">
+          <div class="note-num">04</div>
+          <div class="note-body">
+            <h3>Model Validation</h3>
+            <p>Data annotations, IValidatableObject and returning validation errors the right way.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- DATA FLOW -->
+    <div class="note-group">
+      <div class="note-group-label">Part 02 · DTOs &amp; Results</div>
+      <div class="notes-list">
+        <a class="note-row" href="05-dtos-and-mapping.html">
+          <div class="note-num">05</div>
+          <div class="note-body">
+            <h3>DTOs &amp; Mapping</h3>
+            <p>Why never to expose entities directly, and mapping patterns that stay maintainable.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="06-returning-results.html">
+          <div class="note-num">06</div>
+          <div class="note-body">
+            <h3>Returning Results</h3>
+            <p>IActionResult, ActionResult&lt;T&gt;, Results, TypedResults — picking the right shape.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="07-service-and-data-layers.html">
+          <div class="note-num">07</div>
+          <div class="note-body">
+            <h3>Service &amp; Data Layers</h3>
+            <p>Separating the API surface from services and repositories — with realistic seams for testing.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- CRUD -->
+    <div class="note-group">
+      <div class="note-group-label">Part 03 · CRUD End-to-End</div>
+      <div class="notes-list">
+        <a class="note-row" href="08-crud-end-to-end.html">
+          <div class="note-num">08</div>
+          <div class="note-body">
+            <h3>CRUD End-to-End with EF Core + SQL Server</h3>
+            <p>A working create-read-update-delete slice all the way from the route to the row.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="09-list-endpoints.html">
+          <div class="note-num">09</div>
+          <div class="note-body">
+            <h3>List Endpoints — Pagination, Filtering &amp; Sorting</h3>
+            <p>The list endpoint patterns that scale — page/limit, filters and stable ordering.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="10-api-documentation.html">
+          <div class="note-num">10</div>
+          <div class="note-body">
+            <h3>API Documentation — OpenAPI, Swagger &amp; XML Comments</h3>
+            <p>Auto-generated docs that stay in sync, with XML comments doing the heavy lifting.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- CROSS-CUTTING -->
+    <div class="note-group">
+      <div class="note-group-label">Part 04 · Cross-Cutting Concerns</div>
+      <div class="notes-list">
+        <a class="note-row" href="11-error-handling.html">
+          <div class="note-num">11</div>
+          <div class="note-body">
+            <h3>Error Handling — IExceptionHandler &amp; ProblemDetails</h3>
+            <p>Global error handling and returning consistent, machine-readable problem responses.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="12-authentication.html">
+          <div class="note-num">12</div>
+          <div class="note-body">
+            <h3>Authentication — JWT Bearer &amp; ASP.NET Core Identity</h3>
+            <p>Issuing and validating JWTs, and integrating with Identity for user management.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="13-authorization.html">
+          <div class="note-num">13</div>
+          <div class="note-body">
+            <h3>Authorization — Roles, Policies &amp; Claims</h3>
+            <p>Declarative authorization at the endpoint, and the policy-based model for the trickier cases.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+        <a class="note-row" href="14-cross-cutting-concerns.html">
+          <div class="note-num">14</div>
+          <div class="note-body">
+            <h3>Versioning, CORS &amp; Caching</h3>
+            <p>Living APIs need versioning; browsers need CORS; performance needs caching — all three, cleanly.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+    <!-- FINALE -->
+    <div class="note-group">
+      <div class="note-group-label">Part 05 · Finale</div>
+      <div class="notes-list">
+        <a class="note-row" href="15-minimal-apis-consolidation.html">
+          <div class="note-num">15</div>
+          <div class="note-body">
+            <h3>Minimal APIs &amp; Consolidation</h3>
+            <p>The Minimal API model side-by-side with controllers, and a consolidation of the whole track.</p>
+          </div>
+          <div class="note-go">→</div>
+        </a>
+      </div>
+    </div>
+
+  </section>
+
+  <footer class="foot">
+    <span>© Samrath · Coding Notes</span>
+    <span>Web API · 15 Notes</span>
+  </footer>
+</div>
+
+<script>
+  const bar = document.getElementById('progress-bar');
+  const updateBar = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    bar.style.width = max > 0 ? (h.scrollTop / max * 100) + '%' : '0%';
+  };
+  document.addEventListener('scroll', updateBar, { passive: true });
+  updateBar();
+
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+  }, { threshold: .08 });
+  document.querySelectorAll('.note-row').forEach(c => io.observe(c));
+</script>
+</body>
+</html>

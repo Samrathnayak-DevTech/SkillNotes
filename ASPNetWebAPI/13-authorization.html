@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Authorization — Roles, Policies &amp; Claims — Day 13</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:14px 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 13 · ASP.NET Core</div>
+    <div class="brand-title">Authorization 🛂</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>What Authorization Is</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>Claims &amp; the Principal</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">The Three Styles</div>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Role-Based</span></a>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>Claims-Based (Policies)</span></a>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>One Engine Underneath</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Custom Policies</div>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>Requirements &amp; Handlers</span></a>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>Applying &amp; Combining</span></a>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>Resource-Based</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Practice</div>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>Authorization Flow</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 13 — who's allowed to do what</div>
+      <h1>Authorization 🛂</h1>
+      <p class="lede">Yesterday we proved <em>who</em> a user is. Today we decide <em>what they're allowed to do</em>. ASP.NET Core gives you a spectrum: the blunt-but-simple <code>[Authorize(Roles=…)]</code>, the flexible <strong>claims-based</strong> checks, and the fully general <strong>policy-based</strong> model with custom requirements and handlers that can encode <em>any</em> rule your app can compute. We'll restrict an endpoint to a role and to a custom policy — and see that all three styles are really one engine wearing different hats.</p>
+      <div class="chips">
+        <span class="chip">🚧 [Authorize]</span>
+        <span class="chip">👥 Roles</span>
+        <span class="chip">🏷️ Claims</span>
+        <span class="chip">📜 Policies</span>
+        <span class="chip">🧩 Requirements</span>
+        <span class="chip">⚙️ Handlers</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>What Authorization Is 🛂</h2></div>
+      <p>Authorization (AuthZ) runs <em>after</em> authentication (Day 12). Authentication established <em>who</em> the user is — building their <code>ClaimsPrincipal</code> and setting <code>HttpContext.User</code>. Authorization asks the next question: <em>given who they are, are they permitted to do this?</em> A logged-in user is not automatically an allowed user.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🏢 Analogy — the office building</span>
+        <p>Your badge (authentication) proves you're an employee and gets you in the front door. But the same badge only opens certain doors: the server room needs IT clearance, the exec floor needs a manager badge, the vault needs both a role <em>and</em> a specific permission. Authorization is the set of rules on each door — not "are you an employee?" but "does <em>this</em> employee get through <em>this</em> door?"</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 401 vs. 403, one more time</span>
+        <p>These two live at the authentication/authorization boundary. <strong>401 Unauthorized</strong> = not authenticated (no valid identity). <strong>403 Forbidden</strong> = authenticated, but authorization said no. If your authorization rule fails, the user gets a 403 — proof they're logged in but lack the required role, claim, or policy.</p>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">Authorization</div>
+          <div class="s">what an identity may do</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch b-blue">
+            <h4>👥 Role-based</h4>
+            <ul>
+              <li><code>[Authorize(Roles=…)]</code></li>
+              <li>Coarse buckets</li>
+              <li>Simple, familiar</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>🏷️ Claims-based</h4>
+            <ul>
+              <li><code>RequireClaim</code></li>
+              <li>Match a fact about the user</li>
+              <li>Expressed as a policy</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>📜 Policy-based</h4>
+            <ul>
+              <li>Named bundle of rules</li>
+              <li>Requirements + handlers</li>
+              <li>Any computable rule</li>
+            </ul>
+          </div>
+          <div class="mm-branch">
+            <h4>🧩 The pieces</h4>
+            <ul>
+              <li>Policy = rule bundle</li>
+              <li>Requirement = the data</li>
+              <li>Handler = the logic</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h4>🎯 Resource-based</h4>
+            <ul>
+              <li>"Is this <em>your</em> order?"</li>
+              <li><code>IAuthorizationService</code></li>
+              <li>Checked in code</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>Claims &amp; the ClaimsPrincipal 🏷️</h2></div>
+      <p>Everything today builds on <em>claims</em>. A <strong>claim</strong> is a name–value statement about the user — <code>role: Admin</code>, <code>department: Engineering</code>, <code>age: 34</code> — asserted by a trusted issuer. After authentication, the user's claims live on <code>HttpContext.User</code>, a <code>ClaimsPrincipal</code>. Every authorization decision is ultimately "does this principal's claims satisfy the rule?"</p>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-blue">role<br>Admin</div><div class="idx">claim</div></div>
+          <div class="arr-cell"><div class="val highlight-green">dept<br>Engineering</div><div class="idx">claim</div></div>
+          <div class="arr-cell"><div class="val highlight">tenure<br>18</div><div class="idx">claim</div></div>
+          <div class="arr-cell"><div class="val">sub<br>alice</div><div class="idx">claim</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val neg">ClaimsPrincipal</div><div class="idx">HttpContext.User</div></div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 A role is just a claim</span>
+        <p>Here's the unifying idea: a <strong>role is simply a claim of type <code>role</code></strong>. When your JWT (Day 12) carries <code>ClaimTypes.Role = "Admin"</code>, "role-based" authorization is really claims-based authorization with a well-known claim type. That's why all three styles converge — they're all inspecting claims on the principal.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Reading claims in code</span>
+        <p>You can inspect the principal directly: <code>User.IsInRole("Admin")</code>, <code>User.HasClaim("department", "Engineering")</code>, or <code>User.FindFirst("tenure")?.Value</code>. The authorization system does this checking <em>for</em> you declaratively, so you rarely write it by hand — but knowing it's just claim lookups demystifies the whole thing.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Role-Based Authorization 👥</h2></div>
+      <p>The simplest style, from Day 12: gate an endpoint on one or more named roles. Great for coarse buckets like <code>Admin</code>, <code>Manager</code>, <code>User</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — roles on controllers &amp; actions</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">Authorize</span>(Roles = <span class="str">"Admin"</span>)]                 <span class="cmt">// must be in Admin</span>
+[<span class="ty">HttpDelete</span>(<span class="str">"{id}"</span>)]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Delete</span>(<span class="kw">int</span> id) =&gt; <span class="fn">NoContent</span>();
+
+[<span class="ty">Authorize</span>(Roles = <span class="str">"Admin,Manager"</span>)]         <span class="cmt">// Admin OR Manager (comma = OR)</span>
+[<span class="ty">HttpPost</span>]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Create</span>() =&gt; <span class="fn">Ok</span>();</code></pre>
+      </div>
+
+      <p>Stacking attributes means <strong>AND</strong>, while a comma-separated list means <strong>OR</strong>:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — AND vs OR with roles</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">Authorize</span>(Roles = <span class="str">"Admin"</span>)]     <span class="cmt">// must be Admin…</span>
+[<span class="ty">Authorize</span>(Roles = <span class="str">"Finance"</span>)]   <span class="cmt">// …AND also Finance (both required)</span>
+<span class="kw">public class</span> <span class="ty">PayrollController</span> : <span class="ty">ControllerBase</span> { }</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Roles don't scale as rules get real</span>
+        <p>Roles answer "which bucket are you in?" — but real rules quickly outgrow buckets: "must be over 18," "must own this record," "only during business hours," "must belong to the same tenant." You <em>can</em> keep inventing roles (<code>AdminNightShiftEU</code>…), but that's a combinatorial mess. When matching a name isn't enough, reach for policies.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Roles need to be in the token</span>
+        <p>For <code>[Authorize(Roles=…)]</code> to work with JWT (Day 12), the token must carry role claims — you added them at login with <code>GetRolesAsync</code> → <code>ClaimTypes.Role</code>. No role claim in the token, no match, and the user gets a 403 even if they "are" an admin in your database.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>Claims-Based Authorization via Policies 📜</h2></div>
+      <p>The next step up: instead of matching a role name, require a specific <em>claim</em>. You express this as a named <strong>policy</strong> registered once in <code>AddAuthorization</code>, then apply it with <code>[Authorize(Policy=…)]</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — defining claim policies</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">AddAuthorization</span>(options =&gt;
+{
+    <span class="cmt">// must simply HAVE the "EmployeeId" claim (any value)</span>
+    options.<span class="fn">AddPolicy</span>(<span class="str">"IsEmployee"</span>, policy =&gt;
+        policy.<span class="fn">RequireClaim</span>(<span class="str">"EmployeeId"</span>));
+
+    <span class="cmt">// must have "department" claim equal to one of these values</span>
+    options.<span class="fn">AddPolicy</span>(<span class="str">"EngineeringOnly"</span>, policy =&gt;
+        policy.<span class="fn">RequireClaim</span>(<span class="str">"department"</span>, <span class="str">"Engineering"</span>, <span class="str">"Platform"</span>));
+
+    <span class="cmt">// requirements chain with AND — needs BOTH</span>
+    options.<span class="fn">AddPolicy</span>(<span class="str">"SeniorEngineer"</span>, policy =&gt; policy
+        .<span class="fn">RequireClaim</span>(<span class="str">"department"</span>, <span class="str">"Engineering"</span>)
+        .<span class="fn">RequireClaim</span>(<span class="str">"level"</span>, <span class="str">"Senior"</span>));
+});</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — applying a policy</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">Authorize</span>(Policy = <span class="str">"EngineeringOnly"</span>)]
+[<span class="ty">HttpGet</span>(<span class="str">"builds"</span>)]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetBuilds</span>() =&gt; <span class="fn">Ok</span>();
+
+<span class="cmt">// Minimal API equivalent</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/builds"</span>, () =&gt; <span class="ty">Results</span>.<span class="fn">Ok</span>())
+   .<span class="fn">RequireAuthorization</span>(<span class="str">"EngineeringOnly"</span>);</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Builder method</th><th>Passes when the user…</th></tr></thead>
+          <tbody>
+            <tr><td><code>RequireAuthenticatedUser()</code></td><td>is logged in (any identity)</td></tr>
+            <tr><td><code>RequireRole("Admin")</code></td><td>has the <code>Admin</code> role claim</td></tr>
+            <tr><td><code>RequireClaim("EmployeeId")</code></td><td>has that claim, any value</td></tr>
+            <tr><td><code>RequireClaim("dept", "Eng")</code></td><td>has that claim with one of the listed values</td></tr>
+            <tr><td><code>RequireUserName("bob")</code></td><td>has that exact username</td></tr>
+            <tr><td><code>RequireAssertion(ctx =&gt; …)</code></td><td>satisfies an inline lambda (escape hatch for OR/simple logic)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Chained requirements are AND, not OR</span>
+        <p>Chaining <code>.RequireClaim(a).RequireClaim(b)</code> means the user needs <strong>both</strong> — every requirement in a policy must pass. If you need OR ("VIP <em>or</em> employee <em>or</em> CEO"), chaining won't do it. For simple OR, use <code>RequireAssertion</code> with a lambda; for richer OR logic, use a custom requirement with multiple handlers (§06), since any one handler succeeding satisfies the requirement.</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>One Engine Underneath ⚙️</h2></div>
+      <p>Here's the insight that ties the three styles together: <strong>they're all policy-based authorization</strong>. Roles and claims are just convenient shorthand that the framework compiles into policies at runtime.</p>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-blue">[Authorize(Roles="Admin")]</div><div class="idx">shorthand</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val">RolesAuthorizationRequirement</div><div class="idx">a policy</div></div>
+        </div>
+        <div class="arr-row" style="margin-top:12px;">
+          <div class="arr-cell"><div class="val highlight-green">RequireClaim("dept","Eng")</div><div class="idx">shorthand</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val">ClaimsAuthorizationRequirement</div><div class="idx">a policy</div></div>
+        </div>
+        <div class="arr-row" style="margin-top:12px;">
+          <div class="arr-cell"><div class="val highlight">[Authorize]</div><div class="idx">shorthand</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val">DenyAnonymousAuthorizationRequirement</div><div class="idx">a policy</div></div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why this matters</span>
+        <p>Once you see that <code>[Authorize(Roles="Admin")]</code> and <code>RequireClaim(...)</code> are just pre-built <em>requirements</em> in a policy, custom policies stop feeling exotic. They're the <em>same mechanism</em> with a requirement and handler you write yourself. The framework ships requirements/handlers for the common cases; you extend the system for everything else. A policy is a named bundle of requirements, and <strong>all</strong> requirements must pass (AND) for the policy to succeed.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ DefaultPolicy vs. FallbackPolicy</span>
+        <p>Two options on <code>AuthorizationOptions</code> people mix up. <strong>DefaultPolicy</strong> applies when <code>[Authorize]</code> is used with no policy named (default: require an authenticated user). <strong>FallbackPolicy</strong> applies to endpoints with <em>no</em> authorization metadata at all — setting it to <code>RequireAuthenticatedUser()</code> is a handy way to make your whole API secure-by-default, requiring an explicit <code>[AllowAnonymous]</code> to opt out.</p>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>Custom Policies — Requirements &amp; Handlers 🧩</h2></div>
+      <p>When matching a value isn't enough — you need to <em>compute</em> something — you write a custom policy from two small pieces. A <strong>requirement</strong> carries the rule's data; a <strong>handler</strong> holds the logic.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — 1) the requirement (just data)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">using</span> Microsoft.AspNetCore.Authorization;
+
+<span class="cmt">// A marker interface — the requirement just holds the rule's data.</span>
+<span class="kw">public class</span> <span class="ty">MinimumTenureRequirement</span>(<span class="kw">int</span> months) : <span class="ty">IAuthorizationRequirement</span>
+{
+    <span class="kw">public int</span> Months { <span class="kw">get</span>; } = months;
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — 2) the handler (the logic, from DI)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">MinimumTenureHandler</span> : <span class="ty">AuthorizationHandler</span>&lt;<span class="ty">MinimumTenureRequirement</span>&gt;
+{
+    <span class="kw">protected override</span> <span class="ty">Task</span> <span class="fn">HandleRequirementAsync</span>(
+        <span class="ty">AuthorizationHandlerContext</span> context,
+        <span class="ty">MinimumTenureRequirement</span> requirement)
+    {
+        <span class="cmt">// Always confirm identity first — handlers run even for anonymous users.</span>
+        <span class="kw">var</span> claim = context.User.<span class="fn">FindFirst</span>(<span class="str">"tenure_months"</span>);
+        <span class="kw">if</span> (claim <span class="kw">is null</span>)
+            <span class="kw">return</span> <span class="ty">Task</span>.CompletedTask;   <span class="cmt">// neither pass nor fail; just don't succeed</span>
+
+        <span class="kw">if</span> (<span class="kw">int</span>.<span class="fn">TryParse</span>(claim.Value, <span class="kw">out</span> <span class="kw">var</span> months) &amp;&amp; months &gt;= requirement.Months)
+            context.<span class="fn">Succeed</span>(requirement);   <span class="cmt">// ✅ requirement met</span>
+
+        <span class="kw">return</span> <span class="ty">Task</span>.CompletedTask;
+    }
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — 3) register the handler + define the policy</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Register the handler in DI (singleton is fine when it holds no per-request state)</span>
+builder.Services.<span class="fn">AddSingleton</span>&lt;<span class="ty">IAuthorizationHandler</span>, <span class="ty">MinimumTenureHandler</span>&gt;();
+
+builder.Services.<span class="fn">AddAuthorization</span>(options =&gt;
+{
+    options.<span class="fn">AddPolicy</span>(<span class="str">"VestedEmployee"</span>, policy =&gt;
+        policy.<span class="fn">AddRequirements</span>(<span class="kw">new</span> <span class="ty">MinimumTenureRequirement</span>(<span class="num">12</span>)));
+});</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Succeed / Fail / do nothing — the three outcomes</span>
+        <p>In a handler: call <code>context.Succeed(requirement)</code> when it's met. Call <code>context.Fail()</code> to <em>hard-fail</em> — this vetoes the requirement even if another handler would succeed (use for "banned user" style overrides). Or return <em>without</em> calling either to simply not satisfy it — leaving room for another handler on the same requirement to succeed. That last distinction is how OR logic works across multiple handlers.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Handlers run even for unauthenticated users</span>
+        <p>All registered handlers for the pending requirements are invoked — the pipeline doesn't short-circuit on an anonymous user before your handler runs. So <strong>always null-check the claim</strong> (as above) rather than assuming a user/claim exists; otherwise you risk a <code>NullReferenceException</code>. Pair a custom policy with <code>RequireAuthenticatedUser()</code> if identity is a precondition.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Handlers get DI — that's the superpower</span>
+        <p>Because handlers are resolved from the container, they can inject anything: a <code>TimeProvider</code> for "business hours only" (and a fake clock in tests), your <code>DbContext</code> to look up ownership, an <code>HttpClient</code> to an entitlement service. Any rule your app can compute, the authorization layer can enforce — this is what roles and simple claims can't do. If a handler injects a scoped service, register it scoped rather than singleton.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>Applying &amp; Combining Policies 🔗</h2></div>
+      <p>Today's "Do": restrict one endpoint to a <strong>role</strong> and another to a <strong>custom policy</strong> — here's the payoff, side by side.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — role-restricted AND policy-restricted endpoints</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/reports"</span>)]
+[<span class="ty">Authorize</span>]                              <span class="cmt">// baseline: must be logged in</span>
+<span class="kw">public class</span> <span class="ty">ReportsController</span> : <span class="ty">ControllerBase</span>
+{
+    <span class="cmt">// 🔒 restricted to a ROLE</span>
+    [<span class="ty">HttpGet</span>(<span class="str">"summary"</span>)]
+    [<span class="ty">Authorize</span>(Roles = <span class="str">"Manager"</span>)]
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Summary</span>() =&gt; <span class="fn">Ok</span>();
+
+    <span class="cmt">// 🔒 restricted to a custom POLICY</span>
+    [<span class="ty">HttpGet</span>(<span class="str">"vested"</span>)]
+    [<span class="ty">Authorize</span>(Policy = <span class="str">"VestedEmployee"</span>)]
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">VestedReport</span>() =&gt; <span class="fn">Ok</span>();
+}</code></pre>
+      </div>
+
+      <p>You can stack a role and a policy on the same endpoint — they combine with <strong>AND</strong> (both must pass):</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — combining role + policy (AND)</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpDelete</span>(<span class="str">"{id}"</span>)]
+[<span class="ty">Authorize</span>(Roles = <span class="str">"Manager"</span>)]           <span class="cmt">// must be a Manager…</span>
+[<span class="ty">Authorize</span>(Policy = <span class="str">"VestedEmployee"</span>)]     <span class="cmt">// …AND satisfy the policy</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Delete</span>(<span class="kw">int</span> id) =&gt; <span class="fn">NoContent</span>();</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Verify it end-to-end</span>
+        <p>With three seeded users you can prove each path: a plain user hits <code>/summary</code> → <strong>403</strong> (not a Manager); a Manager → <strong>200</strong>. A user with 6 months' tenure hits <code>/vested</code> → <strong>403</strong>; one with 18 months → <strong>200</strong>. No token at all → <strong>401</strong>. That sequence exercises role, policy, and the authentication boundary together.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Name policies once, reuse everywhere</span>
+        <p>The big win of named policies over inline checks: define the rule <em>once</em> in <code>AddAuthorization</code>, apply it by name across many endpoints. When the rule changes (tenure goes from 12 to 6 months), you edit one line, not every controller. This is the same "centralize the cross-cutting concern" theme as error handling (Day 11).</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>Resource-Based Authorization 🎯</h2></div>
+      <p>Some rules can't be decided from claims alone — they depend on the <em>specific thing</em> being accessed. "Can the user edit <em>this</em> document?" needs the document in hand to check ownership. Attributes can't do this (the resource isn't loaded yet), so you invoke authorization <em>imperatively</em> in the action via <code>IAuthorizationService</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — checking ownership at runtime</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">DocumentsController</span>(<span class="ty">IAuthorizationService</span> auth, <span class="ty">IDocumentService</span> docs)
+    : <span class="ty">ControllerBase</span>
+{
+    [<span class="ty">HttpPut</span>(<span class="str">"{id}"</span>)]
+    [<span class="ty">Authorize</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Update</span>(<span class="kw">int</span> id, <span class="ty">DocumentDto</span> dto)
+    {
+        <span class="kw">var</span> doc = <span class="kw">await</span> docs.<span class="fn">GetAsync</span>(id);
+        <span class="kw">if</span> (doc <span class="kw">is null</span>) <span class="kw">return</span> <span class="fn">NotFound</span>();
+
+        <span class="cmt">// evaluate a policy against THIS document (the resource)</span>
+        <span class="kw">var</span> result = <span class="kw">await</span> auth.<span class="fn">AuthorizeAsync</span>(User, doc, <span class="str">"SameOwner"</span>);
+        <span class="kw">if</span> (!result.Succeeded) <span class="kw">return</span> <span class="fn">Forbid</span>();   <span class="cmt">// 403</span>
+
+        <span class="kw">await</span> docs.<span class="fn">UpdateAsync</span>(id, dto);
+        <span class="kw">return</span> <span class="fn">NoContent</span>();
+    }
+}</code></pre>
+      </div>
+
+      <p>The handler receives the resource via <code>context.Resource</code>:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — a resource-based handler</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">SameOwnerHandler</span> : <span class="ty">AuthorizationHandler</span>&lt;<span class="ty">SameOwnerRequirement</span>, <span class="ty">Document</span>&gt;
+{
+    <span class="kw">protected override</span> <span class="ty">Task</span> <span class="fn">HandleRequirementAsync</span>(
+        <span class="ty">AuthorizationHandlerContext</span> context,
+        <span class="ty">SameOwnerRequirement</span> requirement,
+        <span class="ty">Document</span> resource)                      <span class="cmt">// the doc passed to AuthorizeAsync</span>
+    {
+        <span class="kw">var</span> userId = context.User.<span class="fn">FindFirst</span>(<span class="ty">ClaimTypes</span>.NameIdentifier)?.Value;
+        <span class="kw">if</span> (userId <span class="kw">is not null</span> &amp;&amp; resource.OwnerId == userId)
+            context.<span class="fn">Succeed</span>(requirement);
+        <span class="kw">return</span> <span class="ty">Task</span>.CompletedTask;
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 When to reach for resource-based</span>
+        <p>Use it whenever the decision depends on the relationship between the user and a specific entity — ownership, membership, document state, tenant match. The <code>AuthorizationHandler&lt;TRequirement, TResource&gt;</code> two-type overload gives your handler the strongly-typed resource. It's the tool for "you can edit your <em>own</em> posts but not others'," which no attribute can express.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>The Authorization Flow 🔄</h2></div>
+      <p>Follow a request through the authorization middleware to see how the pieces connect — from token to allow/deny.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · 🪪 identity established</div>
+          <div class="sh">UseAuthentication built the user</div>
+          <p>The JWT was validated (Day 12); <code>HttpContext.User</code> now holds the <code>ClaimsPrincipal</code> with all its claims.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 2 · 🚧 endpoint has metadata</div>
+          <div class="sh">Middleware reads [Authorize]</div>
+          <p><code>UseAuthorization</code> finds the endpoint's requirements — a role, a named policy, or the default policy.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 3 · ⚙️ handlers evaluate</div>
+          <div class="sh">Each requirement checked</div>
+          <p>For every requirement, its handler(s) inspect the user's claims and call <code>Succeed</code>, <code>Fail</code>, or neither.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 4 · 🧮 combine results</div>
+          <div class="sh">ALL requirements must pass</div>
+          <p>The policy succeeds only if every requirement succeeded and none hard-failed. AND across requirements; OR across a requirement's handlers.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 5 · ✅/⛔ decision</div>
+          <div class="sh">Endpoint runs, or 403</div>
+          <p>Pass → the action executes. Fail → <code>403 Forbidden</code> (or <code>401</code> if the user wasn't authenticated at all).</p>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 AND across requirements, OR across handlers</span>
+        <p>Two rules govern the combination, and they're the most-tested detail: a policy needs <strong>all</strong> its requirements satisfied (AND), but a single requirement is satisfied if <strong>any one</strong> of its handlers calls <code>Succeed</code> (OR). Design accordingly — split "must have X and Y" into two requirements; express "X or Y or Z" as one requirement with three handlers.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🛂 AuthZ after AuthN</h4><p>Authorization decides what an authenticated identity may do.</p></div>
+        <div class="recap-card"><h4>🏷️ It's all claims</h4><p>Decisions inspect claims on <code>HttpContext.User</code>; a role is a claim.</p></div>
+        <div class="recap-card"><h4>👥 Role-based</h4><p><code>[Authorize(Roles="Admin,Manager")]</code>; comma = OR, stacked = AND.</p></div>
+        <div class="recap-card"><h4>📜 Claim policies</h4><p><code>AddPolicy(... RequireClaim(...))</code>, apply with <code>[Authorize(Policy=…)]</code>.</p></div>
+        <div class="recap-card"><h4>⚙️ One engine</h4><p>Roles &amp; claims compile to policies under the hood.</p></div>
+        <div class="recap-card"><h4>🧩 Requirement</h4><p><code>IAuthorizationRequirement</code> — just the rule's data.</p></div>
+        <div class="recap-card"><h4>🔧 Handler</h4><p><code>AuthorizationHandler&lt;T&gt;</code> — the logic; from DI.</p></div>
+        <div class="recap-card"><h4>✅ Succeed/Fail</h4><p><code>Succeed</code> passes; <code>Fail</code> vetoes; neither defers.</p></div>
+        <div class="recap-card"><h4>🔢 AND / OR</h4><p>AND across requirements; OR across a requirement's handlers.</p></div>
+        <div class="recap-card"><h4>🎯 Resource-based</h4><p><code>IAuthorizationService.AuthorizeAsync</code> for ownership checks.</p></div>
+        <div class="recap-card"><h4>🛡️ Fallback policy</h4><p>Secure-by-default: require auth on endpoints with no metadata.</p></div>
+        <div class="recap-card"><h4>⚠️ Null-check claims</h4><p>Handlers run for anonymous users too; guard against missing claims.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Style</th><th>Syntax</th><th>Use when</th></tr></thead>
+          <tbody>
+            <tr><td>Authenticated only</td><td><code>[Authorize]</code></td><td>Any logged-in user may access</td></tr>
+            <tr><td>Role-based</td><td><code>[Authorize(Roles="Admin")]</code></td><td>Coarse buckets; exact role match</td></tr>
+            <tr><td>Claims (policy)</td><td><code>RequireClaim("dept","Eng")</code></td><td>Match a specific fact about the user</td></tr>
+            <tr><td>Assertion</td><td><code>RequireAssertion(ctx =&gt; …)</code></td><td>Simple inline logic, incl. OR</td></tr>
+            <tr><td>Custom policy</td><td>Requirement + <code>AuthorizationHandler&lt;T&gt;</code></td><td>Computed rules (age, tenure, time)</td></tr>
+            <tr><td>Resource-based</td><td><code>AuthorizeAsync(User, resource, policy)</code></td><td>Ownership / per-entity decisions</td></tr>
+            <tr><td>Register handler</td><td><code>AddSingleton&lt;IAuthorizationHandler, …&gt;</code></td><td>Scoped if it needs scoped services</td></tr>
+            <tr><td>Apply</td><td><code>[Authorize(Policy=…)]</code> / <code>RequireAuthorization("…")</code></td><td>Controllers / Minimal APIs</td></tr>
+            <tr><td>Combine</td><td>Stack attributes</td><td>AND across role + policy</td></tr>
+            <tr><td>Fail path</td><td>403 Forbidden</td><td>Authenticated but not permitted</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What's the difference between authentication and authorization?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Authentication proves <em>who</em> you are (verifying identity, building the user). Authorization decides <em>what</em> that identity is allowed to do (checking permissions). Authorization always runs after authentication — being logged in doesn't automatically mean you're allowed to perform a given action.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">How do you restrict an endpoint to a role?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Add <code>[Authorize(Roles = "Admin")]</code> to the controller or action (or <code>.RequireAuthorization(p =&gt; p.RequireRole("Admin"))</code> on a Minimal API). A comma-separated list like <code>"Admin,Manager"</code> means the user needs <em>either</em> role. The user's token must carry the matching role claim for it to pass.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What is a claim?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A name–value statement about the user asserted by a trusted issuer — like <code>role: Admin</code>, <code>department: Engineering</code>, or <code>email: a@b.com</code>. After authentication, the user's claims live on <code>HttpContext.User</code> (a <code>ClaimsPrincipal</code>), and authorization decisions are based on them.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What is a policy in ASP.NET Core authorization?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A named, reusable authorization rule. You define it once with <code>AddAuthorization(o =&gt; o.AddPolicy("Name", policy =&gt; ...))</code> — describing what the user must satisfy — then apply it with <code>[Authorize(Policy = "Name")]</code>. Policies let you name a rule once and reuse it across many endpoints.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">How do you require a specific claim?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>In a policy, use <code>policy.RequireClaim("EmployeeId")</code> to require the claim exist (any value), or <code>policy.RequireClaim("department", "Engineering")</code> to require a specific value. Then apply the policy to your endpoint with <code>[Authorize(Policy = "...")]</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What status code does a failed authorization return?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p><strong>403 Forbidden</strong> — the user is authenticated but lacks permission. That's distinct from <strong>401 Unauthorized</strong>, which means the user isn't authenticated at all (no or invalid token). Getting a 403 confirms your identity is valid but the rule denied you.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">How do you allow anonymous access to one endpoint on a protected controller?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Put <code>[Authorize]</code> on the controller and <code>[AllowAnonymous]</code> on the specific action you want public. <code>[AllowAnonymous]</code> overrides the controller-level requirement for that action — commonly used for login or health-check endpoints.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What are the three main styles of authorization?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Role-based (match a role name), claims-based (require a specific claim, expressed as a policy), and policy-based (a named bundle of requirements with custom logic). There's also resource-based authorization for per-entity decisions like ownership. Under the hood they're all the same policy engine.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">How do role-based and claims-based authorization relate?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>A role is just a claim of type <code>role</code>. So role-based authorization is a special case of claims-based authorization with a well-known claim type. Both, in turn, are implemented as policies internally — <code>[Authorize(Roles=…)]</code> compiles to a <code>RolesAuthorizationRequirement</code> and <code>RequireClaim</code> to a <code>ClaimsAuthorizationRequirement</code>. It's one engine with convenient shorthands.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">When would you use a policy instead of a role?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>When the rule needs anything beyond matching a name: comparisons (minimum age or tenure), OR-logic across different facts, data from a database or external service, environmental conditions like time of day, or per-resource ownership. Also use a named policy whenever the same check applies to multiple endpoints, so it's defined once and reused.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What are a requirement and a handler?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>A <strong>requirement</strong> implements <code>IAuthorizationRequirement</code> (a marker interface) and just carries the rule's data — e.g. a minimum tenure of 12 months. A <strong>handler</strong> extends <code>AuthorizationHandler&lt;TRequirement&gt;</code> and contains the logic: it inspects the user in <code>HandleRequirementAsync</code> and calls <code>context.Succeed(requirement)</code> if the rule is met. The requirement holds data; the handler evaluates it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">In a handler, what's the difference between Succeed, Fail, and doing nothing?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p><code>context.Succeed(requirement)</code> marks it satisfied. <code>context.Fail()</code> hard-fails it — a veto that stands even if another handler succeeds (useful for "banned user" overrides). Returning without calling either simply doesn't satisfy the requirement, leaving another handler free to succeed. That "do nothing" option is how OR logic works across multiple handlers for one requirement.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">How do multiple requirements in a policy combine? And multiple handlers?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Requirements combine with <strong>AND</strong> — every requirement in the policy must be satisfied for the policy to pass. A single requirement can have multiple handlers, and it's satisfied if <strong>any one</strong> handler succeeds (OR). So chaining <code>RequireClaim(a).RequireClaim(b)</code> needs both; to express OR, use one requirement with several handlers, or a <code>RequireAssertion</code> lambda.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">How do you register a custom authorization handler?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Add it to DI: <code>builder.Services.AddSingleton&lt;IAuthorizationHandler, MyHandler&gt;()</code>. Singleton is fine when the handler is stateless. If the handler injects a scoped dependency (like a <code>DbContext</code>), register it as scoped instead, to avoid a captive-dependency problem. Then reference its requirement in a policy via <code>policy.AddRequirements(new MyRequirement(...))</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">What's the difference between DefaultPolicy and FallbackPolicy?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p><strong>DefaultPolicy</strong> is used when <code>[Authorize]</code> is applied with no named policy — by default it requires an authenticated user. <strong>FallbackPolicy</strong> applies to endpoints that have <em>no</em> authorization metadata at all. Setting the fallback to <code>RequireAuthenticatedUser()</code> makes the whole app secure-by-default, so you must add <code>[AllowAnonymous]</code> to expose anything publicly.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">How do you express OR logic across two different claims?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Chaining <code>RequireClaim</code> won't work — that's AND. For simple cases use <code>RequireAssertion(ctx =&gt; ctx.User.HasClaim(...) || ctx.User.IsInRole(...))</code>. For richer scenarios, define one requirement and register multiple handlers for it; since any single handler succeeding satisfies the requirement, that naturally models OR while keeping each handler small and testable.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">What is resource-based authorization and when is it necessary?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>When the decision depends on a specific entity — "can this user edit <em>this</em> document?" — attributes can't help because the resource isn't loaded yet. You inject <code>IAuthorizationService</code> and call <code>AuthorizeAsync(User, resource, "PolicyName")</code> inside the action after loading the entity, then <code>Forbid()</code> if it fails. The handler uses the two-type <code>AuthorizationHandler&lt;TRequirement, TResource&gt;</code> overload to receive the resource. It's the tool for ownership, tenancy, and per-record rules.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">Why must authorization handlers null-check the user's claims?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Because all registered handlers for the pending requirements run even when the user is unauthenticated — the pipeline doesn't necessarily short-circuit before your handler executes. If you assume a claim or identity exists, you can hit a <code>NullReferenceException</code>. Guard by checking the claim exists (and returning without succeeding if not), and pair the policy with <code>RequireAuthenticatedUser()</code> when identity is a precondition.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">How would you enforce a rule that depends on runtime data like time or a database?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Write a custom requirement and handler, and let the handler inject its dependencies from DI — a <code>TimeProvider</code> for "business hours only" (swappable with a fake clock in tests), a <code>DbContext</code> or entitlement-service client for data-driven rules. Because handlers are DI-resolved, any rule the app can compute becomes enforceable declaratively. Register the handler with the appropriate lifetime for its dependencies.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How do you make an API secure-by-default?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Set a <code>FallbackPolicy</code> that requires an authenticated user (e.g. <code>options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build()</code>). Then every endpoint without explicit authorization metadata still requires auth, and you must consciously add <code>[AllowAnonymous]</code> to expose public endpoints — flipping the default from "open unless protected" to "protected unless opened," which prevents accidentally-unsecured endpoints.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">When would you implement a custom IAuthorizationPolicyProvider?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>When you can't enumerate policies up front — e.g. parameterized policies like <code>MinimumAge18</code>, <code>MinimumAge21</code>, or policies built at runtime from a database. Rather than registering each with <code>AddPolicy</code>, a custom provider parses the policy name (or looks it up) and produces the policy dynamically. It should defer to <code>DefaultAuthorizationPolicyProvider</code> as a fallback for names it doesn't handle, since ASP.NET Core uses only one provider instance.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">Where should authorization live — controller, service, or both?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Coarse, endpoint-level checks (roles, policies) belong at the boundary via attributes, so unauthorized requests never reach your logic. But fine-grained, data-dependent rules (ownership, business invariants) often belong closer to the domain, enforced via <code>IAuthorizationService</code> in the action or a domain check in the service layer. Defense in depth: gate at the edge, and re-verify per-resource rules where the data is loaded. Avoid scattering ad-hoc <code>if (User.IsInRole(...))</code> checks — prefer named policies so rules are centralized and testable.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">Roles vs. claims vs. policies — how do you choose in a real design?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Use roles for a small set of coarse, stable job functions. Use claims/policies for finer permissions that change independently of job title (feature flags, entitlements, department). Prefer <em>permission-style</em> claims and named policies over proliferating roles, because roles combinatorially explode (<code>AdminEU</code>, <code>AdminNightShift</code>…). Reserve custom requirement/handler policies for computed and data-driven rules, and resource-based checks for per-entity ownership. The guiding principle: keep the rule expressed once, in the layer that has the data to decide it, and apply it by name.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Anchor on the <strong>AuthN/AuthZ split and "a role is a claim"</strong> (Q1, Q3, Q9) — that reframing makes everything click. Then the practical trio: <strong>roles, claim policies, applying them</strong> (Q2, Q4–Q5, Q10), which is the day's "Do." Master the <strong>requirement/handler model and the AND/OR rules</strong> (Q11–Q13, Q16) — the combination semantics are the most-tested detail. Cover the <strong>gotchas</strong>: null-checking claims and handler registration lifetime (Q14, Q18). Finish with <strong>senior design</strong>: resource-based auth, secure-by-default fallback, custom policy providers, and where authorization should live (Q17, Q19–Q23). If you can restrict one endpoint to a role and another to a custom requirement/handler policy from memory, you own this topic.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

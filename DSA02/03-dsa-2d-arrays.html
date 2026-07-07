@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA · 2-D Arrays — Traversal, Diagonals, Transpose &amp; Rotation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}
+body{background:radial-gradient(ellipse 120% 80% at 15% 20%,#f5ede8 0%,transparent 60%),radial-gradient(ellipse 80% 60% at 90% 80%,#e8e4f2 0%,transparent 55%),var(--bg);color:var(--ink);font-family:"Newsreader",Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh}
+.layout{display:flex;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear;border-radius:0 2px 2px 0}
+.nav-toggle{display:none;position:fixed;bottom:1.4rem;right:1.4rem;z-index:500;width:48px;height:48px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:1.3rem;box-shadow:0 4px 16px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:transform .2s}
+.nav-toggle:hover{transform:scale(1.08)}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--bg-soft);border-right:1px solid var(--line);padding:2rem 0 4rem;scrollbar-width:thin;scrollbar-color:var(--line) transparent;transition:transform .3s ease}
+.sidebar-logo{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);padding:0 1.4rem 1.4rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.sidebar-logo strong{display:block;font-family:"Fraunces",serif;font-size:1.05rem;font-weight:600;letter-spacing:0;color:var(--ink);margin-top:.25rem}
+.nav-group{margin-bottom:.2rem}.nav-group-label{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);padding:.7rem 1.4rem .25rem}
+.nav-link{display:flex;align-items:center;gap:.55rem;padding:.42rem 1.4rem;font-family:"Newsreader",serif;font-size:0.9rem;color:var(--ink-soft);text-decoration:none;border-left:3px solid transparent;transition:color .15s,background .15s,border-color .15s}
+.nav-link:hover{color:var(--ink);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+.nav-num{font-family:"JetBrains Mono",monospace;font-size:0.65rem;color:var(--accent);opacity:.7;flex-shrink:0}
+.main{flex:1;min-width:0;padding:0 3rem 6rem;max-width:860px}
+.hero{padding:5rem 0 3.5rem;border-bottom:1px solid var(--line);margin-bottom:4rem}
+.hero-eyebrow{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);margin-bottom:1rem}
+.hero h1{font-family:"Fraunces",serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.15;color:var(--ink);margin-bottom:1rem}
+.hero-lede{font-size:1.1rem;color:var(--ink-soft);max-width:560px;margin-bottom:1.8rem}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:"JetBrains Mono",monospace;font-size:0.7rem;letter-spacing:.04em;padding:.3rem .75rem;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink-soft)}
+.section{margin-bottom:5rem;scroll-margin-top:2rem}.section-header{display:flex;align-items:baseline;gap:1rem;margin-bottom:1.8rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:"JetBrains Mono",monospace;font-size:0.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:.2rem .55rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:"Fraunces",serif;font-size:1.9rem;font-weight:600;color:var(--ink);line-height:1.2}
+h3{font-family:"Fraunces",serif;font-size:1.25rem;font-weight:600;color:var(--ink);margin:2rem 0 .6rem}
+h4{font-family:"JetBrains Mono",monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:1.6rem 0 .5rem}
+p{margin-bottom:1rem}
+.callout{border-radius:8px;padding:1.1rem 1.3rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:"JetBrains Mono",monospace;font-size:0.62rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+:not(pre)>code{font-family:"JetBrains Mono",monospace;font-size:0.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .38em}
+.code-block{border-radius:10px;overflow:hidden;margin:1.5rem 0;background:var(--code-bg);font-size:0.85rem}
+.code-header{display:flex;align-items:center;justify-content:space-between;background:#1e1d26;padding:.55rem 1rem}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:#9896a0}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.06em;color:#9896a0;background:transparent;border:1px solid #3f3d4a;border-radius:4px;padding:.2rem .55rem;cursor:pointer;transition:color .2s,border-color .2s}
+.copy-btn:hover{color:var(--code-ink);border-color:#6c6980}.copy-btn.copied{color:#89d185;border-color:#89d185}
+pre{padding:1.2rem 1.3rem;overflow-x:auto;font-family:"JetBrains Mono",monospace;line-height:1.65;color:var(--code-ink)}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+.table-wrap{overflow-x:auto;margin:1.5rem 0}
+table{width:100%;border-collapse:collapse;font-size:0.92rem}
+thead th{font-family:"JetBrains Mono",monospace;font-size:0.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:var(--bg-soft);padding:.65rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:var(--bg-soft)}
+.diagram{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;margin:1.5rem 0;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;overflow-x:auto}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:.2rem;min-width:42px}
+.arr-cell .val{font-family:"JetBrains Mono",monospace;font-size:.85rem;font-weight:600;background:var(--bg);border:2px solid var(--line);border-radius:6px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose)}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:.65rem;color:var(--blue)}
+.arr-cell .label{font-family:"JetBrains Mono",monospace;font-size:.6rem;color:var(--ink-soft);white-space:nowrap}
+.complexity-row{display:flex;gap:.7rem;flex-wrap:wrap;margin:1rem 0}
+.complexity-badge{font-family:"JetBrains Mono",monospace;font-size:0.72rem;padding:.3rem .7rem;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.complexity-badge .label{color:var(--ink-soft)}.complexity-badge .val{color:var(--accent);font-weight:600}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-top:1.5rem}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:1.1rem 1.2rem;border-top:3px solid var(--accent)}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:.95rem;color:var(--ink);text-transform:none;letter-spacing:0;margin:0 0 .4rem}
+.recap-card p{font-size:.84rem;color:var(--ink-soft);margin:0;line-height:1.5}
+.lc-list{list-style:none;padding:0;margin:1rem 0}
+.lc-list li{display:flex;align-items:baseline;gap:.75rem;padding:.6rem .9rem;border-bottom:1px solid var(--line);font-size:.9rem;flex-wrap:wrap}
+.lc-list li:last-child{border-bottom:none}
+.lc-diff{font-family:"JetBrains Mono",monospace;font-size:.65rem;padding:.15rem .45rem;border-radius:4px;flex-shrink:0;font-weight:600}
+.lc-diff.easy{background:var(--green-soft);color:var(--green)}.lc-diff.medium{background:var(--accent-soft);color:var(--accent)}.lc-diff.hard{background:var(--rose-soft);color:var(--rose)}
+a.lc-name{color:var(--blue);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s,color .15s}
+a.lc-name:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.lc-why{color:var(--ink-soft);font-size:.82rem;width:100%;margin-top:.1rem;padding-left:calc(.65rem + .45rem*2 + .75rem)}
+
+/* 2D matrix grid */
+.matrix-wrap{margin:1.5rem 0;overflow-x:auto}
+.matrix{display:inline-grid;gap:3px;padding:1.2rem;background:var(--bg-soft);border:1px solid var(--line);border-radius:10px}
+.m-cell{font-family:"JetBrains Mono",monospace;font-size:.82rem;font-weight:600;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:2px solid var(--line);background:var(--bg);color:var(--ink)}
+.m-cell.h-accent{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.m-cell.h-blue{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.m-cell.h-green{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.m-cell.h-rose{background:var(--rose-soft);border-color:var(--rose);color:var(--rose)}
+.matrix-label{font-family:"JetBrains Mono",monospace;font-size:.68rem;color:var(--ink-soft);margin-top:.5rem;margin-bottom:1.5rem}
+.two-matrices{display:flex;gap:2.5rem;flex-wrap:wrap;align-items:flex-start}
+.flow{display:flex;flex-direction:column;align-items:flex-start;gap:0;margin:1.5rem 0}
+.flow-step{display:flex;align-items:flex-start;gap:1rem;padding:.8rem 1rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;width:100%;max-width:560px}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent)}
+.flow-connector{width:2px;height:22px;background:var(--line);margin-left:calc(1rem + 12px)}
+.flow-icon{font-size:1rem;flex-shrink:0;margin-top:.1rem}
+.flow-text{font-size:.9rem;color:var(--ink);line-height:1.45}
+.flow-text strong{color:var(--accent)}
+
+@media(max-width:768px){.sidebar{position:fixed;top:0;left:0;height:100vh;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(45,42,38,.12)}.sidebar.open{transform:translateX(0)}.nav-toggle{display:flex}.main{padding:0 1.2rem 4rem}.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.25);z-index:300;backdrop-filter:blur(2px)}.sidebar-overlay.open{display:block}}
+.section{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.__site-nav{position:fixed;top:1rem;right:1rem;z-index:1100;display:flex;gap:.45rem}
+.__site-nav a{font-family:"JetBrains Mono",monospace;font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;display:inline-flex;align-items:center;gap:.35rem;background:#fbf9f4;border:1px solid #e4ddd0;color:#5a554d;padding:.45rem .8rem;border-radius:999px;text-decoration:none;box-shadow:0 2px 10px rgba(45,42,38,.08);transition:all .18s ease}
+.__site-nav a:hover{color:#b5651d;border-color:#b5651d;background:#f0e2d0}
+@media(max-width:720px){.__site-nav{top:auto;bottom:1rem;left:1rem;right:auto}}
+</style>
+</head>
+<body>
+<div class="__site-nav"><a href="../index.html"><span>⌂</span>Home</a><a href="index.html"><span>←</span>Back</a></div>
+<div id="progress-bar"></div>
+<div class="sidebar-overlay" id="nav-overlay"></div>
+<button class="nav-toggle" id="nav-toggle" aria-label="Open navigation">☰</button>
+
+<div class="layout">
+<nav class="sidebar" aria-label="Page navigation">
+  <div class="sidebar-logo">DSA Notes · Series 1<strong>2-D Arrays</strong></div>
+  <div class="nav-group">
+    <div class="nav-group-label">Basics</div>
+    <a class="nav-link" href="#basics"><span class="nav-num">01</span>2-D Array Basics</a>
+    <a class="nav-link" href="#storage"><span class="nav-num">02</span>How It Is Stored</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Traversals</div>
+    <a class="nav-link" href="#row-sum"><span class="nav-num">03</span>Row-Wise Sum</a>
+    <a class="nav-link" href="#col-sum"><span class="nav-num">04</span>Column-Wise Sum</a>
+    <a class="nav-link" href="#diagonal"><span class="nav-num">05</span>Diagonal Elements</a>
+    <a class="nav-link" href="#all-diagonals"><span class="nav-num">06</span>All Diagonals (R→L)</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Matrix Operations</div>
+    <a class="nav-link" href="#transpose-square"><span class="nav-num">07</span>Transpose (Square)</a>
+    <a class="nav-link" href="#transpose-rect"><span class="nav-num">08</span>Transpose (Rectangular)</a>
+    <a class="nav-link" href="#rotate-90"><span class="nav-num">09</span>Rotate 90° Clockwise</a>
+    <a class="nav-link" href="#rotate-180"><span class="nav-num">10</span>Rotate 180° &amp; 270°</a>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-up</div>
+    <a class="nav-link" href="#recap"><span class="nav-num">11</span>Quick Recap</a>
+    <a class="nav-link" href="#leetcode"><span class="nav-num">12</span>LeetCode Problems</a>
+  </div>
+</nav>
+
+<main class="main">
+<header class="hero">
+  <p class="hero-eyebrow">Scaler · DSA Notes · Module 4</p>
+  <h1>2-D Arrays<br>Traversal, Diagonals &amp; Matrix Ops</h1>
+  <p class="hero-lede">Master every pattern for traversing a 2-D matrix: row sums, column sums, diagonal traversal, transpose, and clockwise rotation — all with clean O(N×M) solutions.</p>
+  <div class="chips">
+    <span class="chip">Row/Column Sum</span>
+    <span class="chip">Diagonal Traversal</span>
+    <span class="chip">Matrix Transpose</span>
+    <span class="chip">90° Rotation</span>
+    <span class="chip">180° Rotation</span>
+  </div>
+</header>
+
+<!-- 01 -->
+<section class="section" id="basics">
+  <div class="section-header"><span class="section-num">01</span><h2>2-D Array Basics</h2></div>
+  <p>A 2-D array <code>arr[N][M]</code> is a matrix with N <strong>rows</strong> (indexed 0 to N−1) and M <strong>columns</strong> (indexed 0 to M−1). The total number of elements is <strong>N × M</strong>.</p>
+  <p>Any element is accessed as <code>arr[i][j]</code> — row first, column second. The top-left corner is <code>arr[0][0]</code> and the bottom-right corner is <code>arr[N−1][M−1]</code>.</p>
+
+  <div class="matrix-wrap">
+    <div class="matrix" style="grid-template-columns:repeat(5,44px)">
+      <div class="m-cell h-green">0,0</div><div class="m-cell">0,1</div><div class="m-cell">0,2</div><div class="m-cell">…</div><div class="m-cell h-accent">0,M-1</div>
+      <div class="m-cell">1,0</div><div class="m-cell">1,1</div><div class="m-cell">…</div><div class="m-cell">…</div><div class="m-cell">…</div>
+      <div class="m-cell">2,0</div><div class="m-cell">…</div><div class="m-cell">…</div><div class="m-cell">…</div><div class="m-cell">…</div>
+      <div class="m-cell">…</div><div class="m-cell">…</div><div class="m-cell">i,j</div><div class="m-cell">…</div><div class="m-cell">…</div>
+      <div class="m-cell h-blue">N-1,0</div><div class="m-cell">…</div><div class="m-cell">…</div><div class="m-cell">…</div><div class="m-cell h-rose">N-1,M-1</div>
+    </div>
+    <div class="matrix-label">arr[N][M] — N rows, M columns. Corners highlighted.</div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span>[][] arr = <span class="kw">new</span> <span class="ty">int</span>[N][M]; <span class="cmt">// N rows, M columns, all zeros</span>
+arr[<span class="num">2</span>][<span class="num">3</span>] = <span class="num">42</span>;             <span class="cmt">// set row 2, column 3</span></pre>
+  </div>
+</section>
+
+<!-- 02 -->
+<section class="section" id="storage">
+  <div class="section-header"><span class="section-num">02</span><h2>How a 2-D Array Is Actually Stored</h2></div>
+  <p>In Java, <code>int[][] arr = new int[N][M]</code> creates an <em>array of arrays</em> on the heap. The outer array holds N references; each reference points to an independent 1-D inner array of length M.</p>
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    Think of the outer array as a bookshelf (N slots). Each slot holds a reference (a label with a shelf address). Each label points to a separate physical shelf (the inner 1-D array) where M actual books live.
+  </div>
+  <div class="callout key">
+    <span class="callout-tag">Memory Layout</span>
+    <strong>Stack:</strong> <code>arr → 4K</code> (reference to the outer array).<br>
+    <strong>Heap at 4K:</strong> [8K, 4K2, 15K, 20K, …] — N row references.<br>
+    <strong>Heap at 8K:</strong> [0, 0, 0, 0] — row 0, M elements.<br>
+    <strong>Heap at 4K2:</strong> [0, 0, 0, 0] — row 1, M elements, and so on.
+  </div>
+  <p>Accessing <code>arr[2][3]</code> involves two pointer dereferences: first, get the address of row 2 from the outer array, then index element 3 in that row. Both steps are O(1).</p>
+</section>
+
+<!-- 03 -->
+<section class="section" id="row-sum">
+  <div class="section-header"><span class="section-num">03</span><h2>Row-Wise Sum</h2></div>
+  <div class="callout key">
+    <span class="callout-tag">Problem</span>
+    Given <code>arr[N][M]</code>, print the sum of each row.
+  </div>
+  <p><strong>Idea:</strong> For every row <code>i</code>, iterate over all columns <code>j</code> and accumulate the sum. Reset the accumulator at the start of each row.</p>
+
+  <div class="matrix-wrap">
+    <div class="two-matrices">
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell h-accent">10</div><div class="m-cell h-accent">2</div><div class="m-cell h-accent">7</div><div class="m-cell h-accent">3</div>
+          <div class="m-cell h-blue">9</div><div class="m-cell h-blue">5</div><div class="m-cell h-blue">-1</div><div class="m-cell h-blue">8</div>
+          <div class="m-cell h-green">3</div><div class="m-cell h-green">11</div><div class="m-cell h-green">15</div><div class="m-cell h-green">20</div>
+        </div>
+        <div class="matrix-label">arr[3][4]</div>
+      </div>
+      <div style="align-self:center;font-family:'JetBrains Mono',monospace;font-size:.84rem;color:var(--ink-soft)">
+        Row 0 → <span style="color:var(--accent);font-weight:600">22</span><br>
+        Row 1 → <span style="color:var(--blue);font-weight:600">21</span><br>
+        Row 2 → <span style="color:var(--green);font-weight:600">49</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">printRowWiseSum</span>(<span class="ty">int</span>[][] arr, <span class="ty">int</span> N, <span class="ty">int</span> M) {
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+        <span class="ty">int</span> sum = <span class="num">0</span>;
+        <span class="kw">for</span> (<span class="ty">int</span> j = <span class="num">0</span>; j &lt; M; j++) {
+            sum += arr[i][j];
+        }
+        System.out.<span class="fn">println</span>(sum);
+    }
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time</span> <span class="val">O(N×M)</span></span>
+    <span class="complexity-badge"><span class="label">Space</span> <span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- 04 -->
+<section class="section" id="col-sum">
+  <div class="section-header"><span class="section-num">04</span><h2>Column-Wise Sum</h2></div>
+  <div class="callout key">
+    <span class="callout-tag">Problem</span>
+    Given <code>arr[N][M]</code>, print the sum of each column.
+  </div>
+  <p><strong>Idea:</strong> The outer loop iterates over <em>columns</em> (<code>j</code>); the inner loop iterates over <em>rows</em> (<code>i</code>). Reset the accumulator for each column.</p>
+
+  <div class="matrix-wrap">
+    <div class="two-matrices">
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell h-accent">10</div><div class="m-cell h-blue">2</div><div class="m-cell h-green">7</div><div class="m-cell h-rose">3</div>
+          <div class="m-cell h-accent">9</div><div class="m-cell h-blue">5</div><div class="m-cell h-green">-1</div><div class="m-cell h-rose">8</div>
+          <div class="m-cell h-accent">3</div><div class="m-cell h-blue">11</div><div class="m-cell h-green">15</div><div class="m-cell h-rose">20</div>
+        </div>
+        <div class="matrix-label">arr[3][4]</div>
+      </div>
+      <div style="align-self:center;font-family:'JetBrains Mono',monospace;font-size:.84rem;color:var(--ink-soft)">
+        Col 0 → <span style="color:var(--accent);font-weight:600">22</span><br>
+        Col 1 → <span style="color:var(--blue);font-weight:600">18</span><br>
+        Col 2 → <span style="color:var(--green);font-weight:600">21</span><br>
+        Col 3 → <span style="color:var(--rose);font-weight:600">31</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">printColWiseSum</span>(<span class="ty">int</span>[][] arr, <span class="ty">int</span> N, <span class="ty">int</span> M) {
+    <span class="kw">for</span> (<span class="ty">int</span> j = <span class="num">0</span>; j &lt; M; j++) {    <span class="cmt">// outer: column</span>
+        <span class="ty">int</span> sum = <span class="num">0</span>;
+        <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) { <span class="cmt">// inner: row</span>
+            sum += arr[i][j];
+        }
+        System.out.<span class="fn">println</span>(sum);
+    }
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time</span> <span class="val">O(N×M)</span></span>
+    <span class="complexity-badge"><span class="label">Space</span> <span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- 05 -->
+<section class="section" id="diagonal">
+  <div class="section-header"><span class="section-num">05</span><h2>Diagonal Elements of a Square Matrix</h2></div>
+  <p>A square matrix <code>arr[N][N]</code> has two diagonals. The <strong>main diagonal</strong> (top-left to bottom-right) has elements where <code>i == j</code>. The <strong>anti-diagonal</strong> (top-right to bottom-left) has elements where <code>i + j == N − 1</code>.</p>
+
+  <div class="matrix-wrap">
+    <div class="two-matrices">
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell h-accent">1</div><div class="m-cell">5</div><div class="m-cell">8</div><div class="m-cell">7</div>
+          <div class="m-cell">2</div><div class="m-cell h-accent">11</div><div class="m-cell">3</div><div class="m-cell">9</div>
+          <div class="m-cell">15</div><div class="m-cell">20</div><div class="m-cell h-accent">-3</div><div class="m-cell">18</div>
+          <div class="m-cell">30</div><div class="m-cell">40</div><div class="m-cell">50</div><div class="m-cell h-accent">60</div>
+        </div>
+        <div class="matrix-label">Main diagonal: i == j → {1, 11, −3, 60}</div>
+      </div>
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell">1</div><div class="m-cell">5</div><div class="m-cell">8</div><div class="m-cell h-blue">7</div>
+          <div class="m-cell">2</div><div class="m-cell">11</div><div class="m-cell h-blue">3</div><div class="m-cell">9</div>
+          <div class="m-cell">15</div><div class="m-cell h-blue">20</div><div class="m-cell">-3</div><div class="m-cell">18</div>
+          <div class="m-cell h-blue">30</div><div class="m-cell">40</div><div class="m-cell">50</div><div class="m-cell">60</div>
+        </div>
+        <div class="matrix-label">Anti-diagonal: i+j == N−1 → {7, 3, 20, 30}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — main diagonal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// i=0,j=0  →  i=1,j=1  →  i=2,j=2  → …</span>
+<span class="ty">int</span> i = <span class="num">0</span>, j = <span class="num">0</span>;
+<span class="kw">while</span> (i &lt; N) {
+    System.out.<span class="fn">print</span>(arr[i][j]);
+    i++; j++;
+}</pre>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — anti-diagonal</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// i=0,j=N-1  →  i=1,j=N-2  →  i=2,j=N-3  → …</span>
+<span class="ty">int</span> i = <span class="num">0</span>, j = N - <span class="num">1</span>;
+<span class="kw">while</span> (i &lt; N) {
+    System.out.<span class="fn">print</span>(arr[i][j]);
+    i++; j--;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time</span> <span class="val">O(N)</span></span>
+    <span class="complexity-badge"><span class="label">Space</span> <span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- 06 -->
+<section class="section" id="all-diagonals">
+  <div class="section-header"><span class="section-num">06</span><h2>Print All Diagonals (Right → Left)</h2></div>
+  <div class="callout key">
+    <span class="callout-tag">Problem</span>
+    Given <code>arr[N][M]</code>, print all diagonals going from the top-right direction toward the bottom-left. Total diagonals = <strong>N + M − 1</strong>.
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Key Insight</span>
+    Each diagonal can be identified by its <em>starting point</em>. Diagonals in the first group start from <strong>row 0</strong> (columns 0 to M−1). Diagonals in the second group start from <strong>column M−1</strong> (rows 1 to N−1). Within each diagonal, move <code>i++, j−−</code> until out of bounds.
+  </div>
+
+  <div class="matrix-wrap">
+    <div class="matrix" style="grid-template-columns:repeat(5,44px)">
+      <div class="m-cell h-accent">1</div><div class="m-cell h-blue">2</div><div class="m-cell h-green">3</div><div class="m-cell h-rose">4</div><div class="m-cell h-accent">5</div>
+      <div class="m-cell">6</div><div class="m-cell">7</div><div class="m-cell">8</div><div class="m-cell">9</div><div class="m-cell h-blue">10</div>
+      <div class="m-cell">11</div><div class="m-cell">12</div><div class="m-cell">13</div><div class="m-cell">14</div><div class="m-cell h-green">15</div>
+      <div class="m-cell">16</div><div class="m-cell">17</div><div class="m-cell">18</div><div class="m-cell">19</div><div class="m-cell h-rose">20</div>
+    </div>
+    <div class="matrix-label">arr[4][5] — diagonals start from row 0 (columns 0..4) and then from column 4 (rows 1..3)</div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">printAllDiagonals</span>(<span class="ty">int</span>[][] arr, <span class="ty">int</span> N, <span class="ty">int</span> M) {
+
+    <span class="cmt">// Group 1: diagonals starting from row 0, columns 0..M-1</span>
+    <span class="kw">for</span> (<span class="ty">int</span> k = <span class="num">0</span>; k &lt; M; k++) {
+        <span class="ty">int</span> i = <span class="num">0</span>, j = k;
+        <span class="kw">while</span> (i &lt; N &amp;&amp; j &gt;= <span class="num">0</span>) {
+            System.out.<span class="fn">print</span>(arr[i][j] + <span class="str">" "</span>);
+            i++; j--;
+        }
+        System.out.<span class="fn">println</span>();
+    }
+
+    <span class="cmt">// Group 2: diagonals starting from column M-1, rows 1..N-1</span>
+    <span class="kw">for</span> (<span class="ty">int</span> k = <span class="num">1</span>; k &lt; N; k++) {
+        <span class="ty">int</span> i = k, j = M - <span class="num">1</span>;
+        <span class="kw">while</span> (i &lt; N &amp;&amp; j &gt;= <span class="num">0</span>) {
+            System.out.<span class="fn">print</span>(arr[i][j] + <span class="str">" "</span>);
+            i++; j--;
+        }
+        System.out.<span class="fn">println</span>();
+    }
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time</span> <span class="val">O(N×M)</span></span>
+    <span class="complexity-badge"><span class="label">Space</span> <span class="val">O(1)</span></span>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Storing Diagonal Elements</span>
+    If you need to store all diagonals in a 2-D structure, use a dynamic array (e.g., <code>ArrayList&lt;ArrayList&lt;Integer&gt;&gt;</code>) since each diagonal has a different length. Avoid statically sized 2-D arrays for this — the notes correctly flag this as a common mistake.
+  </div>
+</section>
+
+<!-- 07 -->
+<section class="section" id="transpose-square">
+  <div class="section-header"><span class="section-num">07</span><h2>Transpose of a Square Matrix</h2></div>
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    The <strong>transpose</strong> of a matrix swaps rows and columns: element at <code>(i, j)</code> moves to <code>(j, i)</code>. For a square matrix this can be done <strong>in-place</strong> in O(N²) time and O(1) space.
+  </div>
+  <p><strong>Idea:</strong> Only swap elements in the <em>upper triangle</em> (where <code>j &gt; i</code>) with their mirror in the lower triangle. The main diagonal stays fixed.</p>
+
+  <div class="matrix-wrap">
+    <div class="two-matrices">
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell">1</div><div class="m-cell h-accent">2</div><div class="m-cell h-accent">3</div><div class="m-cell h-accent">4</div>
+          <div class="m-cell h-blue">5</div><div class="m-cell">6</div><div class="m-cell h-accent">7</div><div class="m-cell h-accent">8</div>
+          <div class="m-cell h-blue">9</div><div class="m-cell h-blue">10</div><div class="m-cell">11</div><div class="m-cell h-accent">12</div>
+          <div class="m-cell h-blue">13</div><div class="m-cell h-blue">14</div><div class="m-cell h-blue">15</div><div class="m-cell">16</div>
+        </div>
+        <div class="matrix-label">Original — swap upper (accent) with lower (blue)</div>
+      </div>
+      <div style="align-self:center;font-size:1.4rem;color:var(--ink-soft)">→</div>
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell">1</div><div class="m-cell">5</div><div class="m-cell">9</div><div class="m-cell">13</div>
+          <div class="m-cell">2</div><div class="m-cell">6</div><div class="m-cell">10</div><div class="m-cell">14</div>
+          <div class="m-cell">3</div><div class="m-cell">7</div><div class="m-cell">11</div><div class="m-cell">15</div>
+          <div class="m-cell">4</div><div class="m-cell">8</div><div class="m-cell">12</div><div class="m-cell">16</div>
+        </div>
+        <div class="matrix-label">Transposed — rows became columns</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — in-place transpose (square only)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">transposeSquare</span>(<span class="ty">int</span>[][] arr, <span class="ty">int</span> N) {
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+        <span class="kw">for</span> (<span class="ty">int</span> j = i + <span class="num">1</span>; j &lt; N; j++) {  <span class="cmt">// upper triangle only</span>
+            <span class="ty">int</span> temp  = arr[i][j];
+            arr[i][j] = arr[j][i];
+            arr[j][i] = temp;
+        }
+    }
+}
+<span class="cmt">// Note: if j loops from 0 to N-1 (not i+1), you re-swap every pair
+//       and end up with the original matrix unchanged — a common bug!</span></pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time</span> <span class="val">O(N²)</span></span>
+    <span class="complexity-badge"><span class="label">Space</span> <span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- 08 -->
+<section class="section" id="transpose-rect">
+  <div class="section-header"><span class="section-num">08</span><h2>Transpose of a Rectangular Matrix</h2></div>
+  <p>For a rectangular matrix <code>arr[N][M]</code>, the transpose cannot be done in-place (the result has dimensions M × N). You must allocate a new array.</p>
+
+  <div class="matrix-wrap">
+    <div class="two-matrices">
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell">1</div><div class="m-cell">2</div><div class="m-cell">3</div><div class="m-cell">4</div>
+          <div class="m-cell">5</div><div class="m-cell">6</div><div class="m-cell">7</div><div class="m-cell">8</div>
+          <div class="m-cell">9</div><div class="m-cell">10</div><div class="m-cell">11</div><div class="m-cell">12</div>
+        </div>
+        <div class="matrix-label">Original: 3 × 4 (N×M)</div>
+      </div>
+      <div style="align-self:center;font-size:1.4rem;color:var(--ink-soft)">→</div>
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(3,44px)">
+          <div class="m-cell">1</div><div class="m-cell">5</div><div class="m-cell">9</div>
+          <div class="m-cell">2</div><div class="m-cell">6</div><div class="m-cell">10</div>
+          <div class="m-cell">3</div><div class="m-cell">7</div><div class="m-cell">11</div>
+          <div class="m-cell">4</div><div class="m-cell">8</div><div class="m-cell">12</div>
+        </div>
+        <div class="matrix-label">Transposed: 4 × 3 (M×N)</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">int</span>[][] <span class="fn">transposeRect</span>(<span class="ty">int</span>[][] arr, <span class="ty">int</span> N, <span class="ty">int</span> M) {
+    <span class="ty">int</span>[][] t = <span class="kw">new</span> <span class="ty">int</span>[M][N]; <span class="cmt">// note: M rows, N columns</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+        <span class="kw">for</span> (<span class="ty">int</span> j = <span class="num">0</span>; j &lt; M; j++) {
+            t[j][i] = arr[i][j];
+        }
+    }
+    <span class="kw">return</span> t;
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time</span> <span class="val">O(N×M)</span></span>
+    <span class="complexity-badge"><span class="label">Space</span> <span class="val">O(M×N)</span></span>
+  </div>
+</section>
+
+<!-- 09 -->
+<section class="section" id="rotate-90">
+  <div class="section-header"><span class="section-num">09</span><h2>Rotate a Square Matrix 90° Clockwise</h2></div>
+  <div class="callout key">
+    <span class="callout-tag">Two-Step Algorithm (In-Place)</span>
+    <strong>Step 1:</strong> Transpose the matrix in-place.<br>
+    <strong>Step 2:</strong> Reverse every row in-place.
+  </div>
+  <div class="callout analogy">
+    <span class="callout-tag">Why Does This Work?</span>
+    In a 90° clockwise rotation, column <code>j</code> of the original becomes row <code>j</code> of the result, but in reversed order. Transposing first turns column <code>j</code> into row <code>j</code>. Reversing each row then gives the correct right-to-left ordering of what was originally column <code>j</code>.
+  </div>
+
+  <div class="matrix-wrap">
+    <div class="two-matrices">
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell">1</div><div class="m-cell">2</div><div class="m-cell">3</div><div class="m-cell">4</div>
+          <div class="m-cell">5</div><div class="m-cell">6</div><div class="m-cell">7</div><div class="m-cell">8</div>
+          <div class="m-cell">9</div><div class="m-cell">10</div><div class="m-cell">11</div><div class="m-cell">12</div>
+          <div class="m-cell">13</div><div class="m-cell">14</div><div class="m-cell">15</div><div class="m-cell">16</div>
+        </div>
+        <div class="matrix-label">Original</div>
+      </div>
+      <div style="align-self:center;font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--ink-soft);text-align:center">transpose<br>↓<br>reverse rows</div>
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell h-accent">13</div><div class="m-cell h-accent">9</div><div class="m-cell h-accent">5</div><div class="m-cell h-accent">1</div>
+          <div class="m-cell h-blue">14</div><div class="m-cell h-blue">10</div><div class="m-cell h-blue">6</div><div class="m-cell h-blue">2</div>
+          <div class="m-cell h-green">15</div><div class="m-cell h-green">11</div><div class="m-cell h-green">7</div><div class="m-cell h-green">3</div>
+          <div class="m-cell h-rose">16</div><div class="m-cell h-rose">12</div><div class="m-cell h-rose">8</div><div class="m-cell h-rose">4</div>
+        </div>
+        <div class="matrix-label">Rotated 90° clockwise</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="flow-step highlight">
+      <span class="flow-icon">①</span>
+      <div class="flow-text"><strong>Transpose in-place:</strong> for i in [0,N), for j in [i+1,N) → swap arr[i][j] with arr[j][i].</div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="flow-icon">②</span>
+      <div class="flow-text"><strong>Reverse each row:</strong> for each row i → two-pointer swap from left and right ends meeting in the middle.</div>
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header"><span class="code-lang">java — rotate 90° clockwise in-place</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">rotate90CW</span>(<span class="ty">int</span>[][] arr, <span class="ty">int</span> N) {
+    <span class="cmt">// Step 1: Transpose</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+        <span class="kw">for</span> (<span class="ty">int</span> j = i + <span class="num">1</span>; j &lt; N; j++) {
+            <span class="ty">int</span> temp = arr[i][j];
+            arr[i][j] = arr[j][i];
+            arr[j][i] = temp;
+        }
+    }
+    <span class="cmt">// Step 2: Reverse each row</span>
+    <span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+        <span class="ty">int</span> l = <span class="num">0</span>, r = N - <span class="num">1</span>;
+        <span class="kw">while</span> (l &lt; r) {
+            <span class="ty">int</span> temp = arr[i][l];
+            arr[i][l] = arr[i][r];
+            arr[i][r] = temp;
+            l++; r--;
+        }
+    }
+}</pre>
+  </div>
+  <div class="complexity-row">
+    <span class="complexity-badge"><span class="label">Time</span> <span class="val">O(N²)</span></span>
+    <span class="complexity-badge"><span class="label">Space</span> <span class="val">O(1)</span></span>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="section" id="rotate-180">
+  <div class="section-header"><span class="section-num">10</span><h2>Rotate 180° and 270° Clockwise</h2></div>
+
+  <h3>180° Rotation</h3>
+  <p>A 180° clockwise rotation is equivalent to flipping the matrix both horizontally and vertically. The cleanest in-place approach: <strong>reverse all rows</strong>, then <strong>reverse all columns</strong> (i.e., reverse each row, then reverse the array of rows itself).</p>
+
+  <div class="matrix-wrap">
+    <div class="two-matrices">
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell">1</div><div class="m-cell">2</div><div class="m-cell">3</div><div class="m-cell">4</div>
+          <div class="m-cell">5</div><div class="m-cell">6</div><div class="m-cell">7</div><div class="m-cell">8</div>
+          <div class="m-cell">9</div><div class="m-cell">10</div><div class="m-cell">11</div><div class="m-cell">12</div>
+          <div class="m-cell">13</div><div class="m-cell">14</div><div class="m-cell">15</div><div class="m-cell">16</div>
+        </div>
+        <div class="matrix-label">Original</div>
+      </div>
+      <div style="align-self:center;font-size:1.4rem;color:var(--ink-soft)">→</div>
+      <div>
+        <div class="matrix" style="grid-template-columns:repeat(4,44px)">
+          <div class="m-cell h-rose">16</div><div class="m-cell h-rose">15</div><div class="m-cell h-rose">14</div><div class="m-cell h-rose">13</div>
+          <div class="m-cell">12</div><div class="m-cell">11</div><div class="m-cell">10</div><div class="m-cell">9</div>
+          <div class="m-cell">8</div><div class="m-cell">7</div><div class="m-cell">6</div><div class="m-cell">5</div>
+          <div class="m-cell">4</div><div class="m-cell">3</div><div class="m-cell">2</div><div class="m-cell">1</div>
+        </div>
+        <div class="matrix-label">Rotated 180°</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Algorithm</span>
+    <strong>Step 1:</strong> Reverse all rows (reverse the order of rows in the matrix — swap row 0 with row N−1, etc.).<br>
+    <strong>Step 2:</strong> Reverse each individual row (reverse left-to-right within each row).<br>
+    This is equivalent to rotating 90° clockwise <em>twice</em>.
+  </div>
+
+  <h3>270° Clockwise (= 90° Counter-Clockwise)</h3>
+  <p>For 270° clockwise rotation, apply the reverse steps of 90° CW: <strong>reverse each row first</strong>, then <strong>transpose</strong>. Alternatively: transpose first, then reverse all rows top-to-bottom.</p>
+  <div class="callout warn">
+    <span class="callout-tag">Think Carefully</span>
+    The notes deliberately leave 270° as an exercise — work it out from first principles. Take a small example (e.g., 2×2 or 3×3) and trace what happens to each element. Confirm your formula before implementing.
+  </div>
+
+  <h3>All Rotations at a Glance</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Rotation</th><th>Step 1</th><th>Step 2</th></tr></thead>
+      <tbody>
+        <tr><td>90° CW</td><td>Transpose</td><td>Reverse each row</td></tr>
+        <tr><td>180° CW</td><td>Reverse row order</td><td>Reverse each row</td></tr>
+        <tr><td>270° CW (= 90° CCW)</td><td>Transpose</td><td>Reverse row order (or: reverse each row, then transpose)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="section" id="recap">
+  <div class="section-header"><span class="section-num">11</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><h4>2-D Array</h4><p><code>arr[N][M]</code> — N rows, M columns, N×M total elements. Accessed as arr[i][j], row-major.</p></div>
+    <div class="recap-card"><h4>Storage in Java</h4><p>Array of arrays on the heap. The outer array holds N references to independent inner row arrays. Access is two pointer dereferences — O(1).</p></div>
+    <div class="recap-card"><h4>Row-Wise Sum</h4><p>Outer loop over rows, inner loop over columns. Reset accumulator per row. O(N×M) time.</p></div>
+    <div class="recap-card"><h4>Column-Wise Sum</h4><p>Outer loop over columns, inner loop over rows. Same complexity, different loop order.</p></div>
+    <div class="recap-card"><h4>Main Diagonal</h4><p>Elements where i == j. Walk with i++, j++ until i &lt; N.</p></div>
+    <div class="recap-card"><h4>All Diagonals (R→L)</h4><p>N+M−1 total. Group 1 starts from row 0 (k=0..M-1); Group 2 from column M-1 (k=1..N-1). Within each: i++, j−−.</p></div>
+    <div class="recap-card"><h4>Transpose (Square)</h4><p>Swap arr[i][j] with arr[j][i] for j &gt; i only (upper triangle). O(N²) time, O(1) space.</p></div>
+    <div class="recap-card"><h4>Rotate 90° CW</h4><p>Transpose + reverse each row. Both in-place. O(N²), O(1).</p></div>
+    <div class="recap-card"><h4>Rotate 180°</h4><p>Reverse row order + reverse each row. Equivalent to two 90° CW rotations.</p></div>
+  </div>
+
+  <h3>Complexity Summary</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Operation</th><th>Time</th><th>Space</th></tr></thead>
+      <tbody>
+        <tr><td>Row/Column sum</td><td>O(N×M)</td><td>O(1)</td></tr>
+        <tr><td>Diagonal traversal (square)</td><td>O(N)</td><td>O(1)</td></tr>
+        <tr><td>All diagonals (N×M)</td><td>O(N×M)</td><td>O(1) to print; O(N×M) to store</td></tr>
+        <tr><td>Transpose in-place (square)</td><td>O(N²)</td><td>O(1)</td></tr>
+        <tr><td>Transpose rectangular</td><td>O(N×M)</td><td>O(M×N)</td></tr>
+        <tr><td>Rotate 90° / 180° / 270°</td><td>O(N²)</td><td>O(1)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="section" id="leetcode">
+  <div class="section-header"><span class="section-num">12</span><h2>Related LeetCode Problems</h2></div>
+
+  <h3>Traversal &amp; Sums</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <a class="lc-name" href="https://leetcode.com/problems/matrix-diagonal-sum/" target="_blank" rel="noopener">#1572 · Matrix Diagonal Sum ↗</a>
+      <span class="lc-why">Sum main and anti-diagonal of a square matrix — directly applies the i==j and i+j==N-1 conditions.</span>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <a class="lc-name" href="https://leetcode.com/problems/richest-customer-wealth/" target="_blank" rel="noopener">#1672 · Richest Customer Wealth ↗</a>
+      <span class="lc-why">Row-wise sum of a 2-D array, then find the max — textbook first 2-D array problem.</span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <a class="lc-name" href="https://leetcode.com/problems/diagonal-traverse/" target="_blank" rel="noopener">#498 · Diagonal Traverse ↗</a>
+      <span class="lc-why">Traverse all diagonals alternately up and down — a direct extension of the all-diagonals technique.</span>
+    </li>
+  </ul>
+
+  <h3>Transpose &amp; Rotation</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <a class="lc-name" href="https://leetcode.com/problems/transpose-matrix/" target="_blank" rel="noopener">#867 · Transpose Matrix ↗</a>
+      <span class="lc-why">Rectangular transpose — allocate a new M×N array and fill with t[j][i] = arr[i][j].</span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <a class="lc-name" href="https://leetcode.com/problems/rotate-image/" target="_blank" rel="noopener">#48 · Rotate Image ↗</a>
+      <span class="lc-why">Classic: transpose then reverse each row. Directly from the notes — must-solve.</span>
+    </li>
+    <li>
+      <span class="lc-diff easy">Easy</span>
+      <a class="lc-name" href="https://leetcode.com/problems/flipping-an-image/" target="_blank" rel="noopener">#832 · Flipping an Image ↗</a>
+      <span class="lc-why">Flip each row horizontally and invert bits — combines row reversal with element-wise operation.</span>
+    </li>
+  </ul>
+
+  <h3>Advanced 2-D Traversal</h3>
+  <ul class="lc-list">
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <a class="lc-name" href="https://leetcode.com/problems/spiral-matrix/" target="_blank" rel="noopener">#54 · Spiral Matrix ↗</a>
+      <span class="lc-why">Traverse the matrix in a shrinking spiral — tests multi-directional 2-D navigation.</span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <a class="lc-name" href="https://leetcode.com/problems/set-matrix-zeroes/" target="_blank" rel="noopener">#73 · Set Matrix Zeroes ↗</a>
+      <span class="lc-why">Mark rows and columns without using extra space — classic 2-D in-place mutation challenge.</span>
+    </li>
+    <li>
+      <span class="lc-diff medium">Medium</span>
+      <a class="lc-name" href="https://leetcode.com/problems/search-a-2d-matrix-ii/" target="_blank" rel="noopener">#240 · Search a 2D Matrix II ↗</a>
+      <span class="lc-why">Exploit sorted row/column structure with a staircase traversal — the 2-D analog of binary search.</span>
+    </li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="callout-tag">Recommended Study Order</span>
+    Start with #1672 (Richest Customer Wealth) and #1572 (Matrix Diagonal Sum) for warm-up. Then tackle #867 (Transpose) and #48 (Rotate Image) as the core problems from these notes. Finish with #54 (Spiral Matrix) and #240 (Search 2D Matrix II) to challenge your 2-D thinking.
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+window.addEventListener('scroll',()=>{const s=document.documentElement;document.getElementById('progress-bar').style.width=(s.scrollTop/(s.scrollHeight-s.clientHeight)*100)+'%'});
+const toggle=document.getElementById('nav-toggle'),overlay=document.getElementById('nav-overlay'),sidebar=document.querySelector('.sidebar');
+toggle.addEventListener('click',()=>{sidebar.classList.toggle('open');overlay.classList.toggle('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+function copyCode(btn){const code=btn.closest('.code-block').querySelector('pre').innerText;try{navigator.clipboard.writeText(code)}catch(e){const t=document.createElement('textarea');t.value=code;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t)}btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('.section');
+function setActive(id){navLinks.forEach(l=>l.classList.remove('active'));const a=document.querySelector(`.nav-link[href="#${id}"]`);if(a){a.classList.add('active');const sb=document.querySelector('.sidebar'),lt=a.offsetTop,sh=sb.clientHeight;if(lt<sb.scrollTop+60||lt>sb.scrollTop+sh-60)sb.scrollTo({top:lt-sh/2,behavior:'smooth'})}}
+const spyObs=new IntersectionObserver(entries=>{const vis=entries.filter(e=>e.isIntersecting).map(e=>e.target);if(!vis.length)return;vis.sort((a,b)=>a.getBoundingClientRect().top-b.getBoundingClientRect().top);setActive(vis[0].id)},{rootMargin:'-10% 0px -55% 0px',threshold:0});
+sections.forEach(s=>spyObs.observe(s));
+const revObs=new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')})},{threshold:0.06});
+sections.forEach(s=>revObs.observe(s));
+</script>
+</body>
+</html>

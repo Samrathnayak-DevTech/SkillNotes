@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Factory Method &amp; Abstract Factory — Session 18</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* UML mini */
+.uml-class{border:1.5px solid var(--ink);border-radius:4px;display:inline-flex;flex-direction:column;min-width:140px;font-family:'JetBrains Mono',monospace;font-size:.7rem;margin:.4rem;vertical-align:top}
+.uml-class.iface{border-style:dashed}
+.uml-name{background:var(--bg-soft);padding:.3rem .7rem;border-bottom:1.5px solid var(--ink);font-weight:600;text-align:center}
+.uml-name .st{display:block;font-size:.58rem;font-style:italic;color:var(--ink-soft)}
+.uml-body{padding:.3rem .7rem;color:var(--ink-soft)}
+.uml-row{display:block;padding:.05rem 0}
+.uml-row.hi{color:var(--blue)}
+.arrow-label{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--accent);margin:.5rem 0}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 18</div>
+  <div class="nav-group"><span class="nav-group-label">Overview</span><a class="nav-link" href="#hero">Introduction</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">Factory Method</span>
+    <a class="nav-link" href="#s01">01 The Problem (instanceof)</a>
+    <a class="nav-link" href="#s02">02 Factory Method Pattern</a>
+    <a class="nav-link" href="#s03">03 Database + Query Example</a>
+    <a class="nav-link" href="#s04">04 Adding Transactions</a>
+    <a class="nav-link" href="#s05">05 Cross-Platform UI Example</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Abstract Factory</span>
+    <a class="nav-link" href="#s06">06 Too Many Factory Methods</a>
+    <a class="nav-link" href="#s07">07 Abstract Factory = Factory of Factories</a>
+    <a class="nav-link" href="#s08">08 Abstract Factory: Database Example</a>
+    <a class="nav-link" href="#s09">09 Abstract Factory: UI Example</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Comparison</span>
+    <a class="nav-link" href="#s10">10 Factory Method vs Abstract Factory</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 18 · 22nd Dec</p>
+  <h1>Factory Method &amp; Abstract Factory</h1>
+  <p class="hero-lede">Two creational patterns for delegating object creation. Factory Method lets subclasses decide which object to instantiate. Abstract Factory groups related factory methods into a cohesive "family" — a factory of factories.</p>
+  <div class="agenda-chips">
+    <span class="chip">Factory Method</span><span class="chip">Abstract Factory</span><span class="chip">OCP</span><span class="chip">SRP</span><span class="chip">Database</span><span class="chip">Cross-Platform UI</span>
+  </div>
+</section>
+
+<!-- 01 -->
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>The Problem: instanceof Branching</h2></div>
+  <p>Consider a <code>UserService</code> that saves data to a database. The database could be MySQL, PostgreSQL, or MongoDB. A naïve implementation checks the runtime type to construct the correct query object:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — instanceof branching (Bad)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">UserService</span> {
+    <span class="ty">Database</span> db;   <span class="cmt">// MySQLDB | PostgreDB | MongoDB</span>
+
+    <span class="kw">void</span> <span class="fn">saveUser</span>() {
+        <span class="ty">Query</span> q;
+        <span class="kw">if</span> (db <span class="kw">instanceof</span> <span class="ty">MySQLDB</span>) {
+            q = <span class="kw">new</span> <span class="ty">MySQLQuery</span>();
+        } <span class="kw">else if</span> (db <span class="kw">instanceof</span> <span class="ty">PostgreDB</span>) {
+            q = <span class="kw">new</span> <span class="ty">PostgreQuery</span>();
+        }
+        <span class="cmt">// … each new DB type forces editing this method</span>
+    }
+}</pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Violations</span>
+    <p>This violates both <strong>SRP</strong> (UserService is now responsible for Query creation logic) and <strong>OCP</strong> (adding a MongoDB branch requires editing this method). The <code>UserService</code> is coupled to every concrete Query and Database implementation.</p>
+  </div>
+</section>
+
+<!-- 02 -->
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>Factory Method Pattern</h2></div>
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>The <strong>Factory Method</strong> pattern defines an interface for creating an object, but lets subclasses decide which class to instantiate. The factory method defers instantiation to subclasses. The creator knows <em>when</em> to create; the subclass knows <em>what</em> to create.</p>
+  </div>
+
+  <p>The core idea: instead of the client deciding which concrete class to instantiate, add a method to the object that produces the appropriate related object. This method is the "factory method". Calling <code>db.createQuery()</code> makes each database subclass responsible for returning its own compatible query object.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>A laptop manufacturer (the creator) decides <em>when</em> a laptop needs a charger, but the specific charger (USB-C, MagSafe, barrel) is determined by the laptop model (the subclass). The manufacturer doesn't hard-code a brand of charger — it delegates to the specific model.</p>
+  </div>
+</section>
+
+<!-- 03 -->
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Database + Query Example</h2></div>
+
+  <div class="diagram-box">
+    <div style="display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start">
+      <div>
+        <div class="uml-class iface" style="min-width:180px">
+          <div class="uml-name"><span class="st">&lt;&lt;interface/abstract&gt;&gt;</span>Database</div>
+          <div class="uml-body">
+            <span class="uml-row hi">Query createQuery();</span>
+            <span class="uml-row">void connectToDB();</span>
+            <span class="uml-row">void refreshDB();</span>
+          </div>
+        </div>
+        <div style="font-size:.7rem;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);margin:.3rem 0 0 .5rem">↑ implements</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <div class="uml-class"><div class="uml-name">MySQLDB</div><div class="uml-body"><span class="uml-row hi">createQuery() { return new MySQLQuery() }</span></div></div>
+          <div class="uml-class"><div class="uml-name">PostgreDB</div><div class="uml-body"><span class="uml-row hi">createQuery() { return new PostgreQuery() }</span></div></div>
+          <div class="uml-class"><div class="uml-name">MongoDB</div><div class="uml-body"><span class="uml-row hi">createQuery() { return new MongoDBQuery() }</span></div></div>
+        </div>
+      </div>
+      <div>
+        <div class="uml-class iface" style="min-width:120px">
+          <div class="uml-name"><span class="st">&lt;&lt;interface&gt;&gt;</span>Query</div>
+          <div class="uml-body"><span class="uml-row">execute()</span></div>
+        </div>
+        <div style="font-size:.7rem;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);margin:.3rem 0 0 .5rem">↑ implements</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <div class="uml-class"><div class="uml-name">MySQLQuery</div></div>
+          <div class="uml-class"><div class="uml-name">PostgreQuery</div></div>
+          <div class="uml-class"><div class="uml-name">MongoDBQuery</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Factory Method applied</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">abstract class</span> <span class="ty">Database</span> {
+    <span class="kw">abstract</span> <span class="ty">Query</span> <span class="fn">createQuery</span>();   <span class="cmt">// ← THE factory method</span>
+    <span class="kw">void</span> <span class="fn">connectToDB</span>() { <span class="cmt">/* generic logic */</span> }
+    <span class="kw">void</span> <span class="fn">refreshDB</span>()    { <span class="cmt">/* generic logic */</span> }
+}
+
+<span class="kw">class</span> <span class="ty">MySQLDB</span> <span class="kw">extends</span> <span class="ty">Database</span> {
+    <span class="ty">Query</span> <span class="fn">createQuery</span>() { <span class="kw">return new</span> <span class="ty">MySQLQuery</span>(); }
+}
+<span class="kw">class</span> <span class="ty">PostgreDB</span> <span class="kw">extends</span> <span class="ty">Database</span> {
+    <span class="ty">Query</span> <span class="fn">createQuery</span>() { <span class="kw">return new</span> <span class="ty">PostgreQuery</span>(); }
+}
+<span class="kw">class</span> <span class="ty">MongoDB</span> <span class="kw">extends</span> <span class="ty">Database</span> {
+    <span class="ty">Query</span> <span class="fn">createQuery</span>() { <span class="kw">return new</span> <span class="ty">MongoDBQuery</span>(); }
+}
+
+<span class="cmt">// UserService — completely decoupled from concrete Query types</span>
+<span class="kw">class</span> <span class="ty">UserService</span> {
+    <span class="ty">Database</span> db;
+
+    <span class="kw">void</span> <span class="fn">saveUser</span>() {
+        <span class="ty">Query</span> q = db.<span class="fn">createQuery</span>();  <span class="cmt">// polymorphism — no instanceof needed</span>
+        <span class="cmt">// use q …</span>
+    }
+}</pre>
+  </div>
+
+  <p>Adding a new database (e.g., CassandraDB) now requires only: creating a new <code>CassandraDB</code> class and a <code>CassandraQuery</code> class. The <code>UserService</code> and all existing classes are <strong>untouched</strong>. Pure OCP.</p>
+</section>
+
+<!-- 04 -->
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Adding Transactions</h2></div>
+  <p>The pattern scales cleanly. When we need <code>Transaction</code> objects in addition to queries, we add another factory method to <code>Database</code>:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Multiple factory methods</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">abstract class</span> <span class="ty">Database</span> {
+    <span class="kw">abstract</span> <span class="ty">Query</span>       <span class="fn">createQuery</span>();
+    <span class="kw">abstract</span> <span class="ty">Transaction</span> <span class="fn">createTransaction</span>();
+    <span class="cmt">// non-factory methods remain generic</span>
+    <span class="kw">void</span> <span class="fn">connectToDB</span>() { … }
+    <span class="kw">void</span> <span class="fn">refreshDB</span>()   { … }
+}
+
+<span class="kw">class</span> <span class="ty">MySQLDB</span> <span class="kw">extends</span> <span class="ty">Database</span> {
+    <span class="ty">Query</span>       <span class="fn">createQuery</span>()       { <span class="kw">return new</span> <span class="ty">MySQLQuery</span>(); }
+    <span class="ty">Transaction</span> <span class="fn">createTransaction</span>() { <span class="kw">return new</span> <span class="ty">MySQLTransaction</span>(); }
+}
+
+<span class="cmt">// Usage remains clean</span>
+<span class="ty">Database</span> db = … ;  <span class="cmt">// injected — could be any subtype</span>
+<span class="ty">Query</span>       q   = db.<span class="fn">createQuery</span>();
+<span class="ty">Transaction</span> txn = db.<span class="fn">createTransaction</span>();</pre>
+  </div>
+
+  <p>Each database subclass (<code>MySQLDB</code>, <code>PostgreDB</code>, <code>MongoDB</code>) creates its own compatible <code>Transaction</code> implementation. The factory methods on the <code>Database</code> class act as the glue — they guarantee that a <code>MySQLDB</code> always produces MySQL-compatible objects.</p>
+</section>
+
+<!-- 05 -->
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>Cross-Platform UI Example</h2></div>
+  <p>The same pattern applies to cross-platform UI frameworks like Flutter or React Native. A <code>Platform</code> class has a <code>createButton()</code> factory method; each platform subclass returns its native button.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Platform UI Factory Method</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">abstract class</span> <span class="ty">Platform</span> {
+    <span class="kw">abstract</span> <span class="ty">Button</span> <span class="fn">createButton</span>();
+}
+<span class="kw">class</span> <span class="ty">IOSPlatform</span>     <span class="kw">extends</span> <span class="ty">Platform</span> { <span class="ty">Button</span> <span class="fn">createButton</span>() { <span class="kw">return new</span> <span class="ty">IOSButton</span>(); }}
+<span class="kw">class</span> <span class="ty">AndroidPlatform</span> <span class="kw">extends</span> <span class="ty">Platform</span> { <span class="ty">Button</span> <span class="fn">createButton</span>() { <span class="kw">return new</span> <span class="ty">AndroidButton</span>(); }}
+<span class="kw">class</span> <span class="ty">WindowsPlatform</span> <span class="kw">extends</span> <span class="ty">Platform</span> { <span class="ty">Button</span> <span class="fn">createButton</span>() { <span class="kw">return new</span> <span class="ty">WindowsButton</span>(); }}
+
+<span class="cmt">// Client</span>
+<span class="ty">Platform</span> p = <span class="fn">getPlatform</span>(); <span class="cmt">// injected at runtime</span>
+<span class="ty">Button</span>   b = p.<span class="fn">createButton</span>();
+b.<span class="fn">render</span>();</pre>
+  </div>
+</section>
+
+<!-- 06 -->
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>The Problem: Too Many Factory Methods</h2></div>
+  <p>As the system grows, the <code>Platform</code> class accumulates factory methods: <code>createButton()</code>, <code>createDropDown()</code>, <code>createMenu()</code>, <code>createNavbar()</code>. The class has a <em>lot</em> of factory methods — this is a signal that the responsibilities can be separated further.</p>
+
+  <div class="diagram-box">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;margin-bottom:.7rem;color:var(--ink-soft)">UIComponent hierarchy (one factory method per component type per platform)</div>
+    <div style="display:flex;gap:.8rem;flex-wrap:wrap">
+      <div class="uml-class iface" style="min-width:120px"><div class="uml-name"><span class="st">&lt;&lt;interface&gt;&gt;</span>Button</div><div class="uml-body"><span class="uml-row">render()</span></div></div>
+      <div class="uml-class iface" style="min-width:120px"><div class="uml-name"><span class="st">&lt;&lt;interface&gt;&gt;</span>DropDown</div><div class="uml-body"><span class="uml-row">render()</span></div></div>
+      <div class="uml-class iface" style="min-width:120px"><div class="uml-name"><span class="st">&lt;&lt;interface&gt;&gt;</span>Menu</div><div class="uml-body"><span class="uml-row">render()</span></div></div>
+    </div>
+    <p style="margin-top:.8rem;font-size:.82rem;color:var(--ink-soft)">Each interface has 3 implementations (Windows, iOS, Android) = 9 concrete classes for 3 component types. The <code>Platform</code> class now needs to carry a factory method for every one of these component types.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Signal for Abstract Factory</span>
+    <p>When you notice a class accumulating many factory methods for a coherent <em>family</em> of related products, it's time to extract those factory methods into a dedicated <code>Factory</code> interface. This is the Abstract Factory pattern.</p>
+  </div>
+</section>
+
+<!-- 07 -->
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>Abstract Factory — Factory of Factories</h2></div>
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>The <strong>Abstract Factory</strong> pattern provides an interface for creating <em>families of related objects</em> without specifying their concrete classes. Each concrete factory creates one complete family. The client works with both the factory and its products through abstract interfaces only.</p>
+  </div>
+
+  <p>The Abstract Factory is often described as a "factory of factories." Whereas Factory Method puts a factory method directly on the creator class, Abstract Factory extracts <em>all</em> the factory methods into a separate, dedicated factory interface, and gives each "family variant" its own factory implementation.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy — IKEA vs Crate & Barrel</span>
+    <p>Think of furniture families. An Abstract Factory is like a furniture brand (IKEA, Crate &amp; Barrel). Each brand produces a complete, consistent family — sofa, coffee table, bookshelf — all in the same style. You pick one brand (factory) and get a matched set. Mixing factories (IKEA sofa, Crate &amp; Barrel table) is possible but you have to do it deliberately.</p>
+  </div>
+</section>
+
+<!-- 08 -->
+<section id="s08" class="section">
+  <div class="section-header"><span class="section-num">08</span><h2>Abstract Factory: Database Example</h2></div>
+  <p>The <code>Database</code> class had two factory methods: <code>createQuery()</code> and <code>createTransaction()</code>. With Abstract Factory, we split these responsibilities: <code>Database</code> keeps only non-factory methods, and we introduce a <code>DatabaseFactory</code> interface that owns all the factory methods.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start">
+      <div>
+        <div class="uml-class iface" style="min-width:190px">
+          <div class="uml-name"><span class="st">&lt;&lt;abstract&gt;&gt;</span>Database</div>
+          <div class="uml-body">
+            <span class="uml-row hi">DatabaseFactory createDBFactory();</span>
+            <span class="uml-row">void connectToDB();</span>
+            <span class="uml-row">void refreshDB();</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="uml-class iface" style="min-width:190px">
+          <div class="uml-name"><span class="st">&lt;&lt;interface&gt;&gt;</span>DatabaseFactory</div>
+          <div class="uml-body">
+            <span class="uml-row hi">Query createQuery();</span>
+            <span class="uml-row hi">Transaction createTransaction();</span>
+            <span class="uml-row hi">Updater createUpdater();</span>
+          </div>
+        </div>
+        <div style="font-size:.7rem;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);margin:.3rem 0 0 .5rem">↑ implements</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <div class="uml-class"><div class="uml-name">MySQLDBFactory</div><div class="uml-body"><span class="uml-row hi">createQuery() → MySQLQuery</span><span class="uml-row hi">createTxn() → MySQLTxn</span></div></div>
+          <div class="uml-class"><div class="uml-name">PostgreDBFactory</div></div>
+          <div class="uml-class"><div class="uml-name">MongoDBFactory</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Abstract Factory: Database</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// The Abstract Factory interface</span>
+<span class="kw">interface</span> <span class="ty">DatabaseFactory</span> {
+    <span class="ty">Query</span>       <span class="fn">createQuery</span>();
+    <span class="ty">Transaction</span> <span class="fn">createTransaction</span>();
+    <span class="ty">Updater</span>     <span class="fn">createUpdater</span>();
+}
+
+<span class="cmt">// One concrete factory per database family</span>
+<span class="kw">class</span> <span class="ty">MySQLDBFactory</span> <span class="kw">implements</span> <span class="ty">DatabaseFactory</span> {
+    <span class="kw">public</span> <span class="ty">Query</span>       <span class="fn">createQuery</span>()       { <span class="kw">return new</span> <span class="ty">MySQLQuery</span>(); }
+    <span class="kw">public</span> <span class="ty">Transaction</span> <span class="fn">createTransaction</span>() { <span class="kw">return new</span> <span class="ty">MySQLTransaction</span>(); }
+    <span class="kw">public</span> <span class="ty">Updater</span>     <span class="fn">createUpdater</span>()     { <span class="kw">return new</span> <span class="ty">MySQLUpdater</span>(); }
+}
+
+<span class="cmt">// The Database superclass now just produces a factory — one method</span>
+<span class="kw">abstract class</span> <span class="ty">Database</span> {
+    <span class="kw">abstract</span> <span class="ty">DatabaseFactory</span> <span class="fn">createDBFactory</span>(); <span class="cmt">// ← single factory method</span>
+    <span class="kw">void</span> <span class="fn">connectToDB</span>() { … }
+    <span class="kw">void</span> <span class="fn">refreshDB</span>()   { … }
+}
+<span class="kw">class</span> <span class="ty">MySQLDB</span> <span class="kw">extends</span> <span class="ty">Database</span> {
+    <span class="ty">DatabaseFactory</span> <span class="fn">createDBFactory</span>() { <span class="kw">return new</span> <span class="ty">MySQLDBFactory</span>(); }
+}
+
+<span class="cmt">// Client usage</span>
+<span class="ty">Database</span>        db  = … ;
+<span class="ty">DatabaseFactory</span> dbf = db.<span class="fn">createDBFactory</span>();
+<span class="ty">Query</span>           q   = dbf.<span class="fn">createQuery</span>();
+<span class="ty">Transaction</span>     txn = dbf.<span class="fn">createTransaction</span>();</pre>
+  </div>
+</section>
+
+<!-- 09 -->
+<section id="s09" class="section">
+  <div class="section-header"><span class="section-num">09</span><h2>Abstract Factory: Cross-Platform UI</h2></div>
+  <p>The <code>Platform</code> class had too many factory methods. With Abstract Factory, the factory methods move to a <code>UIFactory</code> interface. Each platform subclass produces its own <code>UIFactory</code> implementation:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Abstract Factory: UI</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Abstract Factory for UI components</span>
+<span class="kw">interface</span> <span class="ty">UIFactory</span> {
+    <span class="ty">Button</span>   <span class="fn">createButton</span>();
+    <span class="ty">DropDown</span> <span class="fn">createDropDown</span>();
+    <span class="ty">Menu</span>     <span class="fn">createMenu</span>();
+    <span class="ty">Navbar</span>   <span class="fn">createNavbar</span>();
+}
+
+<span class="cmt">// Concrete factories — one per platform</span>
+<span class="kw">class</span> <span class="ty">WindowsUIFactory</span> <span class="kw">implements</span> <span class="ty">UIFactory</span> {
+    <span class="kw">public</span> <span class="ty">Button</span>   <span class="fn">createButton</span>()   { <span class="kw">return new</span> <span class="ty">WindowsButton</span>(); }
+    <span class="kw">public</span> <span class="ty">DropDown</span> <span class="fn">createDropDown</span>() { <span class="kw">return new</span> <span class="ty">WindowsDropDown</span>(); }
+    <span class="kw">public</span> <span class="ty">Menu</span>     <span class="fn">createMenu</span>()     { <span class="kw">return new</span> <span class="ty">WindowsMenu</span>(); }
+    <span class="kw">public</span> <span class="ty">Navbar</span>   <span class="fn">createNavbar</span>()   { <span class="kw">return new</span> <span class="ty">WindowsNavbar</span>(); }
+}
+<span class="cmt">// Similarly: IOSUIFactory, AndroidUIFactory …</span>
+
+<span class="cmt">// Platform now holds a single factory method — clean!</span>
+<span class="kw">abstract class</span> <span class="ty">Platform</span> {
+    <span class="kw">abstract</span> <span class="ty">UIFactory</span> <span class="fn">createUIFactory</span>();
+    <span class="kw">void</span> <span class="fn">refreshUI</span>() { … }
+}
+<span class="kw">class</span> <span class="ty">WindowsPlatform</span> <span class="kw">extends</span> <span class="ty">Platform</span> {
+    <span class="ty">UIFactory</span> <span class="fn">createUIFactory</span>() { <span class="kw">return new</span> <span class="ty">WindowsUIFactory</span>(); }
+}
+
+<span class="cmt">// Client</span>
+<span class="ty">Platform</span>  p   = <span class="fn">getPlatform</span>();
+<span class="ty">UIFactory</span> uif = p.<span class="fn">createUIFactory</span>();
+<span class="ty">Button</span>    b   = uif.<span class="fn">createButton</span>();   <span class="cmt">// correct platform button</span></pre>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="s10" class="section">
+  <div class="section-header"><span class="section-num">10</span><h2>Factory Method vs Abstract Factory</h2></div>
+
+  <table>
+    <thead><tr><th>Aspect</th><th>Factory Method</th><th>Abstract Factory</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Creates</strong></td><td>One product at a time</td><td>A family of related products</td></tr>
+      <tr><td><strong>Where defined</strong></td><td>Overridden method on the creator class</td><td>Separate Factory interface, implemented per family</td></tr>
+      <tr><td><strong>Adding a new product type</strong></td><td>Add a new factory method on the creator</td><td>Add a method to the factory interface (affects all concrete factories)</td></tr>
+      <tr><td><strong>Adding a new family variant</strong></td><td>Add a new creator subclass</td><td>Add a new concrete factory class implementing the interface</td></tr>
+      <tr><td><strong>When to use</strong></td><td>One or a few related objects need subclass-specific creation</td><td>Multiple families of related objects must always be used together consistently</td></tr>
+      <tr><td><strong>Examples</strong></td><td>Database.createQuery(), Platform.createButton()</td><td>DatabaseFactory, UIFactory, JDBC DataSource providers</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <span class="callout-tag">Real-World Usage</span>
+    <p>Java's JDBC is a classic Abstract Factory: <code>Connection</code>, <code>Statement</code>, and <code>ResultSet</code> are abstract products. MySQL, PostgreSQL, and Oracle provide their concrete factories (drivers). Spring's <code>ApplicationContext</code> is another example — it's an abstract factory for Spring beans. GUI toolkits like SWT and AWT use Abstract Factory to produce native OS widgets.</p>
+  </div>
+</section>
+
+<!-- Recap -->
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Factory Method</div><p>An abstract/interface method on a creator class. Each subclass overrides it to return the appropriate concrete product. Delegates instantiation to subclasses.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Why not instanceof?</div><p>instanceof branching violates OCP (must edit for each new type) and SRP (creator takes on instantiation responsibility).</p></div>
+    <div class="recap-card"><div class="recap-card-title">createQuery() pattern</div><p>Database → abstract createQuery(). MySQLDB → returns MySQLQuery. UserService calls db.createQuery() — no instanceof, no coupling.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Abstract Factory</div><p>Groups related factory methods into a dedicated Factory interface. Each "family variant" provides its own concrete factory. A factory of factories.</p></div>
+    <div class="recap-card"><div class="recap-card-title">When: Abstract Factory</div><p>When the creator accumulates many factory methods for a coherent family. Extract them into a UIFactory / DatabaseFactory interface.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Consistency guarantee</div><p>Abstract Factory ensures that all products from one factory (MySQLDBFactory) are compatible with each other — you never accidentally mix MySQL queries with Postgres transactions.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Cross-platform UI</div><p>Flutter / React Native use the Abstract Factory approach: Platform → UIFactory → Button, DropDown, Menu. Each platform family is self-consistent.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Real-world: JDBC</div><p>JDBC is a canonical Abstract Factory implementation — Connection, Statement, ResultSet are abstract; MySQL/Postgres drivers are the concrete factories.</p></div>
+  </div>
+</section>
+
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

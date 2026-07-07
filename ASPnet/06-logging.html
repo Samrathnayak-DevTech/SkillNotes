@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 6 — Logging in .NET: ILogger&lt;T&gt;, Levels, Structured Logging &amp; Serilog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+td code { white-space: nowrap; }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">📓 Day 6 · Logging</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Foundations</div>
+    <a href="#s01"><span class="n">01</span>Why Logging Matters</a>
+    <a href="#s02"><span class="n">02</span>The Logging Pipeline</a>
+    <a href="#s03"><span class="n">03</span>ILogger&lt;T&gt; &amp; Injection</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Core Concepts</div>
+    <a href="#s04"><span class="n">04</span>Log Levels</a>
+    <a href="#s05"><span class="n">05</span>Categories &amp; Filtering</a>
+    <a href="#s06"><span class="n">06</span>Structured Logging</a>
+    <a href="#s07"><span class="n">07</span>Scopes &amp; LoggerMessage</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Going Further</div>
+    <a href="#s08"><span class="n">08</span>Adding Serilog</a>
+    <a href="#s09"><span class="n">09</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s10"><span class="n">10</span>Quick Recap</a>
+    <a href="#s11"><span class="n">11</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 06 · ASP.NET Core Fundamentals</div>
+  <h1>📋 Logging: Your App's Black Box Recorder</h1>
+  <p class="lede">When your app misbehaves at 3&nbsp;a.m. on a server you can't touch, logs are the only witness. Today you'll learn how .NET's built-in logging works, how to write logs that machines can search, and how to plug in Serilog — the most popular logging library in the .NET world.</p>
+  <div class="agenda">
+    <span class="chip">💉 ILogger&lt;T&gt;</span>
+    <span class="chip">🚦 Log Levels</span>
+    <span class="chip">🗂️ Categories</span>
+    <span class="chip">🧱 Structured Logging</span>
+    <span class="chip">🔭 Scopes</span>
+    <span class="chip">🌲 Serilog</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>📢 Why Logging Matters</h2>
+
+  <p>Imagine an airplane's <strong>black box recorder</strong>. It quietly records everything that happens during a flight — altitude, speed, cockpit conversations. Nobody looks at it when everything goes well. But when something goes wrong, it becomes the single most important piece of evidence.</p>
+
+  <p><strong>Logging</strong> is exactly that for software: your application continuously writes short notes about what it's doing — <em>"user 42 logged in"</em>, <em>"order 1001 saved"</em>, <em>"payment gateway timed out"</em> — so that later, a human (or a monitoring tool) can reconstruct what happened.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🍳 Analogy</span>
+    <p>Think of a restaurant kitchen keeping a <strong>daily journal</strong>: "6:02 pm — table 4 ordered pasta. 6:14 pm — oven #2 overheated, switched to oven #3. 6:30 pm — pasta served." If a customer later complains their food was late, the manager doesn't have to guess — the journal tells the story. Logs are your app's kitchen journal.</p>
+  </div>
+
+  <h3>Why not just use <code>Console.WriteLine</code>?</h3>
+  <p>Beginners often print debug messages with <code>Console.WriteLine("here!")</code>. That works on your laptop but falls apart in real applications, because a proper logging system gives you things plain printing never can:</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">🚦</span><b>Severity levels</b><p>Mark each message as Trace, Debug, Information, Warning, Error, or Critical — then show only what matters.</p></div>
+    <div class="card"><span class="glyph">🎚️</span><b>Filtering without code changes</b><p>Turn detail up or down per component via configuration — no recompiling, no redeploying.</p></div>
+    <div class="card"><span class="glyph">📦</span><b>Multiple destinations</b><p>Send the same log event to the console, a file, and a cloud dashboard at once — each destination is a "provider" or "sink."</p></div>
+    <div class="card"><span class="glyph">🔍</span><b>Searchable data</b><p>Structured logs store values as named properties, so you can query "show all errors for OrderId 1001" instead of grepping text.</p></div>
+    <div class="card"><span class="glyph">🏷️</span><b>Automatic context</b><p>Each entry carries a timestamp, category (which class wrote it), and can carry a request ID, user ID, and more.</p></div>
+    <div class="card"><span class="glyph">⚡</span><b>Performance control</b><p>Messages below the minimum level are skipped cheaply — the framework doesn't even build the message string.</p></div>
+  </div>
+
+  <h3>🗺️ The big picture</h3>
+  <p>Everything in today's lesson hangs off one central idea: .NET ships a <strong>logging abstraction</strong> (<code>Microsoft.Extensions.Logging</code>) that your code talks to, while pluggable <strong>providers</strong> decide where the messages actually go.</p>
+
+  <div class="mindmap">
+    <div class="mm-core">.NET Logging<small>Microsoft.Extensions.Logging</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-accent">
+        <h4>💉 ILogger&lt;T&gt;</h4>
+        <ul>
+          <li>Injected via DI</li>
+          <li><code>T</code> = your class</li>
+          <li>One interface, many outputs</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-blue">
+        <h4>🚦 Log Levels</h4>
+        <ul>
+          <li>Trace → Critical (0–5)</li>
+          <li>Minimum-level filtering</li>
+          <li>Different per environment</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>🗂️ Categories</h4>
+        <ul>
+          <li>Full type name as label</li>
+          <li>Namespace-prefix filtering</li>
+          <li>Quiet the framework noise</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-rose">
+        <h4>🧱 Structured Logging</h4>
+        <ul>
+          <li>Message templates</li>
+          <li>Named placeholders</li>
+          <li>Queryable properties</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>🌲 Serilog</h4>
+        <ul>
+          <li>Drop-in provider</li>
+          <li>Rich "sinks" ecosystem</li>
+          <li>Enrichers &amp; JSON output</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>Your code never talks to a file or the console directly. It talks to the <strong>ILogger abstraction</strong>, and configuration decides where messages end up. Swap destinations without touching a single service class.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🔀 The Logging Pipeline</h2>
+
+  <p>Before writing any code, it helps to see the journey a single log message takes — from the line you write to the place it's stored. ASP.NET Core sets most of this up automatically when you call <code>WebApplication.CreateBuilder(args)</code>: it registers the logging services and adds default providers (Console, Debug, and EventSource).</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="emoji">✍️</span>
+      <div><b>1. Your code writes a log</b><span class="desc"><code>_logger.LogInformation("Order {OrderId} placed", id)</code> — a message template plus values.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🏷️</span>
+      <div><b>2. A log event is created</b><span class="desc">The framework attaches the level, the category (your class's full name), a timestamp, and an optional event ID and exception.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="emoji">🎚️</span>
+      <div><b>3. Filters decide: keep or drop?</b><span class="desc">Configuration rules compare the event's level and category against minimum levels. Too low? The event is discarded cheaply — this is the critical gate.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">📮</span>
+      <div><b>4. Providers receive the event</b><span class="desc">Every registered provider (Console, Debug, Serilog…) gets the surviving event.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🗄️</span>
+      <div><b>5. Output is written</b><span class="desc">Each provider formats and delivers the event to its destination: terminal, file, database, or a cloud dashboard like Seq or Application Insights.</span></div>
+    </div>
+  </div>
+
+  <h3>The three actors</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Piece</th><th>What it is</th><th>Kitchen analogy 🍳</th></tr></thead>
+    <tbody>
+      <tr><td><code>ILogger</code> / <code>ILogger&lt;T&gt;</code></td><td>The interface your code calls to write messages.</td><td>The chef shouting an update.</td></tr>
+      <tr><td><code>ILoggerProvider</code></td><td>A plugin that knows how to deliver messages somewhere (console, file, cloud).</td><td>The person writing shouts into a specific journal.</td></tr>
+      <tr><td><code>ILoggerFactory</code></td><td>Creates loggers and wires them to all registered providers.</td><td>The manager who hands each chef a megaphone connected to every journal.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Tip</span>
+    <p>You almost never touch <code>ILoggerFactory</code> or providers directly in day-to-day code. You just ask for <code>ILogger&lt;YourClass&gt;</code> in a constructor and start logging — dependency injection (Day 3!) handles the rest.</p>
+  </div>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>💉 ILogger&lt;T&gt; &amp; Dependency Injection</h2>
+
+  <p><code>ILogger&lt;T&gt;</code> is the generic logging interface where <code>T</code> is <strong>the class doing the logging</strong>. Why the generic parameter? Because the full name of <code>T</code> becomes the log <strong>category</strong> — a label stamped on every message that tells you exactly where it came from (more in section 05).</p>
+
+  <p>Getting a logger is as simple as adding a constructor parameter. The DI container already knows how to supply it — no registration needed on your side:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · OrderService.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">OrderService</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">ILogger</span>&lt;<span class="ty">OrderService</span>&gt; _logger;
+
+    <span class="cmt">// The DI container injects a logger whose category is</span>
+    <span class="cmt">// "MyShop.Services.OrderService" (the full type name).</span>
+    <span class="kw">public</span> <span class="fn">OrderService</span>(<span class="ty">ILogger</span>&lt;<span class="ty">OrderService</span>&gt; logger)
+    {
+        _logger = logger;
+    }
+
+    <span class="kw">public void</span> <span class="fn">PlaceOrder</span>(<span class="ty">Order</span> order)
+    {
+        _logger.<span class="fn">LogInformation</span>(
+            <span class="str">"Placing order {OrderId} for customer {CustomerId}"</span>,
+            order.Id, order.CustomerId);
+
+        <span class="cmt">// ... business logic ...</span>
+
+        _logger.<span class="fn">LogInformation</span>(<span class="str">"Order {OrderId} placed successfully"</span>, order.Id);
+    }
+}
+</code></pre>
+  </div>
+
+  <p>Modern C# lets you shorten this with a <strong>primary constructor</strong> (C# 12+):</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Primary constructor style</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">OrderService</span>(<span class="ty">ILogger</span>&lt;<span class="ty">OrderService</span>&gt; logger)
+{
+    <span class="kw">public void</span> <span class="fn">PlaceOrder</span>(<span class="ty">Order</span> order)
+    {
+        logger.<span class="fn">LogInformation</span>(<span class="str">"Placing order {OrderId}"</span>, order.Id);
+    }
+}
+</code></pre>
+  </div>
+
+  <h3>Logging methods you'll use</h3>
+  <p>The interface itself has one core method, <code>Log(...)</code>, but you'll almost always use the friendlier extension methods — one per level:</p>
+  <ul>
+    <li><code>LogTrace(...)</code> 🔬 — ultra-fine detail</li>
+    <li><code>LogDebug(...)</code> 🐛 — developer diagnostics</li>
+    <li><code>LogInformation(...)</code> ℹ️ — normal app flow</li>
+    <li><code>LogWarning(...)</code> ⚠️ — something odd, app continues</li>
+    <li><code>LogError(...)</code> ❌ — an operation failed</li>
+    <li><code>LogCritical(...)</code> 🔥 — the app itself is in danger</li>
+  </ul>
+
+  <p>Every one of these accepts an optional <code>Exception</code> as the <strong>first</strong> argument — always pass it there rather than gluing it into the message, so providers can capture the full stack trace as data:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Logging an exception</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">try</span>
+{
+    <span class="kw">await</span> _paymentGateway.<span class="fn">ChargeAsync</span>(order);
+}
+<span class="kw">catch</span> (<span class="ty">PaymentException</span> ex)
+{
+    <span class="cmt">// ✅ Exception goes FIRST — full stack trace is preserved as data</span>
+    _logger.<span class="fn">LogError</span>(ex,
+        <span class="str">"Payment failed for order {OrderId} with amount {Amount}"</span>,
+        order.Id, order.Total);
+    <span class="kw">throw</span>;
+}
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Common Mistake</span>
+    <p>Don't write <code>LogError("Failed: " + ex.Message)</code>. You lose the exception type, stack trace, and inner exceptions. Pass the exception object itself as the first parameter — the logging system knows what to do with it.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p><code>ILogger&lt;T&gt;</code> vs plain <code>ILogger</code>: the generic version is just a convenience that auto-fills the category from <code>T</code>. Non-generic <code>ILogger</code> instances are created from <code>ILoggerFactory.CreateLogger("SomeCategory")</code> when you want a custom category name.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>🚦 Log Levels</h2>
+
+  <p>Every log message carries a <strong>severity level</strong> — a number from 0 to 5 (plus a special "None"). Levels answer two questions at once: <em>how important is this message?</em> and <em>should we bother recording it right now?</em></p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell"><div class="val">🔬 Trace</div><div class="idx">0</div></div>
+      <div class="arr-cell"><div class="val">🐛 Debug</div><div class="idx">1</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">ℹ️ Information</div><div class="idx">2</div></div>
+      <div class="arr-cell highlight"><div class="val">⚠️ Warning</div><div class="idx">3</div></div>
+      <div class="arr-cell neg"><div class="val">❌ Error</div><div class="idx">4</div></div>
+      <div class="arr-cell neg"><div class="val">🔥 Critical</div><div class="idx">5</div></div>
+    </div>
+    <div class="arr-caption">LogLevel enum · severity rises left → right · "None" (6) disables logging</div>
+  </div>
+
+  <p>Setting a <strong>minimum level</strong> means "record this level <em>and everything more severe</em>." If the minimum is <code>Warning</code>, then Warning, Error, and Critical get through; Trace, Debug, and Information are dropped.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🚨 Analogy</span>
+    <p>Think of a hospital triage desk. <strong>Trace/Debug</strong> = "patient sneezed" (only interesting to a researcher). <strong>Information</strong> = routine check-in notes. <strong>Warning</strong> = elevated temperature — watch closely. <strong>Error</strong> = broken arm — needs treatment now. <strong>Critical</strong> = cardiac arrest — all hands on deck. The triage nurse (your minimum level) decides which cases get written up.</p>
+  </div>
+
+  <h3>When to use each level</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Level</th><th>Value</th><th>Use it for…</th><th>Example message</th><th>Production?</th></tr></thead>
+    <tbody>
+      <tr><td>🔬 <code>Trace</code></td><td>0</td><td>Step-by-step execution detail; may contain sensitive data.</td><td>"Entering ValidateCart with 3 items"</td><td>Off (never by default)</td></tr>
+      <tr><td>🐛 <code>Debug</code></td><td>1</td><td>Diagnostics useful while developing or investigating.</td><td>"Cache miss for key products:42"</td><td>Off, enable temporarily</td></tr>
+      <tr><td>ℹ️ <code>Information</code></td><td>2</td><td>Normal application flow worth an audit trail.</td><td>"Order 1001 placed by customer 42"</td><td>✅ On</td></tr>
+      <tr><td>⚠️ <code>Warning</code></td><td>3</td><td>Unexpected but recoverable situations.</td><td>"Retry 2/3 calling payment API"</td><td>✅ On</td></tr>
+      <tr><td>❌ <code>Error</code></td><td>4</td><td>A specific operation failed; app keeps running.</td><td>"Failed to save order 1001"</td><td>✅ On + alerting</td></tr>
+      <tr><td>🔥 <code>Critical</code></td><td>5</td><td>App-wide failure or data loss risk.</td><td>"Database unreachable — shutting down"</td><td>✅ On + page someone</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>
+    <span class="complexity-badge"><span class="lbl">Default minimum</span><span class="valb">Information</span></span>
+    <span class="complexity-badge"><span class="lbl">Dev deep-dive</span><span class="valb">Debug / Trace</span></span>
+    <span class="complexity-badge"><span class="lbl">Filtered-out cost</span><span class="valb">near zero</span></span>
+  </p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · One method, all levels in action</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">ProcessOrderAsync</span>(<span class="ty">Order</span> order)
+{
+    _logger.<span class="fn">LogDebug</span>(<span class="str">"Validating order {OrderId}"</span>, order.Id);
+
+    <span class="kw">if</span> (order.Items.Count == <span class="num">0</span>)
+    {
+        _logger.<span class="fn">LogWarning</span>(<span class="str">"Order {OrderId} arrived with no items — rejecting"</span>, order.Id);
+        <span class="kw">return</span>;
+    }
+
+    _logger.<span class="fn">LogInformation</span>(<span class="str">"Processing order {OrderId} with {ItemCount} items"</span>,
+        order.Id, order.Items.Count);
+
+    <span class="kw">try</span>
+    {
+        <span class="kw">await</span> _repository.<span class="fn">SaveAsync</span>(order);
+    }
+    <span class="kw">catch</span> (<span class="ty">DbException</span> ex)
+    {
+        _logger.<span class="fn">LogError</span>(ex, <span class="str">"Could not persist order {OrderId}"</span>, order.Id);
+        <span class="kw">throw</span>;
+    }
+}
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Rule of Thumb</span>
+    <p>If a support engineer at 3&nbsp;a.m. would <em>need</em> the message to understand a problem → Warning or above. If it just narrates normal life → Information. If only a developer stepping through code cares → Debug/Trace.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Watch Out</span>
+    <p><strong>Trace may contain sensitive data</strong> (raw payloads, tokens) and should never be enabled in production by default. Also never log passwords, credit card numbers, or personal data at <em>any</em> level — logs are often widely readable within a company.</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>🗂️ Log Categories &amp; Filtering</h2>
+
+  <p>Every logger has a <strong>category</strong> — a string label attached to all its messages. When you inject <code>ILogger&lt;OrderService&gt;</code>, the category is the class's <strong>fully qualified name</strong>, e.g. <code>MyShop.Services.OrderService</code>. Framework code logs with its own categories, like <code>Microsoft.AspNetCore.Hosting</code> or <code>Microsoft.EntityFrameworkCore.Database.Command</code>.</p>
+
+  <div class="callout analogy">
+    <span class="tag">📻 Analogy</span>
+    <p>Categories are like <strong>radio stations</strong>. Every part of your app broadcasts on its own station named after its namespace. Filtering is your mixing desk: turn <em>up</em> the volume on <code>MyShop.Services</code> (Debug) while turning <em>down</em> the chatty <code>Microsoft.*</code> stations (Warning only).</p>
+  </div>
+
+  <h3>Filtering by prefix in appsettings.json</h3>
+  <p>Filters match categories by <strong>longest prefix wins</strong>. The rule <code>"Microsoft.AspNetCore": "Warning"</code> applies to every category starting with that text. <code>"Default"</code> covers anything with no better match.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">JSON · appsettings.json</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  <span class="str">"Logging"</span>: {
+    <span class="str">"LogLevel"</span>: {
+      <span class="str">"Default"</span>: <span class="str">"Information"</span>,
+      <span class="str">"Microsoft.AspNetCore"</span>: <span class="str">"Warning"</span>,
+      <span class="str">"Microsoft.EntityFrameworkCore.Database.Command"</span>: <span class="str">"Information"</span>,
+      <span class="str">"MyShop.Services.OrderService"</span>: <span class="str">"Debug"</span>
+    }
+  }
+}
+</code></pre>
+  </div>
+
+  <p>How a message from <code>MyShop.Services.OrderService</code> finds its rule — the most specific prefix wins:</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell"><div class="val">Default</div><div class="idx">matches (weak)</div></div>
+      <div class="arr-cell"><div class="val">MyShop</div><div class="idx">no rule</div></div>
+      <div class="arr-cell"><div class="val">MyShop.Services</div><div class="idx">no rule</div></div>
+      <div class="arr-cell highlight-green"><div class="val">…OrderService</div><div class="idx">longest match ✔ Debug</div></div>
+    </div>
+    <div class="arr-caption">Category "MyShop.Services.OrderService" → rule "Debug" wins over "Default: Information"</div>
+  </div>
+
+  <h3>Per-environment settings</h3>
+  <p>ASP.NET Core layers configuration files: <code>appsettings.Development.json</code> overrides <code>appsettings.json</code> when you run locally. Typical practice — verbose locally, calm in production:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">JSON · appsettings.Development.json</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  <span class="str">"Logging"</span>: {
+    <span class="str">"LogLevel"</span>: {
+      <span class="str">"Default"</span>: <span class="str">"Debug"</span>,
+      <span class="str">"Microsoft.AspNetCore"</span>: <span class="str">"Information"</span>
+    }
+  }
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>Categories + levels = a <strong>two-dimensional dial</strong>. Level answers "how important?", category answers "from where?". Together they let you silence framework noise while cranking up detail on the one service you're debugging — <em>without changing any code</em>.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Tip</span>
+    <p>Config changes to <code>appsettings.json</code> are picked up <strong>while the app runs</strong> (the default configuration sources reload on change). You can raise a production service from Information to Debug for ten minutes to investigate, then dial it back — no restart.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>🧱 Structured Logging</h2>
+
+  <p>This is the most important concept of the day. <strong>Structured logging</strong> means a log entry isn't just a sentence — it's a small packet of <strong>data</strong>: a message template plus named property values. Instead of storing the string <em>"Order 1001 placed by customer 42"</em>, the system stores:</p>
+
+  <ul>
+    <li>Template: <code>"Order {OrderId} placed by customer {CustomerId}"</code></li>
+    <li>Property <code>OrderId</code> = <code>1001</code></li>
+    <li>Property <code>CustomerId</code> = <code>42</code></li>
+  </ul>
+
+  <p>Why does this matter? Because once values are stored as named properties, a log tool can answer questions like <em>"show every event where OrderId = 1001"</em> or <em>"average Elapsed time for slow queries"</em> — instantly, without fragile text searching.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🗃️ Analogy</span>
+    <p>Plain-text logging is a <strong>shoebox of handwritten receipts</strong> — to find anything you must read every slip. Structured logging is a <strong>spreadsheet</strong> — every receipt has Date, Amount, and Customer columns you can sort and filter in one click.</p>
+  </div>
+
+  <h3>The golden rule: templates, not interpolation</h3>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Do vs Don't</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// ❌ DON'T: string interpolation — the values melt into plain text</span>
+_logger.<span class="fn">LogInformation</span>($<span class="str">"Order {order.Id} placed by {order.CustomerId}"</span>);
+
+<span class="cmt">// ❌ DON'T: string concatenation — same problem, plus allocation cost</span>
+_logger.<span class="fn">LogInformation</span>(<span class="str">"Order "</span> + order.Id + <span class="str">" placed"</span>);
+
+<span class="cmt">// ✅ DO: message template with named placeholders + arguments</span>
+_logger.<span class="fn">LogInformation</span>(<span class="str">"Order {OrderId} placed by customer {CustomerId}"</span>,
+    order.Id, order.CustomerId);
+</code></pre>
+  </div>
+
+  <p>Three reasons the template form wins:</p>
+  <ol>
+    <li><strong>Searchability</strong> 🔍 — <code>OrderId</code> becomes a queryable field in tools like Seq, Elasticsearch, or Application Insights.</li>
+    <li><strong>Performance</strong> ⚡ — with interpolation, C# builds the final string <em>before</em> calling the logger, even if the message will be filtered out. With templates, formatting only happens if the message survives filtering.</li>
+    <li><strong>Grouping</strong> 🧮 — all "Order {OrderId} placed…" events share one template, so dashboards can count "how often does this event happen?" regardless of the values inside.</li>
+  </ol>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Positional, Not Named</span>
+    <p>Placeholders are filled <strong>by position</strong>, not by name. In <code>"Order {OrderId} by {CustomerId}"</code> the first argument fills <code>{OrderId}</code> and the second fills <code>{CustomerId}</code> — swap the arguments and your logs silently lie. The names exist purely to label the stored properties, so keep names and argument order aligned.</p>
+  </div>
+
+  <h3>Naming and formatting placeholders</h3>
+  <ul>
+    <li>Use <strong>PascalCase</strong> names: <code>{OrderId}</code>, <code>{ElapsedMs}</code>, <code>{UserEmail}</code>.</li>
+    <li>Format specifiers work like <code>string.Format</code>: <code>{Total:C}</code> (currency), <code>{Elapsed:0.00}</code>, <code>{Date:yyyy-MM-dd}</code>.</li>
+    <li>Keep names <strong>consistent across the codebase</strong> — if one service logs <code>{OrderId}</code> and another logs <code>{Order_ID}</code>, your queries have to chase both.</li>
+    <li>With Serilog, prefix a placeholder with <code>@</code> — <code>{@Order}</code> — to capture a whole object's properties (destructuring) rather than just its <code>ToString()</code>.</li>
+  </ul>
+
+  <h3>What the output looks like</h3>
+  <p>The same event, rendered two ways. A console shows friendly text; a JSON sink stores the searchable version:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Text vs JSON output</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># Human-friendly console rendering:</span>
+[14:23:07 INF] Order 1001 placed by customer 42
+
+<span class="cmt"># Structured JSON stored by a sink (simplified):</span>
+{
+  <span class="str">"Timestamp"</span>: <span class="str">"2026-07-06T14:23:07.412Z"</span>,
+  <span class="str">"Level"</span>: <span class="str">"Information"</span>,
+  <span class="str">"MessageTemplate"</span>: <span class="str">"Order {OrderId} placed by customer {CustomerId}"</span>,
+  <span class="str">"OrderId"</span>: <span class="num">1001</span>,
+  <span class="str">"CustomerId"</span>: <span class="num">42</span>,
+  <span class="str">"SourceContext"</span>: <span class="str">"MyShop.Services.OrderService"</span>
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>The message template is the <strong>identity</strong> of an event; the properties are its <strong>data</strong>. Once you internalize "logs are data, not prose," everything else — levels, categories, Serilog sinks — clicks into place.</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>🔭 Scopes &amp; the LoggerMessage Pattern</h2>
+
+  <p>Two power tools round out the built-in system: <strong>scopes</strong> attach shared context to a whole block of logs, and the <strong>LoggerMessage source generator</strong> makes hot-path logging both faster and tidier.</p>
+
+  <h3>Scopes: shared context for a block of work 🔭</h3>
+  <p>Suppose ten log lines all belong to the same order. Instead of repeating <code>{OrderId}</code> in every call, open a <strong>scope</strong>: every log written inside it automatically carries those properties.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · BeginScope</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> (_logger.<span class="fn">BeginScope</span>(<span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="kw">string</span>, <span class="kw">object</span>&gt;
+{
+    [<span class="str">"OrderId"</span>] = order.Id,
+    [<span class="str">"CustomerId"</span>] = order.CustomerId
+}))
+{
+    _logger.<span class="fn">LogInformation</span>(<span class="str">"Validating items"</span>);      <span class="cmt">// carries OrderId + CustomerId</span>
+    _logger.<span class="fn">LogInformation</span>(<span class="str">"Charging payment"</span>);       <span class="cmt">// carries OrderId + CustomerId</span>
+    _logger.<span class="fn">LogInformation</span>(<span class="str">"Sending confirmation"</span>);   <span class="cmt">// carries OrderId + CustomerId</span>
+}
+</code></pre>
+  </div>
+
+  <p>ASP.NET Core already uses scopes for you: with <code>"IncludeScopes": true</code> on the console provider (or any structured sink), each request's logs carry the request path and a <code>RequestId</code>, letting you group every line belonging to one HTTP request.</p>
+
+  <div class="callout tip">
+    <span class="tag">✅ Tip</span>
+    <p>Scopes shine for "correlation": trace one order, one user session, or one background job across dozens of log lines by filtering on a single property that the scope stamped everywhere.</p>
+  </div>
+
+  <h3>LoggerMessage: compile-time logging ⚡</h3>
+  <p>For messages written thousands of times per second, .NET offers a <strong>source generator</strong>: you declare a partial method with an attribute, and the compiler generates highly optimized logging code (cached delegates, zero boxing, a built-in level check).</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · [LoggerMessage] source generator</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public static partial class</span> <span class="ty">OrderLogs</span>
+{
+    [<span class="ty">LoggerMessage</span>(EventId = <span class="num">1001</span>, Level = <span class="ty">LogLevel</span>.Information,
+        Message = <span class="str">"Order {OrderId} placed by customer {CustomerId}"</span>)]
+    <span class="kw">public static partial void</span> <span class="fn">OrderPlaced</span>(
+        <span class="kw">this</span> <span class="ty">ILogger</span> logger, <span class="kw">int</span> orderId, <span class="kw">int</span> customerId);
+
+    [<span class="ty">LoggerMessage</span>(EventId = <span class="num">1002</span>, Level = <span class="ty">LogLevel</span>.Error,
+        Message = <span class="str">"Payment failed for order {OrderId}"</span>)]
+    <span class="kw">public static partial void</span> <span class="fn">PaymentFailed</span>(
+        <span class="kw">this</span> <span class="ty">ILogger</span> logger, <span class="ty">Exception</span> ex, <span class="kw">int</span> orderId);
+}
+
+<span class="cmt">// Usage — reads like a domain event, runs faster than LogInformation:</span>
+_logger.<span class="fn">OrderPlaced</span>(order.Id, order.CustomerId);
+</code></pre>
+  </div>
+
+  <p>
+    <span class="complexity-badge"><span class="lbl">Boxing / allocations</span><span class="valb">avoided</span></span>
+    <span class="complexity-badge"><span class="lbl">Level check</span><span class="valb">built-in</span></span>
+    <span class="complexity-badge"><span class="lbl">Event IDs</span><span class="valb">centralized</span></span>
+  </p>
+
+  <div class="callout key">
+    <span class="tag">🔑 When To Bother</span>
+    <p>Plain <code>LogInformation(...)</code> is perfectly fine for most code. Reach for <code>[LoggerMessage]</code> in hot paths (per-request middleware, tight loops) or when your team wants a single catalog of named, numbered events.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>🌲 Adding Serilog</h2>
+
+  <p>The built-in providers cover the console nicely, but real projects usually want more: rolling log <em>files</em>, JSON output, a searchable dashboard, extra context on every event. <strong>Serilog</strong> is the most widely used logging library in .NET — built around structured logging from day one — and it plugs straight into the <code>ILogger&lt;T&gt;</code> world you already know. <strong>Your services don't change at all.</strong></p>
+
+  <h3>Serilog vocabulary</h3>
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">🚰</span><b>Sink</b><p>A destination for log events: Console, File, Seq, Elasticsearch, Application Insights… hundreds exist as NuGet packages.</p></div>
+    <div class="card"><span class="glyph">🧂</span><b>Enricher</b><p>Adds extra properties to every event automatically — machine name, thread ID, or anything pushed via <code>LogContext</code>.</p></div>
+    <div class="card"><span class="glyph">🎚️</span><b>Minimum level &amp; overrides</b><p>Serilog's own filtering: a global minimum plus per-namespace overrides, mirroring the categories idea.</p></div>
+    <div class="card"><span class="glyph">🧾</span><b>Output template / formatter</b><p>Controls how each event is rendered — a friendly text line for the console, compact JSON for machines.</p></div>
+  </div>
+
+  <h3>Step 1 — install packages 📦</h3>
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># The one package most apps need — it pulls in the console and</span>
+<span class="cmt"># file sinks plus configuration support:</span>
+dotnet add package Serilog.AspNetCore
+</code></pre>
+  </div>
+
+  <h3>Step 2 — wire it up in Program.cs 🔌</h3>
+  <p>The recommended pattern is <strong>two-stage initialization</strong>: a tiny "bootstrap" logger catches crashes that happen <em>before</em> the host and configuration are ready (these otherwise vanish silently), and the real logger — configured from <code>appsettings.json</code> — replaces it once the host is built.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Program.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Serilog;
+
+<span class="cmt">// Stage 1: bootstrap logger — catches startup crashes</span>
+Log.Logger = <span class="kw">new</span> <span class="ty">LoggerConfiguration</span>()
+    .WriteTo.<span class="fn">Console</span>()
+    .<span class="fn">CreateBootstrapLogger</span>();
+
+<span class="kw">try</span>
+{
+    Log.<span class="fn">Information</span>(<span class="str">"Starting web application"</span>);
+
+    <span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+
+    <span class="cmt">// Stage 2: the real logger, built from appsettings.json + DI services.</span>
+    <span class="cmt">// AddSerilog replaces the default providers with Serilog.</span>
+    builder.Services.<span class="fn">AddSerilog</span>((services, lc) =&gt; lc
+        .ReadFrom.<span class="fn">Configuration</span>(builder.Configuration)
+        .ReadFrom.<span class="fn">Services</span>(services)
+        .Enrich.<span class="fn">FromLogContext</span>());
+
+    <span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+    <span class="cmt">// One tidy "HTTP GET /orders responded 200 in 12.3 ms" line per request</span>
+    app.<span class="fn">UseSerilogRequestLogging</span>();
+
+    app.<span class="fn">MapControllers</span>();
+    app.<span class="fn">Run</span>();
+}
+<span class="kw">catch</span> (<span class="ty">Exception</span> ex)
+{
+    Log.<span class="fn">Fatal</span>(ex, <span class="str">"Application terminated unexpectedly"</span>);
+}
+<span class="kw">finally</span>
+{
+    <span class="cmt">// Flush buffered events so nothing is lost on shutdown</span>
+    Log.<span class="fn">CloseAndFlush</span>();
+}
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Version Note</span>
+    <p><code>builder.Services.AddSerilog(...)</code> is the recommended registration in current Serilog.AspNetCore versions; the older <code>builder.Host.UseSerilog(...)</code> still works. Match the package's major version to your target framework (e.g., .NET&nbsp;8 → Serilog.AspNetCore 8.x). Also note the final logger fully <em>replaces</em> the bootstrap logger — if you configure sinks in JSON, the bootstrap stage still needs its own <code>WriteTo.Console()</code> in code.</p>
+  </div>
+
+  <h3>Step 3 — configure sinks in appsettings.json 🗄️</h3>
+  <p>Because we used <code>ReadFrom.Configuration(...)</code>, sinks and levels live in config — changeable per environment without recompiling. Note Serilog uses a <code>"Serilog"</code> section (replacing the <code>"Logging"</code> section) and its own level names: <code>Verbose</code> instead of Trace, <code>Fatal</code> instead of Critical.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">JSON · appsettings.json</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  <span class="str">"Serilog"</span>: {
+    <span class="str">"MinimumLevel"</span>: {
+      <span class="str">"Default"</span>: <span class="str">"Information"</span>,
+      <span class="str">"Override"</span>: {
+        <span class="str">"Microsoft.AspNetCore"</span>: <span class="str">"Warning"</span>,
+        <span class="str">"MyShop.Services"</span>: <span class="str">"Debug"</span>
+      }
+    },
+    <span class="str">"WriteTo"</span>: [
+      { <span class="str">"Name"</span>: <span class="str">"Console"</span> },
+      {
+        <span class="str">"Name"</span>: <span class="str">"File"</span>,
+        <span class="str">"Args"</span>: {
+          <span class="str">"path"</span>: <span class="str">"logs/myshop-.txt"</span>,
+          <span class="str">"rollingInterval"</span>: <span class="str">"Day"</span>,
+          <span class="str">"retainedFileCountLimit"</span>: <span class="num">14</span>
+        }
+      }
+    ],
+    <span class="str">"Enrich"</span>: [ <span class="str">"FromLogContext"</span>, <span class="str">"WithMachineName"</span> ]
+  }
+}
+</code></pre>
+  </div>
+
+  <p>That's it. Every existing <code>_logger.LogInformation(...)</code> call in your services now flows through Serilog to the console <em>and</em> a daily rolling file like <code>logs/myshop-20260706.txt</code> that keeps the last 14 days.</p>
+
+  <h3>Serilog ↔ Microsoft level names</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Microsoft LogLevel</th><th>Serilog LogEventLevel</th></tr></thead>
+    <tbody>
+      <tr><td>Trace</td><td>Verbose</td></tr>
+      <tr><td>Debug</td><td>Debug</td></tr>
+      <tr><td>Information</td><td>Information</td></tr>
+      <tr><td>Warning</td><td>Warning</td></tr>
+      <tr><td>Error</td><td>Error</td></tr>
+      <tr><td>Critical</td><td>Fatal</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Bonus: Destructuring</span>
+    <p>Serilog's <code>@</code> operator captures whole objects: <code>_logger.LogInformation("Created {@Order}", order)</code> stores the order's properties as structured data instead of calling <code>ToString()</code>. Use it deliberately — destructure small DTOs, not giant entity graphs.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Why Serilog "Just Works"</span>
+    <p>Serilog registers itself as a <strong>logging provider</strong> behind the <code>ILogger</code> abstraction. Your services keep depending on <code>ILogger&lt;T&gt;</code>; only Program.cs and configuration know Serilog exists. That is the payoff of coding against abstractions (Day 3's DI lesson).</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>🛠️ Hands-On: Add Structured Logs to Your Services</h2>
+
+  <p>Today's <strong>Do</strong>: take the services you built earlier this week and add structured logs with parameters. Work through this checklist:</p>
+
+  <ol>
+    <li>📦 Install <code>Serilog.AspNetCore</code> and set up two-stage initialization in <code>Program.cs</code> (copy the section 08 snippet as your starting point).</li>
+    <li>💉 Inject <code>ILogger&lt;YourService&gt;</code> into at least two services via constructor injection.</li>
+    <li>🧱 Add <strong>Information</strong> logs at the start and successful end of each important operation — always with named placeholders, never interpolation.</li>
+    <li>⚠️ Add a <strong>Warning</strong> for a recoverable oddity (empty input, retry, fallback used).</li>
+    <li>❌ Wrap a risky call in try/catch and log an <strong>Error with the exception object first</strong>, then rethrow.</li>
+    <li>🎚️ In <code>appsettings.Development.json</code>, set your own namespace to <code>Debug</code> and <code>Microsoft.AspNetCore</code> to <code>Warning</code> — watch the console noise drop.</li>
+    <li>🗄️ Add the rolling File sink, run the app, hit a few endpoints, and open the log file. Find one specific order/entity by its ID.</li>
+  </ol>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Target quality for your logs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">BookingService</span>(<span class="ty">ILogger</span>&lt;<span class="ty">BookingService</span>&gt; logger, <span class="ty">IBookingRepository</span> repo)
+{
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">Booking</span>&gt; <span class="fn">CreateAsync</span>(<span class="ty">BookingRequest</span> request)
+    {
+        logger.<span class="fn">LogInformation</span>(
+            <span class="str">"Creating booking for {GuestEmail} from {CheckIn:yyyy-MM-dd} to {CheckOut:yyyy-MM-dd}"</span>,
+            request.GuestEmail, request.CheckIn, request.CheckOut);
+
+        <span class="kw">if</span> (request.CheckIn &gt;= request.CheckOut)
+        {
+            logger.<span class="fn">LogWarning</span>(
+                <span class="str">"Rejected booking: check-in {CheckIn} is not before check-out {CheckOut}"</span>,
+                request.CheckIn, request.CheckOut);
+            <span class="kw">throw new</span> <span class="ty">ValidationException</span>(<span class="str">"Invalid date range"</span>);
+        }
+
+        <span class="kw">try</span>
+        {
+            <span class="kw">var</span> booking = <span class="kw">await</span> repo.<span class="fn">AddAsync</span>(request);
+            logger.<span class="fn">LogInformation</span>(<span class="str">"Booking {BookingId} created for {GuestEmail}"</span>,
+                booking.Id, request.GuestEmail);
+            <span class="kw">return</span> booking;
+        }
+        <span class="kw">catch</span> (<span class="ty">Exception</span> ex)
+        {
+            logger.<span class="fn">LogError</span>(ex, <span class="str">"Failed to create booking for {GuestEmail}"</span>,
+                request.GuestEmail);
+            <span class="kw">throw</span>;
+        }
+    }
+}
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>Open your log file and ask: <em>Could a teammate who has never seen my code follow one booking from request to database using only these lines?</em> If yes, your logging is doing its job.</p>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>📋 Logging</b>Your app's black box: a continuous, filterable record of what happened, essential when you can't attach a debugger.</div>
+    <div class="recap-card"><b>💉 ILogger&lt;T&gt;</b>The injected interface you log through; <code>T</code>'s full type name becomes the message's category.</div>
+    <div class="recap-card"><b>🚦 Log levels</b>Trace(0) → Critical(5); a minimum level keeps that severity and above, dropping the rest cheaply.</div>
+    <div class="recap-card"><b>🗂️ Categories</b>Namespace-based labels filtered by longest prefix — silence <code>Microsoft.*</code>, boost your own services.</div>
+    <div class="recap-card"><b>🧱 Structured logging</b>Message templates with named placeholders store values as searchable data — never use string interpolation.</div>
+    <div class="recap-card"><b>🔭 Scopes</b><code>BeginScope</code> stamps shared properties (OrderId, RequestId) onto every log inside a block.</div>
+    <div class="recap-card"><b>⚡ LoggerMessage</b>A source generator for fast, allocation-free, cataloged log methods on hot paths.</div>
+    <div class="recap-card"><b>🌲 Serilog</b>A drop-in provider adding sinks, enrichers, and JSON output — services keep using plain <code>ILogger&lt;T&gt;</code>.</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Concept</th><th>What it does</th><th>Where you touch it</th><th>Remember</th></tr></thead>
+    <tbody>
+      <tr><td>💉 <code>ILogger&lt;T&gt;</code></td><td>Writes log events from your class</td><td>Constructor parameter</td><td>DI supplies it automatically; category = full name of <code>T</code></td></tr>
+      <tr><td>🚦 Levels</td><td>Rank importance 0–5</td><td>Method choice: <code>LogDebug</code> … <code>LogCritical</code></td><td>Minimum level = "this and worse"; default is Information</td></tr>
+      <tr><td>🗂️ Categories</td><td>Say which component logged</td><td><code>Logging:LogLevel</code> in appsettings.json</td><td>Longest prefix wins; config reloads live</td></tr>
+      <tr><td>🧱 Templates</td><td>Store values as named data</td><td>Every log call</td><td><code>"…{OrderId}…", order.Id</code> — args fill by position</td></tr>
+      <tr><td>❗ Exceptions</td><td>Preserve stack traces</td><td><code>LogError(ex, "…", args)</code></td><td>Exception is the <em>first</em> argument, never inside the string</td></tr>
+      <tr><td>🔭 Scopes</td><td>Context for a block of logs</td><td><code>BeginScope(...)</code> in a using</td><td>Great for correlation IDs; needs IncludeScopes/structured sink</td></tr>
+      <tr><td>⚡ LoggerMessage</td><td>Compile-time fast logging</td><td><code>[LoggerMessage]</code> partial methods</td><td>Use on hot paths; gives EventIds a home</td></tr>
+      <tr><td>🌲 Serilog</td><td>Rich sinks + enrichment</td><td>Program.cs + <code>"Serilog"</code> config section</td><td>Bootstrap logger → <code>AddSerilog</code> → <code>CloseAndFlush</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is logging and why do applications need it?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Logging is the practice of having an application write short records of what it's doing — like a diary or a flight recorder. It matters because once an app runs on a server, you can't watch it or pause it like on your laptop. When something goes wrong, logs are often the only evidence of what happened, in what order, and with what data.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is ILogger&lt;T&gt; and how do you get one in ASP.NET Core?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>ILogger&lt;T&gt;</code> is the standard interface for writing logs, where <code>T</code> is the class doing the logging. You get one through dependency injection: just declare it as a constructor parameter (e.g., <code>ILogger&lt;OrderService&gt;</code>) and the framework hands you a ready-to-use logger. The type <code>T</code> is used to label every message with your class's full name, so you always know where a message came from.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">Name the log levels in order of severity.</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>From least to most severe: <strong>Trace, Debug, Information, Warning, Error, Critical</strong> (values 0 through 5), plus <strong>None</strong> which turns logging off. A handy memory trick: severity rises as the situation gets worse — from "just narrating" (Trace/Debug) to "normal news" (Information) to "something's off" (Warning) to "something broke" (Error) to "everything is on fire" (Critical).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What does setting a "minimum level" of Warning actually do?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It means "record Warning <em>and anything more severe</em>." So Warning, Error, and Critical messages get through, while Trace, Debug, and Information are discarded. It's a threshold, not an exact match — like saying "only tell me about problems of level 3 or worse."</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">Why is Console.WriteLine a bad substitute for a logging framework?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Because it can only print plain text to one place, always. It has no severity levels, can't be filtered or turned off via configuration, can't write to files or monitoring dashboards, carries no timestamp or source information, and stores no searchable data. A logging framework gives you all of that with roughly the same one-line effort.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What is a log category?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A category is a text label attached to every message a logger writes, saying which component produced it. When you inject <code>ILogger&lt;OrderService&gt;</code>, the category is the full type name, like <code>MyShop.Services.OrderService</code>. Categories let you filter by source — for example, showing only warnings from Microsoft's framework code while showing debug detail from your own services.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">How do you log an exception correctly?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Pass the exception object itself as the <em>first</em> argument: <code>_logger.LogError(ex, "Failed to save order {OrderId}", id)</code>. Don't stuff <code>ex.Message</code> into the text — you'd lose the exception type, the stack trace, and any inner exceptions. Passed as an object, the full details are preserved and shown by every provider.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What is structured logging and how is it different from plain-text logging?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Plain-text logging stores a finished sentence: "Order 1001 placed by customer 42." Structured logging stores the event as <em>data</em>: a message template ("Order {OrderId} placed by customer {CustomerId}") plus named property values (OrderId=1001, CustomerId=42). The difference matters when searching: with structured logs, a tool can instantly answer "show all events where OrderId equals 1001" or compute averages over a numeric property — things that are painful or impossible with free text.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">Why should you avoid string interpolation ($"...") in log calls?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Two reasons. First, interpolation bakes the values into plain text before the logger ever sees them, so you lose the named, searchable properties that make structured logging valuable. Second, performance: the string is fully built <em>even when the message will be filtered out</em> (say, a Debug message in production). With a template plus arguments, the framework checks the level first and skips formatting entirely for filtered messages.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">How does category-based filtering resolve when multiple rules could apply?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>By longest matching prefix. Given rules for "Default", "Microsoft", and "Microsoft.AspNetCore", a message from category <code>Microsoft.AspNetCore.Routing</code> uses the "Microsoft.AspNetCore" rule because it's the most specific prefix that matches. "Default" applies only when no named rule matches. This lets you set a broad baseline and then carve out exceptions for specific namespaces.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What is a logging scope (BeginScope) and when would you use one?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>A scope attaches a set of properties to <em>every</em> log message written inside a block of code. For example, opening a scope with OrderId=1001 means ten subsequent log lines all carry that property without repeating it in each call. It's ideal for correlation: tracing one HTTP request, one user session, or one background job across many log lines. ASP.NET Core itself uses scopes to attach a RequestId to all logs of a request.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">What is Serilog and why would you add it when .NET already has logging?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Serilog is a third-party logging library built around structured logging, with a huge ecosystem of "sinks" — destinations like rolling files, Seq, Elasticsearch, and cloud monitoring services. The built-in system defines the <em>abstraction</em> and basic providers (mainly console); Serilog plugs in as a provider behind that abstraction and adds rich outputs, JSON formatting, enrichers, and flexible configuration. Your services keep using <code>ILogger&lt;T&gt;</code> unchanged — only Program.cs and configuration know Serilog exists.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">What is a Serilog sink? Name a few.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>A sink is a destination that receives and stores log events. Each is a NuGet package, and you can write to several at once. Common ones: <strong>Console</strong> (terminal output), <strong>File</strong> (rolling text or JSON files), <strong>Seq</strong> (a searchable log dashboard), <strong>Elasticsearch/OpenSearch</strong>, and <strong>Application Insights</strong> (Azure monitoring).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">In a message template, do the placeholder names have to match the argument names?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>No — arguments fill placeholders <strong>by position</strong>, left to right. The names inside the braces exist to label the stored properties, not to bind arguments. That's a real bug source: if the template says "{OrderId} … {CustomerId}" but you pass the customer ID first, the log will silently record swapped values. Keep template order and argument order in sync, and enable the analyzer warnings that catch mismatched counts.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">What kinds of data should never appear in logs?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Secrets and personal data: passwords, API keys, tokens, session cookies, full credit card numbers, national ID numbers, and health details. Logs get copied to files, dashboards, and third-party services, and are readable by many people — treat them as semi-public within your organization. Mask or omit sensitive fields (log the last four digits, or just an internal ID), and be extra careful with Trace-level logging of raw request bodies.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">How can you change logging detail on a running production app without redeploying?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Log levels live in configuration (appsettings.json or environment-specific files), and the default configuration providers reload when the file changes. So you can edit the file — for example raising your service's namespace from Information to Debug — and the running app picks it up. Investigate, then dial it back. This is exactly why filtering belongs in config rather than in code.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Explain Serilog's two-stage initialization. What problem does the bootstrap logger solve?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The full logger reads its setup from appsettings.json and DI services — but those only exist <em>after</em> the host is built. If the app crashes while building the host (bad config, missing connection string), a config-driven logger doesn't exist yet, so the crash vanishes silently. The fix: create a simple, code-configured <strong>bootstrap logger</strong> on the very first line of Program.cs (<code>CreateBootstrapLogger()</code>), wrap startup in try/catch so fatal startup errors are logged, and let the fully configured logger replace the bootstrap one once the host is ready. A <code>finally</code> block calls <code>Log.CloseAndFlush()</code> so buffered events aren't lost on shutdown.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">What is the LoggerMessage source generator and when is it worth using?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>It's a compile-time feature: you declare a partial method decorated with <code>[LoggerMessage(EventId, Level, Message)]</code>, and the compiler generates optimized logging code — cached delegates, no boxing of value-type arguments, and a built-in "is this level enabled?" check. It's worth using on hot paths (middleware, tight loops, high-throughput services) where ordinary extension methods allocate on every call, and in teams that want a central, numbered catalog of log events. For ordinary business code, plain <code>LogInformation</code> is fine.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">How would you design logging for correlation across services in a distributed system?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Ensure every log line carries a shared correlation identifier so one user action can be followed across services. Practically: rely on W3C trace context (the <code>traceparent</code> header), which ASP.NET Core and HttpClient propagate automatically; surface the TraceId/RequestId in logs via scopes or an enricher; and ship all services' logs to one central, structured store (Seq, Elasticsearch, a cloud APM) where you can filter by that ID. For deeper visibility, pair logging with distributed tracing (OpenTelemetry) — logs tell you <em>what</em> happened, traces show <em>where time went</em>.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">What are the performance considerations of heavy logging, and how do you mitigate them?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Costs come from three places: building messages (string formatting, boxing), I/O to sinks (disk, network), and log <em>volume</em> (storage, ingestion fees). Mitigations: use templates instead of interpolation so filtered messages cost almost nothing; guard expensive argument computation with <code>IsEnabled(LogLevel.Debug)</code>; use the LoggerMessage generator on hot paths; write to sinks asynchronously/buffered where supported; keep production minimums at Information or above with per-namespace overrides; and prefer one rich event over five thin ones (e.g., Serilog's request logging emits a single summarized line per HTTP request).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">Console noise: production logs are drowning in framework messages. Walk me through your fix.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>First, identify the noisy categories (they're printed with each message — usually <code>Microsoft.AspNetCore.*</code> and <code>Microsoft.EntityFrameworkCore.*</code>). Then raise their minimums via category overrides — e.g., <code>"Microsoft.AspNetCore": "Warning"</code> — while keeping application namespaces at Information. With Serilog, the same idea lives under <code>MinimumLevel:Override</code>, and replacing the framework's many per-request messages with <code>UseSerilogRequestLogging()</code> gives one clean summary line per request. Finally, verify the volume drop and confirm errors still surface — the goal is less noise, not less signal.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">When would you destructure an object with {@Obj}, and what are the risks?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Destructuring (<code>{@Order}</code> in Serilog) stores an object's properties as structured data rather than its <code>ToString()</code>. It's great for small, stable DTOs where you genuinely want the fields queryable. Risks: accidentally serializing huge object graphs (an EF entity dragging its navigation properties), leaking sensitive fields buried in the object, and creating high-cardinality noise that bloats storage. Mitigate by destructuring purpose-built log DTOs, configuring destructuring policies/attributes to redact fields, and capping depth.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">Logging vs. metrics vs. tracing — how do they differ and when do you reach for each?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>They're the three pillars of observability. <strong>Logs</strong> are discrete, detailed event records — best for investigating <em>what exactly happened</em> in one case. <strong>Metrics</strong> are cheap numeric aggregates over time (requests/sec, error rate, memory) — best for dashboards and alerting on trends. <strong>Traces</strong> follow one request across services with timing per step — best for finding <em>where latency or failure occurs</em> in a distributed flow. Mature systems use all three, increasingly through OpenTelemetry, with logs enriched by trace IDs so you can pivot between pillars.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">A teammate proposes logging every method's entry and exit at Information level. Your response?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Push back constructively: that pattern floods logs with low-value noise, raises costs, and buries real signals. Information should mark <em>business-meaningful</em> events (order placed, payment failed), not code mechanics. If method-level flow is genuinely needed, put it at Trace/Debug so it's off by default and can be enabled per namespace during an investigation. Better still, get flow information from tracing (spans time the operations automatically) and keep logs for events and decisions. Set the norm in a short team logging guideline: what each level means, standard property names, and what never goes in a log.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Master Q1–Q7 until they're reflexive, then drill Q8, Q9, and Q14 — structured logging and the interpolation trap are the most common interview probes for this topic. Save Serilog internals (Q17) and observability strategy (Q19, Q23) for the final pass; they build directly on the earlier answers.</p>
+  </div>
+</section>
+
+<footer>Day 6 of the .NET series · Logging: ILogger&lt;T&gt;, Levels, Categories, Structured Logging &amp; Serilog · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

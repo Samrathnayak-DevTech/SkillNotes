@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>C# Type System — Value vs Reference, Boxing, ref/out/in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0; --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea; --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3; --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink); font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;}
+#progress{position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .08s linear;}
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+:not(pre) > code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--accent);
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;}
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;
+  background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;background:transparent;
+  border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;color:var(--code-ink);
+  background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent);font-weight:700;}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:24px 22px;margin:24px 0;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+/* memory diagram */
+.mem{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:24px 0;}
+.mem-col{border:1.5px solid var(--line);border-radius:14px;padding:16px;background:#fff;}
+.mem-col h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+  margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+.mem-col.stack h5{color:var(--blue);} .mem-col.heap h5{color:var(--green);}
+.mem-slot{font-family:"JetBrains Mono",monospace;font-size:12.5px;border:1px solid var(--line);border-radius:8px;
+  padding:8px 11px;margin-bottom:8px;background:var(--bg-soft);}
+.mem-slot b{color:var(--ink);} .mem-slot .ref-mark{color:var(--accent);}
+.mem-slot.obj{background:var(--green-soft);border-color:var(--green);}
+.mem-slot.valbox{background:var(--blue-soft);border-color:var(--blue);}
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+.mindmap{display:flex;flex-direction:column;align-items:center;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;font-size:1.1rem;
+  padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);transition:transform .28s ease;
+    box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+  .mem{grid-template-columns:1fr;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">C# Type System</div>
+    <nav>
+      <div class="nav-group">
+        <h4>Two Families</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> The Type System</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> Value Types</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Reference Types</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Stack vs Heap</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Value vs Reference in Action</a>
+      </div>
+      <div class="nav-group">
+        <h4>Boxing</h4>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Boxing &amp; Unboxing</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> Avoiding Boxing</a>
+      </div>
+      <div class="nav-group">
+        <h4>Passing by Reference</h4>
+        <a class="nav-link" href="#s08"><span class="n">08</span> ref</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> out</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> in &amp; ref readonly</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> ref / out / in Compared</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Quick Recap</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// C# &nbsp;·&nbsp; how data is stored &amp; passed</p>
+      <h1>The C# Type System 📦</h1>
+      <p class="lede">
+        Every piece of data in C# is either a <b>value type</b> or a <b>reference type</b>. That one
+        distinction quietly decides what happens when you copy a variable, pass it to a method, or store it in a
+        collection — and it's behind some of the most common "wait, why did that change?" bugs. This page
+        unpacks the two families, the <b>stack vs heap</b> story, the cost of <b>boxing</b>, and the
+        <b>ref / out / in</b> keywords for passing data by reference. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🧊 <b>Value types</b></span>
+        <span class="chip">🔗 <b>Reference types</b></span>
+        <span class="chip">🗂️ <b>Stack vs Heap</b></span>
+        <span class="chip">📦 <b>Boxing</b></span>
+        <span class="chip">↔️ <b>ref / out / in</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- 01 -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>The Type System</h2></div>
+      <p class="sec-sub">Two families of types, one simple question: does the variable hold the data itself, or
+        just directions to where the data lives?</p>
+
+      <p>In C#, every type belongs to one of two families. The difference comes down to <strong>what a variable
+        actually stores</strong>:</p>
+      <ul>
+        <li><strong>Value types</strong> store the <em>actual data</em> directly inside the variable.</li>
+        <li><strong>Reference types</strong> store a <em>reference</em> (think: an address) that points to the data,
+          which lives elsewhere.</li>
+      </ul>
+
+      <div class="callout analogy">
+        <span class="tag">🏠 Analogy</span>
+        <p>A <strong>value type</strong> is like writing a phone number directly on a sticky note — the note <em>is</em>
+        the information. A <strong>reference type</strong> is like writing "the number is in the address book on the
+        shelf" — the note just tells you where to look. Copy the value-type note and you have a second independent
+        number; copy the reference-type note and both notes still point to the <em>same</em> address book.</p>
+      </div>
+
+      <h3>The map for this page 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">📦 C# Type System</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>🧊 Value Types</h5>
+            <ul>
+              <li><code>int, double, bool, char</code></li>
+              <li><code>struct</code>, <code>enum</code>, <code>DateTime</code></li>
+              <li>Hold data directly</li>
+              <li>Copied on assignment</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🔗 Reference Types</h5>
+            <ul>
+              <li><code>class</code>, <code>string</code>, arrays</li>
+              <li><code>object</code>, delegates, interfaces</li>
+              <li>Hold a reference to data</li>
+              <li>Reference copied, data shared</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>📦 Boxing</h5>
+            <ul>
+              <li>Value type → object (heap)</li>
+              <li>Implicit; unboxing is explicit</li>
+              <li>Allocates &amp; copies</li>
+              <li>Costs performance</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>↔️ ref / out / in</h5>
+            <ul>
+              <li>Pass by reference</li>
+              <li><code>ref</code> read + write</li>
+              <li><code>out</code> must assign</li>
+              <li><code>in</code> read-only</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why it matters</span>
+        <p>This isn't trivia. Value-vs-reference behavior explains why changing one variable sometimes affects another
+        and sometimes doesn't, why passing a list to a method can mutate the caller's list, and why certain code is
+        secretly slow. Master this one idea and a huge category of bugs becomes predictable.</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>Value Types</h2></div>
+      <p class="sec-sub">The variable <em>is</em> the data. Copying a value type makes a fully independent copy.</p>
+
+      <p>A <strong>value type</strong> holds its data directly. When you assign one value-type variable to another, the
+        data is <strong>copied</strong> — you end up with two independent values that don't affect each other.</p>
+
+      <h3>What counts as a value type? 🧊</h3>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔢</span><h4>Numbers &amp; basics</h4><p><code>int</code>, <code>long</code>, <code>double</code>, <code>decimal</code>, <code>float</code>, <code>byte</code> — all value types.</p></div>
+        <div class="card"><span class="glyph">✔️</span><h4>bool &amp; char</h4><p><code>bool</code> (true/false) and <code>char</code> (a single character) hold their data directly.</p></div>
+        <div class="card"><span class="glyph">🧱</span><h4>struct</h4><p>Custom value types you define, like a small <code>Point</code> with X and Y. Bundles data with value semantics.</p></div>
+        <div class="card"><span class="glyph">🏷️</span><h4>enum</h4><p>A named set of constants (e.g. <code>Color.Red</code>). Backed by an integer — a value type.</p></div>
+        <div class="card"><span class="glyph">📅</span><h4>DateTime, TimeSpan</h4><p>Common built-in structs from the .NET library — also value types.</p></div>
+        <div class="card"><span class="glyph">❓</span><h4>Nullable&lt;T&gt;</h4><p><code>int?</code> is a value type that can also be <code>null</code>. Still a struct under the hood.</p></div>
+      </div>
+
+      <h3>Copy semantics in action ✂️</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">int</span> a = <span class="num">10</span>;
+<span class="kw">int</span> b = a;     <span class="cmt">// b gets a COPY of the value 10</span>
+b = <span class="num">99</span>;        <span class="cmt">// changing b does NOT touch a</span>
+
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(a);   <span class="cmt">// 10  -- unchanged</span>
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(b);   <span class="cmt">// 99</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Default values, never null</span>
+        <p>Value types always have a value. An uninitialized <code>int</code> is <code>0</code>, a <code>bool</code> is
+        <code>false</code>. A plain value type can't be <code>null</code> — that's why <code>int?</code> (nullable) exists
+        for when you need "no value."</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Mental shortcut</span>
+        <p>Assigning a value type = photocopying a document. Each person has their own copy; scribbling on yours leaves
+        everyone else's untouched.</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Reference Types</h2></div>
+      <p class="sec-sub">The variable holds directions to the data. Copying the variable copies the directions — not the data.</p>
+
+      <p>A <strong>reference type</strong> variable doesn't hold the object itself; it holds a <strong>reference</strong>
+        to where the object lives. Assign one reference variable to another and you copy the <em>reference</em>, so both
+        now point to the <strong>same single object</strong>. Change the object through one, and the other sees the change.</p>
+
+      <h3>What counts as a reference type? 🔗</h3>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🏛️</span><h4>class</h4><p>The big one. Any type you declare with <code>class</code> (and records by default) is a reference type.</p></div>
+        <div class="card"><span class="glyph">🔤</span><h4>string</h4><p>A reference type — though it behaves immutably, so it <em>feels</em> value-like in everyday use.</p></div>
+        <div class="card"><span class="glyph">🗃️</span><h4>Arrays &amp; collections</h4><p><code>int[]</code>, <code>List&lt;T&gt;</code>, <code>Dictionary</code> — all reference types, even an array of value types.</p></div>
+        <div class="card"><span class="glyph">🎯</span><h4>object, delegates, interfaces</h4><p><code>object</code> is the root of all types; delegates and interfaces are reference types too.</p></div>
+      </div>
+
+      <h3>Reference semantics in action 🔗</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">Box</span> { <span class="kw">public int</span> Value; }
+
+<span class="kw">var</span> a = <span class="kw">new</span> <span class="ty">Box</span> { Value = <span class="num">10</span> };
+<span class="kw">var</span> b = a;        <span class="cmt">// b copies the REFERENCE -- same object as a</span>
+b.Value = <span class="num">99</span>;    <span class="cmt">// changes the one shared object</span>
+
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(a.Value);  <span class="cmt">// 99  -- a sees it too!</span>
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(b.Value);  <span class="cmt">// 99</span></code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The classic bug</span>
+        <p>This is exactly where beginners get burned: "I copied the list and modified the copy, but the original
+        changed too!" You didn't copy the list — you copied a reference <em>to</em> it. To get an independent copy of a
+        reference type, you must explicitly clone it (e.g. <code>new List&lt;int&gt;(original)</code>).</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">📄 Analogy</span>
+        <p>A reference type is a shared Google Doc. Emailing someone "the link" (the reference) doesn't create a second
+        document — you're both editing the same one. Value types are emailing a PDF attachment: each recipient gets their
+        own separate copy.</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Stack vs Heap</h2></div>
+      <p class="sec-sub">Where data physically lives — the useful mental model, plus the honest truth about it.</p>
+
+      <p>You'll constantly hear: <em>"value types go on the stack, reference types go on the heap."</em> As a starting
+        model it's helpful. Here's what each region is:</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🗂️</span><h4>The Stack</h4><p>Fast, orderly scratch space for a method's local variables. Grows and shrinks automatically as methods are called and return. No garbage collector needed.</p></div>
+        <div class="card"><span class="glyph">🏔️</span><h4>The Heap</h4><p>A larger, flexible pool where objects (reference types) live. Cleaned up by the garbage collector when nothing references them anymore.</p></div>
+      </div>
+
+      <h3>A picture of memory 🖼️</h3>
+      <p>Consider <code>int n = 5;</code> and <code>var box = new Box();</code>. Here's roughly how they sit:</p>
+      <div class="mem">
+        <div class="mem-col stack">
+          <h5>🗂️ Stack</h5>
+          <div class="mem-slot valbox"><b>n</b> = 5 <span style="color:var(--blue);">(the value itself)</span></div>
+          <div class="mem-slot"><b>box</b> = <span class="ref-mark">⟶ ref to #A1</span></div>
+        </div>
+        <div class="mem-col heap">
+          <h5>🏔️ Heap</h5>
+          <div class="mem-slot obj"><b>#A1:</b> Box { Value = 0 }</div>
+          <div class="mem-slot" style="opacity:.5;">…other objects…</div>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:.88rem;color:var(--ink-soft);margin-top:-4px;">
+        The value <code>5</code> sits right in the stack slot. <code>box</code> sits on the stack too, but only holds a
+        <em>reference</em> to the actual Box object on the heap.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The honest nuance</span>
+        <p>"Value types live on the stack" is an oversimplification. A value type that's a <strong>field inside a class</strong>
+        lives on the <em>heap</em>, as part of that object. Captured variables, <code>async</code> state, and arrays of
+        structs also live on the heap. The truly accurate statement: <strong>where a value is stored is an implementation
+        detail</strong> — what's guaranteed is the <em>copy semantics</em> (values copy, references share). Use the
+        stack/heap model to build intuition, but lean on copy semantics for correctness.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why the stack is cheap</span>
+        <p>Stack memory is reclaimed instantly when a method returns — no garbage collector involved. That's why making
+        small, short-lived data a <code>struct</code> can reduce GC pressure: fewer heap allocations to clean up.</p>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Value vs Reference in Action</h2></div>
+      <p class="sec-sub">The two behaviors that trip everyone up: assignment, and passing to a method.</p>
+
+      <h3>Side by side ⚖️</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Behavior</th><th>Value type</th><th>Reference type</th></tr></thead>
+          <tbody>
+            <tr><td>Variable holds</td><td>The actual data</td><td>A reference to the data</td></tr>
+            <tr><td>On assignment (<code>b = a</code>)</td><td>Copies the data — independent</td><td>Copies the reference — shared object</td></tr>
+            <tr><td>Can be <code>null</code>?</td><td>No (unless <code>Nullable&lt;T&gt;</code>)</td><td>Yes</td></tr>
+            <tr><td>Default value</td><td><code>0</code>, <code>false</code>, etc.</td><td><code>null</code></td></tr>
+            <tr><td>Examples</td><td><code>int</code>, <code>struct</code>, <code>enum</code>, <code>bool</code></td><td><code>class</code>, <code>string</code>, arrays, <code>object</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Passing to a method 📤</h3>
+      <p>By default, C# passes arguments <strong>by value</strong> — meaning the method gets a <em>copy of the variable</em>.
+        For a value type, that's a copy of the data. For a reference type, that's a copy of the <em>reference</em> (still
+        pointing at the same object). Watch the difference:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">void</span> <span class="fn">TryChangeInt</span>(<span class="kw">int</span> x)   { x = <span class="num">99</span>; }        <span class="cmt">// edits a local copy</span>
+<span class="kw">void</span> <span class="fn">TryChangeList</span>(<span class="ty">List</span>&lt;<span class="kw">int</span>&gt; list) { list.<span class="fn">Add</span>(<span class="num">99</span>); } <span class="cmt">// edits the shared object</span>
+
+<span class="kw">int</span> number = <span class="num">10</span>;
+<span class="fn">TryChangeInt</span>(number);
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(number);       <span class="cmt">// 10  -- the copy was changed, not 'number'</span>
+
+<span class="kw">var</span> nums = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="kw">int</span>&gt; { <span class="num">1</span>, <span class="num">2</span> };
+<span class="fn">TryChangeList</span>(nums);
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(nums.Count);     <span class="cmt">// 3  -- the shared list really got a new item</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Two layers, don't conflate them</span>
+        <p>"Passed by value" (the default) means the <em>reference</em> is copied — but it still points at the same object,
+        so the object's contents can be changed. What you <em>can't</em> do (without <code>ref</code>) is make the caller's
+        variable point at a <em>different</em> object. Reassigning the parameter inside the method only changes the local
+        copy. That distinction is the heart of section 08.</p>
+      </div>
+
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell highlight-blue"><div class="val">value type</div><div class="idx">copy made</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell"><div class="val">method edits copy</div><div class="idx">original safe ✓</div></div>
+          <div class="arr-cell highlight-green" style="margin-left:30px"><div class="val">reference type</div><div class="idx">reference copied</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell neg"><div class="val">edits shared object</div><div class="idx">caller sees it!</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Boxing &amp; Unboxing</h2></div>
+      <p class="sec-sub">How a value type gets wrapped up so it can pretend to be an object — and unwrapped again.</p>
+
+      <p>Sometimes C# needs to treat a value type (like an <code>int</code>) as an <code>object</code>. Since value types
+        and reference types are stored differently, the runtime has to <strong>wrap the value in a heap object</strong>
+        first. That wrapping is called <strong>boxing</strong>. The reverse — extracting the value back out — is
+        <strong>unboxing</strong>.</p>
+
+      <h3>The definitions 📦</h3>
+      <ul>
+        <li><strong>Boxing</strong> — converting a value type to <code>object</code> (or an interface it implements). It
+          <em>allocates a new object on the heap</em> and <em>copies the value into it</em>. Boxing is <strong>implicit</strong>
+          (happens automatically).</li>
+        <li><strong>Unboxing</strong> — converting that boxed object back to its value type. It checks the type, then copies
+          the value back out. Unboxing is <strong>explicit</strong> (you must cast).</li>
+      </ul>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">int</span> i = <span class="num">123</span>;        <span class="cmt">// a value type, on the stack</span>
+<span class="kw">object</span> o = i;       <span class="cmt">// BOXING (implicit): new heap object, value copied in</span>
+<span class="kw">int</span> j = (<span class="kw">int</span>)o;     <span class="cmt">// UNBOXING (explicit cast): value copied back out</span>
+
+<span class="cmt">// Because boxing COPIES, the box is independent of the original:</span>
+i = <span class="num">456</span>;
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(o);    <span class="cmt">// 123  -- the box kept the old value</span></code></pre>
+      </div>
+
+      <h3>What happens in memory 🔬</h3>
+      <div class="flow">
+        <div class="flow-step"><b><span class="st-icon">🧊</span>Start: value on the stack</b><small><code>int i = 123;</code></small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight"><b><span class="st-icon">📦</span>Box: allocate heap object + copy value in</b><small><code>object o = i;</code> — a <code>System.Object</code> wrapper now holds 123</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">🔍</span>Unbox: verify type, then copy value out</b><small><code>int j = (int)o;</code> — wrong type throws <code>InvalidCastException</code></small></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Unboxing pitfalls</span>
+        <p>Unboxing is strict. You must cast to the <em>exact</em> boxed type: unboxing a boxed <code>int</code> as
+        <code>(long)</code> throws <strong>InvalidCastException</strong>. Unboxing <code>null</code> throws
+        <strong>NullReferenceException</strong>. There's no "close enough."</p>
+      </div>
+
+      <h3>When does boxing sneak in? 👀</h3>
+      <ul>
+        <li>Assigning a value type to an <code>object</code> variable.</li>
+        <li>Passing a value type to a method expecting <code>object</code> (e.g. old <code>string.Format</code> patterns).</li>
+        <li>Storing value types in non-generic collections like <code>ArrayList</code> (which stores everything as <code>object</code>).</li>
+        <li>Calling an interface method on a value type when treated through the interface.</li>
+      </ul>
+    </section>
+
+    <!-- 07 -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Avoiding Boxing</h2></div>
+      <p class="sec-sub">Boxing is correct but costly. In hot paths, eliminating it is free performance.</p>
+
+      <p>Each box is a <strong>heap allocation</strong>, plus a copy, plus eventual <strong>garbage-collection work</strong>.
+        One box is nothing. A million boxes in a tight loop is a real performance problem. The good news: modern C# rarely
+        forces you to box — <strong>generics</strong> were designed largely to avoid it.</p>
+
+      <h3>The classic fix: generics 🛠️</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// ❌ ArrayList stores everything as object -> boxes every int</span>
+<span class="kw">var</span> oldList = <span class="kw">new</span> <span class="ty">ArrayList</span>();
+oldList.<span class="fn">Add</span>(<span class="num">42</span>);              <span class="cmt">// BOXING happens here</span>
+<span class="kw">int</span> x = (<span class="kw">int</span>)oldList[<span class="num">0</span>];     <span class="cmt">// UNBOXING happens here</span>
+
+<span class="cmt">// ✅ List&lt;int&gt; stores ints directly -> no boxing at all</span>
+<span class="kw">var</span> goodList = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="kw">int</span>&gt;();
+goodList.<span class="fn">Add</span>(<span class="num">42</span>);             <span class="cmt">// no box -- stored as a real int</span>
+<span class="kw">int</span> y = goodList[<span class="num">0</span>];          <span class="cmt">// no unbox</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Practical rules to dodge boxing</span>
+        <p>Prefer <strong>generic collections</strong> (<code>List&lt;T&gt;</code>, <code>Dictionary&lt;K,V&gt;</code>) over
+        the legacy non-generic ones (<code>ArrayList</code>, <code>Hashtable</code>). Use generic methods/constraints
+        instead of <code>object</code> parameters. Implement <code>IEquatable&lt;T&gt;</code> on structs so comparisons
+        don't box. And don't reach for <code>object</code> when a specific type will do.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">📦 Analogy</span>
+        <p>Boxing is like couriering a single coin inside a padded shipping box every time you want to hand it to someone
+        who "only accepts parcels." It works, but if you're handing over millions of coins, all that packing, shipping,
+        and recycling of boxes dominates the cost. Generics let you just hand over the coin directly.</p>
+      </div>
+
+      <div class="complexity-badge"><span class="lab">boxing</span><span class="val">heap alloc + copy</span></div>
+      <div class="complexity-badge"><span class="lab">unboxing</span><span class="val">type check + copy</span></div>
+      <div class="complexity-badge"><span class="lab">in a tight loop</span><span class="val">GC pressure ⚠️</span></div>
+    </section>
+
+    <!-- 08 -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>ref</h2></div>
+      <p class="sec-sub">Pass the actual variable, not a copy — so the method can read <em>and</em> write the caller's variable.</p>
+
+      <p>By default arguments are passed by value (a copy). The <strong><code>ref</code></strong> keyword changes that: the
+        method receives an <strong>alias</strong> to the caller's variable. Whatever the method assigns is reflected back
+        in the caller — even for value types, and even reassigning to point at a brand-new object.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 ref rules</span>
+        <p>The variable <strong>must be initialized before</strong> the call. The method <em>may</em> read and write it.
+        You must write <code>ref</code> at <strong>both</strong> the method definition <em>and</em> the call site — the
+        caller is forced to acknowledge "yes, you may modify my variable."</p>
+      </div>
+
+      <h3>The textbook example: swap 🔄</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">void</span> <span class="fn">Swap</span>(<span class="kw">ref int</span> x, <span class="kw">ref int</span> y)
+{
+    <span class="kw">int</span> temp = x;
+    x = y;
+    y = temp;
+}
+
+<span class="kw">int</span> a = <span class="num">1</span>, b = <span class="num">2</span>;
+<span class="fn">Swap</span>(<span class="kw">ref</span> a, <span class="kw">ref</span> b);   <span class="cmt">// 'ref' required at the call site too</span>
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"{a} {b}"</span>);  <span class="cmt">// 2 1  -- the caller's variables really swapped</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Use sparingly</span>
+        <p>Most methods should just return a value. Reach for <code>ref</code> when you genuinely need to modify the
+        caller's variable in place, or for performance with very large structs (avoiding a big copy). If you're returning
+        a value <em>and</em> a success flag, prefer the <code>out</code> pattern in the next section.</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>out</h2></div>
+      <p class="sec-sub">For methods that hand a value <em>back out</em> through a parameter — the method promises to assign it.</p>
+
+      <p><strong><code>out</code></strong> is like <code>ref</code> but for <em>output</em>. The caller does
+        <strong>not</strong> need to initialize the variable first, and the method is <strong>required to assign</strong> it
+        before returning. It's how a method can effectively return more than one value.</p>
+
+      <h3>The Try pattern 🧪</h3>
+      <p>You'll see <code>out</code> most often in the <strong>Try…</strong> pattern: return <code>true/false</code> for
+        success, and hand the actual result back through an <code>out</code> parameter.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">string</span> input = <span class="str">"42"</span>;
+
+<span class="cmt">// 'out var number' declares the variable right at the call site</span>
+<span class="kw">if</span> (<span class="kw">int</span>.<span class="fn">TryParse</span>(input, <span class="kw">out var</span> number))
+{
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"Parsed: {number}"</span>);  <span class="cmt">// Parsed: 42</span>
+}
+<span class="kw">else</span>
+{
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Not a number"</span>);
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 out vs ref in one line</span>
+        <p><code>ref</code> = "here's my value, you may change it" (must be initialized first). <code>out</code> = "give me
+        a value back" (the method must set it). Both alias the caller's variable; both require the keyword at the call site.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Modern conveniences</span>
+        <p>You can declare the variable inline with <code>out var x</code>, and ignore unwanted outputs with a discard:
+        <code>int.TryParse(s, out _)</code>. The <code>Try…</code> pattern is the idiomatic way to avoid exceptions for
+        operations that can simply fail.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>in &amp; ref readonly</h2></div>
+      <p class="sec-sub">Pass by reference for speed, but promise <em>not</em> to modify it — read-only references.</p>
+
+      <p>Sometimes you want the <em>performance</em> of passing by reference (no big copy) but you don't intend to modify
+        the argument. That's what <strong><code>in</code></strong> is for. Introduced in <strong>C# 7.2</strong>, an
+        <code>in</code> parameter is a <strong>read-only reference</strong>: the method can read it but cannot assign to it.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">struct</span> <span class="ty">BigStruct</span> { <span class="kw">public double</span> A, B, C, D, E, F; }
+
+<span class="cmt">// 'in' avoids copying the whole struct, but forbids modifying it</span>
+<span class="kw">double</span> <span class="fn">Sum</span>(<span class="kw">in</span> <span class="ty">BigStruct</span> s)
+{
+    <span class="cmt">// s.A = 0;   // ❌ compile error: cannot assign to an 'in' parameter</span>
+    <span class="kw">return</span> s.A + s.B + s.C + s.D + s.E + s.F;
+}
+
+<span class="kw">var</span> data = <span class="kw">new</span> <span class="ty">BigStruct</span>();
+<span class="kw">double</span> total = <span class="fn">Sum</span>(data);     <span class="cmt">// 'in' keyword optional at call site</span></code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The defensive-copy trap</span>
+        <p>If you call a method on an <code>in</code> struct that <em>might</em> mutate it, the compiler quietly makes a
+        hidden "defensive copy" to protect the read-only guarantee — which can erase the performance benefit you wanted.
+        The fix: make the struct a <strong><code>readonly struct</code></strong>, so the compiler knows nothing can mutate
+        it and skips the copy.</p>
+      </div>
+
+      <h3>ref readonly — the explicit cousin (C# 12) 🆕</h3>
+      <p>C# 12 added <strong><code>ref readonly</code></strong>. It also passes a read-only reference, but unlike
+        <code>in</code> it <strong>requires the caller to be explicit</strong> — you must write <code>in</code> or
+        <code>ref</code> at the call site, making it obvious a reference is being passed. It also warns if you pass a
+        throwaway value (an "rvalue") instead of a real variable.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 in vs ref readonly</span>
+        <p>Both mean "by reference, read-only." <code>in</code> lets the caller omit the keyword (silent), and accepts
+        literals/expressions. <code>ref readonly</code> forces the caller to annotate and wants a real variable — clearer
+        intent for APIs that capture or return that reference.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Not everywhere</span>
+        <p>You can't use <code>ref</code>, <code>out</code>, or <code>in</code> parameters on <code>async</code> methods or
+        iterator methods (those using <code>yield return</code>). Those methods pause and resume, which is incompatible
+        with holding a live reference to the caller's variable.</p>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>ref / out / in Compared</h2></div>
+      <p class="sec-sub">All three pass by reference. The difference is who initializes, who may write, and what the caller must say.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Modifier</th><th>Caller inits first?</th><th>Method may write?</th><th>Method must write?</th><th>Keyword at call site?</th><th>Typical use</th></tr></thead>
+          <tbody>
+            <tr><td><code>ref</code></td><td>Yes</td><td>Yes</td><td>No</td><td>Required</td><td>Modify caller's variable in place (swap)</td></tr>
+            <tr><td><code>out</code></td><td>No</td><td>Yes</td><td>Yes</td><td>Required</td><td>Return extra values (Try pattern)</td></tr>
+            <tr><td><code>in</code></td><td>Yes</td><td>No (read-only)</td><td>No</td><td>Optional</td><td>Pass large structs cheaply, no mutation</td></tr>
+            <tr><td><code>ref readonly</code></td><td>Yes</td><td>No (read-only)</td><td>No</td><td>Required (<code>in</code>/<code>ref</code>)</td><td>Read-only ref with explicit caller intent</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>One picture 🧭</h3>
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell highlight"><div class="val">ref</div><div class="idx">read + write</div></div>
+          <div class="arr-cell highlight-green"><div class="val">out</div><div class="idx">must write</div></div>
+          <div class="arr-cell highlight-blue"><div class="val">in</div><div class="idx">read-only</div></div>
+          <div class="arr-cell" style="--x:1"><div class="val" style="background:var(--purple-soft);border-color:var(--purple);color:var(--purple);font-weight:700;">ref readonly</div><div class="idx">read-only, explicit</div></div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ How to pick</span>
+        <p>Need to send a value <em>back</em>? → <code>out</code>. Need to modify in place? → <code>ref</code>. Just want to
+        avoid copying a big struct you won't change? → <code>in</code> (and make it a <code>readonly struct</code>). Want
+        that read-only-ref behavior but with the caller forced to acknowledge it? → <code>ref readonly</code>. When in
+        doubt, plain by-value parameters and return values are the simplest and usually right.</p>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea. If you can explain each card aloud, you've got the type system.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🧊 Value type</h4><p>The variable holds the data itself; assigning copies it, so copies are independent.</p></div>
+        <div class="recap-card"><h4>🔗 Reference type</h4><p>The variable holds a reference; assigning copies the reference, so both share one object.</p></div>
+        <div class="recap-card"><h4>🗂️ Stack vs heap</h4><p>A useful model (values on stack, objects on heap) — but storage location is really an implementation detail; trust copy semantics.</p></div>
+        <div class="recap-card"><h4>📤 Pass by value</h4><p>The default: methods get a copy of the variable (for refs, a copy of the reference to the same object).</p></div>
+        <div class="recap-card"><h4>📦 Boxing</h4><p>Wrapping a value type in a heap object so it can act as <code>object</code> — implicit, allocates, copies.</p></div>
+        <div class="recap-card"><h4>🔍 Unboxing</h4><p>Casting a boxed object back to its exact value type — explicit; wrong type throws.</p></div>
+        <div class="recap-card"><h4>🛠️ Avoid boxing</h4><p>Prefer generics (<code>List&lt;T&gt;</code>) over <code>ArrayList</code> to skip heap allocations in hot paths.</p></div>
+        <div class="recap-card"><h4>↔️ ref</h4><p>Pass an alias the method can read and write; must be initialized; keyword required both sides.</p></div>
+        <div class="recap-card"><h4>📥 out</h4><p>Pass an alias the method must assign; no init needed; powers the Try pattern.</p></div>
+        <div class="recap-card"><h4>🔒 in / ref readonly</h4><p>Read-only references for passing big structs cheaply; <code>ref readonly</code> forces explicit call-site intent.</p></div>
+      </div>
+
+      <h3>Summary table 📊</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>Family / role</th><th>Key behavior</th><th>Watch out for</th></tr></thead>
+          <tbody>
+            <tr><td>Value type</td><td><code>int</code>, <code>struct</code>, <code>enum</code></td><td>Copied on assign</td><td>Can't be null (use <code>T?</code>)</td></tr>
+            <tr><td>Reference type</td><td><code>class</code>, <code>string</code>, arrays</td><td>Shared on assign</td><td>"Copy" only copies the reference</td></tr>
+            <tr><td>Boxing</td><td>Value → object</td><td>Implicit, heap alloc + copy</td><td>GC pressure in loops</td></tr>
+            <tr><td>Unboxing</td><td>Object → value</td><td>Explicit cast</td><td>Exact type or it throws</td></tr>
+            <tr><td><code>ref</code></td><td>By reference</td><td>Read + write</td><td>Must init; keyword both sides</td></tr>
+            <tr><td><code>out</code></td><td>By reference</td><td>Method must assign</td><td>Great for Try pattern</td></tr>
+            <tr><td><code>in</code> / <code>ref readonly</code></td><td>By reference (read-only)</td><td>No mutation</td><td>Defensive copies; use <code>readonly struct</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 13 -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a clear answer. Tagged by level — Junior (0–2 yrs),
+        Mid (2–5 yrs), Senior (5–7 yrs). Written for someone with no prior coding background.</p>
+
+      <h3>🌱 Junior — fundamentals (0–2 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q1</span> What's the difference between a value type and a reference type? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A <strong>value type</strong> stores the data directly in the variable, so copying the variable makes
+        an independent copy of the data. A <strong>reference type</strong> stores a reference (an address) to data that lives
+        elsewhere, so copying the variable copies the reference — both copies point to the <em>same</em> object. Changing the
+        object through one is visible through the other.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span> Give examples of each. <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><strong>Value types:</strong> <code>int</code>, <code>double</code>, <code>bool</code>, <code>char</code>,
+        <code>struct</code>, <code>enum</code>, <code>DateTime</code>. <strong>Reference types:</strong> <code>class</code>,
+        <code>string</code>, arrays, <code>object</code>, delegates, interfaces. A handy memory aid: built-in primitives and
+        <code>struct</code>/<code>enum</code> are values; anything you build with <code>class</code> is a reference.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span> Can a value type be null? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Not normally — a plain value type always holds some value (an uninitialized <code>int</code> is
+        <code>0</code>, a <code>bool</code> is <code>false</code>). If you need a value type that can also represent "no value,"
+        use a <strong>nullable</strong> type like <code>int?</code> (which is <code>Nullable&lt;int&gt;</code>). Reference types,
+        by contrast, can be <code>null</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span> Is <code>string</code> a value type or reference type? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>string</code> is a <strong>reference type</strong>. It can trip people up because it's
+        <em>immutable</em> — you can't change an existing string, so any "modification" actually creates a new string. That
+        immutability makes it <em>behave</em> a lot like a value type in everyday use, but technically it's a reference type.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span> What is boxing? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><strong>Boxing</strong> is converting a value type (like an <code>int</code>) into an <code>object</code>
+        so it can be treated as a reference type. The runtime allocates a new object on the heap and copies the value into it.
+        It happens automatically (implicitly), for example when you put an <code>int</code> into an <code>object</code> variable.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span> What is unboxing? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><strong>Unboxing</strong> is the reverse: extracting the value type back out of a boxed object by casting
+        it. Unlike boxing, unboxing is <strong>explicit</strong> — you must write the cast, e.g. <code>int j = (int)o;</code>.
+        You must cast to the exact original type, or it throws an error.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span> What do <code>ref</code> and <code>out</code> do, in plain terms? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Both let a method work directly on the caller's variable instead of a copy. <code>ref</code> means
+        "here's my variable, you can read and change it" (and it must already have a value). <code>out</code> means "give me a
+        value back through this" — the caller doesn't need to set it first, but the method must assign it before returning.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span> What happens when you pass an object to a method and change its contents? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Because the method receives a copy of the <em>reference</em> (still pointing at the same object),
+        changes to the object's contents <strong>are</strong> visible to the caller. For example, adding an item to a
+        <code>List</code> inside a method affects the caller's list. What you <em>can't</em> do is make the caller's variable
+        point at a different object — that would need <code>ref</code>.</p></div></details>
+
+      <h3>🟠 Mid-level — going deeper (2–5 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q9</span> Explain what "passed by value" really means for a reference type. <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>C# passes arguments by value by default. For a reference type, the <em>value</em> being copied is the
+        reference itself — not the object. So the method gets its own reference variable pointing at the same object. It can
+        mutate that shared object (visible to the caller), but reassigning the parameter to a new object only changes the local
+        copy of the reference, leaving the caller's variable untouched. To change which object the caller points to, use
+        <code>ref</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> Is the rule "value types live on the stack" actually true? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It's a useful simplification, not the whole truth. A value type that's a <strong>field of a class</strong>
+        lives on the heap inside that object; arrays of structs, captured variables, and async state can also put values on the
+        heap. The accurate framing is that <em>where</em> data is stored is an implementation detail — what's guaranteed is the
+        <strong>copy semantics</strong>: value types copy, reference types share. Reason about correctness from semantics, use
+        stack/heap for intuition.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> Why is boxing a performance concern? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Every box is a <strong>heap allocation</strong> plus a copy, and every allocated object eventually creates
+        work for the <strong>garbage collector</strong>. One box is negligible, but boxing inside a hot loop (say, millions of
+        iterations) generates lots of short-lived heap objects, increasing GC frequency and pauses. It also costs CPU for the
+        allocation and the copy on both box and unbox.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> How do you avoid boxing? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Use <strong>generics</strong>: prefer <code>List&lt;int&gt;</code> over <code>ArrayList</code>, and
+        <code>Dictionary&lt;K,V&gt;</code> over <code>Hashtable</code>, since generic collections store value types directly.
+        Use generic methods/constraints instead of <code>object</code> parameters. Implement <code>IEquatable&lt;T&gt;</code> on
+        structs so equality checks don't box. Generally, don't treat value types as <code>object</code> unless you must.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What exceptions can unboxing throw, and why? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Two. <strong>InvalidCastException</strong> if you unbox to a type that isn't the exact boxed type — a boxed
+        <code>int</code> cannot be unboxed as <code>long</code>, even though the values are compatible; there's no implicit
+        conversion during unboxing. <strong>NullReferenceException</strong> if you try to unbox a <code>null</code> reference,
+        since there's no value to extract.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> When would you choose a struct over a class? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Choose a <strong>struct</strong> for small, short-lived, immutable bundles of data with value semantics —
+        like a coordinate, a color, or a money amount — where copying is cheap and you want to avoid heap allocations and GC
+        pressure. Choose a <strong>class</strong> for larger objects, anything with identity, or things you want shared/mutated by
+        reference. A common guideline: keep structs small (roughly ≤16 bytes) and immutable; otherwise prefer a class.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> What's the difference between <code>ref</code> and <code>out</code> beyond syntax? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It's about the <em>contract</em>. <code>ref</code> requires the caller to initialize the variable first
+        and the method may or may not write it — it's two-way. <code>out</code> doesn't require initialization and the method
+        <em>must</em> assign a value before returning — it's effectively a second return value. Both alias the caller's variable
+        and require the keyword at the call site. <code>out</code> shines in the <code>Try…</code> pattern.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> What is the <code>in</code> modifier for? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>in</code> (added in C# 7.2) passes an argument <strong>by read-only reference</strong>. You get the
+        performance of avoiding a copy — useful for large structs in tight loops — while the compiler guarantees the method can't
+        modify the argument. The <code>in</code> keyword is optional at the call site. Pairing it with a <code>readonly struct</code>
+        avoids hidden "defensive copies."</p></div></details>
+
+      <h3>🔴 Senior — synthesis &amp; judgment (5–7 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain the defensive-copy problem with <code>in</code> parameters. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>An <code>in</code> parameter is a read-only reference. If you invoke an instance method or property on it
+        that the compiler can't prove leaves the struct unchanged, it inserts a hidden <strong>defensive copy</strong> before the
+        call to protect the read-only guarantee — copying the very struct you used <code>in</code> to avoid copying. The remedy is
+        to declare the type as a <strong><code>readonly struct</code></strong> (and use <code>readonly</code> members), so the
+        compiler knows nothing mutates and skips the copy, restoring the intended performance win.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> How does <code>ref readonly</code> differ from <code>in</code>, and when do you use it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Both pass a read-only reference. The difference is at the call site: <code>in</code> lets the caller omit
+        the keyword and accepts literals or expressions (rvalues), which can hide that a reference is being captured.
+        <strong><code>ref readonly</code></strong> (C# 12) requires the caller to write <code>in</code> or <code>ref</code> and warns
+        if you pass an rvalue. Use it for APIs that capture or return that reference, where it's important the caller knows they're
+        passing a real variable by reference. It adds clarity, not new capability.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> Why can't <code>ref</code>/<code>out</code>/<code>in</code> be used on async or iterator methods? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Both <code>async</code> methods and iterators (<code>yield return</code>) <strong>pause and resume</strong> — their
+        execution state is captured into a compiler-generated state machine that may outlive the original stack frame. A
+        by-reference parameter aliases a variable on the caller's stack, which may no longer exist when the method resumes. Since the
+        runtime can't safely hold that reference across an <code>await</code> or yield suspension, the compiler disallows these
+        modifiers (errors CS1988 / CS1623).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> A method that takes <code>object</code> and is called in a tight loop is slow. How do you reason about it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>An <code>object</code> parameter forces <strong>boxing</strong> of any value-type argument on every call —
+        a heap allocation and copy each iteration, driving up GC frequency and pauses. The fix is to make the method
+        <strong>generic</strong> (<code>void M&lt;T&gt;(T value)</code>), so value types flow through without boxing. If it must
+        interact polymorphically, a generic constraint or an interface that the struct implements via a generic context avoids the box.
+        Confirm with an allocation profiler that the boxing was the actual culprit before refactoring.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> How can a struct accidentally hurt performance instead of helping? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Structs are copied by value, so a <strong>large</strong> struct passed around frequently causes expensive
+        repeated copying that can be worse than a single heap allocation for a class. Mutable structs cause subtle bugs (you mutate a
+        copy, not the original) and trigger defensive copies in read-only contexts. Putting structs in places that box them (e.g.
+        non-generic collections, <code>object</code> parameters) defeats their purpose. Keep structs small, immutable, and pass big ones
+        by <code>in</code> reference with <code>readonly struct</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> Two variables of a reference type compare "equal" — what does that mean, and how is it different for structs? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>For most reference types, the default equality is <strong>reference equality</strong>: <code>==</code> /
+        <code>Equals</code> is true only if both variables point to the <em>same</em> object instance (unless the type overrides
+        equality, as <code>string</code> and records do for value-like comparison). For structs, the default is <strong>value
+        equality</strong>: field-by-field comparison. Note the default struct <code>Equals</code> can use reflection and may box,
+        which is slow — so performance-sensitive structs should override <code>Equals</code> and implement
+        <code>IEquatable&lt;T&gt;</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> When passing a reference type by <code>ref</code>, what extra power do you gain? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Without <code>ref</code>, a method can mutate the shared object but can't change which object the caller's
+        variable points to. With <code>ref</code> on a reference-type parameter, the method can <strong>reassign the caller's
+        variable to a different object</strong> (or to <code>null</code>), and the caller sees that change. It's a reference to a
+        reference. Useful but rare — for example, a method that may replace the caller's instance entirely. Most designs are clearer
+        returning the new value instead.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> Walk through exactly what happens at the IL/runtime level when you box an int. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The compiler emits a <code>box</code> IL instruction. At runtime the CLR allocates a new object on the
+        managed heap large enough to hold the <code>int</code> plus the standard object header (type info and sync block), copies the
+        4-byte value into it, and yields a reference to that boxed object. Unboxing emits an <code>unbox</code> (or
+        <code>unbox.any</code>) instruction that verifies the object's type matches exactly, then copies the value back out. The cost
+        is the allocation, the header overhead (a boxed int uses far more memory than 4 bytes), the copies, and the future GC work to
+        reclaim the box.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Lock down <strong>Junior</strong> first — the value-vs-reference distinction and basic boxing vocabulary underpin
+        everything. <strong>Mid</strong> connects them to real behavior (passing semantics, the stack/heap nuance, struct-vs-class
+        choices). <strong>Senior</strong> is judgment: defensive copies, when structs backfire, eliminating boxing, and the
+        reference-to-a-reference power of <code>ref</code>. If you can answer a question out loud without peeking, move on; the ones
+        you stumble on point straight back to the section to re-read.</p>
+      </div>
+
+      <p class="foot">All technical details verified against Microsoft Learn (boxing &amp; unboxing, method parameters and
+        modifiers, <code>readonly</code> keyword, <code>ref readonly</code> spec) and supporting references. Version notes:
+        <code>in</code> parameters arrived in C# 7.2; <code>ref readonly</code> in C# 12. This single
+        <code>02-type-system.html</code> file is fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+function updateProgress(){const h=document.documentElement;const max=h.scrollHeight-h.clientHeight;
+  progress.style.width=(max>0?(h.scrollTop/max)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});
+window.addEventListener('resize',updateProgress);updateProgress();
+
+const sidebar=document.getElementById('sidebar');const backdrop=document.getElementById('backdrop');
+function closeSidebar(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(link.getAttribute('href'));
+    if(target){const y=target.getBoundingClientRect().top+window.pageYOffset-24;window.scrollTo({top:y,behavior:'smooth'});}
+    if(window.innerWidth<=920) closeSidebar();
+  });
+});
+
+const sections=[...document.querySelectorAll('.section')];
+const navLinks=[...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on=l.getAttribute('href')==='#'+id;
+    l.classList.toggle('active',on);
+    if(on){const lr=l.getBoundingClientRect(),sr=sidebar.getBoundingClientRect();
+      if(lr.top<sr.top+60||lr.bottom>sr.bottom-60){sidebar.scrollTop+=(lr.top-sr.top)-sidebar.clientHeight/2+lr.height/2;}}
+  });
+}
+const spy=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting) setActive(en.target.id);});},
+  {rootMargin:'-20% 0px -70% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+const reveal=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');reveal.unobserve(en.target);}});},{threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.closest('.code').querySelector('pre code').innerText;
+    const done=()=>{btn.textContent='Copied!';btn.classList.add('done');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done');},2000);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code,done));
+    } else {fallback(code,done);}
+  });
+});
+function fallback(text,cb){const ta=document.createElement('textarea');ta.value=text;
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
+
+document.getElementById('fab').addEventListener('click',()=>{
+  const open=sidebar.classList.toggle('open');backdrop.classList.toggle('show',open);});
+backdrop.addEventListener('click',closeSidebar);
+</script>
+</body>
+</html>

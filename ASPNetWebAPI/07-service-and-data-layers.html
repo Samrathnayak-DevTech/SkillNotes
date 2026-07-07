@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Service &amp; Data Layers in ASP.NET Core — Day 7</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:14px 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 07 · ASP.NET Core</div>
+    <div class="brand-title">Service &amp; Data Layers 🧱</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>Why Layers?</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>Dependency Injection</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Wiring It Up</div>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Injecting Into Controllers</span></a>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>Service Lifetimes</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">The Service Layer</div>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>Building a Service</span></a>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>The Refactor</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">The Data Layer</div>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>Repository Pattern</span></a>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>Do You Even Need It?</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Practice</div>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>Full Stack Walkthrough</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 7 — controllers should delegate, not do</div>
+      <h1>Service &amp; Data Layers 🧱</h1>
+      <p class="lede">A controller's job is to take a request and hand back a response — not to run business rules, talk to the database, and format results all at once. When everything piles into the controller, it becomes untestable and unchangeable. Today we push that work outward: <em>dependency injection</em> supplies collaborators, a <em>service layer</em> holds the business logic, and (optionally) a <em>repository</em> wraps the data access. The "Do": lift logic out of a fat controller into an injected service.</p>
+      <div class="chips">
+        <span class="chip">💉 Dependency injection</span>
+        <span class="chip">⏳ Service lifetimes</span>
+        <span class="chip">🧠 Service layer</span>
+        <span class="chip">🗄️ Repository pattern</span>
+        <span class="chip">🧩 EF Core</span>
+        <span class="chip">🔌 Loose coupling</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>Why Layers? 🎂</h2></div>
+      <p>A "layer" is just a group of classes with one kind of responsibility, talking to the next layer through a small, well-defined interface. In a typical Web API the layers stack like this:</p>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-blue">Controller</div><div class="idx">HTTP in/out</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val highlight-green">Service</div><div class="idx">business logic</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val highlight">Repository / EF Core</div><div class="idx">data access</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val">Database</div><div class="idx">storage</div></div>
+        </div>
+      </div>
+
+      <p>Each layer only knows about the one directly below it, and only through an interface. That single rule buys you a lot: you can test the service without a database, swap the data layer without touching controllers, and find any given kind of code in one predictable place.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🍽️ Analogy — a restaurant</span>
+        <p>The <strong>waiter</strong> (controller) takes your order and brings your food — but never cooks. The <strong>chef</strong> (service) knows the recipes and makes decisions. The <strong>pantry clerk</strong> (repository) just fetches and stores ingredients. If the waiter also cooked and managed inventory, the kitchen would be chaos. Clear roles keep everyone fast and replaceable.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The "fat controller" smell</span>
+        <p>A controller action that validates input, runs business rules, queries the database, and shapes the response all in one method is doing four jobs. It can't be unit-tested without spinning up a database, and the same logic gets copy-pasted into the next controller that needs it. Today's refactor fixes exactly this.</p>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <p>Here's the whole topic on one page. Each branch is a section below.</p>
+
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">Service &amp; Data Layers</div>
+          <div class="s">separation of concerns</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch b-blue">
+            <h4>💉 DI container</h4>
+            <ul>
+              <li>Register in <code>Program.cs</code></li>
+              <li>Inject via constructor</li>
+              <li>Depend on interfaces</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>⏳ Lifetimes</h4>
+            <ul>
+              <li>Transient / Scoped / Singleton</li>
+              <li><code>DbContext</code> is scoped</li>
+              <li>Don't capture short in long</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>🧠 Service layer</h4>
+            <ul>
+              <li>Holds business rules</li>
+              <li>Behind an interface</li>
+              <li>Reusable + testable</li>
+            </ul>
+          </div>
+          <div class="mm-branch">
+            <h4>🗄️ Data layer</h4>
+            <ul>
+              <li>EF Core <code>DbContext</code></li>
+              <li>Repository (optional)</li>
+              <li>Isolates persistence</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h4>⚖️ The debate</h4>
+            <ul>
+              <li>Repo over EF Core?</li>
+              <li>EF is already Repo + UoW</li>
+              <li>Pragmatism wins</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>Dependency Injection in a Nutshell 💉</h2></div>
+      <p><strong>Dependency injection (DI)</strong> means a class doesn't create the things it needs — they're handed to it from outside. Instead of a controller calling <code>new ProductService()</code>, the framework's built-in container constructs the service and passes it in. This flips control of object creation to the container (a form of <em>Inversion of Control</em>).</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Two steps, always</span>
+        <p><strong>1. Register</strong> the service with the container in <code>Program.cs</code> (say what implements what, and for how long). <strong>2. Request</strong> it by listing it as a constructor parameter wherever you need it. The container wires the two together automatically.</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs (registration)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Map the interface to its implementation, with a lifetime.</span>
+builder.Services.<span class="fn">AddScoped</span>&lt;<span class="ty">IProductService</span>, <span class="ty">ProductService</span>&gt;();
+builder.Services.<span class="fn">AddScoped</span>&lt;<span class="ty">IProductRepository</span>, <span class="ty">ProductRepository</span>&gt;();
+
+<span class="cmt">// EF Core's DbContext is registered scoped by this helper.</span>
+builder.Services.<span class="fn">AddDbContext</span>&lt;<span class="ty">AppDbContext</span>&gt;(opt =&gt;
+    opt.<span class="fn">UseSqlServer</span>(connectionString));</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Why depend on an interface, not the concrete class?</span>
+        <p>When a controller asks for <code>IProductService</code> instead of <code>ProductService</code>, it no longer cares <em>how</em> the service works — only <em>what</em> it does. That lets you swap the implementation (a real one, a fake for tests, a cached one) without changing the controller. Microsoft's own guidance: request dependencies as constructor parameters, and avoid directly instantiating dependent classes because it couples your code to one implementation.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🔌 Analogy — the wall socket</span>
+        <p>Your lamp doesn't come with a power station wired inside it. It has a plug, and the socket delivers electricity. DI is the socket: your class exposes what it needs (the plug — a constructor parameter), and the container supplies it. Swap the power source (coal, solar) and the lamp neither knows nor cares.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Injecting Services Into Controllers 🎛️</h2></div>
+      <p>The standard way to get a service into a controller is <strong>constructor injection</strong>. You declare the dependencies as constructor parameters, store them in <code>readonly</code> fields, and use them in your actions. The container fills them in when it creates the controller.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/[controller]"</span>)]
+<span class="kw">public class</span> <span class="ty">ProductsController</span> : <span class="ty">ControllerBase</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">IProductService</span> _service;
+
+    <span class="cmt">// The container injects IProductService here.</span>
+    <span class="kw">public</span> <span class="fn">ProductsController</span>(<span class="ty">IProductService</span> service) =&gt; _service = service;
+
+    [<span class="ty">HttpGet</span>(<span class="str">"{id}"</span>)]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">ProductDto</span>&gt;&gt; <span class="fn">GetById</span>(<span class="kw">int</span> id)
+    {
+        <span class="kw">var</span> product = <span class="kw">await</span> _service.<span class="fn">GetByIdAsync</span>(id);
+        <span class="kw">return</span> product <span class="kw">is null</span> ? <span class="fn">NotFound</span>() : product;
+    }
+}</code></pre>
+      </div>
+
+      <p>Notice the controller is now tiny: it receives the request, calls one service method, and maps the result to an HTTP response. It contains <em>no</em> business logic and <em>no</em> database code. That's the goal.</p>
+
+      <h3>Two other injection styles 🧰</h3>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🎯</span><h4><code>[FromServices]</code></h4><p>Inject a service into a single action method's parameters instead of the constructor — handy when only one action needs it.</p></div>
+        <div class="card"><span class="glyph">🧵</span><h4>Minimal API params</h4><p>In Minimal APIs, services are just parameters on the route handler lambda; the container matches them by type automatically.</p></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the two alternatives</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// [FromServices] on one action only</span>
+[<span class="ty">HttpGet</span>]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">GetAll</span>([<span class="ty">FromServices</span>] <span class="ty">IProductService</span> service) =&gt;
+    <span class="fn">Ok</span>(<span class="kw">await</span> service.<span class="fn">GetAllAsync</span>());
+
+<span class="cmt">// Minimal API: the service is just a handler parameter</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/products/{id}"</span>, <span class="kw">async</span> (<span class="kw">int</span> id, <span class="ty">IProductService</span> service) =&gt;
+    <span class="kw">await</span> service.<span class="fn">GetByIdAsync</span>(id) <span class="kw">is</span> { } p ? <span class="ty">Results</span>.<span class="fn">Ok</span>(p) : <span class="ty">Results</span>.<span class="fn">NotFound</span>());</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Prefer the constructor</span>
+        <p>Constructor injection is the default for a reason: it makes a class's dependencies obvious and explicit, and yields classes that are easy to test (you just pass fakes to the constructor). Reach for <code>[FromServices]</code> only when a dependency is needed by a single action.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>Service Lifetimes — The Gotcha ⏳</h2></div>
+      <p>When you register a service, you choose how long each instance lives. Pick wrong and you get subtle, painful bugs. There are three lifetimes:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Lifetime</th><th>New instance…</th><th>Register with</th><th>Good for</th></tr></thead>
+          <tbody>
+            <tr><td>🟢 Transient</td><td>Every single time it's requested</td><td><code>AddTransient</code></td><td>Lightweight, stateless helpers (mappers, formatters)</td></tr>
+            <tr><td>🔵 Scoped</td><td>Once per HTTP request</td><td><code>AddScoped</code></td><td>Services and repositories; anything using <code>DbContext</code></td></tr>
+            <tr><td>🟣 Singleton</td><td>Once for the whole app</td><td><code>AddSingleton</code></td><td>Stateless shared or expensive-to-create services</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 DbContext is scoped by default</span>
+        <p><code>AddDbContext&lt;T&gt;</code> registers your EF Core context with a <strong>scoped</strong> lifetime — one per request. That's deliberate: a <code>DbContext</code> is a short-lived unit of work that tracks changes for a single request and isn't thread-safe. Any service or repository that uses it should therefore also be <strong>scoped</strong>.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The captive dependency trap</span>
+        <p>Never inject a shorter-lived service into a longer-lived one — for example, a <strong>scoped</strong> <code>DbContext</code> into a <strong>singleton</strong>. The singleton holds onto that one <code>DbContext</code> forever, sharing it across all requests and threads, which corrupts change-tracking and throws errors. This is a "captive dependency." In development, ASP.NET Core's scope validation throws an exception to catch exactly this.</p>
+      </div>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-green">Singleton</div><div class="idx">app lifetime</div></div>
+          <div class="arr-arrow">✅ may use →</div>
+          <div class="arr-cell"><div class="val highlight-blue">Scoped</div><div class="idx">per request</div></div>
+          <div class="arr-arrow">✅ may use →</div>
+          <div class="arr-cell"><div class="val">Transient</div><div class="idx">per resolve</div></div>
+        </div>
+        <p style="margin:14px 0 0; font-size:.85rem; color:var(--ink-soft);">Safe direction: longer-lived may depend on equal-or-longer-lived. Injecting <span style="color:var(--rose); font-weight:600;">right-to-left</span> (a scoped into a singleton) is the captive-dependency bug.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Simple rule of thumb</span>
+        <p>Default your business services and repositories to <strong>scoped</strong> — it matches the request-per-instance model of <code>DbContext</code> and is almost always correct for web APIs. Use transient for tiny stateless helpers, and singleton only for genuinely global, thread-safe, stateless (or carefully-managed) services.</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>Building a Service Layer 🧠</h2></div>
+      <p>The <strong>service layer</strong> is where business logic lives — the rules and decisions that make your app <em>your</em> app. It sits between controllers (HTTP) and the data layer (persistence). Each service is defined by an interface so callers depend on the contract, not the implementation.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the contract</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public interface</span> <span class="ty">IProductService</span>
+{
+    <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">ProductDto</span>&gt;&gt; <span class="fn">GetAllAsync</span>();
+    <span class="ty">Task</span>&lt;<span class="ty">ProductDto</span>?&gt; <span class="fn">GetByIdAsync</span>(<span class="kw">int</span> id);
+    <span class="ty">Task</span>&lt;<span class="ty">ProductDto</span>&gt; <span class="fn">CreateAsync</span>(<span class="ty">CreateProductRequest</span> request);
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the implementation</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">ProductService</span> : <span class="ty">IProductService</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">IProductRepository</span> _repo;
+
+    <span class="kw">public</span> <span class="fn">ProductService</span>(<span class="ty">IProductRepository</span> repo) =&gt; _repo = repo;
+
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ProductDto</span>?&gt; <span class="fn">GetByIdAsync</span>(<span class="kw">int</span> id)
+    {
+        <span class="kw">var</span> product = <span class="kw">await</span> _repo.<span class="fn">GetByIdAsync</span>(id);
+        <span class="kw">return</span> product <span class="kw">is null</span> ? <span class="kw">null</span> : product.<span class="fn">ToDto</span>();
+    }
+
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ProductDto</span>&gt; <span class="fn">CreateAsync</span>(<span class="ty">CreateProductRequest</span> request)
+    {
+        <span class="cmt">// Business rule lives HERE, not in the controller.</span>
+        <span class="kw">if</span> (<span class="kw">await</span> _repo.<span class="fn">NameExistsAsync</span>(request.Name))
+            <span class="kw">throw new</span> <span class="ty">DuplicateNameException</span>(request.Name);
+
+        <span class="kw">var</span> product = <span class="kw">new</span> <span class="ty">Product</span> { Name = request.Name, Price = request.Price };
+        <span class="kw">await</span> _repo.<span class="fn">AddAsync</span>(product);
+        <span class="kw">await</span> _repo.<span class="fn">SaveChangesAsync</span>();
+        <span class="kw">return</span> product.<span class="fn">ToDto</span>();
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 What belongs in a service?</span>
+        <p>Business rules ("a product name must be unique"), orchestration across multiple repositories, mapping between entities and DTOs, and calls to other services or external APIs. What does <em>not</em> belong: HTTP concerns (status codes, routing) — those stay in the controller; and raw SQL/query mechanics — those stay in the data layer.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Watch the constructor</span>
+        <p>Microsoft's guidance: if a class ends up with a long list of injected dependencies, that's a sign it has too many responsibilities (a Single Responsibility Principle violation). Split it into smaller, focused services rather than growing one giant one.</p>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>The Refactor — Fat Controller → Service 🔧</h2></div>
+      <p>This is today's "Do." Here's a controller doing everything itself — validation, business rule, database access, mapping — all crammed into one action.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — BEFORE: the fat controller ❌</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpPost</span>]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Create</span>(<span class="ty">CreateProductRequest</span> request)
+{
+    <span class="cmt">// data access in the controller...</span>
+    <span class="kw">var</span> exists = <span class="kw">await</span> _db.Products
+        .<span class="fn">AnyAsync</span>(p =&gt; p.Name == request.Name);
+
+    <span class="cmt">// ...business rule in the controller...</span>
+    <span class="kw">if</span> (exists)
+        <span class="kw">return</span> <span class="fn">Conflict</span>(<span class="str">"A product with that name already exists."</span>);
+
+    <span class="cmt">// ...entity creation in the controller...</span>
+    <span class="kw">var</span> product = <span class="kw">new</span> <span class="ty">Product</span> { Name = request.Name, Price = request.Price };
+    _db.Products.<span class="fn">Add</span>(product);
+    <span class="kw">await</span> _db.<span class="fn">SaveChangesAsync</span>();
+
+    <span class="cmt">// ...and mapping in the controller. Four jobs, one method.</span>
+    <span class="kw">var</span> dto = <span class="kw">new</span> <span class="ty">ProductDto</span>(product.Id, product.Name, product.Price);
+    <span class="kw">return</span> <span class="fn">CreatedAtAction</span>(<span class="kw">nameof</span>(GetById), <span class="kw">new</span> { id = product.Id }, dto);
+}</code></pre>
+      </div>
+
+      <p>Now the same behavior, with the logic moved into <code>ProductService</code>. The controller shrinks to pure request/response translation.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — AFTER: thin controller ✅</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpPost</span>]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">ProductDto</span>&gt;&gt; <span class="fn">Create</span>(<span class="ty">CreateProductRequest</span> request)
+{
+    <span class="kw">try</span>
+    {
+        <span class="kw">var</span> dto = <span class="kw">await</span> _service.<span class="fn">CreateAsync</span>(request);   <span class="cmt">// all logic delegated</span>
+        <span class="kw">return</span> <span class="fn">CreatedAtAction</span>(<span class="kw">nameof</span>(GetById), <span class="kw">new</span> { id = dto.Id }, dto);
+    }
+    <span class="kw">catch</span> (<span class="ty">DuplicateNameException</span> ex)
+    {
+        <span class="kw">return</span> <span class="fn">Conflict</span>(ex.Message);   <span class="cmt">// controller only maps to HTTP</span>
+    }
+}</code></pre>
+      </div>
+
+      <h3>What the refactor buys you 🎁</h3>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🧪</span><h4>Testable</h4><p>Unit-test <code>ProductService</code> with a fake repository — no web server, no database, no HTTP.</p></div>
+        <div class="card"><span class="glyph">♻️</span><h4>Reusable</h4><p>A background job or another endpoint can call <code>CreateAsync</code> without duplicating the rule.</p></div>
+        <div class="card"><span class="glyph">🔍</span><h4>Readable</h4><p>The controller reads like a table of contents; the service reads like the actual story.</p></div>
+        <div class="card"><span class="glyph">🔧</span><h4>Changeable</h4><p>Business rules change in one place. The controller and database code stay untouched.</p></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Handling service errors cleanly</span>
+        <p>The <code>try/catch</code> above works, but many teams prefer a global exception handler (recall Day 6's <code>ProblemDetails</code>) or a result object so the service reports "duplicate" without throwing. Either way, the principle holds: the service decides <em>what</em> happened; the controller decides the <em>HTTP status</em> for it.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>The Repository Pattern Over EF Core 🗄️</h2></div>
+      <p>A <strong>repository</strong> is a class that wraps data access behind a collection-like interface, so the rest of your app asks for entities without knowing SQL or EF Core exists. The <strong>Unit of Work</strong> is the companion idea: a single object that batches several changes and commits them together in one transaction.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — a repository interface + EF Core implementation</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public interface</span> <span class="ty">IProductRepository</span>
+{
+    <span class="ty">Task</span>&lt;<span class="ty">Product</span>?&gt; <span class="fn">GetByIdAsync</span>(<span class="kw">int</span> id);
+    <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Product</span>&gt;&gt; <span class="fn">GetAllAsync</span>();
+    <span class="ty">Task</span>&lt;<span class="kw">bool</span>&gt; <span class="fn">NameExistsAsync</span>(<span class="kw">string</span> name);
+    <span class="ty">Task</span> <span class="fn">AddAsync</span>(<span class="ty">Product</span> product);
+    <span class="ty">Task</span> <span class="fn">SaveChangesAsync</span>();
+}
+
+<span class="kw">public class</span> <span class="ty">ProductRepository</span> : <span class="ty">IProductRepository</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">AppDbContext</span> _db;
+    <span class="kw">public</span> <span class="fn">ProductRepository</span>(<span class="ty">AppDbContext</span> db) =&gt; _db = db;
+
+    <span class="kw">public</span> <span class="ty">Task</span>&lt;<span class="ty">Product</span>?&gt; <span class="fn">GetByIdAsync</span>(<span class="kw">int</span> id) =&gt;
+        _db.Products.<span class="fn">FirstOrDefaultAsync</span>(p =&gt; p.Id == id);
+
+    <span class="kw">public</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Product</span>&gt;&gt; <span class="fn">GetAllAsync</span>() =&gt;
+        _db.Products.<span class="fn">ToListAsync</span>();
+
+    <span class="kw">public</span> <span class="ty">Task</span>&lt;<span class="kw">bool</span>&gt; <span class="fn">NameExistsAsync</span>(<span class="kw">string</span> name) =&gt;
+        _db.Products.<span class="fn">AnyAsync</span>(p =&gt; p.Name == name);
+
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">AddAsync</span>(<span class="ty">Product</span> product) =&gt;
+        <span class="kw">await</span> _db.Products.<span class="fn">AddAsync</span>(product);
+
+    <span class="kw">public</span> <span class="ty">Task</span> <span class="fn">SaveChangesAsync</span>() =&gt; _db.<span class="fn">SaveChangesAsync</span>();
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The classic argument FOR a repository</span>
+        <p>It decouples your business code from EF Core, so the service never sees a <code>DbContext</code> or an <code>IQueryable</code>. In theory that means you could swap the persistence technology, and it gives you one obvious place to centralize complex or shared queries. It also lets you hand your service a fake repository in unit tests.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">📚 Analogy — the librarian</span>
+        <p>A repository is a librarian. You ask "do you have books by this author?" and get a stack back — you never touch the shelving system, the catalog software, or the storage room. If the library switches from paper cards to a database, your request to the librarian doesn't change.</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>Do You Even Need a Repository? ⚖️</h2></div>
+      <p>Here's where honest engineers disagree — so let's lay out both sides fairly. The crux: <strong>EF Core's <code>DbContext</code> already implements the Unit of Work pattern, and each <code>DbSet&lt;T&gt;</code> is already a repository.</strong> A hand-written repository over EF Core can therefore be "an abstraction over an abstraction."</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Skip the repository (use DbContext directly)</th><th>Add a repository</th></tr></thead>
+          <tbody>
+            <tr><td>EF Core <em>is</em> Repository + Unit of Work already</td><td>Decouples business code from EF Core entirely</td></tr>
+            <tr><td>Fewer layers of indirection to read through</td><td>One place for shared/complex queries</td></tr>
+            <tr><td>Full access to EF features (<code>Include</code>, projections, etc.)</td><td>Enforces a boundary so <code>Include</code>s don't sprawl everywhere</td></tr>
+            <tr><td>Test with the EF InMemory or SQLite provider</td><td>Hand services a fake/mock repository in tests</td></tr>
+            <tr><td>Generic repositories often just re-wrap <code>DbSet</code></td><td>Useful with DDD, CQRS, or multi-source data access</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The "swap the database" myth</span>
+        <p>The most-cited reason for a repository — "so we can change databases later" — rarely pays off. Switching SQL Server → PostgreSQL is already handled by EF Core providers; switching to a document database like Cosmos DB changes your data model and query patterns so fundamentally that you can't just swap a repository implementation. Don't add the abstraction for a swap that almost never happens.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The pragmatic middle ground (2026 consensus)</span>
+        <p>There's no universal winner. <strong>Small/CRUD apps:</strong> inject <code>DbContext</code> straight into your service — simpler and honest. <strong>Domain-heavy or large apps:</strong> a thin repository (or the <em>Specification pattern</em> for reusable queries) creates a clean seam worth the cost. The common advice: <em>start simple, add the abstraction only when complexity genuinely demands it</em> — don't over-engineer up front, but don't fear refactoring later.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The one non-negotiable</span>
+        <p>Whichever you choose, keep the <em>service layer</em>. Even without a repository, injecting <code>DbContext</code> into a <code>ProductService</code> (rather than into the controller) still gives you the testability and separation that today's refactor is about. The service layer is the win; the repository is optional.</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the "no repository" option: DbContext in the service</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">ProductService</span> : <span class="ty">IProductService</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">AppDbContext</span> _db;   <span class="cmt">// inject the context directly</span>
+    <span class="kw">public</span> <span class="fn">ProductService</span>(<span class="ty">AppDbContext</span> db) =&gt; _db = db;
+
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ProductDto</span>?&gt; <span class="fn">GetByIdAsync</span>(<span class="kw">int</span> id)
+    {
+        <span class="kw">var</span> product = <span class="kw">await</span> _db.Products.<span class="fn">FindAsync</span>(id);
+        <span class="kw">return</span> product?.<span class="fn">ToDto</span>();
+    }
+}</code></pre>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>Full-Stack Walkthrough 🧩</h2></div>
+      <p>Let's trace a single <code>POST /api/products</code> request all the way down and back up, so you can see each layer do exactly its one job.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · 📥 controller</div>
+          <div class="sh">Receive &amp; delegate</div>
+          <p>The action binds the request DTO, then calls <code>_service.CreateAsync(request)</code>. No logic here.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 2 · 🧠 service</div>
+          <div class="sh">Apply business rules</div>
+          <p>Checks the name isn't taken, builds the <code>Product</code> entity, tells the repository to add and save, maps to a DTO.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 3 · 🗄️ repository</div>
+          <div class="sh">Talk to EF Core</div>
+          <p>Runs the <code>AnyAsync</code> check, calls <code>AddAsync</code>, then <code>SaveChangesAsync</code> — the unit of work commits.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 4 · 💾 database</div>
+          <div class="sh">Persist the row</div>
+          <p>EF Core generates the <code>INSERT</code>; the new <code>Id</code> flows back up into the entity.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 5 · 📤 back to the controller</div>
+          <div class="sh">Return 201 Created</div>
+          <p>The DTO bubbles up; the controller wraps it in <code>CreatedAtAction</code> with a <code>Location</code> header.</p>
+        </div>
+      </div>
+
+      <h3>The wiring, all together 🔩</h3>
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs (the full registration)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+
+builder.Services.<span class="fn">AddControllers</span>();
+
+<span class="cmt">// Data layer: DbContext (scoped) + repository (scoped)</span>
+builder.Services.<span class="fn">AddDbContext</span>&lt;<span class="ty">AppDbContext</span>&gt;(opt =&gt;
+    opt.<span class="fn">UseSqlServer</span>(builder.Configuration.<span class="fn">GetConnectionString</span>(<span class="str">"Default"</span>)));
+builder.Services.<span class="fn">AddScoped</span>&lt;<span class="ty">IProductRepository</span>, <span class="ty">ProductRepository</span>&gt;();
+
+<span class="cmt">// Service layer: business logic (scoped)</span>
+builder.Services.<span class="fn">AddScoped</span>&lt;<span class="ty">IProductService</span>, <span class="ty">ProductService</span>&gt;();
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+app.<span class="fn">MapControllers</span>();
+app.<span class="fn">Run</span>();</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Read the dependency chain</span>
+        <p><code>Controller → IProductService → IProductRepository → AppDbContext → Database</code>. Every arrow is an interface (except the context), every hop is one responsibility, and the container assembles the whole chain for each request. Change any link's implementation and the others don't notice.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🎂 Layers</h4><p>Controller → service → data; each talks to the next through an interface.</p></div>
+        <div class="recap-card"><h4>💉 DI</h4><p>The container creates dependencies and injects them; you register then request.</p></div>
+        <div class="recap-card"><h4>🔌 Interfaces</h4><p>Depend on abstractions, not concrete classes, so implementations can be swapped.</p></div>
+        <div class="recap-card"><h4>🎛️ Constructor injection</h4><p>List dependencies as constructor params; the default, most testable style.</p></div>
+        <div class="recap-card"><h4>⏳ Three lifetimes</h4><p>Transient (per resolve), Scoped (per request), Singleton (whole app).</p></div>
+        <div class="recap-card"><h4>🗄️ DbContext = scoped</h4><p><code>AddDbContext</code> is scoped; services using it should be scoped too.</p></div>
+        <div class="recap-card"><h4>⚠️ Captive dependency</h4><p>Never inject a scoped service into a singleton — it gets frozen for the app's life.</p></div>
+        <div class="recap-card"><h4>🧠 Service layer</h4><p>Holds business rules and orchestration; keep HTTP out of it.</p></div>
+        <div class="recap-card"><h4>🔧 The refactor</h4><p>Move logic from a fat controller into an injected service — the day's "Do."</p></div>
+        <div class="recap-card"><h4>🗃️ Repository</h4><p>Wraps data access behind a collection-like interface; EF Core is one already.</p></div>
+        <div class="recap-card"><h4>⚖️ Repo is optional</h4><p>EF Core is Repo + UoW; add your own only when complexity earns it.</p></div>
+        <div class="recap-card"><h4>🚀 Start simple</h4><p>Keep the service layer always; add repositories/abstractions only when needed.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it is</th><th>Key detail</th></tr></thead>
+          <tbody>
+            <tr><td>Dependency injection</td><td>Container supplies a class's dependencies</td><td>Register in <code>Program.cs</code>, request via constructor</td></tr>
+            <tr><td>Constructor injection</td><td>Dependencies as constructor parameters</td><td>Default &amp; most testable; store in <code>readonly</code> fields</td></tr>
+            <tr><td><code>[FromServices]</code></td><td>Inject into one action's params</td><td>For a dependency only one action needs</td></tr>
+            <tr><td>Transient</td><td>New instance every resolve</td><td><code>AddTransient</code>; stateless helpers</td></tr>
+            <tr><td>Scoped</td><td>One instance per request</td><td><code>AddScoped</code>; default for services &amp; <code>DbContext</code></td></tr>
+            <tr><td>Singleton</td><td>One instance per app</td><td><code>AddSingleton</code>; stateless/global only</td></tr>
+            <tr><td>Captive dependency</td><td>Short-lived captured by long-lived</td><td>Scope validation catches it in dev</td></tr>
+            <tr><td>Service layer</td><td>Business-logic classes behind interfaces</td><td>No HTTP, no raw query mechanics</td></tr>
+            <tr><td>Repository</td><td>Collection-like data-access wrapper</td><td>Optional over EF Core; useful for DDD/complex queries</td></tr>
+            <tr><td>Unit of Work</td><td>Commits many changes as one transaction</td><td><code>DbContext.SaveChangesAsync()</code> already is one</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is dependency injection?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>It's a pattern where a class receives the objects it needs from the outside instead of creating them itself. In ASP.NET Core a built-in container constructs those dependencies and passes them into your class (usually through its constructor), so your class just declares what it needs and the framework supplies it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What are the two steps to use a service with DI?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>First, <strong>register</strong> it in <code>Program.cs</code> — map the interface to its implementation and choose a lifetime, e.g. <code>AddScoped&lt;IProductService, ProductService&gt;()</code>. Second, <strong>request</strong> it by listing the interface as a constructor parameter where you need it. The container connects the two automatically.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What is a service layer and why have one?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>It's a set of classes that hold your business logic, sitting between the controllers and the data access. Having one keeps controllers thin, makes the logic reusable and unit-testable, and gives every rule one clear home instead of being scattered across controllers.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">Why inject an interface instead of a concrete class?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Depending on an interface means your class cares only about <em>what</em> a dependency does, not <em>how</em>. That lets you swap the implementation — a real one in production, a fake in tests, a cached one later — without changing the class that uses it. It's the core of loose coupling.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What is constructor injection?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Declaring your dependencies as parameters on the class's constructor. The DI container fills them in when it creates the object, and you typically store them in <code>readonly</code> fields. It's the default and recommended injection style because it makes dependencies explicit and the class easy to test.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What are the three service lifetimes?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p><strong>Transient</strong> — a new instance every time it's requested (<code>AddTransient</code>). <strong>Scoped</strong> — one instance per HTTP request (<code>AddScoped</code>). <strong>Singleton</strong> — one instance for the whole application (<code>AddSingleton</code>). You pick one when registering the service.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What does a controller do once you have a service layer?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Very little, on purpose. It receives the HTTP request, calls the relevant service method, and turns the result into an HTTP response (status code plus body). It holds no business rules and no database code — it's a thin translation layer between HTTP and your services.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What is a repository?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A class that wraps data access behind a simple, collection-like interface — methods like <code>GetByIdAsync</code> or <code>AddAsync</code> — so the rest of the app can work with entities without knowing about SQL or the ORM underneath. It's the bridge between your business code and the database.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">Which lifetime should a service that uses DbContext have, and why?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Scoped. <code>AddDbContext</code> registers the context as scoped (one per request) because a <code>DbContext</code> is a short-lived, non-thread-safe unit of work that tracks changes for a single request. Any service or repository that depends on it should also be scoped so their lifetimes line up.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">What is a captive dependency?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>When a longer-lived service captures a shorter-lived one — classically, injecting a scoped <code>DbContext</code> into a singleton. The singleton holds that one instance forever, so it's shared across all requests and threads, breaking change-tracking and causing errors. ASP.NET Core's scope validation throws in development to catch it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">How would you refactor a fat controller?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Extract the business logic, data access, and mapping into a service class behind an interface (e.g. <code>IProductService</code>), register it in DI, and inject it into the controller. The action then just calls one service method and maps the result to an HTTP response. The logic becomes testable and reusable, and the controller becomes a thin translator.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">What belongs in the service layer vs. the controller vs. the data layer?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p><strong>Controller:</strong> HTTP concerns — model binding, status codes, routing. <strong>Service:</strong> business rules, orchestration across repositories/services, and entity-to-DTO mapping. <strong>Data layer:</strong> query mechanics and persistence (EF Core / SQL). Keeping HTTP out of the service and business rules out of the controller is the whole point.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">What is the Unit of Work pattern, and where is it in EF Core?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Unit of Work tracks a set of changes and commits them together in a single transaction. In EF Core the <code>DbContext</code> <em>is</em> the Unit of Work: you make several changes across entities, then one call to <code>SaveChangesAsync()</code> persists them all atomically. That's why layering your own Unit of Work on top is often redundant.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">Why is DbContext often described as already being a repository?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Because each <code>DbSet&lt;T&gt;</code> behaves like a repository for that entity type — you query, add, and remove through it — and the <code>DbContext</code> coordinates saving as a unit of work. So EF Core already gives you the Repository + Unit of Work combination, which is why a hand-written repository over it can be "an abstraction over an abstraction."</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">When would you use [FromServices] instead of constructor injection?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>When only a single action needs a particular dependency, so putting it in the constructor (and a field) would be noise for every other action. <code>[FromServices]</code> injects it directly into that one action's parameters. For anything used across multiple actions, constructor injection is cleaner and more discoverable.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">How do you unit-test a service that depends on a repository?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Because the service depends on <code>IProductRepository</code>, you pass in a fake or mock implementation in the test — one that returns canned data — and assert the service's behavior without a real database or web server. That testability is a major reason for both the interface and the service layer.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Is the repository pattern worth it over EF Core?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>It depends — and there's no universal answer. EF Core already implements Repository + Unit of Work, so for small or CRUD-heavy apps a repository is often needless indirection; injecting <code>DbContext</code> into services is cleaner. For domain-heavy or large systems, or with DDD/CQRS, a thin repository (or the Specification pattern) creates a useful boundary that stops query logic sprawling. The pragmatic stance: start simple, add the abstraction only when complexity earns it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">Why is "so we can swap databases" a weak argument for a repository?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Because the swap it protects against rarely happens the way people imagine. Moving between relational databases (SQL Server ↔ PostgreSQL) is already handled by EF Core providers with no repository needed. Moving to a document store like Cosmos DB changes the data model and query patterns so deeply that you can't just swap a repository implementation anyway. The abstraction cost is paid up front for a benefit that seldom materializes.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">What's the downside of a generic repository over EF Core?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>A generic <code>Repository&lt;T&gt;</code> tends to just re-wrap <code>DbSet&lt;T&gt;</code> with the same methods, adding a layer without adding value, and it can hide or block useful EF Core features (custom includes, projections, split queries). Many argue that if you use a repository at all, it should be a specific, intention-revealing one per aggregate — not a generic pass-through.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">What is the Specification pattern and how does it relate to repositories?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>A specification is a reusable, composable object that encapsulates a query's filtering/including logic, which you then apply to EF Core (directly or through a repository). It gives you query reuse and testability without stuffing dozens of methods into a repository — you add a new specification as requirements grow. It's a popular alternative to fat repositories for keeping query logic clean and separated.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">How should a singleton safely use a scoped service like DbContext?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Not by constructor injection — that captures it. Instead, inject <code>IServiceScopeFactory</code>, create a scope explicitly when needed (<code>using var scope = factory.CreateScope();</code>), resolve the scoped service from that scope, and dispose the scope when done. This gives the singleton a fresh, correctly-scoped <code>DbContext</code> per operation instead of freezing one for the app's lifetime.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">How do you keep a service class from becoming a "god object"?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Watch the constructor: a long list of injected dependencies is a signal the class has too many responsibilities and is violating the Single Responsibility Principle. Split it into smaller, focused services (or use patterns like MediatR/CQRS handlers so each use case is its own class). Small, well-factored services are easier to test and reason about.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">If you drop the repository, how do you still test data-dependent logic?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Test against a real (but lightweight) EF Core provider rather than mocking. The InMemory provider works for pure logic tests but doesn't enforce relational rules like foreign keys; for realistic query behavior, use SQLite in-memory or a containerized database in integration tests. This tests how your LINQ actually translates and how relationships load — something mocking a repository can't verify.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Nail <strong>DI basics</strong> first (Q1–Q5) — register/request, interfaces, constructor injection — because everything else builds on it. Then master <strong>lifetimes</strong> and the captive-dependency trap (Q6, Q9, Q10, Q21), the single most common source of DI bugs and interview follow-ups. Get comfortable articulating the <strong>refactor</strong> (Q11–Q12), and finish with the <strong>repository debate</strong> (Q17–Q20) where senior interviewers want to hear a balanced, pragmatic answer — not dogma. If you can walk the request through all four layers in section 09 out loud, you're ready.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

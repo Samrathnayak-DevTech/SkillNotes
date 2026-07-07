@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OOP II — Polymorphism &amp; Abstraction (override vs new)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0; --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea; --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3; --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink); font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;}
+#progress{position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .08s linear;}
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+:not(pre) > code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--accent);
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;}
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;
+  background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;background:transparent;
+  border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;color:var(--code-ink);
+  background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent);font-weight:700;}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:24px 22px;margin:24px 0;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+/* two-column compare */
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:24px 0;}
+.compare-col{border:1.5px solid var(--line);border-radius:14px;padding:18px;background:#fff;}
+.compare-col h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+.compare-col.win{border-color:var(--green);} .compare-col.win h5{color:var(--green);}
+.compare-col.warn-col{border-color:var(--accent);} .compare-col.warn-col h5{color:var(--accent);}
+.compare-col .rslt{font-family:"JetBrains Mono",monospace;font-size:12.5px;background:var(--bg-soft);
+  border-radius:8px;padding:8px 11px;margin-top:8px;}
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+.mindmap{display:flex;flex-direction:column;align-items:center;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;font-size:1.1rem;
+  padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch .badge-now{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.06em;
+  background:var(--accent);color:#fff;border-radius:5px;padding:2px 6px;margin-left:auto;}
+.mm-branch .badge-done{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.06em;
+  background:var(--line);color:var(--ink-soft);border-radius:5px;padding:2px 6px;margin-left:auto;}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);transition:transform .28s ease;
+    box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+  .compare{grid-template-columns:1fr;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">OOP II · Polymorphism &amp; Abstraction</div>
+    <nav>
+      <div class="nav-group">
+        <h4>Polymorphism</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> Where We Are</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The Big Idea</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Compile-time</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Runtime</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> override vs new ★</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Covariant Returns</a>
+      </div>
+      <div class="nav-group">
+        <h4>Abstraction</h4>
+        <a class="nav-link" href="#s07"><span class="n">07</span> The Big Idea</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> Abstract Classes</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Interfaces</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Default &amp; Explicit</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Abstract vs Interface</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Worked Example</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Quick Recap</a>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// C# &nbsp;·&nbsp; object-oriented programming, part 2</p>
+      <h1>Polymorphism &amp; Abstraction 🎭</h1>
+      <p class="lede">
+        OOP I gave you encapsulation and inheritance. This page finishes the four pillars with the two that make code
+        <b>flexible</b>: <b>polymorphism</b> (one call, many behaviors — including the crucial <b>override vs new</b>
+        distinction) and <b>abstraction</b> (program against ideas, not concrete details, using <b>abstract classes</b>
+        and <b>interfaces</b>). Together they're why you can add new types to a system without rewriting the old ones.
+        No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🎭 <b>Polymorphism</b></span>
+        <span class="chip">⚖️ <b>Overload vs Override</b></span>
+        <span class="chip">🔀 <b>override vs new</b></span>
+        <span class="chip">🪟 <b>Abstraction</b></span>
+        <span class="chip">📜 <b>Interfaces</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- 01 -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>Where We Are</h2></div>
+      <p class="sec-sub">Two pillars down, two to go. This page deepens the <code>virtual</code>/<code>override</code> and
+        <code>abstract</code> ideas that OOP I only introduced.</p>
+
+      <p>In OOP I you saw <strong>encapsulation</strong> (hide data, expose a safe interface) and
+        <strong>inheritance</strong> (build types on top of types). Along the way you met <code>virtual</code>,
+        <code>override</code>, <code>new</code>, and <code>abstract</code> in passing. Now we put
+        <strong>polymorphism</strong> and <strong>abstraction</strong> centre stage.</p>
+
+      <div class="mindmap">
+        <div class="mm-core">🏛️ OOP</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>💊 Encapsulation <span class="badge-done">OOP I</span></h5>
+            <ul><li>Hide data</li><li>Access modifiers</li><li>Properties</li></ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🧬 Inheritance <span class="badge-done">OOP I</span></h5>
+            <ul><li>is-a relationships</li><li>base &amp; constructors</li><li>Reuse + extend</li></ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>🎭 Polymorphism <span class="badge-now">this page</span></h5>
+            <ul><li>Compile-time (overload)</li><li>Runtime (override)</li><li>override vs new</li></ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🪟 Abstraction <span class="badge-now">this page</span></h5>
+            <ul><li>Abstract classes</li><li>Interfaces</li><li>Program to contracts</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why these two matter most for design</span>
+        <p>Encapsulation and inheritance organize code; <strong>polymorphism and abstraction make it extensible</strong>.
+        They're what let you write a loop over <code>Shape</code> objects today and drop in a brand-new
+        <code>Hexagon</code> next year without changing that loop. This is the <em>open/closed principle</em>: open to
+        extension, closed to modification.</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>The Big Idea</h2></div>
+      <p class="sec-sub">"Polymorphism" = "many forms." One name or one interface, many behaviors depending on context.</p>
+
+      <p><strong>Polymorphism</strong> lets a single method name — or a single base-typed variable — behave differently
+        depending on the situation. C# offers it in two flavors, split by <em>when</em> the decision is made:</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🧮</span><h4>Compile-time (static)</h4><p>The compiler decides which method to call based on the arguments. This is <strong>method overloading</strong> (and operator overloading). Also called "early binding."</p></div>
+        <div class="card"><span class="glyph">🎯</span><h4>Runtime (dynamic)</h4><p>The runtime decides based on the object's actual type. This is <strong>method overriding</strong> via <code>virtual</code>/<code>override</code>. Also called "late binding."</p></div>
+      </div>
+
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell highlight-blue"><div class="val">Overloading</div><div class="idx">compile-time</div></div>
+          <div class="arrow">·</div>
+          <div class="arr-cell"><div class="val">same name<br>diff params</div><div class="idx">no inheritance needed</div></div>
+          <div class="arr-cell highlight" style="margin-left:30px"><div class="val">Overriding</div><div class="idx">runtime</div></div>
+          <div class="arrow">·</div>
+          <div class="arr-cell"><div class="val">same signature<br>diff behavior</div><div class="idx">needs inheritance</div></div>
+        </div>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🗣️ Analogy</span>
+        <p>The word "cut" is polymorphic. Say it to a chef, a barber, or a film director and the <em>same word</em>
+        triggers a completely different action — the listener (the runtime/compiler) picks the meaning from context.
+        One name, many forms.</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Compile-time Polymorphism</h2></div>
+      <p class="sec-sub">Method overloading: many methods share a name but differ in their parameters. The compiler picks.</p>
+
+      <p><strong>Method overloading</strong> means defining several methods with the <em>same name</em> but
+        <em>different parameter lists</em> — different number, types, or order of parameters. The compiler chooses which
+        one to call by matching the arguments you pass. No inheritance is involved.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">Printer</span>
+{
+    <span class="kw">public void</span> <span class="fn">Print</span>(<span class="kw">int</span> n)        =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"int: {n}"</span>);
+    <span class="kw">public void</span> <span class="fn">Print</span>(<span class="kw">string</span> s)     =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"string: {s}"</span>);
+    <span class="kw">public void</span> <span class="fn">Print</span>(<span class="kw">int</span> a, <span class="kw">int</span> b) =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"two ints: {a},{b}"</span>);
+}
+
+<span class="kw">var</span> p = <span class="kw">new</span> <span class="ty">Printer</span>();
+p.<span class="fn">Print</span>(<span class="num">5</span>);        <span class="cmt">// compiler picks Print(int)</span>
+p.<span class="fn">Print</span>(<span class="str">"hi"</span>);     <span class="cmt">// compiler picks Print(string)</span>
+p.<span class="fn">Print</span>(<span class="num">1</span>, <span class="num">2</span>);     <span class="cmt">// compiler picks Print(int, int)</span></code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Return type alone doesn't count</span>
+        <p>You <strong>cannot</strong> overload two methods that differ <em>only</em> by return type — the compiler can't
+        tell them apart from a call. The parameter list (the "signature") is what distinguishes overloads. Likewise,
+        differing only by parameter <em>names</em> doesn't work; the types/count/order must differ.</p>
+      </div>
+
+      <h3>Operator overloading 🧩</h3>
+      <p>Operators like <code>+</code> can also be "overloaded" to work on your own types — another form of compile-time
+        polymorphism.</p>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public struct</span> <span class="ty">Money</span>
+{
+    <span class="kw">public decimal</span> Amount;
+    <span class="cmt">// define what '+' means for two Money values</span>
+    <span class="kw">public static</span> <span class="ty">Money</span> <span class="kw">operator</span> +(<span class="ty">Money</span> a, <span class="ty">Money</span> b)
+        =&gt; <span class="kw">new</span> <span class="ty">Money</span> { Amount = a.Amount + b.Amount };
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why it's "compile-time"</span>
+        <p>The exact method is locked in when the program is compiled, based on the static types of the arguments. There's
+        no runtime decision — hence "static polymorphism" or "early binding." Fast and predictable.</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Runtime Polymorphism</h2></div>
+      <p class="sec-sub">Method overriding: the same method, redefined in a derived class — and the runtime calls the right one.</p>
+
+      <p>This is the form most people mean by "polymorphism." A base class marks a method <code>virtual</code>; derived
+        classes <code>override</code> it. When you call the method through a base-typed variable, the runtime looks at the
+        object's <strong>actual type</strong> and runs that type's version. It <strong>requires inheritance</strong>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">abstract class</span> <span class="ty">Payment</span>
+{
+    <span class="kw">public abstract void</span> <span class="fn">Pay</span>(<span class="kw">decimal</span> amount);
+}
+
+<span class="kw">class</span> <span class="ty">CardPayment</span> : <span class="ty">Payment</span>
+{
+    <span class="kw">public override void</span> <span class="fn">Pay</span>(<span class="kw">decimal</span> a) =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"Paid {a} by card"</span>);
+}
+<span class="kw">class</span> <span class="ty">UpiPayment</span> : <span class="ty">Payment</span>
+{
+    <span class="kw">public override void</span> <span class="fn">Pay</span>(<span class="kw">decimal</span> a) =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"Paid {a} by UPI"</span>);
+}
+
+<span class="cmt">// One loop, one call -- many behaviors. This is the payoff.</span>
+<span class="ty">Payment</span>[] payments = { <span class="kw">new</span> <span class="ty">CardPayment</span>(), <span class="kw">new</span> <span class="ty">UpiPayment</span>() };
+<span class="kw">foreach</span> (<span class="ty">Payment</span> pay <span class="kw">in</span> payments)
+    pay.<span class="fn">Pay</span>(<span class="num">100</span>);   <span class="cmt">// "Paid 100 by card"  then  "Paid 100 by UPI"</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Late binding</span>
+        <p>The variable is typed <code>Payment</code>, but the method that runs depends on whether the object is really a
+        <code>CardPayment</code> or a <code>UpiPayment</code> — decided at runtime ("late binding"). Add a new
+        <code>CashPayment</code> tomorrow and the loop above keeps working untouched. That extensibility is the whole point.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The three enablers</span>
+        <p>Runtime polymorphism needs: (1) a base type, (2) a <code>virtual</code> or <code>abstract</code> member, and
+        (3) an <code>override</code> in the derived type. Miss any one and you don't get dynamic dispatch.</p>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>override vs new ★</h2></div>
+      <p class="sec-sub">The single most-tested distinction in OOP interviews. Both let a child redefine a base method — but they
+        resolve completely differently.</p>
+
+      <p>Both <code>override</code> and <code>new</code> give a derived class its own version of a base member with the same
+        name. The difference is <strong>who decides which version runs</strong>:</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🎯</span><h4>override → the object decides</h4><p>Polymorphic. The runtime picks the version based on the object's <em>real</em> type, no matter what type the variable is. Requires the base member to be <code>virtual</code>/<code>abstract</code>.</p></div>
+        <div class="card"><span class="glyph">🏷️</span><h4>new → the variable decides</h4><p>Hiding (not overriding). The compiler picks the version based on the variable's <em>declared</em> type. The base member need not be virtual. <code>new</code> just silences the hiding warning.</p></div>
+      </div>
+
+      <h3>The same object, two outcomes 🔬</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">Base</span>
+{
+    <span class="kw">public virtual void</span> <span class="fn">Speak</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Base"</span>);
+}
+
+<span class="kw">class</span> <span class="ty">OverrideChild</span> : <span class="ty">Base</span>
+{
+    <span class="kw">public override void</span> <span class="fn">Speak</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Override!"</span>);
+}
+
+<span class="kw">class</span> <span class="ty">NewChild</span> : <span class="ty">Base</span>
+{
+    <span class="kw">public new void</span> <span class="fn">Speak</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"New!"</span>);
+}</code></pre>
+      </div>
+
+      <p>Now hold each object two ways — once as its real type, once as the base type:</p>
+
+      <div class="compare">
+        <div class="compare-col win">
+          <h5>🎯 override</h5>
+          <div class="rslt">OverrideChild c = new();<br>c.Speak();        <span style="color:var(--green);">// "Override!"</span></div>
+          <div class="rslt">Base b = c;<br>b.Speak();        <span style="color:var(--green);">// "Override!"</span></div>
+          <p style="font-size:.85rem;margin:10px 0 0;">Same result both ways — the <strong>object</strong> wins. Consistent &amp; polymorphic.</p>
+        </div>
+        <div class="compare-col warn-col">
+          <h5>🏷️ new (hiding)</h5>
+          <div class="rslt">NewChild c = new();<br>c.Speak();        <span style="color:var(--accent);">// "New!"</span></div>
+          <div class="rslt">Base b = c;<br>b.Speak();        <span style="color:var(--accent);">// "Base"</span></div>
+          <p style="font-size:.85rem;margin:10px 0 0;">Different results! The <strong>variable type</strong> wins. Same object, two behaviors.</p>
+        </div>
+      </div>
+
+      <h3>How resolution differs 🧭</h3>
+      <div class="flow">
+        <div class="flow-step"><b><span class="st-icon">📞</span>You call <code>b.Speak()</code> where <code>b</code> is <code>Base</code> holding a child</b></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight"><b><span class="st-icon">🎯</span>If child used <code>override</code></b><small>Runtime checks the object's real type → runs the child's version</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">🏷️</span>If child used <code>new</code></b><small>Compiler already bound to <code>Base.Speak</code> via the variable type → runs the base version</small></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th><code>override</code></th><th><code>new</code> (hiding)</th></tr></thead>
+          <tbody>
+            <tr><td>Relationship to base</td><td>Replaces the base method</td><td>Hides it (both still exist)</td></tr>
+            <tr><td>Base member must be</td><td><code>virtual</code> / <code>abstract</code> / <code>override</code></td><td>Anything (often non-virtual)</td></tr>
+            <tr><td>Which version runs</td><td>The object's <strong>real type</strong></td><td>The variable's <strong>declared type</strong></td></tr>
+            <tr><td>Polymorphic?</td><td>Yes ✅</td><td>No ❌</td></tr>
+            <tr><td>Typical use</td><td>The normal, intended case</td><td>Rare; versioning a base you can't change</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The real-world bug</span>
+        <p>If you forget <code>override</code> and the compiler warns "hides inherited member," do <em>not</em> silence it
+        by blindly adding <code>new</code> — that gives you hiding, not polymorphism, and your base-typed code will call the
+        wrong version. Add <code>new</code> only when you genuinely intend hiding. 99% of the time, you meant
+        <code>override</code>.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🎭 Analogy</span>
+        <p><code>override</code> is an actor who truly <em>becomes</em> the role — whoever calls "the character" gets the
+        new performance. <code>new</code> is a stand-in wearing a name tag: people who look at the name tag (the declared
+        type) see the original; only those who know it's the stand-in (the derived type) see the new act.</p>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Covariant Returns</h2></div>
+      <p class="sec-sub">A modern refinement (C# 9): an override may return a <em>more specific</em> type than the base method.</p>
+
+      <p>Normally an override must return the exact same type as the base method. <strong>Covariant return types</strong>
+        (added in C# 9) relax this: the override can return a <em>more derived</em> type. This makes APIs cleaner — callers
+        of the derived class get the precise type without casting.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">Animal</span> { }
+<span class="kw">class</span> <span class="ty">Dog</span> : <span class="ty">Animal</span> { }
+
+<span class="kw">class</span> <span class="ty">AnimalShelter</span>
+{
+    <span class="kw">public virtual</span> <span class="ty">Animal</span> <span class="fn">Adopt</span>() =&gt; <span class="kw">new</span> <span class="ty">Animal</span>();
+}
+
+<span class="kw">class</span> <span class="ty">DogShelter</span> : <span class="ty">AnimalShelter</span>
+{
+    <span class="cmt">// returns Dog (more specific) instead of Animal -- legal since C# 9</span>
+    <span class="kw">public override</span> <span class="ty">Dog</span> <span class="fn">Adopt</span>() =&gt; <span class="kw">new</span> <span class="ty">Dog</span>();
+}
+
+<span class="ty">Dog</span> d = <span class="kw">new</span> <span class="ty">DogShelter</span>().<span class="fn">Adopt</span>();  <span class="cmt">// no cast needed -- it's already a Dog</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why it's safe</span>
+        <p>A <code>Dog</code> <em>is an</em> <code>Animal</code>, so anyone expecting an <code>Animal</code> from the base
+        contract still gets one. The derived class simply makes a stronger promise. This keeps polymorphism intact while
+        removing annoying casts in derived-type code.</p>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Abstraction — The Big Idea</h2></div>
+      <p class="sec-sub">Expose <em>what</em> something does; hide <em>how</em> it does it. Program against concepts, not details.</p>
+
+      <p><strong>Abstraction</strong> means modeling the essential behavior of something while hiding the messy
+        implementation. You define a clean contract — "a <code>Shape</code> has an <code>Area()</code>" — and let each
+        concrete type fill in the details. Code that uses shapes only needs the <em>idea</em> of a shape, not the formula
+        for every one.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🚗 Analogy</span>
+        <p>Driving a car is abstraction in action. The steering wheel, pedals, and gear stick are the <em>contract</em>.
+        You don't need to know whether the engine is petrol, diesel, or electric — the interface is the same. The car
+        <em>abstracts away</em> the mechanism. Swap the engine (the implementation) and your driving (the calling code)
+        doesn't change.</p>
+      </div>
+
+      <p>C# gives you two tools for abstraction, and choosing between them is a core skill:</p>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📋</span><h4>Abstract classes</h4><p>A partial base class: some real implementation + some members children must fill in. Best when related types share code and state.</p></div>
+        <div class="card"><span class="glyph">📜</span><h4>Interfaces</h4><p>A pure contract: "any type that implements me promises these members." Best for capabilities shared by unrelated types.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Abstraction vs encapsulation</span>
+        <p>They sound similar but differ in focus. <strong>Encapsulation</strong> hides <em>data</em> (the internal state)
+        behind access control. <strong>Abstraction</strong> hides <em>complexity</em> (the implementation) behind a simple
+        contract. Encapsulation is "don't touch my variables"; abstraction is "you don't need to know how I work."</p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>Abstract Classes</h2></div>
+      <p class="sec-sub">A base class you can't instantiate, mixing ready-made code with blanks the children must fill.</p>
+
+      <p>An <strong>abstract class</strong> can't be created with <code>new</code> — it exists only to be inherited. It can
+        hold <strong>fields, constructors, and fully-implemented methods</strong> (shared code) alongside
+        <strong>abstract members</strong> (no body) that every concrete subclass must implement.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">abstract class</span> <span class="ty">Shape</span>
+{
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; }
+    <span class="kw">protected</span> <span class="fn">Shape</span>(<span class="kw">string</span> name) =&gt; Name = name;   <span class="cmt">// constructor: OK in abstract class</span>
+
+    <span class="kw">public abstract double</span> <span class="fn">Area</span>();              <span class="cmt">// blank -- children MUST implement</span>
+
+    <span class="cmt">// shared, concrete method that uses the abstract one</span>
+    <span class="kw">public void</span> <span class="fn">Describe</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"{Name} area = {Area():F2}"</span>);
+}
+
+<span class="kw">class</span> <span class="ty">Circle</span> : <span class="ty">Shape</span>
+{
+    <span class="kw">public double</span> R { <span class="kw">get</span>; }
+    <span class="kw">public</span> <span class="fn">Circle</span>(<span class="kw">double</span> r) : <span class="kw">base</span>(<span class="str">"Circle"</span>) =&gt; R = r;
+    <span class="kw">public override double</span> <span class="fn">Area</span>() =&gt; <span class="ty">Math</span>.PI * R * R;
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 What only abstract classes can do</span>
+        <p>They can hold <strong>instance fields and state</strong>, have <strong>constructors</strong>, and provide shared
+        implementation — all things a derived class inherits for free. The trade-off: a class can inherit from only
+        <strong>one</strong> abstract class (single inheritance).</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Interfaces</h2></div>
+      <p class="sec-sub">A pure contract that any number of unrelated types can sign — C#'s answer to "multiple inheritance."</p>
+
+      <p>An <strong>interface</strong> declares a set of members (methods, properties, events, indexers) that an implementing
+        type promises to provide. It says <em>what</em> a type can do, not <em>how</em>. A class can implement
+        <strong>many</strong> interfaces, which is how C# lets a type take on capabilities from several sources at once.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">interface</span> <span class="ty">IFlyable</span> { <span class="kw">void</span> <span class="fn">Fly</span>(); }
+<span class="kw">interface</span> <span class="ty">ISwimmable</span> { <span class="kw">void</span> <span class="fn">Swim</span>(); }
+
+<span class="cmt">// a Duck can do BOTH -- multiple interfaces, no multiple class inheritance needed</span>
+<span class="kw">class</span> <span class="ty">Duck</span> : <span class="ty">IFlyable</span>, <span class="ty">ISwimmable</span>
+{
+    <span class="kw">public void</span> <span class="fn">Fly</span>()  =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Duck flies"</span>);
+    <span class="kw">public void</span> <span class="fn">Swim</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Duck swims"</span>);
+}
+
+<span class="cmt">// program to the contract -- works for ANY flyable thing</span>
+<span class="ty">IFlyable</span> thing = <span class="kw">new</span> <span class="ty">Duck</span>();
+thing.<span class="fn">Fly</span>();</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 What interfaces can't do (classically)</span>
+        <p>An interface has <strong>no instance fields and no constructors</strong> — it carries no per-object state. It's
+        a promise about behavior, not a place to store data. Members are <code>public</code> by default. (Interfaces can,
+        however, also work for <code>struct</code> types, which can't inherit from classes — another reason they're so
+        useful.)</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Program to interfaces</span>
+        <p>Typing variables and parameters as interfaces (<code>IRepository</code>, <code>ILogger</code>) instead of
+        concrete classes makes components <strong>swappable</strong> and code easy to test (you can drop in a fake
+        implementation). This is the foundation of dependency injection and loosely-coupled design.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Default &amp; Explicit Implementation</h2></div>
+      <p class="sec-sub">Two interface features worth knowing: providing a default body (C# 8), and resolving name clashes explicitly.</p>
+
+      <h3>Default interface methods (C# 8) 🆕</h3>
+      <p>Since <strong>C# 8</strong>, an interface member can ship with a <strong>default implementation</strong>. Existing
+        implementers don't have to write it — they inherit the default. This lets library authors add new members to an
+        interface <em>without breaking</em> every class that already implements it.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">interface</span> <span class="ty">ILogger</span>
+{
+    <span class="kw">void</span> <span class="fn">Log</span>(<span class="kw">string</span> message);
+
+    <span class="cmt">// default body -- implementers get this free unless they override it</span>
+    <span class="kw">void</span> <span class="fn">LogError</span>(<span class="kw">string</span> message) =&gt; <span class="fn">Log</span>($<span class="str">"ERROR: {message}"</span>);
+}</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Default-method catch</span>
+        <p>To call a default-implemented member, you must reference the variable <em>through the interface type</em>, not
+        the concrete class. It's a versioning/compatibility tool — not a replacement for putting shared code in an abstract
+        class. Interfaces still can't hold instance state.</p>
+      </div>
+
+      <h3>Explicit interface implementation 🔏</h3>
+      <p>If a class implements two interfaces that declare the <em>same</em> member, or you want to hide an interface member
+        from the class's normal public surface, implement it <strong>explicitly</strong> by prefixing the interface name.
+        Such members are only reachable through the interface.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">interface</span> <span class="ty">IEnglish</span> { <span class="kw">void</span> <span class="fn">Greet</span>(); }
+<span class="kw">interface</span> <span class="ty">IFrench</span>  { <span class="kw">void</span> <span class="fn">Greet</span>(); }
+
+<span class="kw">class</span> <span class="ty">Greeter</span> : <span class="ty">IEnglish</span>, <span class="ty">IFrench</span>
+{
+    <span class="cmt">// explicit: resolve the clash, one body per interface</span>
+    <span class="kw">void</span> <span class="ty">IEnglish</span>.<span class="fn">Greet</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Hello"</span>);
+    <span class="kw">void</span> <span class="ty">IFrench</span>.<span class="fn">Greet</span>()  =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Bonjour"</span>);
+}
+
+<span class="ty">Greeter</span> g = <span class="kw">new</span>();
+((<span class="ty">IEnglish</span>)g).<span class="fn">Greet</span>();   <span class="cmt">// Hello</span>
+((<span class="ty">IFrench</span>)g).<span class="fn">Greet</span>();    <span class="cmt">// Bonjour</span>
+<span class="cmt">// g.Greet();   // won't compile -- explicit members aren't on the class surface</span></code></pre>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Abstract Class vs Interface</h2></div>
+      <p class="sec-sub">The classic interview question. Both enable abstraction and polymorphism — but they're built for different jobs.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Aspect</th><th>Abstract class</th><th>Interface</th></tr></thead>
+          <tbody>
+            <tr><td>How many can a type take?</td><td>One (single inheritance)</td><td>Many</td></tr>
+            <tr><td>Instance fields / state</td><td>Yes</td><td>No</td></tr>
+            <tr><td>Constructors</td><td>Yes</td><td>No</td></tr>
+            <tr><td>Implemented members</td><td>Yes (normal + virtual)</td><td>Default impls since C# 8</td></tr>
+            <tr><td>Access modifiers on members</td><td>Any</td><td>Public by default (modifiers since C# 8)</td></tr>
+            <tr><td>Works for structs?</td><td>No (structs can't inherit)</td><td>Yes</td></tr>
+            <tr><td>Models</td><td>A strong "is-a" with shared code</td><td>A capability / contract ("can-do")</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ How to choose</span>
+        <p>Use an <strong>abstract class</strong> when related types share real implementation and state, and form one
+        hierarchy (e.g. <code>Shape</code> → <code>Circle</code>, <code>Square</code>). Use an <strong>interface</strong>
+        when you're defining a capability that <em>unrelated</em> types should support, or when a type needs several such
+        capabilities (e.g. <code>IDisposable</code>, <code>IComparable</code>, <code>IFlyable</code>). Rule of thumb:
+        shared code + single hierarchy → abstract class; multiple, cross-cutting contracts → interface.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 You can combine them</span>
+        <p>A class can inherit one abstract class <em>and</em> implement many interfaces at the same time:
+        <code>class Duck : Bird, IFlyable, ISwimmable</code>. This is the common real-world shape — a base class for the
+        core identity, interfaces for the assorted capabilities.</p>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Worked Example</h2></div>
+      <p class="sec-sub">Abstraction + polymorphism together: a notification system that's open to new channels without edits.</p>
+
+      <p>We define an abstraction (<code>INotifier</code>), implement it polymorphically for several channels, and write
+        calling code that works for all of them — and any future ones — without change.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// the abstraction: a contract for "something that can notify"</span>
+<span class="kw">interface</span> <span class="ty">INotifier</span>
+{
+    <span class="kw">void</span> <span class="fn">Send</span>(<span class="kw">string</span> message);
+}
+
+<span class="kw">class</span> <span class="ty">EmailNotifier</span> : <span class="ty">INotifier</span>
+{
+    <span class="kw">public void</span> <span class="fn">Send</span>(<span class="kw">string</span> m) =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"📧 Email: {m}"</span>);
+}
+<span class="kw">class</span> <span class="ty">SmsNotifier</span> : <span class="ty">INotifier</span>
+{
+    <span class="kw">public void</span> <span class="fn">Send</span>(<span class="kw">string</span> m) =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"📱 SMS: {m}"</span>);
+}
+
+<span class="cmt">// This method NEVER changes, even as you add new notifier types.</span>
+<span class="kw">void</span> <span class="fn">Alert</span>(<span class="ty">IEnumerable</span>&lt;<span class="ty">INotifier</span>&gt; channels, <span class="kw">string</span> msg)
+{
+    <span class="kw">foreach</span> (<span class="ty">INotifier</span> c <span class="kw">in</span> channels)
+        c.<span class="fn">Send</span>(msg);     <span class="cmt">// polymorphism: each channel sends its own way</span>
+}
+
+<span class="ty">INotifier</span>[] channels = { <span class="kw">new</span> <span class="ty">EmailNotifier</span>(), <span class="kw">new</span> <span class="ty">SmsNotifier</span>() };
+<span class="fn">Alert</span>(channels, <span class="str">"Server is down!"</span>);
+<span class="cmt">// 📧 Email: Server is down!</span>
+<span class="cmt">// 📱 SMS: Server is down!</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ What each pillar did here</span>
+        <p><strong>Abstraction:</strong> <code>INotifier</code> hides how each channel works behind one <code>Send</code>
+        contract. <strong>Polymorphism:</strong> the single <code>c.Send(msg)</code> call dispatches to the right
+        implementation at runtime. <strong>The win:</strong> adding a <code>PushNotifier</code> means writing one new class
+        — the <code>Alert</code> method and all existing callers stay untouched. That's the open/closed principle in action.</p>
+      </div>
+    </section>
+
+    <!-- 13 -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea. If you can explain each card aloud, you've got polymorphism and abstraction.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🎭 Polymorphism</h4><p>One name or interface, many behaviors — chosen by the compiler (static) or the runtime (dynamic).</p></div>
+        <div class="recap-card"><h4>🧮 Compile-time</h4><p>Method (and operator) overloading: same name, different parameters; the compiler picks. Return type alone can't overload.</p></div>
+        <div class="recap-card"><h4>🎯 Runtime</h4><p><code>virtual</code>/<code>override</code> dispatch: the object's real type decides which version runs; requires inheritance.</p></div>
+        <div class="recap-card"><h4>🔀 override</h4><p>Polymorphic — the <strong>object's</strong> type wins, so base-typed variables still call the derived version.</p></div>
+        <div class="recap-card"><h4>🏷️ new</h4><p>Hiding — the <strong>variable's</strong> declared type wins; same object can behave two ways. Rare and bug-prone.</p></div>
+        <div class="recap-card"><h4>↩️ Covariant returns</h4><p>Since C# 9, an override may return a more derived type than the base method, removing casts.</p></div>
+        <div class="recap-card"><h4>🪟 Abstraction</h4><p>Hide implementation behind a clean contract; program against ideas (<code>Shape</code>) not details.</p></div>
+        <div class="recap-card"><h4>📋 Abstract class</h4><p>Non-instantiable base with shared code + state + blanks children must fill; single inheritance.</p></div>
+        <div class="recap-card"><h4>📜 Interface</h4><p>A pure contract any number of unrelated types can implement; no instance state; multiple allowed.</p></div>
+        <div class="recap-card"><h4>🧰 Default / explicit</h4><p>Interfaces can carry default bodies (C# 8); explicit implementation resolves name clashes and hides members.</p></div>
+      </div>
+
+      <h3>Summary table 📊</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>Decided when</th><th>Keyword(s)</th><th>Key fact</th></tr></thead>
+          <tbody>
+            <tr><td>Overloading</td><td>Compile time</td><td>(same name)</td><td>Different parameter lists</td></tr>
+            <tr><td>Overriding</td><td>Runtime</td><td><code>virtual</code> + <code>override</code></td><td>Object's real type wins</td></tr>
+            <tr><td>Hiding</td><td>Compile time</td><td><code>new</code></td><td>Variable's declared type wins</td></tr>
+            <tr><td>Covariant return</td><td>Compile time</td><td><code>override</code> (C# 9)</td><td>Return a more derived type</td></tr>
+            <tr><td>Abstract class</td><td>—</td><td><code>abstract</code></td><td>Shared code + state, single base</td></tr>
+            <tr><td>Interface</td><td>—</td><td><code>interface</code></td><td>Contract, many per type, no state</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 14 -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a clear answer. Tagged by level — Junior (0–2 yrs),
+        Mid (2–5 yrs), Senior (5–7 yrs). Written for someone with no prior coding background.</p>
+
+      <h3>🌱 Junior — fundamentals (0–2 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q1</span> What is polymorphism? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Polymorphism means "many forms." It lets the same method name or the same base-typed variable produce
+        different behavior depending on context. For example, a single <code>Pay()</code> call can charge a card, a UPI account,
+        or cash, depending on which payment object it's running on. It makes code flexible and reusable.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span> What are the two types of polymorphism in C#? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><strong>Compile-time (static)</strong> polymorphism is <em>method overloading</em> — same name, different
+        parameters; the compiler decides which to call. <strong>Runtime (dynamic)</strong> polymorphism is <em>method overriding</em>
+        with <code>virtual</code>/<code>override</code> — the runtime decides based on the object's actual type. They're also called
+        early binding and late binding.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span> What is method overloading? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Defining multiple methods with the <strong>same name but different parameter lists</strong> (different number,
+        types, or order of parameters) in the same class. The compiler picks the right one from the arguments you pass. You can't
+        overload on return type alone.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span> What is method overriding? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Redefining a base class's <code>virtual</code> (or <code>abstract</code>) method in a derived class using the
+        <code>override</code> keyword, keeping the same signature but changing the behavior. When you call it, the runtime runs the
+        derived version even through a base-typed variable. It requires inheritance.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span> What is abstraction? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Abstraction is exposing <em>what</em> something does while hiding <em>how</em> it does it. You define a simple
+        contract (like "a shape has an area") and let each concrete type provide the details. Driving a car is the classic example:
+        you use the wheel and pedals without knowing the engine internals.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span> What is an interface? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>An interface is a contract that lists members (methods, properties, etc.) a type promises to provide,
+        without saying how. A class that implements the interface must supply those members. A class can implement many interfaces,
+        which is how C# allows behavior from multiple sources without multiple class inheritance.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span> What's the difference between an abstract class and an interface, simply? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>An <strong>abstract class</strong> is a partial base class that can include real code, fields, and a constructor,
+        and a type can inherit only one. An <strong>interface</strong> is a pure contract with (classically) no implementation or state,
+        and a type can implement many. Abstract class = shared code + single hierarchy; interface = capability that many types can sign.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span> Why can't you instantiate an abstract class? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Because it's incomplete by design — it may contain abstract methods with no body. Creating one directly would
+        leave those methods undefined. Its purpose is to be a base that concrete derived classes complete, so C# blocks
+        <code>new AbstractType()</code> at compile time.</p></div></details>
+
+      <h3>🟠 Mid-level — going deeper (2–5 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q9</span> What is the difference between <code>override</code> and <code>new</code>? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>override</code> is polymorphic: the method that runs is chosen by the object's <strong>real type</strong>,
+        so even a base-typed variable calls the derived version. <code>new</code> <em>hides</em> the base member: the method that runs is
+        chosen by the variable's <strong>declared type</strong>. Hold the same object as the base type and <code>override</code> still runs
+        the derived code, while <code>new</code> runs the base code. <code>override</code> requires a <code>virtual</code>/<code>abstract</code>
+        base member; <code>new</code> works on any member and just suppresses the hiding warning.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> Given a base-typed variable holding a derived object, which method runs for each? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>If the derived class used <code>override</code>, the <strong>derived</strong> method runs (polymorphism). If it used
+        <code>new</code>, the <strong>base</strong> method runs, because the call was bound to the base member via the variable's declared type.
+        This is the canonical gotcha: same object, different result, depending solely on <code>override</code> vs <code>new</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> Can you overload methods that differ only by return type? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>No. Overload resolution is based on the parameter list (the signature), and the compiler determines the call from
+        the arguments — it can't tell two same-parameter methods apart by return type alone. You must vary the number, types, or order of
+        parameters. (Covariant return types are a separate feature about <em>overriding</em>, not overloading.)</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> When would you choose an interface over an abstract class? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Choose an interface when you're defining a <strong>capability</strong> that possibly <em>unrelated</em> types should
+        support (e.g. <code>IComparable</code>, <code>IDisposable</code>), when a type needs <strong>several</strong> such capabilities, or
+        when you need structs to participate. Choose an abstract class when related types share real <strong>implementation and state</strong>
+        and belong to one hierarchy. You can also combine: inherit one abstract class and implement many interfaces.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What are default interface methods, and why were they added? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Since C# 8, an interface member can include a default body. Implementers inherit it unless they provide their own.
+        The main reason is <strong>versioning</strong>: a library author can add a new member to a widely-used interface without breaking every
+        existing class that implements it. Note you must call a default member through the interface type, and interfaces still can't hold
+        instance state.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> What is explicit interface implementation and when is it useful? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It's implementing an interface member with the interface name as a prefix (<code>void IFoo.Method()</code>), so the
+        member is accessible only through the interface, not the class's public surface. It's useful to <strong>resolve clashes</strong> when two
+        interfaces declare the same member (giving each its own implementation), and to <strong>hide</strong> an interface member from the class's
+        everyday API while still satisfying the contract.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> What are covariant return types? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A C# 9 feature letting an <code>override</code> return a <strong>more derived type</strong> than the base method
+        declared. For example, a base <code>Adopt()</code> returns <code>Animal</code>, while <code>DogShelter.Adopt()</code> overrides it to
+        return <code>Dog</code>. It's safe because a <code>Dog</code> is an <code>Animal</code>, and it spares callers of the derived class from
+        casting.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> How does polymorphism support the open/closed principle? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The open/closed principle says code should be open to extension but closed to modification. With polymorphism, you
+        write logic against a base type or interface (e.g. a loop over <code>INotifier</code>). To add new behavior you create a new implementing
+        class — you don't touch the existing loop or its callers. New types extend the system without modifying tested code, reducing the risk of
+        regressions.</p></div></details>
+
+      <h3>🔴 Senior — synthesis &amp; judgment (5–7 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain the runtime mechanism that makes <code>override</code> polymorphic but not <code>new</code>. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Virtual members are dispatched through a <strong>method table (v-table)</strong> keyed by the object's real type: a
+        virtual call indirects through that table, so the most-derived <code>override</code> is found regardless of the variable's compile-time type.
+        A <code>new</code> member isn't an override — it's a separate, non-virtual member, so the call is bound at <strong>compile time</strong> to
+        whichever member the variable's declared type exposes. No v-table lookup happens, so the declared type's version is what runs.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> What problems do default interface methods introduce, despite solving versioning? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>They blur the interface/abstract-class line and add subtle rules: default members are callable only through the interface
+        type, so the same object behaves differently depending on how it's referenced (echoing the <code>new</code> trap). They reintroduce a form of
+        multiple inheritance of behavior, raising diamond-style ambiguity when two interfaces supply conflicting defaults (the implementer must
+        disambiguate). And because interfaces still can't hold instance state, defaults can't build real stateful properties. Use them for compatibility,
+        not as a general code-sharing mechanism — abstract classes remain better for shared implementation with state.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> Why can overloading be ambiguous, and how does the compiler resolve it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>With multiple overloads and implicit conversions, more than one candidate can match a call. The compiler runs
+        <strong>overload resolution</strong>: it gathers applicable candidates, then picks the <em>most specific</em> one using "better conversion"
+        rules (an exact type beats one requiring conversion; a more derived parameter type beats a less derived). If no single best candidate exists,
+        you get a compile error (CS0121, ambiguous call). Pitfalls include <code>null</code> arguments, numeric literals that fit several types, and
+        optional parameters — which is why deliberately overlapping overloads should be designed carefully or replaced with clearer distinct names.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> Compare abstraction and encapsulation precisely. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>They're complementary but distinct. <strong>Encapsulation</strong> is a <em>mechanism</em>: hiding internal data and
+        bundling it with behavior, enforced by access modifiers, to protect invariants and localize change. <strong>Abstraction</strong> is a
+        <em>design perspective</em>: exposing a simplified model (a contract) and suppressing implementation complexity so callers depend on the idea,
+        not the details. Encapsulation is largely about <em>data hiding</em> within a type; abstraction is about <em>complexity hiding</em> across a
+        boundary (often via abstract classes/interfaces). Good design uses both: encapsulate the internals, then expose them through a clean abstraction.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> When is method hiding (<code>new</code>) actually the right choice? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Rarely, but legitimately: when you must introduce a member that collides with a base member you <em>can't</em> make virtual
+        (e.g. a sealed third-party base, or a base member that wasn't designed for overriding), and you explicitly want the derived type to expose different
+        behavior while leaving base-typed callers on the original. It's also used to "re-declare" a member with a more specific signature in some library
+        patterns. The decision must be deliberate and documented, because the declared-type dispatch surprises maintainers — if you can use
+        <code>override</code> instead, do.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> How do interfaces enable testability and loose coupling? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Depending on an interface rather than a concrete class means the consumer is decoupled from any specific implementation —
+        you can substitute another at will. In tests you inject a <strong>mock or fake</strong> implementing the interface to isolate the unit under test
+        from databases, networks, or clocks. This is the basis of <strong>dependency injection</strong>: code declares the contracts it needs, and an
+        external composition root supplies concrete implementations. The result is modular, swappable, independently testable components — a direct
+        practical payoff of abstraction + polymorphism.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> Is polymorphism possible without inheritance in C#? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Yes — it depends which kind. <strong>Compile-time</strong> polymorphism (overloading) needs no inheritance at all.
+        <strong>Runtime</strong> polymorphism can be achieved through <strong>interfaces</strong> as well as class inheritance — implementing types need
+        not share a base class, just the contract. There's also <strong>parametric polymorphism</strong> via generics (<code>List&lt;T&gt;</code>), and
+        ad-hoc dispatch via pattern matching. So "polymorphism" is broader than "class inheritance"; inheritance is just one route to it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> What's the Liskov Substitution Principle and how does it relate to overriding? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The Liskov Substitution Principle (the "L" in SOLID) says a derived type must be usable anywhere its base type is expected,
+        without breaking correctness. Overriding must therefore <em>honor the base method's contract</em>: don't strengthen preconditions, weaken
+        postconditions, throw unexpected exceptions, or change the meaning callers rely on. A classic violation is a <code>Square : Rectangle</code> whose
+        overridden setters break code that assumes width and height vary independently. Polymorphism only delivers its benefits when overrides are
+        substitutable — otherwise base-typed code that calls the override gets surprised, defeating the whole point.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Nail <strong>Junior</strong> first — the definitions of polymorphism, its two types, overriding, abstraction, and interfaces.
+        <strong>Mid</strong> is where the star topic lives: <code>override</code> vs <code>new</code> (be able to predict the output of the
+        base-typed-variable example), plus interface-vs-abstract judgment and default/explicit implementation. <strong>Senior</strong> tests the
+        machinery and design principles — v-tables, overload resolution, LSP, and testability. Answer each aloud without peeking; stumbles point straight
+        back to the relevant section.</p>
+      </div>
+
+      <p class="foot">All technical details verified against Microsoft Learn (covariant returns spec, access modifiers, interface and abstract/override
+        keyword references) and supporting references. Version notes: default interface methods arrived in C# 8; covariant return types in C# 9. This
+        single <code>04-oop-polymorphism-abstraction.html</code> file is fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+function updateProgress(){const h=document.documentElement;const max=h.scrollHeight-h.clientHeight;
+  progress.style.width=(max>0?(h.scrollTop/max)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});
+window.addEventListener('resize',updateProgress);updateProgress();
+
+const sidebar=document.getElementById('sidebar');const backdrop=document.getElementById('backdrop');
+function closeSidebar(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(link.getAttribute('href'));
+    if(target){const y=target.getBoundingClientRect().top+window.pageYOffset-24;window.scrollTo({top:y,behavior:'smooth'});}
+    if(window.innerWidth<=920) closeSidebar();
+  });
+});
+
+const sections=[...document.querySelectorAll('.section')];
+const navLinks=[...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on=l.getAttribute('href')==='#'+id;
+    l.classList.toggle('active',on);
+    if(on){const lr=l.getBoundingClientRect(),sr=sidebar.getBoundingClientRect();
+      if(lr.top<sr.top+60||lr.bottom>sr.bottom-60){sidebar.scrollTop+=(lr.top-sr.top)-sidebar.clientHeight/2+lr.height/2;}}
+  });
+}
+const spy=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting) setActive(en.target.id);});},
+  {rootMargin:'-20% 0px -70% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+const reveal=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');reveal.unobserve(en.target);}});},{threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.closest('.code').querySelector('pre code').innerText;
+    const done=()=>{btn.textContent='Copied!';btn.classList.add('done');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done');},2000);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code,done));
+    } else {fallback(code,done);}
+  });
+});
+function fallback(text,cb){const ta=document.createElement('textarea');ta.value=text;
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
+
+document.getElementById('fab').addEventListener('click',()=>{
+  const open=sidebar.classList.toggle('open');backdrop.classList.toggle('show',open);});
+backdrop.addEventListener('click',closeSidebar);
+</script>
+</body>
+</html>

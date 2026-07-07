@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DSA — Hashing 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;
+  --line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;
+  --blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;
+  --green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;
+  --code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar:268px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:radial-gradient(ellipse 80% 60% at 20% 10%,#f5f0ff22 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 80%,#ffe8d622 0%,transparent 60%),var(--bg);color:var(--ink);font-family:'Newsreader',Georgia,serif;font-size:18px;line-height:1.75;min-height:100vh;}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;z-index:1000;background:linear-gradient(90deg,var(--accent),var(--rose));transition:width .1s linear;}
+#sidebar{position:fixed;top:3px;left:0;width:var(--sidebar);height:calc(100vh - 3px);background:var(--bg-soft);border-right:1px solid var(--line);overflow-y:auto;padding:28px 0 40px;z-index:200;scrollbar-width:thin;scrollbar-color:var(--line) transparent;}
+#sidebar::-webkit-scrollbar{width:4px;}
+#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+.sidebar-brand{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--accent);font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:0 20px 20px;border-bottom:1px solid var(--line);margin-bottom:16px;}
+.sidebar-group{margin-bottom:8px;padding:0 12px;}
+.sidebar-group-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-soft);padding:6px 8px 4px;opacity:.7;}
+.sidebar-link{display:block;padding:6px 8px;border-radius:6px;font-family:'Newsreader',serif;font-size:.88rem;color:var(--ink-soft);text-decoration:none;line-height:1.4;transition:background .15s,color .15s;}
+.sidebar-link:hover{background:var(--accent-soft);color:var(--accent);}
+.sidebar-link.active{background:var(--accent-soft);color:var(--accent);font-weight:500;}
+.sidebar-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);margin-right:6px;opacity:.8;}
+#main{margin-left:var(--sidebar);padding:48px 56px 80px;max-width:900px;}
+#fab{display:none;position:fixed;bottom:24px;right:24px;z-index:500;width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;font-size:1.3rem;border:none;cursor:pointer;box-shadow:0 4px 20px #b5651d44;align-items:center;justify-content:center;transition:transform .2s;}
+#fab:hover{transform:scale(1.08);}
+#overlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(45,42,38,.35);backdrop-filter:blur(4px);}
+.hero{padding:16px 0 56px;}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--accent);text-transform:uppercase;letter-spacing:.14em;margin-bottom:16px;}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);line-height:1.1;color:var(--ink);margin-bottom:20px;}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:28px;}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px;}
+.pill{font-family:'JetBrains Mono',monospace;font-size:.72rem;background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);padding:4px 12px;border-radius:20px;letter-spacing:.04em;}
+.section{padding:48px 0 20px;border-top:1px solid var(--line);opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease;}
+.section.visible{opacity:1;transform:none;}
+h2{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(1.6rem,3vw,2rem);color:var(--ink);margin-bottom:24px;display:flex;align-items:center;gap:14px;line-height:1.2;}
+.sec-badge{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--accent);background:var(--accent-soft);padding:3px 10px;border-radius:4px;font-weight:600;letter-spacing:.06em;flex-shrink:0;}
+h3{font-family:'Fraunces',serif;font-size:1.2rem;font-weight:600;color:var(--ink);margin:28px 0 12px;}
+p{margin-bottom:16px;}
+ul,ol{margin:0 0 16px 24px;}
+li{margin-bottom:6px;}
+strong{color:var(--ink);}
+.callout{border-radius:8px;padding:18px 22px;margin:24px 0;border-left:4px solid;}
+.callout .callout-label{font-family:'JetBrains Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;font-weight:600;margin-bottom:8px;display:block;}
+.callout.tip{background:var(--green-soft);border-color:var(--green);}
+.callout.tip .callout-label{color:var(--green);}
+.callout.key{background:var(--blue-soft);border-color:var(--blue);}
+.callout.key .callout-label{color:var(--blue);}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose);}
+.callout.analogy .callout-label{color:var(--rose);}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent);}
+.callout.warn .callout-label{color:var(--accent);}
+.code-wrap{border-radius:10px;overflow:hidden;margin:24px 0;}
+.code-header{background:#1e1d26;display:flex;align-items:center;justify-content:space-between;padding:8px 16px;}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#aaa;letter-spacing:.06em;}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.7rem;background:transparent;border:1px solid #444;color:#aaa;padding:3px 10px;border-radius:4px;cursor:pointer;transition:all .2s;}
+.copy-btn:hover{border-color:#888;color:#ddd;}
+.copy-btn.copied{color:#82d982;border-color:#82d982;}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.85rem;line-height:1.65;padding:20px 22px;overflow-x:auto;margin:0;}
+code:not(pre code){font-family:'JetBrains Mono',monospace;font-size:.84em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:2px 6px;}
+.kw{color:#c792ea;}.str{color:#c3e88d;}.cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;}.fn{color:#ffcb6b;}.num{color:#f78c6c;}
+.diagram-wrap{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:24px;margin:24px 0;overflow-x:auto;}
+.complexity-badge{display:inline-flex;align-items:center;gap:6px;background:var(--bg-soft);border:1px solid var(--line);border-radius:20px;padding:4px 14px;margin:4px 4px 4px 0;font-size:.84rem;}
+.complexity-badge .cb-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);}
+.complexity-badge .cb-val{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);}
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:.9rem;}
+thead tr{background:var(--bg-soft);}
+th{font-family:'JetBrains Mono',monospace;font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);padding:10px 16px;text-align:left;}
+td{padding:10px 16px;border-bottom:1px solid var(--line);}
+tr:hover td{background:var(--bg-soft);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px;margin:24px 0;}
+.card{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:22px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 28px #b5651d18;}
+.card-glyph{font-size:1.5rem;margin-bottom:10px;}
+.card-title{font-family:'Fraunces',serif;font-weight:600;font-size:1rem;color:var(--ink);margin-bottom:8px;}
+.card-body{font-size:.88rem;color:var(--ink-soft);}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:var(--bg-soft);border:1px solid var(--line);border-radius:10px;padding:20px;border-top:3px solid var(--accent);}
+.recap-card .rc-title{font-family:'Fraunces',serif;font-weight:600;font-size:.97rem;color:var(--ink);margin-bottom:8px;}
+.recap-card .rc-body{font-size:.85rem;color:var(--ink-soft);line-height:1.6;}
+/* LeetCode problems */
+.lc-list { list-style: none; padding: 0; margin: 1rem 0; }
+.lc-list li {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .6rem .9rem;
+  border-bottom: 1px solid var(--line);
+  font-size: .9rem;
+}
+.lc-list li:last-child { border-bottom: none; }
+.lc-diff {
+  font-family: "JetBrains Mono", monospace;
+  font-size: .65rem;
+  padding: .15rem .45rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+  font-weight: 600;
+}
+.lc-diff.easy   { background: var(--green-soft);  color: var(--green);  }
+.lc-diff.medium { background: var(--accent-soft); color: var(--accent); }
+.lc-diff.hard   { background: var(--rose-soft);   color: var(--rose);   }
+.lc-name { color: var(--blue); font-weight: 500; }
+.lc-why  { color: var(--ink-soft); font-size: .82rem; }
+a.lc-name {
+  color: var(--blue);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color .15s, color .15s;
+}
+a.lc-name:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.lc-why{font-size:.82rem;color:var(--ink-soft);}
+/* ARR CELLS */
+.arr-wrap{overflow-x:auto;margin:16px 0;}
+.arr-row{display:flex;gap:0;align-items:flex-end;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;min-width:40px;}
+.arr-cell .v{height:40px;width:40px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--line);background:var(--bg);font-family:'JetBrains Mono',monospace;font-size:.82rem;font-weight:600;color:var(--ink);}
+.arr-cell:first-child .v{border-radius:6px 0 0 6px;}
+.arr-cell:last-child .v{border-radius:0 6px 6px 0;}
+.arr-cell .ix{padding:4px 0;font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--ink-soft);text-align:center;width:40px;}
+.arr-cell.hi .v{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.arr-cell.hi2 .v{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.arr-cell.hi3 .v{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+.arr-cell.neg .v{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);}
+/* MAP TABLE */
+.map-table{border:1.5px solid var(--line);border-radius:8px;overflow:hidden;margin:16px 0;display:inline-table;min-width:200px;}
+.map-row{display:flex;border-bottom:1px solid var(--line);}
+.map-row:last-child{border-bottom:none;}
+.map-k{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--blue);font-weight:600;padding:8px 16px;background:var(--bg-soft);min-width:80px;border-right:1px solid var(--line);}
+.map-v{font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--accent);font-weight:600;padding:8px 16px;background:var(--bg);}
+.map-row.hi .map-k,.map-row.hi .map-v{background:var(--accent-soft);}
+/* PSUM VISUAL */
+.psum-section{margin:16px 0;}
+.psum-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em;}
+/* FORMULA */
+.formula{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:16px 22px;margin:16px 0;font-family:'JetBrains Mono',monospace;font-size:.88rem;color:var(--ink);overflow-x:auto;white-space:pre;}
+@media(max-width:800px){
+  #sidebar{transform:translateX(-100%);transition:transform .3s ease;}
+  #sidebar.open{transform:translateX(0);}
+  #main{margin-left:0;padding:32px 22px 60px;}
+  #fab{display:flex;}
+  #overlay.open{display:block;}
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+  padding-bottom: .75rem;
+  border-bottom: 1px solid var(--line);
+}
+.section-num {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: .2rem .55rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.section-header h2 {
+  font-family: "Fraunces", serif;
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+
+<nav id="sidebar">
+  <div class="sidebar-brand">DSA · Hashing 2</div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Pair Problems</div>
+    <a class="sidebar-link" href="#pair-exists"><span class="sidebar-num">01</span>Pair Sum Exists (check)</a>
+    <a class="sidebar-link" href="#pair-count"><span class="sidebar-num">02</span>Count Pairs with Sum K</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Prefix Sum + HashMap</div>
+    <a class="sidebar-link" href="#subarray-zero"><span class="sidebar-num">03</span>Subarray with Sum = 0</a>
+    <a class="sidebar-link" href="#subarray-k"><span class="sidebar-num">04</span>Subarray with Sum = K</a>
+    <a class="sidebar-link" href="#longest-zero"><span class="sidebar-num">05</span>Longest Subarray Sum = 0</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">Review</div>
+    <a class="sidebar-link" href="#recap">Quick Recap</a>
+    <a class="sidebar-link" href="#leetcode">LeetCode Problems</a>
+  </div>
+</nav>
+
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+
+<main id="main">
+  <div class="hero">
+    <div class="hero-eyebrow">DSA · Scaler · Hashing — Session 2</div>
+    <h1>Prefix Sums<br/>&amp; HashMap Patterns</h1>
+    <p class="hero-lede">
+      The "on-the-go" hash trick for pair problems, the prefix-sum duplicate insight for subarray sum detection, and the first-occurrence map for the longest zero-sum subarray.
+    </p>
+    <div class="pill-row">
+      <span class="pill">Pair Sum Check</span>
+      <span class="pill">Count Pairs</span>
+      <span class="pill">Subarray Sum = 0</span>
+      <span class="pill">Subarray Sum = K</span>
+      <span class="pill">Longest Zero-Sum Subarray</span>
+    </div>
+  </div>
+
+  <!-- 01 PAIR EXISTS -->
+  <section class="section" id="pair-exists">
+    <h2><span class="sec-badge">01</span>Pair Sum Exists — Check</h2>
+
+    <div class="callout key">
+      <span class="callout-label">Problem</span>
+      Given an array of N integers and a target K, check if there exist two distinct indices i ≠ j such that <code>arr[i] + arr[j] = K</code>.
+    </div>
+
+    <div class="diagram-wrap">
+      <p style="font-size:.85rem;color:var(--ink-soft);margin-bottom:12px;">arr = [8, 9, 1, −2, 4, 5, 11, −6, 4]</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="arr-cell"><div class="v">8</div><div class="ix">0</div></div>
+        <div class="arr-cell"><div class="v">9</div><div class="ix">1</div></div>
+        <div class="arr-cell"><div class="v">1</div><div class="ix">2</div></div>
+        <div class="arr-cell neg"><div class="v">-2</div><div class="ix">3</div></div>
+        <div class="arr-cell"><div class="v">4</div><div class="ix">4</div></div>
+        <div class="arr-cell"><div class="v">5</div><div class="ix">5</div></div>
+        <div class="arr-cell hi"><div class="v">11</div><div class="ix">6</div></div>
+        <div class="arr-cell neg"><div class="v">-6</div><div class="ix">7</div></div>
+        <div class="arr-cell"><div class="v">4</div><div class="ix">8</div></div>
+      </div></div>
+      <p style="margin-top:12px;font-size:.85rem;color:var(--ink-soft);">K=6 → true (1+5). &nbsp; K=22 → false (11+11 needs same element twice). &nbsp; K=8 → true (9+−1? no, but −2+10? no; actually 9+−1? Let's check: no 10 in array. Wait — the notes say K=8 true. That's 4+4 at indices 4 and 8.) ✓</p>
+    </div>
+
+    <h3>Brute Force — O(N²)</h3>
+    <p>Check all pairs (i, j) with i &lt; j.</p>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Brute Force</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+    <span class="kw">for</span> (<span class="ty">int</span> j = i + <span class="num">1</span>; j &lt; N; j++) {
+        <span class="kw">if</span> (arr[j] == K - arr[i]) <span class="kw">return true</span>;
+    }
+}
+<span class="kw">return false</span>;</pre>
+    </div>
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N²)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(1)</span></span>
+
+    <h3>Why "Build Set First" Fails for K = 8 with arr = [4, 4, …]</h3>
+    <p>
+      If you add all elements to a set first then check <code>set.contains(K − arr[i])</code>, a set with a single 4 would report K=8 as true even when only one 4 exists — because the set can't distinguish "is there a <em>different</em> element equal to 4?" from "is 4 anywhere in the set?"
+    </p>
+
+    <h3>Optimized — HashSet "On the Go" — O(N)</h3>
+    <p>
+      Check for the complement <em>before</em> adding the current element. This ensures we only match with elements seen earlier — never with the element itself.
+    </p>
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — HashSet On the Go</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">HashSet</span>&lt;<span class="ty">Integer</span>&gt; set = <span class="kw">new</span> <span class="ty">HashSet</span>&lt;&gt;();
+
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+    <span class="cmt">// Check complement BEFORE adding current element</span>
+    <span class="kw">if</span> (set.contains(K - arr[i])) <span class="kw">return true</span>;
+    set.add(arr[i]);
+}
+<span class="kw">return false</span>;</pre>
+    </div>
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(N)</span></span>
+
+    <div class="callout tip">
+      <span class="callout-label">The "On the Go" Pattern</span>
+      Always check <em>then</em> add. The set at step i contains only elements at indices 0 through i−1. So a successful match guarantees two distinct indices. This is the canonical O(N) pair-detection pattern.
+    </div>
+  </section>
+
+  <!-- 02 COUNT PAIRS -->
+  <section class="section" id="pair-count">
+    <h2><span class="sec-badge">02</span>Count Pairs with Sum = K</h2>
+
+    <div class="callout key">
+      <span class="callout-label">Problem</span>
+      Given an array and target K, count all ordered pairs (i, j) with i &lt; j such that <code>arr[i] + arr[j] = K</code>.
+    </div>
+
+    <div class="diagram-wrap">
+      <p style="font-size:.85rem;color:var(--ink-soft);margin-bottom:12px;">arr = [2, 5, 2, 5, 8, 5, 2, 8] &nbsp;|&nbsp; K = 10</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="arr-cell hi"><div class="v">2</div><div class="ix">0</div></div>
+        <div class="arr-cell hi2"><div class="v">5</div><div class="ix">1</div></div>
+        <div class="arr-cell hi"><div class="v">2</div><div class="ix">2</div></div>
+        <div class="arr-cell hi2"><div class="v">5</div><div class="ix">3</div></div>
+        <div class="arr-cell hi3"><div class="v">8</div><div class="ix">4</div></div>
+        <div class="arr-cell hi2"><div class="v">5</div><div class="ix">5</div></div>
+        <div class="arr-cell hi"><div class="v">2</div><div class="ix">6</div></div>
+        <div class="arr-cell hi3"><div class="v">8</div><div class="ix">7</div></div>
+      </div></div>
+      <p style="margin-top:12px;font-size:.85rem;color:var(--ink-soft);">Pairs summing to 10: (2,8) and (8,2) combos. Frequency map: 2→3, 5→3, 8→2. &nbsp; When we see a 2 at index 2, we need an 8 — there are 0 eights in map yet. When we see 8 at index 4, complement is 2 — there are 2 twos already → ans += 2. And so on. Total = <strong>9</strong>.</p>
+    </div>
+
+    <h3>HashMap "On the Go"</h3>
+    <p>
+      For each element, its complement is <code>K − arr[i]</code>. If the complement is already in the map, <em>all</em> previous occurrences of that complement form valid pairs with the current element. Add <code>map.get(K − arr[i])</code> to the answer.
+    </p>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Count Pairs with Sum K</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">HashMap</span>&lt;<span class="ty">Integer</span>, <span class="ty">Integer</span>&gt; map = <span class="kw">new</span> <span class="ty">HashMap</span>&lt;&gt;();
+<span class="ty">int</span> ans = <span class="num">0</span>;
+
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+    <span class="cmt">// Count how many previous elements form a valid pair</span>
+    <span class="ty">int</span> complement = K - arr[i];
+    <span class="kw">if</span> (map.containsKey(complement)) {
+        ans += map.get(complement);
+    }
+
+    <span class="cmt">// Add current element to map AFTER checking</span>
+    map.put(arr[i], map.getOrDefault(arr[i], <span class="num">0</span>) + <span class="num">1</span>);
+}
+<span class="kw">return</span> ans;</pre>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(N)</span></span>
+
+    <div class="callout analogy">
+      <span class="callout-label">Trace — K = 10</span>
+      i=0: arr[0]=2, complement=8, map empty → ans=0, add 2→1. <br/>
+      i=1: arr[1]=5, complement=5, map has no 5 → ans=0, add 5→1.<br/>
+      i=2: arr[2]=2, complement=8, no 8 → ans=0, add 2→2.<br/>
+      i=3: arr[3]=5, complement=5, map has 5→1 → ans=1, add 5→2.<br/>
+      i=4: arr[4]=8, complement=2, map has 2→2 → ans=3, add 8→1.<br/>
+      i=5: arr[5]=5, complement=5, map has 5→2 → ans=5, add 5→3.<br/>
+      i=6: arr[6]=2, complement=8, map has 8→1 → ans=6, add 2→3.<br/>
+      i=7: arr[7]=8, complement=2, map has 2→3 → ans=9, add 8→2.<br/>
+      <strong>Answer = 9 ✓</strong>
+    </div>
+  </section>
+
+  <!-- 03 SUBARRAY ZERO -->
+  <section class="section" id="subarray-zero">
+    <h2><span class="sec-badge">03</span>Subarray with Sum = 0 (Exists?)</h2>
+
+    <div class="callout key">
+      <span class="callout-label">Problem</span>
+      Given N elements, check whether any contiguous subarray has sum equal to 0. (1 ≤ N ≤ 10⁵)
+    </div>
+
+    <h3>Brute Force — O(N³) or O(N²)</h3>
+    <p>Enumerate all subarrays (O(N²) start/end pairs) and compute each sum from scratch (O(N)) → O(N³). Using prefix sums reduces to O(N²).</p>
+
+    <h3>Key Insight — Prefix Sum Duplicates</h3>
+    <p>
+      Define the <strong>prefix sum</strong> <code>psum[i] = arr[0] + arr[1] + … + arr[i]</code>. The sum of subarray <code>arr[j+1..i]</code> equals <code>psum[i] − psum[j]</code>. This sum is 0 when <code>psum[i] = psum[j]</code> — that is, when the same prefix sum repeats.
+    </p>
+
+    <div class="formula">sum(arr[j+1 .. i]) = psum[i] − psum[j]
+                      = 0   iff   psum[i] == psum[j]
+
+→ A repeated value in psum means a zero-sum subarray exists.</div>
+
+    <div class="diagram-wrap">
+      <p class="psum-label">arr = [2, 2, 1, −3, 4, 3, 1, −2, −3, 2]</p>
+      <div class="arr-wrap" style="margin-bottom:12px;"><div class="arr-row">
+        <div class="arr-cell hi"><div class="v">2</div><div class="ix">0</div></div>
+        <div class="arr-cell hi"><div class="v">2</div><div class="ix">1</div></div>
+        <div class="arr-cell hi"><div class="v">1</div><div class="ix">2</div></div>
+        <div class="arr-cell neg"><div class="v">-3</div><div class="ix">3</div></div>
+        <div class="arr-cell"><div class="v">4</div><div class="ix">4</div></div>
+        <div class="arr-cell"><div class="v">3</div><div class="ix">5</div></div>
+        <div class="arr-cell"><div class="v">1</div><div class="ix">6</div></div>
+        <div class="arr-cell neg"><div class="v">-2</div><div class="ix">7</div></div>
+        <div class="arr-cell neg"><div class="v">-3</div><div class="ix">8</div></div>
+        <div class="arr-cell"><div class="v">2</div><div class="ix">9</div></div>
+      </div></div>
+      <p class="psum-label">psum = [2, 4, 5, 2, 6, 9, 10, 8, 5, 7]</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="arr-cell hi"><div class="v">2</div><div class="ix">0</div></div>
+        <div class="arr-cell"><div class="v">4</div><div class="ix">1</div></div>
+        <div class="arr-cell hi3"><div class="v">5</div><div class="ix">2</div></div>
+        <div class="arr-cell hi"><div class="v">2</div><div class="ix">3</div></div>
+        <div class="arr-cell"><div class="v">6</div><div class="ix">4</div></div>
+        <div class="arr-cell"><div class="v">9</div><div class="ix">5</div></div>
+        <div class="arr-cell"><div class="v">10</div><div class="ix">6</div></div>
+        <div class="arr-cell"><div class="v">8</div><div class="ix">7</div></div>
+        <div class="arr-cell hi3"><div class="v">5</div><div class="ix">8</div></div>
+        <div class="arr-cell"><div class="v">7</div><div class="ix">9</div></div>
+      </div></div>
+      <p style="margin-top:12px;font-size:.85rem;color:var(--ink-soft);">psum[0]=2 and psum[3]=2 → subarray arr[1..3]=[2,1,−3] has sum 0. Also psum[2]=5 and psum[8]=5 → arr[3..8] has sum 0. Answer: <strong>true</strong>.</p>
+    </div>
+
+    <h3>Edge Case — Prefix Sum Itself = 0</h3>
+    <p>
+      If <code>psum[i] = 0</code>, the subarray from index 0 to i has sum 0. To handle this uniformly, <strong>insert 0 into the set initially</strong> before scanning. Then "sum 0 seen before" correctly triggers a match.
+    </p>
+    <div class="callout analogy">
+      <span class="callout-label">Example — arr = [−2, −1, 3, 5]</span>
+      psum = [−2, −3, 0, 5]. At i=2, psum=0. Without 0 pre-inserted, the check "set.contains(0)" is false. With 0 pre-inserted, it correctly returns true because arr[0..2] = [−2, −1, 3] sums to 0.
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Subarray Sum = 0</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">HashSet</span>&lt;<span class="ty">Integer</span>&gt; set = <span class="kw">new</span> <span class="ty">HashSet</span>&lt;&gt;();
+set.add(<span class="num">0</span>);   <span class="cmt">// handle subarrays starting from index 0</span>
+
+<span class="ty">int</span> sum = <span class="num">0</span>;
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+    sum += arr[i];
+    <span class="kw">if</span> (set.contains(sum)) <span class="kw">return true</span>;
+    set.add(sum);
+}
+<span class="kw">return false</span>;</pre>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(N)</span></span>
+  </section>
+
+  <!-- 04 SUBARRAY K -->
+  <section class="section" id="subarray-k">
+    <h2><span class="sec-badge">04</span>Subarray with Sum = K (Exists?)</h2>
+
+    <div class="callout key">
+      <span class="callout-label">Problem</span>
+      Given an array of N integers and target K, check if any contiguous subarray has sum equal to K. (1 ≤ N ≤ 10⁶)
+    </div>
+
+    <div class="diagram-wrap" style="font-family:'JetBrains Mono',monospace;font-size:.84rem;">
+      <div style="margin-bottom:8px;">arr=[2,3,9,−4,1,5,6,2,5], K=11 → <span style="color:var(--green);font-weight:600;">true</span> (subarray [2,3,9,−4,1]=11)</div>
+      <div style="margin-bottom:8px;">arr=[2,3,9,−4,1,5,6,2,5], K=10 → <span style="color:var(--green);font-weight:600;">true</span></div>
+      <div>arr=[5,10,20,100,105], K=110 → <span style="color:var(--rose);font-weight:600;">false</span></div>
+    </div>
+
+    <h3>Key Insight — Prefix Sum Difference</h3>
+    <p>
+      The sum of subarray <code>arr[j+1..i] = psum[i] − psum[j]</code>. This equals K when <code>psum[j] = psum[i] − K</code>. So for each running prefix sum, check if <code>sum − K</code> was seen before.
+    </p>
+
+    <div class="formula">sum(arr[j+1..i]) = K
+iff  psum[i] − psum[j] = K
+iff  psum[j] = psum[i] − K  =  sum − K
+
+→ Check if (sum − K) is in the set.</div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Subarray Sum = K</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">HashSet</span>&lt;<span class="ty">Integer</span>&gt; set = <span class="kw">new</span> <span class="ty">HashSet</span>&lt;&gt;();
+set.add(<span class="num">0</span>);   <span class="cmt">// handle subarrays starting from index 0</span>
+
+<span class="ty">int</span> sum = <span class="num">0</span>;
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+    sum += arr[i];
+    <span class="kw">if</span> (set.contains(sum - K)) <span class="kw">return true</span>;  <span class="cmt">// key change from sum=0 version</span>
+    set.add(sum);
+}
+<span class="kw">return false</span>;</pre>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(N)</span></span>
+
+    <div class="callout tip">
+      <span class="callout-label">Sum=0 as a Special Case</span>
+      The subarray-sum-0 problem is just the K=0 case: <code>sum − K = sum − 0 = sum</code>. So the sum=0 version checks <code>set.contains(sum)</code> and the sum=K version checks <code>set.contains(sum − K)</code>. One unified solution handles both.
+    </div>
+
+    <h3>Trace — arr=[2,3,9,−4,1,5,6,2,5], K=15</h3>
+    <div class="diagram-wrap">
+      <p class="psum-label">psum = [2, 5, 14, 10, 11, 16, 22, 24, 29]</p>
+      <div class="arr-wrap" style="margin-bottom:6px;"><div class="arr-row">
+        <div class="arr-cell"><div class="v">2</div><div class="ix">ps0</div></div>
+        <div class="arr-cell"><div class="v">5</div><div class="ix">ps1</div></div>
+        <div class="arr-cell"><div class="v">14</div><div class="ix">ps2</div></div>
+        <div class="arr-cell hi3"><div class="v">10</div><div class="ix">ps3</div></div>
+        <div class="arr-cell"><div class="v">11</div><div class="ix">ps4</div></div>
+        <div class="arr-cell"><div class="v">16</div><div class="ix">ps5</div></div>
+        <div class="arr-cell hi"><div class="v">22</div><div class="ix">ps6</div></div>
+        <div class="arr-cell hi2"><div class="v">24</div><div class="ix">ps7</div></div>
+        <div class="arr-cell"><div class="v">29</div><div class="ix">ps8</div></div>
+      </div></div>
+      <p style="font-size:.84rem;color:var(--ink-soft);">At i=6 (ps=22): 22−15=7. Is 7 in set? No. At i=7 (ps=24): 24−15=9. Is 9 in set? No. But at some point (ps=10 at i=3): 10−15=−5, not in set. At i=6, (22−15=7) not in set. Hmm let's check i where it matches: sum=5+14+10=? Actually sum=2,5,14,10,11,16,22,24,29. Check sum-15 at each: −13,−10,−1,−5,−4,1,7,9,14. Is 14 in set? At i=8 (sum=29): 29−15=14. psum[2]=14 is in set. Answer: <strong>true</strong> (subarray arr[3..8]).</p>
+    </div>
+  </section>
+
+  <!-- 05 LONGEST ZERO SUM -->
+  <section class="section" id="longest-zero">
+    <h2><span class="sec-badge">05</span>Longest Subarray with Sum = 0</h2>
+
+    <div class="callout key">
+      <span class="callout-label">Problem</span>
+      Given an array of N integers, find the <strong>length</strong> of the longest contiguous subarray whose elements sum to 0.
+    </div>
+
+    <h3>Extending the Detection Idea</h3>
+    <p>
+      We know that if <code>psum[i] = psum[j]</code> (with i &gt; j), then the subarray <code>arr[j+1..i]</code> has sum 0 and length <code>i − j</code>. To maximize this length, we want the <strong>earliest</strong> (smallest j) at which each prefix sum value was seen. Store the first occurrence index in a HashMap.
+    </p>
+
+    <div class="formula">ans = max(ans,  i − map.get(sum))
+
+Insert (0 → −1) initially so that if psum[i] = 0,
+the subarray arr[0..i] of length i − (−1) = i + 1 is counted.</div>
+
+    <div class="diagram-wrap">
+      <p class="psum-label">arr = [2, 5, 3, 4, −6, −1, 5, −2, 7, −10]</p>
+      <div class="arr-wrap" style="margin-bottom:12px;"><div class="arr-row">
+        <div class="arr-cell"><div class="v">2</div><div class="ix">0</div></div>
+        <div class="arr-cell"><div class="v">5</div><div class="ix">1</div></div>
+        <div class="arr-cell"><div class="v">3</div><div class="ix">2</div></div>
+        <div class="arr-cell"><div class="v">4</div><div class="ix">3</div></div>
+        <div class="arr-cell neg"><div class="v">-6</div><div class="ix">4</div></div>
+        <div class="arr-cell neg"><div class="v">-1</div><div class="ix">5</div></div>
+        <div class="arr-cell"><div class="v">5</div><div class="ix">6</div></div>
+        <div class="arr-cell neg"><div class="v">-2</div><div class="ix">7</div></div>
+        <div class="arr-cell"><div class="v">7</div><div class="ix">8</div></div>
+        <div class="arr-cell neg"><div class="v">-10</div><div class="ix">9</div></div>
+      </div></div>
+      <p class="psum-label">psum = [2, 7, 10, 14, 8, 7, 12, 10, 17, 7]</p>
+      <div class="arr-wrap"><div class="arr-row">
+        <div class="arr-cell"><div class="v">2</div><div class="ix">ps0</div></div>
+        <div class="arr-cell hi"><div class="v">7</div><div class="ix">ps1</div></div>
+        <div class="arr-cell hi2"><div class="v">10</div><div class="ix">ps2</div></div>
+        <div class="arr-cell"><div class="v">14</div><div class="ix">ps3</div></div>
+        <div class="arr-cell"><div class="v">8</div><div class="ix">ps4</div></div>
+        <div class="arr-cell hi"><div class="v">7</div><div class="ix">ps5</div></div>
+        <div class="arr-cell"><div class="v">12</div><div class="ix">ps6</div></div>
+        <div class="arr-cell hi2"><div class="v">10</div><div class="ix">ps7</div></div>
+        <div class="arr-cell"><div class="v">17</div><div class="ix">ps8</div></div>
+        <div class="arr-cell hi"><div class="v">7</div><div class="ix">ps9</div></div>
+      </div></div>
+      <p style="margin-top:12px;font-size:.85rem;color:var(--ink-soft);">
+        7 first seen at ps1 (index 1). Repeated at ps5 (5−1=4), ps9 (9−1=<strong>8</strong>). &nbsp;
+        10 first seen at ps2 (index 2). Repeated at ps7 (7−2=5). &nbsp;
+        Longest = <strong>8</strong> (indices 2 through 9 of the original array).
+      </p>
+    </div>
+
+    <h3>First-Occurrence Map</h3>
+    <div class="diagram-wrap" style="display:flex;gap:24px;flex-wrap:wrap;">
+      <div>
+        <p style="font-size:.82rem;color:var(--ink-soft);margin-bottom:8px;">HashMap (sum → first index):</p>
+        <div class="map-table">
+          <div class="map-row hi"><div class="map-k">0</div><div class="map-v">−1</div></div>
+          <div class="map-row"><div class="map-k">2</div><div class="map-v">0</div></div>
+          <div class="map-row"><div class="map-k">7</div><div class="map-v">1</div></div>
+          <div class="map-row"><div class="map-k">10</div><div class="map-v">2</div></div>
+          <div class="map-row"><div class="map-k">14</div><div class="map-v">3</div></div>
+          <div class="map-row"><div class="map-k">8</div><div class="map-v">4</div></div>
+          <div class="map-row"><div class="map-k">12</div><div class="map-v">6</div></div>
+          <div class="map-row"><div class="map-k">17</div><div class="map-v">8</div></div>
+        </div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.82rem;color:var(--ink-soft);">
+        <p style="margin-bottom:10px;color:var(--ink);">Length calculations when psum repeats:</p>
+        <p>ps5=7: 5 − map(7)=1 → len <strong>4</strong></p>
+        <p>ps7=10: 7 − map(10)=2 → len <strong>5</strong></p>
+        <p>ps9=7: 9 − map(7)=1 → len <strong>8</strong> ← max</p>
+        <p style="margin-top:12px;color:var(--accent);font-weight:600;">ans = 8</p>
+      </div>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><span class="code-lang">Java — Longest Subarray Sum = 0</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+      <pre><span class="ty">HashMap</span>&lt;<span class="ty">Integer</span>, <span class="ty">Integer</span>&gt; map = <span class="kw">new</span> <span class="ty">HashMap</span>&lt;&gt;();
+map.put(<span class="num">0</span>, -<span class="num">1</span>);   <span class="cmt">// virtual index: psum=0 "first seen" before index 0</span>
+
+<span class="ty">int</span> sum = <span class="num">0</span>, ans = <span class="num">0</span>;
+
+<span class="kw">for</span> (<span class="ty">int</span> i = <span class="num">0</span>; i &lt; N; i++) {
+    sum += arr[i];
+
+    <span class="kw">if</span> (map.containsKey(sum)) {
+        <span class="cmt">// Same prefix sum seen before: subarray arr[map.get(sum)+1 .. i] has sum 0</span>
+        ans = Math.<span class="fn">max</span>(ans, i - map.get(sum));
+    } <span class="kw">else</span> {
+        <span class="cmt">// Only store FIRST occurrence — we want the longest span</span>
+        map.put(sum, i);
+    }
+}
+<span class="kw">return</span> ans;</pre>
+    </div>
+
+    <span class="complexity-badge"><span class="cb-label">Time</span><span class="cb-val">O(N)</span></span>
+    <span class="complexity-badge"><span class="cb-label">Space</span><span class="cb-val">O(N)</span></span>
+
+    <div class="callout warn">
+      <span class="callout-label">Don't Overwrite First Occurrence</span>
+      The <code>else</code> branch is critical: only insert into the map if the key is absent. If you overwrite an existing entry, you'll lose the earliest index and compute a shorter (not longest) subarray. The code checks <code>containsKey</code> and only puts if the key is absent.
+    </div>
+  </section>
+
+  <!-- RECAP -->
+  <section class="section" id="recap">
+    <h2><span class="sec-badge">★</span>Quick Recap</h2>
+    <div class="recap-grid">
+      <div class="recap-card">
+        <div class="rc-title">Pair Sum Exists</div>
+        <div class="rc-body">HashSet on the go: check <code>set.contains(K−x)</code> THEN add x. Prevents matching an element with itself.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Count Pairs with Sum K</div>
+        <div class="rc-body">HashMap on the go: <code>ans += map.get(K−x)</code> then increment <code>map[x]</code>. Counts all earlier matching elements.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Subarray Sum = 0</div>
+        <div class="rc-body">Pre-insert 0 into set. Check if running prefix sum has been seen before. O(N) time and space.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Subarray Sum = K</div>
+        <div class="rc-body">Same as sum=0 but check <code>set.contains(sum−K)</code>. Pre-insert 0. O(N) time and space.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">Longest Subarray Sum = 0</div>
+        <div class="rc-body">HashMap stores first occurrence of each prefix sum. On repeat: update ans = max(ans, i − map.get(sum)). Pre-insert 0→−1.</div>
+      </div>
+      <div class="recap-card">
+        <div class="rc-title">"On the Go" Pattern</div>
+        <div class="rc-body">Always check the hash structure FIRST, then add the current element. Prevents self-matching and maintains correct ordering.</div>
+      </div>
+    </div>
+
+    <h3>The Prefix Sum Unification</h3>
+    <p>All five problems in this session reduce to the same underlying insight:</p>
+    <table>
+      <thead><tr><th>Problem</th><th>Check in set/map</th><th>Pre-insert</th><th>Time</th></tr></thead>
+      <tbody>
+        <tr><td>Pair sum = K (exists)</td><td><code>K − arr[i]</code></td><td>nothing</td><td>O(N)</td></tr>
+        <tr><td>Count pairs sum = K</td><td><code>K − arr[i]</code> → add count</td><td>nothing</td><td>O(N)</td></tr>
+        <tr><td>Subarray sum = 0</td><td><code>sum</code></td><td>0</td><td>O(N)</td></tr>
+        <tr><td>Subarray sum = K</td><td><code>sum − K</code></td><td>0</td><td>O(N)</td></tr>
+        <tr><td>Longest subarray sum = 0</td><td><code>sum</code> → compute i − first_idx</td><td>0 → −1</td><td>O(N)</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- LEETCODE -->
+    <section class="section" id="leetcode">
+    <div class="section-header">
+      <span class="section-num">↗</span>
+      <h2>Related LeetCode Problems</h2>
+    </div>
+
+    <p>The following problems use the same core ideas covered in these notes. Solving them in order reinforces each concept progressively.</p>
+
+    <h3>Pair Sum</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/two-sum/" target="_blank" rel="noopener">#1 — Two Sum ↗</a><br/>
+          <span class="lc-why">The canonical "pair sum exists" problem — implement with HashMap on-the-go for O(N).</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/count-good-meals/" target="_blank" rel="noopener">#1711 — Count Good Meals ↗</a><br/>
+          <span class="lc-why">Count pairs with sum equal to a power of 2 — extends the count-pairs HashMap pattern.</span>
+        </span>
+      </li>
+    </ul>
+
+    <h3>Subarray Sum = 0 and Prefix Sum</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/subarray-sum-equals-k/" target="_blank" rel="noopener">#560 — Subarray Sum Equals K ↗</a><br/>
+          <span class="lc-why">The exact subarray-sum=K problem — use prefix sum + HashMap counting approach.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/continuous-subarray-sum/" target="_blank" rel="noopener">#523 — Continuous Subarray Sum ↗</a><br/>
+          <span class="lc-why">Subarray whose sum is divisible by k — uses prefix sum mod k with pre-inserted 0.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff easy">Easy</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/find-pivot-index/" target="_blank" rel="noopener">#724 — Find Pivot Index ↗</a><br/>
+          <span class="lc-why">Prefix sum to check left vs right balance — warm-up for the longer subarray problems.</span>
+        </span>
+      </li>
+    </ul>
+
+    <h3>Longest Subarray Variants</h3>
+    <ul class="lc-list">
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/longest-subarray-of-1s-after-deleting-one-element/" target="_blank" rel="noopener">#1493 — Longest Subarray of 1s After Deleting One Element ↗</a><br/>
+          <span class="lc-why">Sliding window variant of longest-subarray — builds on the same prefix-sum intuition.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/maximum-size-subarray-sum-equals-k/" target="_blank" rel="noopener">#325 — Maximum Size Subarray Sum Equals K ↗</a><br/>
+          <span class="lc-why">The exact problem from Section 05 — longest subarray with sum K using first-occurrence HashMap.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff medium">Medium</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/contiguous-array/" target="_blank" rel="noopener">#525 — Contiguous Array ↗</a><br/>
+          <span class="lc-why">Longest subarray with equal 0s and 1s — transform to sum=0 problem by mapping 0→−1.</span>
+        </span>
+      </li>
+      <li>
+        <span class="lc-diff hard">Hard</span>
+        <span>
+          <a class="lc-name" href="https://leetcode.com/problems/subarrays-with-k-different-integers/" target="_blank" rel="noopener">#992 — Subarrays with K Different Integers ↗</a><br/>
+          <span class="lc-why">Advanced: count subarrays with exactly K distinct — combines prefix sums with a sliding window.</span>
+        </span>
+      </li>
+    </ul>
+
+    <div class="callout tip">
+      <span class="callout-tag">Recommended Study Order</span>
+      Start with <strong>Two Sum</strong> to nail the on-the-go HashSet pattern. Then solve <strong>Subarray Sum Equals K</strong> — it's the direct application of the prefix-sum + HashMap approach. Follow with <strong>Contiguous Array</strong> to practice the "transform then apply" insight (0→−1 then longest zero-sum subarray). Finally <strong>Maximum Size Subarray Sum Equals K</strong> puts it all together.
+    </div>
+  </section>
+
+</main>
+
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{const p=window.scrollY/(document.body.scrollHeight-window.innerHeight)*100;bar.style.width=Math.min(p,100)+'%';});
+const links=document.querySelectorAll('.sidebar-link'),sections=document.querySelectorAll('.section'),sidebar=document.getElementById('sidebar');
+function activateLink(id){links.forEach(l=>l.classList.remove('active'));const t=document.querySelector(`.sidebar-link[href="#${id}"]`);if(t){t.classList.add('active');const sT=sidebar.scrollTop,sH=sidebar.clientHeight,lT=t.offsetTop,lH=t.offsetHeight;if(lT<sT||lT+lH>sT+sH)sidebar.scrollTo({top:lT-sH/2+lH/2,behavior:'smooth'});}}
+const io=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)activateLink(x.target.id);}),{rootMargin:'-20% 0px -60% 0px'});sections.forEach(s=>io.observe(s));
+const rIO=new IntersectionObserver(e=>e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('visible');}),{threshold:0.06});sections.forEach(s=>rIO.observe(s));
+links.forEach(l=>l.addEventListener('click',e=>{e.preventDefault();const t=document.querySelector(l.getAttribute('href'));if(t)window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-24,behavior:'smooth'});sidebar.classList.remove('open');document.getElementById('overlay').classList.remove('open');}));
+document.getElementById('fab').addEventListener('click',()=>{sidebar.classList.toggle('open');document.getElementById('overlay').classList.toggle('open');});
+document.getElementById('overlay').addEventListener('click',()=>{sidebar.classList.remove('open');document.getElementById('overlay').classList.remove('open');});
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>flash(btn));else{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);flash(btn);}}
+function flash(btn){btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied');},2000);}
+</script>
+</body>
+</html>

@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Returning Results in ASP.NET Core — Day 6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:0 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.qa .ans{padding-top:14px;}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 06 · ASP.NET Core</div>
+    <div class="brand-title">Returning Results 📤</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>Why Return Types Matter</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>Status Codes You'll Use</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Controller Returns</div>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Returning a Plain Type</span></a>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>IActionResult</span></a>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>ActionResult&lt;T&gt;</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Minimal API / HttpResults</div>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>Results &amp; TypedResults</span></a>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>Union Return Types</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Errors</div>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>ProblemDetails</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Practice</div>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>A CRUD Controller</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 6 — say the right thing, with the right code</div>
+      <h1>Returning Results in ASP.NET Core 📤</h1>
+      <p class="lede">An HTTP response is more than a blob of JSON — it's a <em>status code</em> that tells the client what happened, optional <em>headers</em>, and an optional <em>body</em>. Return the wrong code and a caller can't tell success from failure, a browser won't cache, and a client SDK guesses. Today we learn the tools ASP.NET Core gives you to shape responses cleanly — <code>IActionResult</code>, <code>ActionResult&lt;T&gt;</code>, <code>Results</code>/<code>TypedResults</code>, and <code>ProblemDetails</code> — and when to reach for <code>200</code>, <code>201</code>, <code>204</code>, and <code>404</code>.</p>
+      <div class="chips">
+        <span class="chip">🟢 200 OK</span>
+        <span class="chip">🆕 201 Created</span>
+        <span class="chip">🫗 204 No Content</span>
+        <span class="chip">🔎 404 Not Found</span>
+        <span class="chip">🎛️ IActionResult</span>
+        <span class="chip">⚡ TypedResults</span>
+        <span class="chip">🧾 ProblemDetails</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>Why Return Types Matter 🎯</h2></div>
+      <p>When your action finishes, ASP.NET Core has to turn whatever you returned into a real HTTP response. That response has three parts, and a good API is deliberate about all three:</p>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight">Status code</div><div class="idx">what happened</div></div>
+          <div class="arr-cell"><div class="val highlight-blue">Headers</div><div class="idx">metadata, Location…</div></div>
+          <div class="arr-cell"><div class="val highlight-green">Body</div><div class="idx">the data (maybe)</div></div>
+          <div class="arr-arrow">=</div>
+          <div class="arr-cell"><div class="val">HTTP response</div><div class="idx">what the client sees</div></div>
+        </div>
+      </div>
+
+      <p>The status code is the headline. A client reads it first to decide what to do — retry, show data, show an error, follow a link. Returning <code>200 OK</code> for everything (even failures) is one of the most common API mistakes: it forces every caller to dig into the body to guess what actually happened.</p>
+
+      <div class="callout analogy">
+        <span class="tag">📦 Analogy — the delivery slip</span>
+        <p>A status code is the sticker on a package: "Delivered," "Address not found," "Signature required." A courier who slapped "Delivered" on every parcel — even the ones they couldn't deliver — would be useless. The sticker (status code) lets the recipient act without opening the box (the body). Return the honest sticker every time.</p>
+      </div>
+
+      <h3>Two worlds, one goal 🌗</h3>
+      <p>ASP.NET Core has two styles of building APIs, and each has its own family of return helpers:</p>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🎛️</span><h4>Controllers (MVC)</h4><p>Actions return <code>IActionResult</code>, <code>ActionResult&lt;T&gt;</code>, or a plain type. Helpers live on <code>ControllerBase</code>: <code>Ok()</code>, <code>NotFound()</code>, etc.</p></div>
+        <div class="card"><span class="glyph">⚡</span><h4>Minimal APIs</h4><p>Route handlers return <code>IResult</code> via the <code>Results</code> / <code>TypedResults</code> classes: <code>Results.Ok()</code>, <code>TypedResults.NotFound()</code>, etc.</p></div>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <p>Here's the full family of ways to return a result. Each branch is a section below.</p>
+
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">Returning Results</div>
+          <div class="s">status + headers + body</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch">
+            <h4>📦 Plain type (T)</h4>
+            <ul>
+              <li>Return the object directly</li>
+              <li>Always ~200 on success</li>
+              <li>No status flexibility</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-blue">
+            <h4>🎛️ IActionResult</h4>
+            <ul>
+              <li>Interface, fully flexible</li>
+              <li>Many return paths</li>
+              <li>Needs <code>[ProducesResponseType]</code></li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>🎯 ActionResult&lt;T&gt;</h4>
+            <ul>
+              <li>Best of both worlds</li>
+              <li>Return object <em>or</em> status</li>
+              <li>Type inferred for docs</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>⚡ Results / TypedResults</h4>
+            <ul>
+              <li>Minimal APIs (&amp; shared code)</li>
+              <li>TypedResults = strongly typed</li>
+              <li>Auto OpenAPI metadata</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h4>🧾 ProblemDetails</h4>
+            <ul>
+              <li>Standardized errors</li>
+              <li>RFC 9457</li>
+              <li><code>Problem()</code> / <code>ValidationProblem()</code></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>The Status Codes You'll Actually Use 🔢</h2></div>
+      <p>There are dozens of HTTP status codes, but a typical CRUD API leans on a small handful. They group into families by their first digit:</p>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-green">2xx</div><div class="idx">success</div></div>
+          <div class="arr-cell"><div class="val highlight-blue">3xx</div><div class="idx">redirection</div></div>
+          <div class="arr-cell"><div class="val neg">4xx</div><div class="idx">client's fault</div></div>
+          <div class="arr-cell"><div class="val highlight">5xx</div><div class="idx">server's fault</div></div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Code</th><th>Meaning</th><th>Use it when…</th><th>Helper</th></tr></thead>
+          <tbody>
+            <tr><td>🟢 200 OK</td><td>Success, here's the data</td><td>A GET/PUT succeeds and you're returning a body</td><td><code>Ok(value)</code></td></tr>
+            <tr><td>🆕 201 Created</td><td>A new resource now exists</td><td>A POST creates something — add a <code>Location</code> header</td><td><code>CreatedAtAction(...)</code></td></tr>
+            <tr><td>🫗 204 No Content</td><td>Success, nothing to return</td><td>A PUT/DELETE succeeds with no body to send back</td><td><code>NoContent()</code></td></tr>
+            <tr><td>🔎 404 Not Found</td><td>That resource doesn't exist</td><td>A lookup by id finds nothing</td><td><code>NotFound()</code></td></tr>
+            <tr><td>⚠️ 400 Bad Request</td><td>The request was malformed/invalid</td><td>Validation fails or input is nonsense</td><td><code>BadRequest(...)</code></td></tr>
+            <tr><td>🚫 401 / 403</td><td>Not authenticated / not allowed</td><td>Missing or insufficient credentials</td><td><code>Unauthorized()</code> / <code>Forbid()</code></td></tr>
+            <tr><td>💥 409 Conflict</td><td>Clashes with current state</td><td>Duplicate key, concurrency conflict</td><td><code>Conflict(...)</code></td></tr>
+            <tr><td>🧯 500 Server Error</td><td>Something broke on our side</td><td>Unhandled exception (usually automatic)</td><td><code>Problem(...)</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The four this lesson targets</span>
+        <p><strong>200</strong> = "here's what you asked for." <strong>201</strong> = "I made it, and here's where it lives." <strong>204</strong> = "done — nothing to show you." <strong>404</strong> = "there's nothing here." Nail these four and the rest of REST falls into place.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ 200-for-everything is an anti-pattern</span>
+        <p>Returning <code>200</code> with a body like <code>{ "success": false }</code> defeats the purpose of HTTP. Caching, retries, client SDKs, and monitoring all key off the status code. Let the status line carry the truth; don't smuggle failure inside a 200 body.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Returning a Plain Type (T) 📦</h2></div>
+      <p>The simplest thing an action can do is return the data directly — a <code>string</code>, an <code>int</code>, or a custom object. ASP.NET Core serializes it to JSON and sends <code>200 OK</code> automatically.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpGet</span>]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Product</span>&gt;&gt; <span class="fn">Get</span>() =&gt;
+    <span class="kw">await</span> _db.Products.<span class="fn">OrderBy</span>(p =&gt; p.Name).<span class="fn">ToListAsync</span>();</code></pre>
+      </div>
+
+      <p>On success this returns <code>200</code> with a JSON array; on an unhandled exception the framework produces a <code>500</code>. It's clean and reads well — but notice what it <em>can't</em> do: there's no way to also return a <code>404</code> or a <code>400</code> from this signature, because the return type is locked to <code>List&lt;Product&gt;</code>.</p>
+
+      <div class="callout tip">
+        <span class="tag">✅ When a plain type is enough</span>
+        <p>Use it when the action has a single, always-successful path and no validation — like a "list everything" endpoint with no parameters. Microsoft's guidance: "without known conditions to safeguard against, returning a specific type could suffice." The moment you need a second outcome (not found, invalid input), reach for <code>IActionResult</code> or <code>ActionResult&lt;T&gt;</code>.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Bonus: self-documenting</span>
+        <p>Because the return type is right there in the signature (<code>List&lt;Product&gt;</code>), OpenAPI/Swagger can describe the 200 response automatically — no extra attributes needed. That's an advantage plain types share with <code>ActionResult&lt;T&gt;</code>.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>IActionResult — Full Flexibility 🎛️</h2></div>
+      <p><code>IActionResult</code> is an interface representing "any action result." Returning it lets a single action produce <em>different</em> responses down different paths — a <code>200</code> here, a <code>404</code> there. It's the right choice when an action has multiple possible outcomes.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id}"</span>)]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetById</span>(<span class="kw">int</span> id)
+{
+    <span class="kw">var</span> product = _db.Products.<span class="fn">Find</span>(id);
+    <span class="kw">if</span> (product <span class="kw">is null</span>)
+        <span class="kw">return</span> <span class="fn">NotFound</span>();   <span class="cmt">// 404</span>
+
+    <span class="kw">return</span> <span class="fn">Ok</span>(product);      <span class="cmt">// 200 + JSON body</span>
+}</code></pre>
+      </div>
+
+      <p>Those helpers — <code>Ok()</code>, <code>NotFound()</code>, <code>BadRequest()</code>, <code>NoContent()</code>, <code>CreatedAtAction()</code> — are convenience methods on <code>ControllerBase</code>. Each creates a result object representing a status code. For example, <code>return BadRequest();</code> is just shorthand for <code>return new BadRequestResult();</code>.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The catch — the type is hidden</span>
+        <p>Because the signature only says <code>IActionResult</code>, tools like Swagger can't tell what a successful response contains. You have to spell it out with attributes, or your API docs will be blank on the body:</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — documenting an IActionResult action</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id}"</span>)]
+[<span class="ty">ProducesResponseType</span>&lt;<span class="ty">Product</span>&gt;(<span class="ty">StatusCodes</span>.Status200OK)]
+[<span class="ty">ProducesResponseType</span>(<span class="ty">StatusCodes</span>.Status404NotFound)]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetById</span>(<span class="kw">int</span> id) { <span class="cmt">/* ... */</span> }</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 IActionResult in one line</span>
+        <p>Maximum flexibility, but you carry the documentation burden yourself. That trade-off is exactly what <code>ActionResult&lt;T&gt;</code> was created to fix.</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>ActionResult&lt;T&gt; — The Sweet Spot 🎯</h2></div>
+      <p>Introduced in ASP.NET Core 2.1, <code>ActionResult&lt;T&gt;</code> combines the two previous approaches: you can return <em>either</em> a status-code result (<code>NotFound()</code>, <code>BadRequest()</code>) <em>or</em> the object itself, and the compiler handles the rest via implicit conversions.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id}"</span>)]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">Product</span>&gt;&gt; <span class="fn">GetById</span>(<span class="kw">int</span> id)
+{
+    <span class="kw">var</span> product = <span class="kw">await</span> _db.Products.<span class="fn">FindAsync</span>(id);
+    <span class="kw">if</span> (product <span class="kw">is null</span>)
+        <span class="kw">return</span> <span class="fn">NotFound</span>();   <span class="cmt">// 404 — a status result</span>
+
+    <span class="kw">return</span> product;         <span class="cmt">// 200 — no Ok() wrapper needed; implicit cast</span>
+}</code></pre>
+      </div>
+
+      <p>Two things make this the modern default for controller APIs:</p>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🪄</span><h4>Implicit casts</h4><p>Both <code>T</code> and <code>ActionResult</code> convert to <code>ActionResult&lt;T&gt;</code>, so you can <code>return product;</code> for success and <code>return NotFound();</code> for failure in the same method.</p></div>
+        <div class="card"><span class="glyph">📖</span><h4>Self-documenting</h4><p>The <code>T</code> tells OpenAPI the success body's shape, so you can drop the <code>Type</code> from <code>[ProducesResponseType]</code>.</p></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Rule of thumb</span>
+        <p>For controller-based Web APIs, reach for <code>ActionResult&lt;T&gt;</code> by default. Use plain <code>IActionResult</code> only when there's genuinely no single success type to name (e.g. an action that returns a file or a redirect). And wrap I/O in <code>async Task&lt;...&gt;</code> whenever you touch a database or network.</p>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Return type</th><th>Multiple status codes?</th><th>Self-documenting?</th><th>Best for</th></tr></thead>
+          <tbody>
+            <tr><td><code>T</code> (plain)</td><td>❌ No</td><td>✅ Yes</td><td>Single always-successful path</td></tr>
+            <tr><td><code>IActionResult</code></td><td>✅ Yes</td><td>❌ No (needs attributes)</td><td>Many paths, no single success type</td></tr>
+            <tr><td><code>ActionResult&lt;T&gt;</code></td><td>✅ Yes</td><td>✅ Yes</td><td>Most controller actions</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>Results &amp; TypedResults — Minimal APIs ⚡</h2></div>
+      <p>Minimal APIs don't use <code>IActionResult</code>. Instead, route handlers return <code>IResult</code>, and two static helper classes create those results: <code>Results</code> and <code>TypedResults</code>. They live in the <code>HttpResults</code> family and work in both Minimal APIs and controllers.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Results (returns IResult)</span><button class="copy-btn">Copy</button></div>
+        <pre><code>app.<span class="fn">MapGet</span>(<span class="str">"/products/{id}"</span>, <span class="kw">async</span> (<span class="kw">int</span> id, <span class="ty">AppDb</span> db) =&gt;
+{
+    <span class="kw">var</span> product = <span class="kw">await</span> db.Products.<span class="fn">FindAsync</span>(id);
+    <span class="kw">return</span> product <span class="kw">is null</span>
+        ? <span class="ty">Results</span>.<span class="fn">NotFound</span>()      <span class="cmt">// 404</span>
+        : <span class="ty">Results</span>.<span class="fn">Ok</span>(product);   <span class="cmt">// 200</span>
+});</code></pre>
+      </div>
+
+      <h3>The one difference that matters 🔍</h3>
+      <p><code>Results</code> and <code>TypedResults</code> offer the same helpers, but they differ in <em>return type</em>. <code>Results.Ok(x)</code> returns the interface <code>IResult</code> — the compiler knows nothing about the shape. <code>TypedResults.Ok(x)</code> returns a concrete type, <code>Ok&lt;T&gt;</code>, that the compiler and tooling can inspect.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="ty">IResult</span> a = <span class="ty">Results</span>.<span class="fn">Ok</span>(product);        <span class="cmt">// type: IResult (opaque)</span>
+<span class="ty">Ok</span>&lt;<span class="ty">Product</span>&gt; b = <span class="ty">TypedResults</span>.<span class="fn">Ok</span>(product); <span class="cmt">// type: Ok&lt;Product&gt; (concrete)</span></code></pre>
+      </div>
+
+      <p>The runtime behavior is identical — both send <code>200</code> with the JSON body. The typing difference unlocks two real benefits, which is why Microsoft recommends <code>TypedResults</code> as the default for new Minimal API code:</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📖</span><h4>Automatic OpenAPI</h4><p><code>TypedResults.Ok&lt;Product&gt;()</code> tells the framework the 200 returns a <code>Product</code> — no <code>.Produces&lt;T&gt;()</code> call needed. With plain <code>Results</code>, the contract is invisible.</p></div>
+        <div class="card"><span class="glyph">🧪</span><h4>Easier testing</h4><p>Unit tests can assert <code>Assert.IsType&lt;Ok&lt;Product&gt;&gt;(result)</code> and read <code>.Value</code> directly, instead of converting an opaque <code>IResult</code> first.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 HttpResults vs. MVC results, under the hood</span>
+        <p>Unlike <code>IActionResult</code>, <code>HttpResults</code> are executed by <code>IResult.ExecuteAsync</code> and <strong>don't use the configured formatters</strong>. That means no content negotiation — the <code>Content-Type</code> is decided by the result type itself. This is why they're lighter, and why controllers (which want content negotiation) idiomatically stick with <code>ActionResult&lt;T&gt;</code>.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ TypedResults ≠ controller default</span>
+        <p>Although <code>HttpResults</code> technically compile inside controllers, the idiomatic split is: <strong>controllers → <code>ActionResult&lt;T&gt;</code></strong>, <strong>Minimal APIs → <code>TypedResults</code></strong>. Don't rip working <code>IActionResult</code> controllers out to chase <code>TypedResults</code>; apply it to new Minimal API work instead.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>Union Return Types — Results&lt;T1, …, TN&gt; 🔗</h2></div>
+      <p>There's a wrinkle: because every <code>TypedResults</code> helper returns a <em>different</em> concrete type, a handler with more than one outcome (say <code>200</code> and <code>404</code>) has two different return types. The compiler can't reconcile that on its own. The fix is the <strong>union type</strong> <code>Results&lt;T1, …, TN&gt;</code>, which lists every result the handler may produce.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Minimal API with a union return type</span><button class="copy-btn">Copy</button></div>
+        <pre><code>app.<span class="fn">MapGet</span>(<span class="str">"/products/{id}"</span>,
+    <span class="kw">async</span> <span class="ty">Task</span>&lt;<span class="ty">Results</span>&lt;<span class="ty">Ok</span>&lt;<span class="ty">Product</span>&gt;, <span class="ty">NotFound</span>&gt;&gt; (<span class="kw">int</span> id, <span class="ty">AppDb</span> db) =&gt;
+{
+    <span class="kw">var</span> product = <span class="kw">await</span> db.Products.<span class="fn">FindAsync</span>(id);
+    <span class="kw">return</span> product <span class="kw">is null</span>
+        ? <span class="ty">TypedResults</span>.<span class="fn">NotFound</span>()
+        : <span class="ty">TypedResults</span>.<span class="fn">Ok</span>(product);
+});</code></pre>
+      </div>
+
+      <p>The same pattern works on controller actions too:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — union type on a controller action</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id}"</span>)]
+<span class="kw">public</span> <span class="ty">Results</span>&lt;<span class="ty">Ok</span>&lt;<span class="ty">Product</span>&gt;, <span class="ty">NotFound</span>&gt; <span class="fn">GetById</span>(<span class="kw">int</span> id)
+{
+    <span class="kw">var</span> product = _db.Products.<span class="fn">Find</span>(id);
+    <span class="kw">return</span> product <span class="kw">is null</span>
+        ? <span class="ty">TypedResults</span>.<span class="fn">NotFound</span>()
+        : <span class="ty">TypedResults</span>.<span class="fn">Ok</span>(product);
+}</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Why the union type is powerful</span>
+        <p>It declares the endpoint's full contract right in the signature — this endpoint returns a <code>Product</code> (200) or nothing (404), and the OpenAPI docs pick that up automatically. Better still, the union types use implicit casts and give you <strong>compile-time checking</strong>: try to return a result you didn't declare, and the code won't build. Microsoft prefers <code>Results&lt;T1, …, TN&gt;</code> over bare <code>IResult</code> for exactly this reason.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Rule of thumb</span>
+        <p>Returning <code>Results</code> (plain)? The compiler infers <code>IResult</code>, so multiple outcomes "just work" — at the cost of type info. Returning <code>TypedResults</code> with more than one outcome? You must declare a <code>Results&lt;…&gt;</code> union — and you get richer docs and safety in return.</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>ProblemDetails — Standardized Errors 🧾</h2></div>
+      <p>When something goes wrong, don't invent your own error shape per endpoint. <strong><code>ProblemDetails</code></strong> is a standard machine-readable error format (defined by RFC 9457, formerly RFC 7807) that ASP.NET Core produces out of the box. A consistent error contract makes every client's life easier.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">JSON — a ProblemDetails body</span><button class="copy-btn">Copy</button></div>
+        <pre><code>{
+  <span class="str">"type"</span>:   <span class="str">"https://tools.ietf.org/html/rfc9110#section-15.5.10"</span>,
+  <span class="str">"title"</span>:  <span class="str">"Insufficient stock"</span>,
+  <span class="str">"status"</span>: <span class="num">409</span>,
+  <span class="str">"detail"</span>: <span class="str">"Only 3 units of 'Widget' remain."</span>,
+  <span class="str">"instance"</span>: <span class="str">"/api/orders/1042"</span>
+}</code></pre>
+      </div>
+
+      <p>Register it once in <code>Program.cs</code>, and error responses (status 400 and up) get turned into <code>ProblemDetails</code> automatically:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">AddProblemDetails</span>();</code></pre>
+      </div>
+
+      <p>To return one explicitly with your own message and status code, use the <code>Problem</code> helper — available on both <code>ControllerBase</code> and the <code>Results</code>/<code>TypedResults</code> classes:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Controller: ControllerBase.Problem(...)</span>
+<span class="kw">return</span> <span class="fn">Problem</span>(
+    title: <span class="str">"Insufficient stock"</span>,
+    detail: <span class="str">$"Only {available} units of '{product.Name}' remain."</span>,
+    statusCode: <span class="ty">StatusCodes</span>.Status409Conflict);
+
+<span class="cmt">// Minimal API: TypedResults.Problem(...)</span>
+<span class="kw">return</span> <span class="ty">TypedResults</span>.<span class="fn">Problem</span>(
+    detail: <span class="str">"There is an error"</span>,
+    statusCode: <span class="ty">StatusCodes</span>.Status403Forbidden);</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Problem vs. ValidationProblem</span>
+        <p><code>ValidationProblem</code> is a specialized cousin that returns a <code>ValidationProblemDetails</code> — same shape plus an <code>errors</code> dictionary keyed by field — and it <strong>always</strong> uses <code>400</code>. Use it for input-validation failures (recall Day 4's automatic 400s). Use <code>Problem</code> when you need to choose the status code yourself (403, 409, 500, …).</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Tip</span>
+        <p>Pair <code>AddProblemDetails()</code> with a global exception handler so even unexpected <code>500</code>s come back as tidy <code>ProblemDetails</code> instead of raw stack traces. One consistent error shape across success codes and failures is a hallmark of a professional API.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>Putting It Together: A CRUD Controller 🧩</h2></div>
+      <p>Here's the whole lesson applied — one controller returning <code>200</code>, <code>201</code>, <code>204</code>, and <code>404</code> in the right places. This is the "Do" for today.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — ProductsController</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/[controller]"</span>)]
+<span class="kw">public class</span> <span class="ty">ProductsController</span> : <span class="ty">ControllerBase</span>
+{
+    <span class="cmt">// GET all -> 200 with a list</span>
+    [<span class="ty">HttpGet</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Product</span>&gt;&gt;&gt; <span class="fn">GetAll</span>() =&gt;
+        <span class="kw">await</span> _db.Products.<span class="fn">ToListAsync</span>();
+
+    <span class="cmt">// GET one -> 200 if found, 404 if not</span>
+    [<span class="ty">HttpGet</span>(<span class="str">"{id}"</span>)]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">Product</span>&gt;&gt; <span class="fn">GetById</span>(<span class="kw">int</span> id)
+    {
+        <span class="kw">var</span> product = <span class="kw">await</span> _db.Products.<span class="fn">FindAsync</span>(id);
+        <span class="kw">return</span> product <span class="kw">is null</span> ? <span class="fn">NotFound</span>() : product;   <span class="cmt">// 404 : 200</span>
+    }
+
+    <span class="cmt">// POST -> 201 with a Location header pointing to the new resource</span>
+    [<span class="ty">HttpPost</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">Product</span>&gt;&gt; <span class="fn">Create</span>(<span class="ty">CreateProductRequest</span> request)
+    {
+        <span class="kw">var</span> product = <span class="kw">new</span> <span class="ty">Product</span> { Name = request.Name, Price = request.Price };
+        _db.Products.<span class="fn">Add</span>(product);
+        <span class="kw">await</span> _db.<span class="fn">SaveChangesAsync</span>();
+
+        <span class="kw">return</span> <span class="fn">CreatedAtAction</span>(<span class="kw">nameof</span>(GetById),
+            <span class="kw">new</span> { id = product.Id }, product);          <span class="cmt">// 201 + Location</span>
+    }
+
+    <span class="cmt">// PUT -> 204 on success, 404 if the target is missing</span>
+    [<span class="ty">HttpPut</span>(<span class="str">"{id}"</span>)]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Update</span>(<span class="kw">int</span> id, <span class="ty">UpdateProductRequest</span> request)
+    {
+        <span class="kw">var</span> product = <span class="kw">await</span> _db.Products.<span class="fn">FindAsync</span>(id);
+        <span class="kw">if</span> (product <span class="kw">is null</span>) <span class="kw">return</span> <span class="fn">NotFound</span>();       <span class="cmt">// 404</span>
+
+        product.Name = request.Name;
+        product.Price = request.Price;
+        <span class="kw">await</span> _db.<span class="fn">SaveChangesAsync</span>();
+        <span class="kw">return</span> <span class="fn">NoContent</span>();                            <span class="cmt">// 204</span>
+    }
+
+    <span class="cmt">// DELETE -> 204 on success, 404 if the target is missing</span>
+    [<span class="ty">HttpDelete</span>(<span class="str">"{id}"</span>)]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Delete</span>(<span class="kw">int</span> id)
+    {
+        <span class="kw">var</span> product = <span class="kw">await</span> _db.Products.<span class="fn">FindAsync</span>(id);
+        <span class="kw">if</span> (product <span class="kw">is null</span>) <span class="kw">return</span> <span class="fn">NotFound</span>();       <span class="cmt">// 404</span>
+
+        _db.Products.<span class="fn">Remove</span>(product);
+        <span class="kw">await</span> _db.<span class="fn">SaveChangesAsync</span>();
+        <span class="kw">return</span> <span class="fn">NoContent</span>();                            <span class="cmt">// 204</span>
+    }
+}</code></pre>
+      </div>
+
+      <h3>Choosing the status code — a decision flow 🔄</h3>
+      <p>When you write an action, walk this path to pick the response:</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · ❓ did it succeed?</div>
+          <div class="sh">Success or failure?</div>
+          <p>If the request couldn't be honored, jump to the failure branch (404 / 400 / 409 / 500). Otherwise continue.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 2 · 🆕 did you create something?</div>
+          <div class="sh">Was a new resource made?</div>
+          <p>Yes → <code>201 Created</code> with a <code>Location</code> header via <code>CreatedAtAction</code>. No → continue.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 3 · 📦 is there a body?</div>
+          <div class="sh">Do you have data to return?</div>
+          <p>Yes → <code>200 OK</code> with the body. No → <code>204 No Content</code> (typical for PUT/DELETE).</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 4 · 🔎 the failure branch</div>
+          <div class="sh">Pick the honest error code</div>
+          <p>Missing resource → <code>404</code>. Bad input → <code>400</code>. State conflict → <code>409</code>. Our bug → <code>500</code> (usually automatic, as <code>ProblemDetails</code>).</p>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why CreatedAtAction, not just Ok</span>
+        <p><code>CreatedAtAction(nameof(GetById), new { id }, product)</code> does three things at once: sends <code>201</code>, puts the new resource in the body, and adds a <code>Location</code> header with the URL to fetch it later. That <code>Location</code> header is what makes a POST truly RESTful — the client learns where its new thing lives without guessing.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🎯 Status matters</h4><p>A response is status + headers + body; the status code carries the truth.</p></div>
+        <div class="recap-card"><h4>🟢 200 OK</h4><p>Success with a body — <code>Ok(value)</code>.</p></div>
+        <div class="recap-card"><h4>🆕 201 Created</h4><p>New resource made — <code>CreatedAtAction</code>, adds a Location header.</p></div>
+        <div class="recap-card"><h4>🫗 204 No Content</h4><p>Success, no body — <code>NoContent()</code>, common for PUT/DELETE.</p></div>
+        <div class="recap-card"><h4>🔎 404 Not Found</h4><p>Resource missing — <code>NotFound()</code>.</p></div>
+        <div class="recap-card"><h4>📦 Plain type</h4><p>Return the object; ~200 always; single success path only.</p></div>
+        <div class="recap-card"><h4>🎛️ IActionResult</h4><p>Flexible interface for many paths; needs doc attributes.</p></div>
+        <div class="recap-card"><h4>🎯 ActionResult&lt;T&gt;</h4><p>Object <em>or</em> status result; self-documenting; the controller default.</p></div>
+        <div class="recap-card"><h4>⚡ Results</h4><p>Minimal API helpers returning opaque <code>IResult</code>.</p></div>
+        <div class="recap-card"><h4>🔬 TypedResults</h4><p>Concrete typed results; auto OpenAPI + easy testing; preferred for new code.</p></div>
+        <div class="recap-card"><h4>🔗 Results&lt;T1,…&gt;</h4><p>Union type declaring every outcome; compile-time checked.</p></div>
+        <div class="recap-card"><h4>🧾 ProblemDetails</h4><p>Standard error shape (RFC 9457); <code>Problem()</code> / <code>ValidationProblem()</code>.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Tool</th><th>Where</th><th>Returns</th><th>Key point</th></tr></thead>
+          <tbody>
+            <tr><td>Plain type <code>T</code></td><td>Controllers</td><td>~200 + JSON</td><td>Simplest; one success path</td></tr>
+            <tr><td><code>IActionResult</code></td><td>Controllers</td><td>Any result</td><td>Flexible; hide the type → needs attributes</td></tr>
+            <tr><td><code>ActionResult&lt;T&gt;</code></td><td>Controllers</td><td><code>T</code> or a result</td><td>Best default; implicit casts; self-documenting</td></tr>
+            <tr><td><code>Results.*</code></td><td>Minimal APIs</td><td><code>IResult</code></td><td>Opaque; multiple outcomes just work</td></tr>
+            <tr><td><code>TypedResults.*</code></td><td>Minimal APIs</td><td><code>Ok&lt;T&gt;</code>, <code>NotFound</code>…</td><td>Typed; auto OpenAPI; recommended</td></tr>
+            <tr><td><code>Results&lt;T1,…,TN&gt;</code></td><td>Both</td><td>Union of results</td><td>Declares full contract; compile-checked</td></tr>
+            <tr><td><code>ProblemDetails</code></td><td>Both</td><td>Error body</td><td>RFC 9457; <code>AddProblemDetails()</code></td></tr>
+            <tr><td><code>CreatedAtAction</code></td><td>Controllers</td><td>201 + body + Location</td><td>The RESTful way to answer a POST</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">Why return a status code instead of just data?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>The status code tells the client what happened without opening the body — success, missing resource, bad input, server error. Caching, retries, client SDKs, and monitoring all rely on it. Returning <code>200</code> for everything forces callers to guess by parsing the body, which defeats the point of HTTP.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What does 200 OK mean and how do you return it?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>200 OK means the request succeeded and there's a body with the result. In a controller you return it with <code>Ok(value)</code>, or by returning the object directly from an <code>ActionResult&lt;T&gt;</code> or plain-type action. In a Minimal API, <code>Results.Ok(value)</code> or <code>TypedResults.Ok(value)</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What does 201 Created mean, and what extra thing does it include?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>201 means a new resource was created (typically after a POST). Besides the status, it includes a <code>Location</code> response header holding the URL of the new resource, so the client knows where to fetch it. <code>CreatedAtAction</code> sets the status, body, and Location header together.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What does 204 No Content mean, and when do you use it?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>204 means the request succeeded but there's nothing to send back in the body. It's the natural response to a successful PUT or DELETE where you don't need to return the updated or deleted resource. You return it with <code>NoContent()</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What does 404 Not Found mean and how do you return it?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>404 means the resource the client asked for doesn't exist — for example, a lookup by id that finds nothing. Return it with <code>NotFound()</code> (optionally passing a message or ProblemDetails). It signals the client to stop looking rather than retry.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What is IActionResult?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>It's an interface representing the result of a controller action. Returning <code>IActionResult</code> lets one action produce different responses on different paths — a 200 here, a 404 there — because any result type (like <code>OkObjectResult</code> or <code>NotFoundResult</code>) implements it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What's the simplest thing an action can return?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>The data itself — a plain type like a <code>string</code>, <code>int</code>, or a custom object (or a list of them). ASP.NET Core serializes it to JSON and returns 200 on success. It's fine when there's a single always-successful path and no need for other status codes.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What do Ok(), NotFound(), and NoContent() do?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>They're convenience methods on <code>ControllerBase</code> that build result objects for common status codes: <code>Ok()</code> → 200 (with an optional body), <code>NotFound()</code> → 404, <code>NoContent()</code> → 204. For instance, <code>return NotFound();</code> is shorthand for <code>return new NotFoundResult();</code>.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">IActionResult vs. ActionResult&lt;T&gt; — what's the difference?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p><code>IActionResult</code> only expresses "some result" — the success body's type is invisible in the signature. <code>ActionResult&lt;T&gt;</code> adds a type parameter, so you can return either a status result (<code>NotFound()</code>) <em>or</em> the object <code>T</code> directly (thanks to implicit casts), and the <code>T</code> documents the success shape. <code>ActionResult&lt;T&gt;</code> is essentially <code>IActionResult</code> plus type information.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">Why is ActionResult&lt;T&gt; often preferred over IActionResult?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Two reasons: you can return the object directly without wrapping it in <code>Ok()</code>, and the return type is self-documenting — OpenAPI/Swagger infers the success body from <code>T</code>, so you can omit the <code>Type</code> from <code>[ProducesResponseType]</code>. You keep full status-code flexibility while getting cleaner code and better docs.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What are Results and TypedResults in Minimal APIs?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>They're two static classes that create <code>IResult</code> objects for Minimal API responses, with matching helpers like <code>Ok()</code>, <code>NotFound()</code>, and <code>Problem()</code>. <code>Results</code> helpers return the interface <code>IResult</code>; <code>TypedResults</code> helpers return concrete types like <code>Ok&lt;T&gt;</code>. Both produce the same HTTP response at runtime.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">What's the difference between Results.Ok() and TypedResults.Ok()?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>The return type. <code>Results.Ok(x)</code> returns <code>IResult</code> — opaque to the compiler and tooling. <code>TypedResults.Ok(x)</code> returns <code>Ok&lt;T&gt;</code> — a concrete type. The runtime result (200 + JSON) is identical, but the typed version gives automatic OpenAPI metadata and easier unit testing, which is why it's the recommended default for new code.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">What is ProblemDetails and when should you return it?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>It's a standardized, machine-readable error body (RFC 9457) with fields like <code>type</code>, <code>title</code>, <code>status</code>, and <code>detail</code>. Return it for error responses so every client gets a consistent shape. Register <code>AddProblemDetails()</code> for automatic conversion, and use <code>Problem(...)</code> to return one explicitly with a chosen status code.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">Which method returns a 201 with a Location header, and why does Location matter?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p><code>CreatedAtAction</code> (or <code>CreatedAtRoute</code> / <code>Created</code>). It returns 201, the created resource in the body, and a <code>Location</code> header pointing to the new resource's URL. The Location matters because it tells the client exactly where its new resource lives — the RESTful convention for answering a successful POST.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">What status code for a successful DELETE with no body? For a POST that creates?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>A successful DELETE (or PUT) with nothing to return → <code>204 No Content</code>. A POST that creates a new resource → <code>201 Created</code> with a Location header. If the DELETE's target didn't exist, <code>404</code> is appropriate. Matching the verb to the right code is the heart of today's "Do."</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">What is CreatedAtAction and what arguments does it take?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>It builds a 201 response and computes the <code>Location</code> header from another action. Typical call: <code>CreatedAtAction(nameof(GetById), new { id = product.Id }, product)</code> — the action name to link to, the route values to build its URL, and the body to return. Using <code>nameof</code> avoids hard-coding the action name.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">When would you return a plain type vs. IActionResult vs. ActionResult&lt;T&gt;?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Plain type: a single, always-successful path with no validation (e.g. "list all"). <code>IActionResult</code>: multiple outcomes where there's no single success type to name — a redirect, a file, or genuinely heterogeneous responses. <code>ActionResult&lt;T&gt;</code>: the common case — multiple status codes but a clear success type; you get flexibility <em>and</em> self-documentation. In practice <code>ActionResult&lt;T&gt;</code> is the default for controller actions.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">What is the Results&lt;T1, …, TN&gt; union type and why use it?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Because each <code>TypedResults</code> helper returns a different concrete type, a handler with multiple outcomes needs a return type that covers them all. <code>Results&lt;Ok&lt;Product&gt;, NotFound&gt;</code> is a union declaring exactly the results the handler may return. It uses implicit casts, retains OpenAPI metadata automatically, and gives compile-time checking — return an undeclared type and it won't build. Microsoft prefers it over bare <code>IResult</code> for multi-outcome endpoints.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">Why does TypedResults improve OpenAPI docs and testing over Results?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Because the concrete type carries the response contract. <code>TypedResults.Ok&lt;Product&gt;()</code> lets the OpenAPI generator infer a 200 returning a <code>Product</code> with no extra <code>.Produces&lt;T&gt;()</code> call; <code>Results.Ok()</code> returns opaque <code>IResult</code>, so the schema is invisible unless you add metadata by hand. For tests, you can assert <code>IsType&lt;Ok&lt;Product&gt;&gt;</code> and read <code>.Value</code> directly instead of converting an <code>IResult</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How do HttpResults differ from MVC results under the hood?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p><code>HttpResults</code> (from <code>Results</code>/<code>TypedResults</code>) are executed by <code>IResult.ExecuteAsync</code> and <em>don't</em> use the configured output formatters — so there's no content negotiation, and the result type itself decides the <code>Content-Type</code>. MVC's <code>IActionResult</code> pipeline does run formatters and supports content negotiation. That's why HttpResults are lighter and shareable between Minimal APIs and controllers, while controllers idiomatically keep <code>ActionResult&lt;T&gt;</code> when they want negotiation.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">400 vs. 404 vs. 409 vs. 422 — how do you pick?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p><code>400 Bad Request</code>: the request was malformed or couldn't be parsed/validated. <code>404 Not Found</code>: the target resource doesn't exist. <code>409 Conflict</code>: the request clashes with current state (duplicate, concurrency conflict). <code>422 Unprocessable Entity</code>: the request was well-formed but semantically invalid (some teams use this instead of 400 for business-rule failures). ASP.NET Core defaults validation failures to 400; consistency across your API matters more than the exact choice between 400 and 422.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">How do you standardize error responses across an API?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Adopt <code>ProblemDetails</code> everywhere. Call <code>AddProblemDetails()</code> so error status codes are converted to the RFC 9457 shape automatically, return <code>Problem()</code>/<code>ValidationProblem()</code> from your own error paths, and register a global exception handler so unexpected 500s also come back as <code>ProblemDetails</code> rather than stack traces. The result is one predictable error contract clients can code against.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">Should you migrate existing IActionResult controllers to TypedResults?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Not as a priority. <code>TypedResults</code> is the recommended default for <em>new</em> Minimal API work, but rewriting stable <code>IActionResult</code> controllers carries risk for little day-to-day gain unless you have a concrete trigger — rewriting the module, generating a client SDK, or fixing weak tests. Apply the modern approach to new code and let legacy controllers evolve naturally; for existing controllers, <code>ActionResult&lt;T&gt;</code> already gives type-safe responses.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Start with the <strong>status codes</strong> (Q2–Q5, Q15) — they're the vocabulary everything else uses and the most-asked. Then learn the <strong>controller return types</strong> in order of power: plain type → <code>IActionResult</code> → <code>ActionResult&lt;T&gt;</code> (Q6–Q10). Layer on the <strong>Minimal API side</strong> (<code>Results</code>/<code>TypedResults</code>/union types, Q11–Q12, Q18–Q20) and finish with <strong>ProblemDetails</strong> (Q13, Q22). If you can build the CRUD controller in section 09 from memory and justify each status code, you own this topic.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

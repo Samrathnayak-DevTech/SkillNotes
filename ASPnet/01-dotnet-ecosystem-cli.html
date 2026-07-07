@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>.NET — Ecosystem &amp; the CLI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader", Georgia, serif;
+  font-size:18px;
+  line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- progress bar ---------- */
+#progress{
+  position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg, var(--accent), var(--rose));
+  z-index:1000;transition:width .08s linear;
+}
+
+/* ---------- layout ---------- */
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+
+/* ---------- sidebar ---------- */
+.sidebar{
+  position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;
+  margin:0 0 22px;color:var(--ink);}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+
+/* ---------- main ---------- */
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+
+/* ---------- sections ---------- */
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);
+  margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+
+/* ---------- inline code ---------- */
+:not(pre) > code{
+  font-family:"JetBrains Mono",monospace;font-size:.86em;
+  color:var(--accent);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:4px;padding:1px 6px;
+}
+
+/* ---------- callouts ---------- */
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;
+  padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;
+  letter-spacing:.13em;text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+
+/* ---------- code blocks ---------- */
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;
+  padding:9px 16px;background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;
+  background:transparent;border:1px solid rgba(255,255,255,.18);border-radius:6px;
+  padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px 18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;
+  color:var(--code-ink);background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;} .cmd{color:#c3e88d;}
+
+/* ---------- complexity badge ---------- */
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;
+  padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);}
+.complexity-badge .val{color:var(--accent);font-weight:700;}
+
+/* ---------- pipeline / array cells ---------- */
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;
+  padding:24px 22px;margin:24px 0;}
+.diagram-box .cap{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);text-align:center;margin-bottom:16px;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arr-cell.dim .val{opacity:.4;border-style:dashed;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+
+/* ---------- tree diagram ---------- */
+.tree{background:var(--code-bg);border-radius:12px;padding:20px 22px;margin:22px 0;overflow-x:auto;
+  box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.tree pre{padding:0;color:var(--code-ink);font-family:"JetBrains Mono",monospace;font-size:13px;line-height:1.7;}
+.tree .dir{color:#82aaff;font-weight:700;} .tree .file{color:#e8e6e3;} .tree .note{color:#697098;font-style:italic;}
+
+/* ---------- flow chart ---------- */
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:600px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step code{font-size:.82em;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+
+/* ---------- mind map ---------- */
+.mindmap{display:flex;flex-direction:column;align-items:center;gap:0;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.1rem;padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+
+/* ---------- cards grid ---------- */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;
+  transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.card code{font-size:.82em;}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+td.good{background:var(--green-soft);font-weight:700;color:var(--green);}
+td.bad{background:var(--rose-soft);font-weight:700;color:var(--rose);}
+
+/* ---------- recap ---------- */
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);
+  border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;
+  display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+
+/* ---------- interview Q ---------- */
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;
+  font-weight:600;font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px 20px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+
+/* ---------- FAB / mobile ---------- */
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;
+  border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);
+    transition:transform .28s ease;box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes · day&nbsp;1</div>
+    <div class="side-title">.NET: Ecosystem &amp; CLI</div>
+
+    <nav>
+      <div class="nav-group">
+        <h4>The Platform</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> What .NET Is</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> SDK vs Runtime</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Versions &amp; Support</a>
+      </div>
+      <div class="nav-group">
+        <h4>The CLI</h4>
+        <a class="nav-link" href="#s04"><span class="n">04</span> The dotnet CLI</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> dotnet new</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Project Structure</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> The .csproj File</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> Solutions</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> NuGet</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Build · Run · Test</a>
+      </div>
+      <div class="nav-group">
+        <h4>Practice</h4>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Hands-On Build</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Publishing</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Mistakes &amp; Practices</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s14"><span class="n">14</span> Quick Recap</a>
+        <a class="nav-link" href="#s15"><span class="n">15</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// .NET &nbsp;·&nbsp; day 1 &nbsp;·&nbsp; the platform, the tooling, and your first solution</p>
+      <h1>Ecosystem &amp; the CLI ⚙️</h1>
+      <p class="lede">
+        Before writing C#, it helps to know what <b>.NET</b> actually is: a runtime that executes your code, an
+        <b>SDK</b> that builds it, and a command-line tool — <code>dotnet</code> — that ties it all together. In this
+        first day you'll learn the <b>SDK-vs-runtime</b> distinction, the core CLI verbs
+        (<code>new / build / run / test</code>), how projects and solutions are laid out, what lives in a
+        <code>.csproj</code>, and how <b>NuGet</b> pulls in packages — then build a real solution with a console app
+        and a class library. No prior .NET background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">📦 <b>SDK vs runtime</b></span>
+        <span class="chip">⌨️ <b>dotnet CLI</b></span>
+        <span class="chip">🗂️ <b>Projects &amp; solutions</b></span>
+        <span class="chip">📄 <b>.csproj</b></span>
+        <span class="chip">📥 <b>NuGet</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>What .NET Is</h2></div>
+      <p class="sec-sub">.NET is a free, cross-platform, open-source developer platform — a runtime that runs your
+        code, a set of libraries, languages (C#, F#, VB), and tooling to build all kinds of apps.</p>
+
+      <p>Modern <strong>.NET</strong> (the successor to the older, Windows-only .NET Framework) runs on Windows, Linux,
+        and macOS. You write code in a language like <strong>C#</strong>, the compiler turns it into an
+        intermediate form, and the <strong>runtime</strong> executes it. Around that sit thousands of built-in and
+        third-party libraries and a unified command-line tool. With one platform you can build console tools, web APIs
+        and sites (ASP.NET Core), desktop and mobile apps, cloud services, and more.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🏭 Analogy</span>
+        <p>Think of .NET as a kitchen. The <strong>runtime</strong> is the stove that actually cooks your dish
+        (executes your program). The <strong>SDK</strong> is the full set of chef's tools — knives, mixers, recipes —
+        used to <em>prepare</em> the dish (compile and build). <strong>NuGet</strong> is the pantry you pull
+        pre-made ingredients from. And the <code>dotnet</code> <strong>CLI</strong> is the head chef issuing the
+        commands that make everything happen.</p>
+      </div>
+
+      <h3>The Day-1 landscape 🗺️</h3>
+      <div class="mindmap">
+        <div class="mm-core">⚙️ .NET Ecosystem</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>📦 Runtime &amp; SDK</h5>
+            <ul>
+              <li>Runtime = run apps</li>
+              <li>SDK = build apps</li>
+              <li>SDK includes the runtime</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>⌨️ CLI</h5>
+            <ul>
+              <li><code>dotnet new / build</code></li>
+              <li><code>run / test / publish</code></li>
+              <li><code>add / restore</code></li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🗂️ Structure</h5>
+            <ul>
+              <li>Project = one <code>.csproj</code></li>
+              <li>Solution = many projects</li>
+              <li>Console vs class library</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>📄 .csproj</h5>
+            <ul>
+              <li>SDK-style, small</li>
+              <li>TargetFramework</li>
+              <li>Package/Project references</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>📥 NuGet</h5>
+            <ul>
+              <li>Package manager</li>
+              <li><code>dotnet add package</code></li>
+              <li>Restore &amp; versions</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 One name, a bit of history</span>
+        <p>"<strong>.NET Core</strong>" was the name of the cross-platform rewrite (versions 1–3.1). From version 5
+        onward Microsoft dropped "Core" and calls it simply "<strong>.NET</strong>" (.NET 5, 6, 7, 8, 9, 10…). So
+        ".NET Core" and modern ".NET" refer to the same lineage — distinct from the legacy Windows-only ".NET
+        Framework." When people say ".NET Core" today they almost always mean modern .NET.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>SDK vs Runtime</h2></div>
+      <p class="sec-sub">The single most important Day-1 distinction: the <strong>runtime</strong> <em>runs</em> .NET
+        apps; the <strong>SDK</strong> <em>builds</em> them (and includes a runtime).</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>Runtime</th><th>SDK</th></tr></thead>
+          <tbody>
+            <tr><td>Purpose</td><td>Execute a finished app</td><td>Create, compile, test, publish apps</td></tr>
+            <tr><td>Who needs it</td><td>End users / servers running your app</td><td>Developers writing code</td></tr>
+            <tr><td>Includes</td><td>CLR + base libraries</td><td>Runtime + compiler + CLI + templates + MSBuild</td></tr>
+            <tr><td>Has the <code>dotnet build</code> command?</td><td class="bad">No</td><td class="good">Yes</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The SDK is a superset</span>
+        <p>Installing the <strong>SDK</strong> gives you everything: the compiler, the CLI, project templates, MSBuild,
+        <em>and</em> a runtime to execute what you build. Installing only the <strong>runtime</strong> lets a machine
+        run .NET apps but not build them — which is exactly what you want on a production server. As a developer, you
+        install the SDK.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Check what you have installed</span>
+        <p><code>dotnet --version</code> shows the active SDK version; <code>dotnet --list-sdks</code> and
+        <code>dotnet --list-runtimes</code> list all installed SDKs and runtimes; and <code>dotnet --info</code> prints
+        a full report of both plus your OS and architecture. These are the first commands to run when something's off.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Versions &amp; Support</h2></div>
+      <p class="sec-sub">.NET ships a new major version every November. Each is either <strong>LTS</strong> (long-term
+        support) or <strong>STS</strong> (standard-term support).</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Release type</th><th>Cadence</th><th>Supported for</th><th>Choose when</th></tr></thead>
+          <tbody>
+            <tr><td>LTS (Long-Term Support)</td><td>Odd-numbered years (e.g. .NET 8, .NET 10)</td><td>3 years</td><td>Production apps wanting stability</td></tr>
+            <tr><td>STS (Standard-Term Support)</td><td>Even-numbered years (e.g. .NET 9)</td><td>2 years</td><td>Wanting the newest features sooner</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Current version context (mid-2026)</span>
+        <p><strong>.NET 10</strong> (released November 2025) is the current <strong>LTS</strong>, supported into
+        November 2028 — the safe default for new projects. <strong>.NET 8</strong> (LTS) and <strong>.NET 9</strong>
+        (STS) both reach end of support on <strong>November 10, 2026</strong>, so projects on those should plan to move
+        to .NET 10. All releases are equal in quality; LTS vs STS differs only in how long it's patched. This series
+        targets <code>net10.0</code>, but the CLI and concepts are identical across .NET 6–10.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Pinning an SDK with global.json</span>
+        <p>A <code>global.json</code> file at the root of a repo can pin which SDK version the CLI uses, so everyone on
+        the team builds with the same one: <code>{ "sdk": { "version": "10.0.100" } }</code>. Without it, the CLI uses
+        the latest installed SDK that's compatible. This keeps builds reproducible across machines and CI.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>The dotnet CLI</h2></div>
+      <p class="sec-sub">The <code>dotnet</code> command is the entry point to everything: scaffolding, building,
+        running, testing, packaging, and managing references and packages.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>dotnet new</code></td><td>Scaffold a new project, file, or solution from a template</td></tr>
+            <tr><td><code>dotnet restore</code></td><td>Download the NuGet packages a project needs</td></tr>
+            <tr><td><code>dotnet build</code></td><td>Compile the code into assemblies (DLLs/EXEs)</td></tr>
+            <tr><td><code>dotnet run</code></td><td>Build (if needed) and run the app</td></tr>
+            <tr><td><code>dotnet test</code></td><td>Build and run the project's unit tests</td></tr>
+            <tr><td><code>dotnet publish</code></td><td>Produce a deployable, self-contained output folder</td></tr>
+            <tr><td><code>dotnet add</code></td><td>Add a package or project reference to a project</td></tr>
+            <tr><td><code>dotnet sln</code></td><td>Manage projects inside a solution file</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># The shape of most commands: dotnet &lt;verb&gt; [target] [options]</span>
+<span class="cmd">dotnet</span> --info                 <span class="cmt"># SDKs, runtimes, OS — your environment report</span>
+<span class="cmd">dotnet</span> new list               <span class="cmt"># show all available project/file templates</span>
+<span class="cmd">dotnet</span> build                   <span class="cmt"># compile the project/solution in the current folder</span>
+<span class="cmd">dotnet</span> run --project App       <span class="cmt"># run a specific project</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The CLI is the real interface</span>
+        <p>Visual Studio and other IDEs are friendly front-ends, but underneath they call the same CLI and MSBuild
+        engine. Learning the CLI means you can build, test, and run .NET anywhere — your laptop, a Linux server, a CI
+        pipeline — with no IDE at all. It's also exactly what interviewers expect you to reach for.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>dotnet new</h2></div>
+      <p class="sec-sub"><code>dotnet new</code> scaffolds a starting point from a <em>template</em> — a console app, a
+        class library, a web API, a solution file, and many more.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmd">dotnet</span> new console   -n PeopleApp.Cli    <span class="cmt"># a runnable console application</span>
+<span class="cmd">dotnet</span> new classlib  -n PeopleApp.Core   <span class="cmt"># a reusable class library (a DLL)</span>
+<span class="cmd">dotnet</span> new sln       -n PeopleApp        <span class="cmt"># an empty solution to group projects</span>
+<span class="cmd">dotnet</span> new webapi    -n PeopleApp.Api    <span class="cmt"># an ASP.NET Core web API (later in the series)</span>
+<span class="cmd">dotnet</span> new xunit     -n PeopleApp.Tests  <span class="cmt"># an xUnit test project</span></code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Template</th><th>Produces</th><th>Runnable?</th></tr></thead>
+          <tbody>
+            <tr><td><code>console</code></td><td>A command-line app with an entry point</td><td class="good">Yes</td></tr>
+            <tr><td><code>classlib</code></td><td>A library of reusable code (a DLL)</td><td class="bad">No — referenced by others</td></tr>
+            <tr><td><code>sln</code></td><td>A solution file that groups projects</td><td>—</td></tr>
+            <tr><td><code>webapi</code> / <code>mvc</code></td><td>An ASP.NET Core web app</td><td class="good">Yes</td></tr>
+            <tr><td><code>xunit</code> / <code>nunit</code></td><td>A unit-test project</td><td>Via <code>dotnet test</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The <code>-n</code> flag names it</span>
+        <p><code>-n PeopleApp.Cli</code> creates a folder and project of that name. Without <code>-o</code>/<code>-n</code>,
+        the template uses the current directory name. Run <code>dotnet new list</code> anytime to see every installed
+        template — there are dozens, and you can install more.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Project Structure</h2></div>
+      <p class="sec-sub">A <em>project</em> is one <code>.csproj</code> plus its source files. Here's what a fresh
+        console app looks like on disk.</p>
+
+      <div class="tree">
+<pre><span class="dir">PeopleApp.Cli/</span>
+├── <span class="file">PeopleApp.Cli.csproj</span>   <span class="note"># the project file: settings, references</span>
+├── <span class="file">Program.cs</span>             <span class="note"># your source code (the entry point)</span>
+├── <span class="dir">bin/</span>                    <span class="note"># build OUTPUT (DLLs/EXEs) — do not commit</span>
+│   └── <span class="dir">Debug/net10.0/</span>
+└── <span class="dir">obj/</span>                    <span class="note"># build INTERMEDIATE files — do not commit</span></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📄</span><h4>.csproj</h4><p>The project definition — target framework, references, and settings. The heart of the project.</p></div>
+        <div class="card"><span class="glyph">💻</span><h4>Program.cs</h4><p>Your code. In a console app it holds the entry point where execution begins.</p></div>
+        <div class="card"><span class="glyph">📦</span><h4>bin/</h4><p>The compiled output — the DLLs and EXE the build produces. Regenerated every build.</p></div>
+        <div class="card"><span class="glyph">🔧</span><h4>obj/</h4><p>Intermediate build artifacts and restore data. Temporary scaffolding for the build.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Never commit bin/ and obj/</span>
+        <p>Both folders are generated by the build and are recreated from your source at any time, so they don't belong
+        in source control — a <code>.gitignore</code> for .NET excludes them by default. Committing them bloats the repo
+        and causes needless merge conflicts. Your <em>source</em> (the <code>.cs</code> and <code>.csproj</code> files)
+        is what matters.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>The .csproj File</h2></div>
+      <p class="sec-sub">The project file is XML that tells the build how to compile the project. Modern
+        <strong>SDK-style</strong> projects are refreshingly short.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">xml · PeopleApp.Cli.csproj</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">&lt;Project</span> <span class="ty">Sdk</span>=<span class="str">"Microsoft.NET.Sdk"</span><span class="kw">&gt;</span>
+
+  <span class="kw">&lt;PropertyGroup&gt;</span>
+    <span class="kw">&lt;OutputType&gt;</span>Exe<span class="kw">&lt;/OutputType&gt;</span>            <span class="cmt">&lt;!-- Exe = runnable; Library = a DLL --&gt;</span>
+    <span class="kw">&lt;TargetFramework&gt;</span>net10.0<span class="kw">&lt;/TargetFramework&gt;</span> <span class="cmt">&lt;!-- which .NET version --&gt;</span>
+    <span class="kw">&lt;ImplicitUsings&gt;</span>enable<span class="kw">&lt;/ImplicitUsings&gt;</span>   <span class="cmt">&lt;!-- auto-import common namespaces --&gt;</span>
+    <span class="kw">&lt;Nullable&gt;</span>enable<span class="kw">&lt;/Nullable&gt;</span>             <span class="cmt">&lt;!-- opt in to null-safety warnings --&gt;</span>
+  <span class="kw">&lt;/PropertyGroup&gt;</span>
+
+  <span class="kw">&lt;ItemGroup&gt;</span>
+    <span class="kw">&lt;ProjectReference</span> <span class="ty">Include</span>=<span class="str">"..\PeopleApp.Core\PeopleApp.Core.csproj"</span> <span class="kw">/&gt;</span>
+  <span class="kw">&lt;/ItemGroup&gt;</span>
+
+<span class="kw">&lt;/Project&gt;</span></code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Element</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td><code>Sdk="Microsoft.NET.Sdk"</code></td><td>Uses the standard SDK, which supplies sensible defaults (so the file stays tiny)</td></tr>
+            <tr><td><code>&lt;TargetFramework&gt;</code></td><td>The framework you compile against — the "TFM," e.g. <code>net10.0</code></td></tr>
+            <tr><td><code>&lt;OutputType&gt;</code></td><td><code>Exe</code> for an app, <code>Library</code> for a class library</td></tr>
+            <tr><td><code>&lt;ImplicitUsings&gt;</code></td><td>Auto-imports common namespaces so you write fewer <code>using</code> lines</td></tr>
+            <tr><td><code>&lt;Nullable&gt;</code></td><td>Turns on nullable-reference-type warnings to catch null bugs early</td></tr>
+            <tr><td><code>&lt;PackageReference&gt;</code></td><td>A NuGet dependency (in an <code>&lt;ItemGroup&gt;</code>)</td></tr>
+            <tr><td><code>&lt;ProjectReference&gt;</code></td><td>A dependency on another project in your solution</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 SDK-style vs the old format</span>
+        <p>Old .NET Framework <code>.csproj</code> files listed every source file explicitly and ran to hundreds of
+        lines. The modern <strong>SDK-style</strong> project (introduced with .NET Core) automatically includes all
+        <code>.cs</code> files in the folder and relies on SDK defaults, so a whole project fits in a dozen readable
+        lines. If you ever see a huge, verbose project file, it's the legacy format.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>Solutions</h2></div>
+      <p class="sec-sub">A <strong>solution</strong> (<code>.sln</code>) is a container that groups related projects so
+        you can build and manage them together.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmd">dotnet</span> new sln -n PeopleApp                              <span class="cmt"># create PeopleApp.sln</span>
+<span class="cmd">dotnet</span> sln add PeopleApp.Cli/PeopleApp.Cli.csproj       <span class="cmt"># add a project</span>
+<span class="cmd">dotnet</span> sln add PeopleApp.Core/PeopleApp.Core.csproj      <span class="cmt"># add another</span>
+<span class="cmd">dotnet</span> sln list                                         <span class="cmt"># show projects in the solution</span>
+<span class="cmd">dotnet</span> build                                            <span class="cmt"># builds every project in the .sln</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Project vs solution</span>
+        <p>A <strong>project</strong> produces one output (an app or a library) and is defined by one
+        <code>.csproj</code>. A <strong>solution</strong> is just an organizational grouping of projects — running
+        <code>dotnet build</code> against the <code>.sln</code> builds them all in the right dependency order. A small
+        program might be a single project; a real application is usually several projects in one solution (an API, a
+        core library, tests, etc.).</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ You don't strictly need a solution</span>
+        <p>You can build and run a single project without any <code>.sln</code> at all. Solutions become valuable once
+        you have multiple related projects, want to open everything at once in an IDE, or need one command to build the
+        whole set. For today's exercise we'll use one because it mirrors real-world structure.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>NuGet</h2></div>
+      <p class="sec-sub"><strong>NuGet</strong> is .NET's package manager — the pantry of reusable libraries you pull
+        into a project instead of writing everything yourself.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmd">dotnet</span> add package Newtonsoft.Json            <span class="cmt"># add a dependency (latest version)</span>
+<span class="cmd">dotnet</span> add package Serilog --version 4.0.0    <span class="cmt"># pin a specific version</span>
+<span class="cmd">dotnet</span> restore                               <span class="cmt"># download all referenced packages</span>
+<span class="cmd">dotnet</span> list package                          <span class="cmt"># show this project's packages</span>
+<span class="cmd">dotnet</span> remove package Newtonsoft.Json         <span class="cmt"># drop a dependency</span></code></pre>
+      </div>
+
+      <p>Adding a package writes a <code>&lt;PackageReference&gt;</code> line into your <code>.csproj</code>. On the
+        next build (or an explicit <code>dotnet restore</code>), the CLI downloads that package — and everything it
+        depends on — from the public <strong>nuget.org</strong> feed (or a private one you configure) and caches it
+        locally.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 PackageReference = a version, not a file</span>
+        <p>You don't commit the downloaded library files — you commit the <code>&lt;PackageReference&gt;</code> with its
+        version, and <code>restore</code> fetches the exact packages on any machine. This keeps repos small and builds
+        reproducible. Restore happens automatically as part of <code>build</code>, <code>run</code>, and
+        <code>test</code>, so you rarely call it explicitly.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Transitive dependencies come along</span>
+        <p>If package A depends on package B, adding A automatically brings B too — you don't list B yourself. NuGet
+        resolves this whole dependency graph for you and picks compatible versions, which is why a single
+        <code>add package</code> can pull in several files behind the scenes.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 10 ===================== -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Build · Run · Test</h2></div>
+      <p class="sec-sub">The everyday inner loop. Each verb does one job — and each does a restore first if needed.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔨</span><h4>dotnet build</h4><p>Compiles source into assemblies in <code>bin/</code>. Reports compiler errors and warnings. Doesn't run anything.</p></div>
+        <div class="card"><span class="glyph">▶️</span><h4>dotnet run</h4><p>Builds if needed, then launches the app. For quick iteration on a runnable project.</p></div>
+        <div class="card"><span class="glyph">🧪</span><h4>dotnet test</h4><p>Builds and executes the test project's tests, reporting pass/fail counts.</p></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmd">dotnet</span> build                          <span class="cmt"># compile; Debug config by default</span>
+<span class="cmd">dotnet</span> build -c Release               <span class="cmt"># optimized Release build</span>
+<span class="cmd">dotnet</span> run --project PeopleApp.Cli    <span class="cmt"># run the console app</span>
+<span class="cmd">dotnet</span> test                           <span class="cmt"># run all tests in the solution</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Debug vs Release</span>
+        <p>By default the CLI builds the <strong>Debug</strong> configuration — unoptimized, with full debugging info,
+        for development. Pass <code>-c Release</code> for the <strong>Release</strong> configuration — optimized and
+        stripped of debug overhead — which is what you ship. Same code, different build settings; always publish
+        Release.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 11 ===================== -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Hands-On Build</h2></div>
+      <p class="sec-sub">The Day-1 exercise: create a solution containing a <strong>console app</strong> and a
+        <strong>class library</strong>, wire them together, and run it. This is our running example for the whole
+        series.</p>
+
+      <h3>The sequence 🧭</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <span class="st-icon">📁</span>
+          <b>1 · Create the solution</b>
+          <small><code>dotnet new sln -n PeopleApp</code></small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">💻</span>
+          <b>2 · Create the console app &amp; the library</b>
+          <small><code>dotnet new console -n PeopleApp.Cli</code> · <code>dotnet new classlib -n PeopleApp.Core</code></small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">➕</span>
+          <b>3 · Add both projects to the solution</b>
+          <small><code>dotnet sln add …Cli.csproj</code> · <code>dotnet sln add …Core.csproj</code></small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <span class="st-icon">🔗</span>
+          <b>4 · Make the app reference the library</b>
+          <small><code>dotnet add …Cli.csproj reference …Core.csproj</code></small>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <span class="st-icon">▶️</span>
+          <b>5 · Build &amp; run</b>
+          <small><code>dotnet build</code> · <code>dotnet run --project PeopleApp.Cli</code> → <em>Hello, Ada!</em></small>
+        </div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">bash · the full script</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># 1) A solution to hold everything</span>
+<span class="cmd">dotnet</span> new sln -n PeopleApp
+
+<span class="cmt"># 2) A runnable console app and a reusable library</span>
+<span class="cmd">dotnet</span> new console  -n PeopleApp.Cli
+<span class="cmd">dotnet</span> new classlib -n PeopleApp.Core
+
+<span class="cmt"># 3) Register both projects with the solution</span>
+<span class="cmd">dotnet</span> sln add PeopleApp.Cli/PeopleApp.Cli.csproj
+<span class="cmd">dotnet</span> sln add PeopleApp.Core/PeopleApp.Core.csproj
+
+<span class="cmt"># 4) The app depends on the library</span>
+<span class="cmd">dotnet</span> add PeopleApp.Cli/PeopleApp.Cli.csproj reference PeopleApp.Core/PeopleApp.Core.csproj
+
+<span class="cmt"># 5) Build the whole solution, then run the app</span>
+<span class="cmd">dotnet</span> build
+<span class="cmd">dotnet</span> run --project PeopleApp.Cli</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">csharp · PeopleApp.Core/Greeter.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">namespace</span> PeopleApp.Core;
+
+<span class="kw">public class</span> <span class="ty">Greeter</span>
+{
+    <span class="kw">public</span> <span class="ty">string</span> <span class="fn">Greet</span>(<span class="ty">string</span> name) =&gt; <span class="str">$"Hello, {name}!"</span>;
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">csharp · PeopleApp.Cli/Program.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> PeopleApp.Core;              <span class="cmt">// pull in the library's namespace</span>
+
+<span class="kw">var</span> greeter = <span class="kw">new</span> <span class="ty">Greeter</span>();
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(greeter.<span class="fn">Greet</span>(<span class="str">"Ada"</span>));   <span class="cmt">// → Hello, Ada!</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ What just happened</span>
+        <p>You built a two-project solution: <code>PeopleApp.Core</code> compiles to a DLL that holds reusable logic,
+        and <code>PeopleApp.Cli</code> is the runnable app that <em>references</em> that DLL and calls into it. The
+        <code>using PeopleApp.Core;</code> line makes the library's <code>Greeter</code> class visible. This
+        library-plus-app split is the foundation of almost every real .NET codebase — keep this <code>PeopleApp</code>
+        around; later days build on it.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 12 ===================== -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Publishing</h2></div>
+      <p class="sec-sub"><code>dotnet publish</code> packages your app for deployment. The key choice is whether the
+        target machine already has the .NET runtime.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">bash</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># Framework-dependent: small output; the machine must have the .NET runtime</span>
+<span class="cmd">dotnet</span> publish -c Release
+
+<span class="cmt"># Self-contained: bundles the runtime; runs anywhere, but larger output</span>
+<span class="cmd">dotnet</span> publish -c Release -r linux-x64 --self-contained true</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th></th><th>Framework-dependent</th><th>Self-contained</th></tr></thead>
+          <tbody>
+            <tr><td>Includes the runtime?</td><td class="bad">No</td><td class="good">Yes</td></tr>
+            <tr><td>Output size</td><td class="good">Small</td><td>Larger</td></tr>
+            <tr><td>Target needs .NET installed?</td><td>Yes</td><td class="good">No</td></tr>
+            <tr><td>Best for</td><td>Servers/images with .NET present</td><td>Machines without .NET; isolated deploys</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 build vs publish</span>
+        <p><code>build</code> produces assemblies for <em>development</em> (with dependencies scattered in
+        <code>bin/</code>). <code>publish</code> produces a <em>deployable</em> folder — everything the app needs,
+        arranged to copy to a server or container. You develop with <code>build</code>/<code>run</code> and ship with
+        <code>publish</code>.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 13 ===================== -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Mistakes &amp; Practices</h2></div>
+      <p class="sec-sub">Day-1 habits that save pain later.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🎯</span><h4>Target an LTS</h4><p>New projects → <code>net10.0</code> (current LTS) for the longest support window.</p></div>
+        <div class="card"><span class="glyph">🙈</span><h4>Ignore bin/ &amp; obj/</h4><p>Never commit build output; add the standard .NET <code>.gitignore</code> from the start.</p></div>
+        <div class="card"><span class="glyph">📌</span><h4>Pin the SDK</h4><p>Use <code>global.json</code> so the team and CI build with the same SDK version.</p></div>
+        <div class="card"><span class="glyph">🗂️</span><h4>Split app from library</h4><p>Keep reusable logic in a class library, thin runnable apps on top — easier to test and reuse.</p></div>
+        <div class="card"><span class="glyph">📥</span><h4>Commit references, not packages</h4><p>Commit <code>&lt;PackageReference&gt;</code> lines; let <code>restore</code> fetch the files.</p></div>
+        <div class="card"><span class="glyph">🚢</span><h4>Publish in Release</h4><p>Ship <code>-c Release</code> builds; Debug is for development only.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ "It builds on my machine" — pin your versions</span>
+        <p>Most reproducibility problems come from different SDK versions or unpinned package versions across machines.
+        A <code>global.json</code> to pin the SDK and explicit package versions (or central package management, which
+        later days cover) make builds identical everywhere — locally and in CI. Set this up early rather than debugging
+        mystery differences later.</p>
+      </div>
+    </section>
+
+    <!-- ===================== 14 ===================== -->
+    <section class="section" id="s14">
+      <div class="sec-head"><span class="sec-badge">14</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea, then a full cheat-sheet table.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>⚙️ .NET</h4><p>A cross-platform platform: runtime, libraries, languages, and tooling.</p></div>
+        <div class="recap-card"><h4>📦 Runtime</h4><p>Runs finished apps; what a production server needs.</p></div>
+        <div class="recap-card"><h4>🧰 SDK</h4><p>Builds apps and includes a runtime; what developers install.</p></div>
+        <div class="recap-card"><h4>🎗️ LTS vs STS</h4><p>3-year vs 2-year support; .NET 10 is the current LTS.</p></div>
+        <div class="recap-card"><h4>⌨️ dotnet CLI</h4><p>new / build / run / test / publish / add / restore.</p></div>
+        <div class="recap-card"><h4>🗂️ Project</h4><p>One <code>.csproj</code> producing one app or library.</p></div>
+        <div class="recap-card"><h4>📚 Solution</h4><p>A <code>.sln</code> grouping many projects to build together.</p></div>
+        <div class="recap-card"><h4>📄 .csproj</h4><p>SDK-style XML: target framework, references, settings.</p></div>
+        <div class="recap-card"><h4>📥 NuGet</h4><p>Package manager; add references, restore fetches files.</p></div>
+        <div class="recap-card"><h4>🚢 publish</h4><p>Deployable output; framework-dependent or self-contained.</p></div>
+      </div>
+
+      <h3>Command cheat sheet</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Command</th><th>Does</th></tr></thead>
+          <tbody>
+            <tr><td><code>dotnet --info</code></td><td>Show installed SDKs, runtimes, and environment</td></tr>
+            <tr><td><code>dotnet new console -n X</code></td><td>Scaffold a console app named X</td></tr>
+            <tr><td><code>dotnet new classlib -n X</code></td><td>Scaffold a class library named X</td></tr>
+            <tr><td><code>dotnet new sln -n X</code></td><td>Create a solution named X</td></tr>
+            <tr><td><code>dotnet sln add path.csproj</code></td><td>Add a project to the solution</td></tr>
+            <tr><td><code>dotnet add A reference B</code></td><td>Make project A depend on project B</td></tr>
+            <tr><td><code>dotnet add package Name</code></td><td>Add a NuGet package dependency</td></tr>
+            <tr><td><code>dotnet build / run / test</code></td><td>Compile / run / test</td></tr>
+            <tr><td><code>dotnet publish -c Release</code></td><td>Produce a deployable Release build</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===================== 15 ===================== -->
+    <section class="section" id="s15">
+      <div class="sec-head"><span class="sec-badge">15</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a plain-English answer. Tagged by experience level.</p>
+
+      <!-- JUNIOR -->
+      <details class="qa"><summary><span class="qnum">Q01</span> What is .NET (Core)? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A free, cross-platform, open-source developer platform for building many kinds of apps — console
+        tools, web APIs, desktop, mobile, cloud. It includes a runtime that executes your code, a large set of libraries,
+        languages like C#, and command-line tooling. "Core" was the name of versions 1–3.1; from version 5 it's just
+        ".NET," but the same modern, cross-platform lineage.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q02</span> What's the difference between the SDK and the runtime? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The runtime <em>runs</em> finished .NET apps — it's what a production server needs. The SDK <em>builds</em>
+        apps: it includes the compiler, the CLI, templates, MSBuild, and a runtime. Developers install the SDK (a superset);
+        servers that only run apps need just the runtime.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q03</span> What does <code>dotnet build</code> do? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It compiles your project's source code into assemblies (DLLs and, for apps, an executable) placed in the
+        <code>bin/</code> folder, reporting any compiler errors and warnings. It restores NuGet packages first if needed, but it
+        doesn't run the program.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q04</span> What does <code>dotnet run</code> do? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It builds the project if necessary and then launches the resulting app. It's the quick way to run a project
+        during development. You can target a specific project with <code>--project</code>. For shipping, you'd use
+        <code>publish</code> instead.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q05</span> What is a .csproj file? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The project file — XML that defines how a project is built: which .NET version it targets
+        (<code>TargetFramework</code>), whether it's an app or a library (<code>OutputType</code>), and its package and project
+        references. Modern SDK-style project files are short because they rely on SDK defaults and auto-include source files.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q06</span> What is a solution (.sln)? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A container that groups related projects so you can manage and build them together. Building the solution
+        compiles all its projects in dependency order. A single project doesn't require a solution, but real applications usually
+        organize several projects (app, library, tests) into one.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q07</span> What is NuGet? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>.NET's package manager. It lets you pull in reusable libraries — published on nuget.org or a private feed —
+        instead of writing everything yourself. You add a package with <code>dotnet add package</code>, which records a
+        <code>&lt;PackageReference&gt;</code> in the .csproj; <code>restore</code> then downloads it and its dependencies.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q08</span> What's the difference between a console app and a class library? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A console app is runnable — it has an entry point and produces an executable. A class library is a reusable
+        bundle of code (a DLL) with no entry point; it isn't run directly but is referenced by other projects. You typically put
+        shared logic in a library and have thin apps reference it.</p></div></details>
+
+      <!-- MID -->
+      <details class="qa"><summary><span class="qnum">Q09</span> How do you add a project reference via the CLI? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>dotnet add &lt;consumer.csproj&gt; reference &lt;dependency.csproj&gt;</code>. That writes a
+        <code>&lt;ProjectReference&gt;</code> into the consuming project so it can use the other project's public types. For example,
+        a console app referencing a class library so it can call the library's classes.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> What is a target framework (TFM)? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The Target Framework Moniker specifies which framework version your project compiles against — for example
+        <code>net10.0</code>. It determines which APIs are available and which runtime the output expects. A project can even target
+        multiple frameworks. It's set via <code>&lt;TargetFramework&gt;</code> (or <code>&lt;TargetFrameworks&gt;</code>, plural) in the
+        .csproj.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> What do ImplicitUsings and Nullable do in the .csproj? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>ImplicitUsings</code> (enabled) auto-imports a set of common namespaces (like <code>System</code>) so you
+        write fewer <code>using</code> statements. <code>Nullable</code> (enabled) turns on nullable-reference-type analysis, giving
+        compiler warnings when you might dereference null — a big help for catching null-related bugs early. Both are on by default in
+        new templates.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> What's the difference between LTS and STS releases? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Both are full-quality releases; they differ only in support length. LTS (Long-Term Support) releases come in
+        odd-numbered years and get three years of patches — good for production stability. STS (Standard-Term Support) releases come in
+        even-numbered years and get two years — good for adopting new features sooner. .NET 10 is the current LTS; .NET 9 is STS.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What does <code>dotnet restore</code> do, and when does it run automatically? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It reads the project's package references and downloads those packages (and their transitive dependencies) into
+        the local cache, writing restore data into <code>obj/</code>. It runs automatically as part of <code>build</code>, <code>run</code>,
+        <code>test</code>, and <code>publish</code>, so you rarely call it directly — mainly in CI or to force a refresh.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> What's in the bin and obj folders? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>bin/</code> holds the build <em>output</em> — the compiled DLLs and executables, organized by configuration
+        and target framework. <code>obj/</code> holds <em>intermediate</em> build artifacts and restore metadata. Both are generated from
+        your source, so neither should be committed to source control; the standard .NET <code>.gitignore</code> excludes them.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> What is global.json used for? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It pins which .NET SDK version the CLI uses for a folder and its subfolders, so everyone on a team and the CI
+        server build with the same SDK. Without it, the CLI picks the latest compatible installed SDK. It can also set roll-forward behavior.
+        It's about build reproducibility, not the runtime the app targets (that's the TFM).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> Framework-dependent vs self-contained deployment? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A framework-dependent deployment ships just your app and relies on a .NET runtime already installed on the target —
+        small output, but the machine needs the right runtime. A self-contained deployment bundles the runtime with your app — larger output,
+        but it runs on a machine with no .NET installed. You choose with <code>--self-contained</code> and a runtime identifier
+        (<code>-r</code>) at publish time.</p></div></details>
+
+      <!-- SENIOR -->
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain SDK-style projects versus the old .csproj format. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Legacy .NET Framework project files explicitly listed every source file and were long and merge-conflict prone.
+        SDK-style projects (introduced with .NET Core, declared via <code>Sdk="Microsoft.NET.Sdk"</code>) implicitly include all source files
+        in the folder, provide sensible defaults through the SDK, and express dependencies as concise <code>&lt;PackageReference&gt;</code> and
+        <code>&lt;ProjectReference&gt;</code> items — so a project file is often just a dozen lines. They're also the basis for cross-platform
+        builds and modern features like implicit usings.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> How does the CLI decide which SDK version to use? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>By default it uses the highest installed SDK compatible with the command. If a <code>global.json</code> is present
+        in the current directory or an ancestor, its <code>sdk.version</code> (and roll-forward policy) determines the SDK selected — pinning the
+        exact version and failing if it's missing (depending on roll-forward settings). This lets teams guarantee everyone, including CI, builds
+        with an identical SDK, which matters because SDK versions can change build behavior and defaults.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> How does NuGet dependency resolution and transitive restore work? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Each <code>&lt;PackageReference&gt;</code> pulls in that package plus its own dependencies, forming a graph. NuGet
+        walks the graph and resolves a single version per package — by default choosing the <em>lowest</em> version that satisfies all constraints
+        (nearest-wins/lowest-applicable), with direct references taking precedence over transitive ones. The result is written to a lock/assets file
+        in <code>obj/</code>, and the packages are pulled from the global cache or downloaded. Version conflicts surface as warnings you resolve by
+        adding an explicit reference or unifying versions.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> What's the difference between .NET Framework, .NET Core, .NET Standard, and .NET 5+? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><strong>.NET Framework</strong> is the original Windows-only platform (latest 4.8, still supported but not evolving).
+        <strong>.NET Core</strong> was the cross-platform, open-source rewrite (1.0–3.1). <strong>.NET Standard</strong> was a set of API
+        specifications that libraries could target to run on multiple runtimes (Framework, Core, Xamarin) — a compatibility bridge.
+        <strong>.NET 5+</strong> unified everything into one cross-platform product (dropping "Core" from the name), and is where all new
+        development happens. New libraries usually target modern .NET; .NET Standard is now mainly for libraries that must also support old
+        Framework apps.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> How do PackageReference and ProjectReference differ, and how do transitive references flow? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A <code>&lt;PackageReference&gt;</code> depends on a published NuGet package (by name and version); a
+        <code>&lt;ProjectReference&gt;</code> depends on another project in your own solution, built from source. Both flow transitively by default:
+        if app A references library B, and B references package/project C, then A also compiles against C without listing it. You can control this
+        flow with attributes like <code>PrivateAssets</code> (to stop a dependency leaking to consumers) — useful for build-only or analyzer packages
+        you don't want to propagate.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> What happens during <code>dotnet build</code> versus <code>dotnet publish</code>? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>build</code> compiles each project to assemblies in <code>bin/&lt;config&gt;/&lt;tfm&gt;/</code> for development —
+        dependencies are resolved but the layout isn't a finished deployment. <code>publish</code> runs a build and then gathers everything the app
+        needs into a single publish folder arranged for deployment: your assemblies, dependencies, config, and — for self-contained or single-file/
+        trimmed/ReadyToRun options — the runtime and optimizations. So <code>build</code> is for the inner dev loop; <code>publish</code> produces the
+        artifact you copy to a server or container image.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> How do you manage package versions centrally across a solution? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>With Central Package Management: a <code>Directory.Packages.props</code> file at the repo root declares each package's
+        version once via <code>&lt;PackageVersion&gt;</code>, and individual projects reference packages by name only (no version). This guarantees every
+        project uses the same version, prevents drift and conflicts, and makes upgrades a one-line change. Related mechanisms include
+        <code>Directory.Build.props</code> for shared MSBuild properties across projects. It's the standard way to keep a large multi-project solution
+        consistent.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> How would you structure a multi-project solution for a real app? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Typically separate concerns into projects: a thin entry-point/host (e.g., the web API or console app), one or more
+        class libraries for domain/business logic and data access, and dedicated test projects mirroring them — all grouped in one solution. Dependencies
+        flow inward (the app references the libraries, not vice versa), keeping logic reusable and testable independent of the host. Shared build settings
+        go in <code>Directory.Build.props</code> and versions in <code>Directory.Packages.props</code>. The exact split depends on the architecture, but
+        the principle is: reusable logic in libraries, thin runnable hosts on top, tests alongside.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Work top to bottom. <strong>Junior</strong> questions establish what .NET is and the SDK/runtime, CLI, project, and NuGet basics;
+        <strong>Mid</strong> questions test the practical details (references, TFMs, restore, global.json, deployment); <strong>Senior</strong>
+        questions probe the model (SDK-style projects, dependency resolution, the .NET family, central package management, solution architecture).
+        Say each answer out loud in plain English, and actually run the Day-1 build — the ones you stumble on point straight to the section to
+        re-read.</p>
+      </div>
+
+      <p class="foot">Version facts verified against Microsoft's .NET support policy and the dotnet/core release notes (July 2026): .NET 10 (Nov 2025)
+        is the current LTS, supported into November 2028; .NET 8 (LTS) and .NET 9 (STS) reach end of support on November 10, 2026. CLI verbs, SDK-style
+        projects, and NuGet concepts are stable across .NET 6–10. This single <code>01-dotnet-ecosystem-cli.html</code> file is fully self-contained and
+        works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ---------- progress bar ---------- */
+const progress = document.getElementById('progress');
+function updateProgress(){
+  const h = document.documentElement;
+  const scrolled = h.scrollTop;
+  const max = h.scrollHeight - h.clientHeight;
+  progress.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+}
+window.addEventListener('scroll', updateProgress, {passive:true});
+window.addEventListener('resize', updateProgress);
+updateProgress();
+
+/* ---------- smooth scroll with 24px offset ---------- */
+const sidebar = document.getElementById('sidebar');
+const backdrop = document.getElementById('backdrop');
+function closeSidebar(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', e=>{
+    e.preventDefault();
+    const target = document.querySelector(link.getAttribute('href'));
+    if(target){
+      const y = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({top:y, behavior:'smooth'});
+    }
+    if(window.innerWidth <= 920) closeSidebar();
+  });
+});
+
+/* ---------- scroll-spy + auto-center active link ---------- */
+const sections = [...document.querySelectorAll('.section')];
+const navLinks = [...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on = l.getAttribute('href') === '#'+id;
+    l.classList.toggle('active', on);
+    if(on){
+      const lr = l.getBoundingClientRect(), sr = sidebar.getBoundingClientRect();
+      if(lr.top < sr.top + 60 || lr.bottom > sr.bottom - 60){
+        sidebar.scrollTop += (lr.top - sr.top) - sidebar.clientHeight/2 + lr.height/2;
+      }
+    }
+  });
+}
+const spy = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting) setActive(en.target.id); });
+}, {rootMargin:'-20% 0px -70% 0px', threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+/* ---------- scroll reveal ---------- */
+const reveal = new IntersectionObserver(entries=>{
+  entries.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('visible'); reveal.unobserve(en.target); } });
+}, {threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+/* ---------- copy buttons ---------- */
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const code = btn.closest('.code').querySelector('pre code').innerText;
+    const done = ()=>{ btn.textContent='Copied!'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='Copy'; btn.classList.remove('done'); }, 2000); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code, done));
+    } else { fallback(code, done); }
+  });
+});
+function fallback(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- mobile FAB ---------- */
+document.getElementById('fab').addEventListener('click', ()=>{
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+});
+backdrop.addEventListener('click', closeSidebar);
+</script>
+</body>
+</html>

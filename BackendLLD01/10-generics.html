@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generics — Session 10</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* evolution diagram */
+.evo-row{display:flex;gap:1rem;align-items:stretch;flex-wrap:wrap;margin:1rem 0}
+.evo-box{flex:1;min-width:200px;border-radius:8px;padding:1rem;border:1px solid}
+.evo-box.bad{background:var(--rose-soft);border-color:var(--rose)}
+.evo-box.ok{background:var(--accent-soft);border-color:var(--accent)}
+.evo-box.good{background:var(--green-soft);border-color:var(--green)}
+.evo-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.4rem}
+.evo-box.bad .evo-label{color:var(--rose)}.evo-box.ok .evo-label{color:var(--accent)}.evo-box.good .evo-label{color:var(--green)}
+.evo-box p{font-size:.82rem;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 10</div>
+  <div class="nav-group"><span class="nav-group-label">Getting Started</span><a class="nav-link" href="#hero">Overview</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">The Problem</span>
+    <a class="nav-link" href="#s01">01 The Pair Problem</a>
+    <a class="nav-link" href="#s02">02 Using Object — Unsafe</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Generics</span>
+    <a class="nav-link" href="#s03">03 Generic Classes</a>
+    <a class="nav-link" href="#s04">04 Using Generic Pair</a>
+    <a class="nav-link" href="#s05">05 Wildcards — ? extends T</a>
+    <a class="nav-link" href="#s06">06 Type Erasure</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 10 · 28th Nov</p>
+  <h1>Generics</h1>
+  <p class="hero-lede">Why using <code>Object</code> for reusable classes loses type safety, how generics (introduced in Java 5) add compile-time type checking, and what happens to all those type parameters at runtime.</p>
+  <div class="agenda-chips">
+    <span class="chip">Generic Classes</span><span class="chip">Type Parameters</span><span class="chip">Wildcards</span><span class="chip">Bounded Types</span><span class="chip">Raw Types</span><span class="chip">Type Erasure</span>
+  </div>
+</section>
+
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>The Pair Problem</h2></div>
+  <p>Suppose you need a reusable <strong>Pair</strong> class — a container for two related values. You might use it for coordinates (x, y), for a student's (name, marks), or for any two values that belong together. The naive first attempt uses fixed types:</p>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Naive Approach</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Pair</span> {
+    <span class="ty">Double</span> first;
+    <span class="ty">Double</span> second;
+}
+
+<span class="ty">Pair</span> coord = <span class="kw">new</span> <span class="ty">Pair</span>();
+coord.first  = <span class="num">8.17</span>;
+coord.second = <span class="num">7.14</span>;
+
+<span class="cmt">// But what about Pair<String, Double> for student marks?
+// You'd need a whole new class — Marks { String name; Double marks; }
+// This creates code duplication for every new type combination.</span></pre>
+  </div>
+  <p>The problem: a hard-coded <code>Pair</code> only works for one type combination. Every new combination requires a new class.</p>
+</section>
+
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>Using <code>Object</code> — Generality Without Safety</h2></div>
+  <p>Since every Java class extends <code>Object</code>, you can use <code>Object</code> fields to accept anything. This gives you generality, but you lose all compile-time type checking — you can accidentally assign a <code>String</code> to a field that should hold a <code>Double</code>, and the compiler won't warn you.</p>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Object Approach (Unsafe)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Pair</span> {
+    <span class="ty">Object</span> first;
+    <span class="ty">Object</span> second;
+}
+
+<span class="ty">Pair</span> coord = <span class="kw">new</span> <span class="ty">Pair</span>();
+coord.first  = <span class="num">8.79</span>;
+coord.second = <span class="num">6.14</span>;
+coord.first  = <span class="str">"Scaler"</span>;  <span class="cmt">// ✗ No compile error! But semantically wrong.</span>
+
+<span class="cmt">// To get the value back you need an explicit cast — which can fail at runtime:</span>
+<span class="ty">Double</span> x = (<span class="ty">Double</span>) coord.first;  <span class="cmt">// ClassCastException if first holds a String!</span></pre>
+  </div>
+  <div class="callout warn">
+    <span class="callout-tag">The Problem with Object</span>
+    <p><code>Object</code> provides generality but NO compile-time safety. Bugs only surface at runtime as <code>ClassCastException</code> — the worst possible time to find them.</p>
+  </div>
+</section>
+
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Generic Classes — The Right Solution</h2></div>
+  <p>Generics (introduced in Java 5) allow you to define a class with <strong>type parameters</strong> — placeholders for data types that are filled in at the use site. You get both generality (works with any type) and compile-time safety (wrong types are caught by the compiler).</p>
+
+  <div class="evo-row">
+    <div class="evo-box bad"><div class="evo-label">❌ Fixed Types</div><p>Hard-coded type. Must duplicate for every new type combination.</p></div>
+    <div class="evo-box ok"><div class="evo-label">⚠ Object</div><p>Any type accepted. No compile-time safety. Casting errors at runtime.</p></div>
+    <div class="evo-box good"><div class="evo-label">✓ Generics</div><p>Works with any type AND catches type mistakes at compile time.</p></div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Generic Pair&lt;T, U&gt;</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// T and U are type parameters — placeholders, like variables for types</span>
+<span class="kw">class</span> <span class="ty">Pair</span>&lt;<span class="ty">T</span>, <span class="ty">U</span>&gt; {
+    <span class="ty">T</span> first;
+    <span class="ty">U</span> second;
+
+    <span class="ty">T</span> <span class="fn">getFirst</span>()          { <span class="kw">return</span> first; }
+    <span class="kw">void</span> <span class="fn">setFirst</span>(<span class="ty">T</span> val)  { <span class="kw">this</span>.first = val; }
+    <span class="ty">U</span> <span class="fn">getSecond</span>()         { <span class="kw">return</span> second; }
+    <span class="kw">void</span> <span class="fn">setSecond</span>(<span class="ty">U</span> val) { <span class="kw">this</span>.second = val; }
+}</pre>
+  </div>
+  <div class="callout key">
+    <span class="callout-tag">Convention</span>
+    <p>Common type parameter names: <code>T</code> = Type, <code>U</code> / <code>V</code> = second/third type, <code>E</code> = Element (collections), <code>K</code> = Key, <code>V</code> = Value. You'll see these everywhere in the Java standard library: <code>List&lt;E&gt;</code>, <code>HashMap&lt;K,V&gt;</code>.</p>
+  </div>
+</section>
+
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Using a Generic Class</h2></div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Coordinates — both Double</span>
+<span class="ty">Pair</span>&lt;<span class="ty">Double</span>, <span class="ty">Double</span>&gt; p1 = <span class="kw">new</span> <span class="ty">Pair</span>&lt;&gt;();
+p1.<span class="fn">setFirst</span>(<span class="num">3.14</span>);
+p1.<span class="fn">setSecond</span>(<span class="num">2.71</span>);
+p1.<span class="fn">setSecond</span>(<span class="str">"Scaler"</span>);  <span class="cmt">// ✗ Compile error — second must be Double</span>
+
+<span class="cmt">// Student marks — String name, Double marks</span>
+<span class="ty">Pair</span>&lt;<span class="ty">String</span>, <span class="ty">Double</span>&gt; p2 = <span class="kw">new</span> <span class="ty">Pair</span>&lt;&gt;();
+p2.<span class="fn">setFirst</span>(<span class="str">"Samable"</span>);
+p2.<span class="fn">setSecond</span>(<span class="num">82.5</span>);
+
+<span class="cmt">// No cast needed — getFirst() returns String directly</span>
+<span class="ty">String</span> s = p2.<span class="fn">getFirst</span>();   <span class="cmt">// ✓ no (String) cast required</span>
+
+<span class="cmt">// Generic method — accepts any Animal or subclass</span>
+<span class="kw">void</span> <span class="fn">fun</span>(<span class="ty">Animal</span> animal) { <span class="cmt">/* ... */</span> }
+
+<span class="ty">Animal</span> a = <span class="kw">new</span> <span class="ty">Animal</span>(); <span class="fn">fun</span>(a);  <span class="cmt">// ✓</span>
+<span class="ty">Dog</span>    d = <span class="kw">new</span> <span class="ty">Dog</span>();    <span class="fn">fun</span>(d);  <span class="cmt">// ✓ Dog IS-A Animal</span></pre>
+  </div>
+</section>
+
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>Wildcards — <code>? extends T</code></h2></div>
+  <p>Generics are <em>invariant</em> — <code>List&lt;Dog&gt;</code> is NOT a subtype of <code>List&lt;Animal&gt;</code>, even though <code>Dog</code> IS-A <code>Animal</code>. This means you cannot pass a <code>List&lt;Dog&gt;</code> to a method that expects <code>List&lt;Animal&gt;</code>.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">fun</span>(<span class="ty">List</span>&lt;<span class="ty">Animal</span>&gt; animals) { <span class="cmt">/* ... */</span> }
+
+<span class="ty">List</span>&lt;<span class="ty">Dog</span>&gt; dogs = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+<span class="fn">fun</span>(dogs);  <span class="cmt">// ✗ Compile error — List&lt;Dog&gt; is NOT a List&lt;Animal&gt;</span>
+
+<span class="cmt">// Without wildcards, you'd need separate overloads for every animal type — code duplication!</span>
+<span class="kw">void</span> <span class="fn">fun</span>(<span class="ty">List</span>&lt;<span class="ty">Dog</span>&gt;   d) { <span class="cmt">/* ... */</span> }  <span class="cmt">// duplicated</span>
+<span class="kw">void</span> <span class="fn">fun</span>(<span class="ty">List</span>&lt;<span class="ty">Cat</span>&gt;   c) { <span class="cmt">/* ... */</span> }  <span class="cmt">// duplicated</span>
+<span class="kw">void</span> <span class="fn">fun</span>(<span class="ty">List</span>&lt;<span class="ty">Tiger</span>&gt; t) { <span class="cmt">/* ... */</span> }  <span class="cmt">// duplicated</span></pre>
+  </div>
+
+  <p>The solution is a <strong>bounded wildcard</strong>: <code>? extends Animal</code> means "a List of Animal or any of its subclasses."</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Bounded Wildcard</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// ? extends Animal = "any List whose elements are Animal or a subclass of Animal"</span>
+<span class="kw">void</span> <span class="fn">fun</span>(<span class="ty">List</span>&lt;? <span class="kw">extends</span> <span class="ty">Animal</span>&gt; animals) {
+    <span class="kw">for</span> (<span class="ty">Animal</span> a : animals) { <span class="cmt">/* treat each as Animal */</span> }
+}
+
+<span class="fn">fun</span>(<span class="kw">new</span> <span class="ty">ArrayList</span>&lt;<span class="ty">Dog</span>&gt;());    <span class="cmt">// ✓</span>
+<span class="fn">fun</span>(<span class="kw">new</span> <span class="ty">ArrayList</span>&lt;<span class="ty">Cat</span>&gt;());    <span class="cmt">// ✓</span>
+<span class="fn">fun</span>(<span class="kw">new</span> <span class="ty">ArrayList</span>&lt;<span class="ty">Car</span>&gt;());    <span class="cmt">// ✗ Car is not an Animal</span></pre>
+  </div>
+</section>
+
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>Type Erasure</h2></div>
+  <p>Generics are a compile-time feature only. At <strong>runtime</strong>, all type parameters are erased — replaced with <code>Object</code> (or the upper bound if bounded). This is called <strong>type erasure</strong>, and it was the backward-compatibility mechanism that allowed generics to be added in Java 5 without breaking existing pre-Java-5 code.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Before Java 5 — raw type (no type parameter)</span>
+<span class="ty">List</span> list = <span class="kw">new</span> <span class="ty">ArrayList</span>();
+
+<span class="cmt">// After Java 5 — generic types</span>
+<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; nos     = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+<span class="ty">List</span>&lt;<span class="ty">String</span>&gt;  strings = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+<span class="ty">List</span>&lt;<span class="ty">Car</span>&gt;     cars    = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+
+<span class="cmt">// At runtime, ALL of the above are just:  List (holding Objects)
+// The JVM erases Integer, String, Car — it only sees List.
+// Type checks and casts are injected by the compiler automatically.</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Implication of Type Erasure</span>
+    <p>You cannot do <code>instanceof List&lt;Integer&gt;</code> at runtime — the JVM doesn't know the type parameter. You also cannot create a <code>new T[10]</code> generic array for this reason. Generic types only exist at compile time.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Approach</th><th>Generality</th><th>Compile-Time Safety</th><th>Runtime Cast</th></tr></thead>
+    <tbody>
+      <tr><td>Fixed type (<code>Double</code>)</td><td>One type only</td><td>✓</td><td>Not needed</td></tr>
+      <tr><td><code>Object</code></td><td>Any type</td><td>✗</td><td>Manual cast, can fail</td></tr>
+      <tr><td>Generics <code>&lt;T&gt;</code></td><td>Any type</td><td>✓</td><td>Compiler inserts safe cast</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Generics</div><p>Placeholders for data types. Introduced Java 5. Give you reusability (works with any type) + compile-time type safety.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Type Parameter</div><p>A placeholder like <code>T</code>, <code>U</code>, <code>K</code>, <code>V</code> in a class or method declaration. Filled in at use site: <code>Pair&lt;String, Double&gt;</code>.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Object vs Generics</div><p>Object: general but unsafe. Generics: general AND safe. Wrong types caught at compile time instead of runtime.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Invariance</div><p><code>List&lt;Dog&gt;</code> is NOT a subtype of <code>List&lt;Animal&gt;</code>, even though Dog IS-A Animal. Generics are invariant by default.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Wildcard ? extends T</div><p>Accepts List of T or any subclass. <code>List&lt;? extends Animal&gt;</code> accepts <code>List&lt;Dog&gt;</code>, <code>List&lt;Cat&gt;</code>, etc.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Type Erasure</div><p>At runtime all type parameters become Object. Generics only exist at compile time. Cannot use instanceof with generic types.</p></div>
+  </div>
+</section>
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

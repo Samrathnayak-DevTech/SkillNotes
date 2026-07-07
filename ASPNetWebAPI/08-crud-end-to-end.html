@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRUD End-to-End with EF Core + SQL Server — Day 8</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:14px 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 08 · ASP.NET Core</div>
+    <div class="brand-title">CRUD End-to-End 🔁</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>What "CRUD End-to-End" Means</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>Wiring EF Core to SQL Server</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">The Database</div>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Migrations</span></a>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>How EF Core Tracks Changes</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">The Five Operations</div>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>Create &amp; Read</span></a>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>Update &amp; Delete</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Verify It Works</div>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>Exploring with OpenAPI</span></a>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>Automated Tests</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Practice</div>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>End-to-End Trace</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 8 — the capstone: it all comes together</div>
+      <h1>CRUD End-to-End 🔁</h1>
+      <p class="lede">Today everything from the past week clicks into place. We take one resource — a <code>Product</code> — and build the full set of operations that let a client create it, read it, update it, and delete it, with the data living in a real SQL Server database via Entity Framework Core. That's <strong>five endpoints</strong>: list all, get one, create, update, delete. Then we verify each one actually works, by hand and with automated tests. This is the shape of nearly every real API you'll ever build.</p>
+      <div class="chips">
+        <span class="chip">➕ Create</span>
+        <span class="chip">📖 Read (list + one)</span>
+        <span class="chip">✏️ Update</span>
+        <span class="chip">🗑️ Delete</span>
+        <span class="chip">🧩 EF Core</span>
+        <span class="chip">🗃️ SQL Server</span>
+        <span class="chip">🧪 Tested</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>What "CRUD End-to-End" Means 🔁</h2></div>
+      <p><strong>CRUD</strong> stands for <strong>C</strong>reate, <strong>R</strong>ead, <strong>U</strong>pdate, <strong>D</strong>elete — the four things you can do to almost any piece of data. "End-to-end" means we build the whole path for one resource: from an HTTP request, through the layers we learned this week, into a SQL Server table, and all the way back.</p>
+
+      <p>In a REST API those four operations become <strong>five endpoints</strong>, because "Read" splits into "read the whole collection" and "read one item":</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Operation</th><th>HTTP</th><th>Route</th><th>Success code</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Read all</td><td><code>GET</code></td><td><code>/api/products</code></td><td>200 OK</td></tr>
+            <tr><td>2</td><td>Read one</td><td><code>GET</code></td><td><code>/api/products/{id}</code></td><td>200 OK / 404</td></tr>
+            <tr><td>3</td><td>Create</td><td><code>POST</code></td><td><code>/api/products</code></td><td>201 Created</td></tr>
+            <tr><td>4</td><td>Update</td><td><code>PUT</code></td><td><code>/api/products/{id}</code></td><td>204 No Content / 404</td></tr>
+            <tr><td>5</td><td>Delete</td><td><code>DELETE</code></td><td><code>/api/products/{id}</code></td><td>204 No Content / 404</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 This is the week, assembled</span>
+        <p>Every layer we built shows up here: <strong>validation</strong> (Day 4) on the incoming DTO, <strong>DTOs</strong> (Day 5) separating the API from the entity, <strong>correct status codes</strong> (Day 6) on each response, and the <strong>service + data layers</strong> (Day 7) doing the work. CRUD is where all of it meets a real database.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🗂️ Analogy — a filing cabinet</span>
+        <p>Think of a drawer of index cards. <strong>Create</strong> = write a new card and file it. <strong>Read</strong> = pull one card, or flip through them all. <strong>Update</strong> = erase and rewrite a card. <strong>Delete</strong> = shred a card. EF Core is the clerk who does the physical filing; SQL Server is the cabinet itself.</p>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">CRUD End-to-End</div>
+          <div class="s">one resource, full loop</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch b-blue">
+            <h4>🔌 Setup</h4>
+            <ul>
+              <li>NuGet packages</li>
+              <li><code>DbContext</code> + <code>DbSet</code></li>
+              <li><code>AddDbContext</code> + conn. string</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>🏗️ Migrations</h4>
+            <ul>
+              <li><code>migrations add</code></li>
+              <li><code>database update</code></li>
+              <li>Schema in sync</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>🔁 Operations</h4>
+            <ul>
+              <li>Create / Read / Update / Delete</li>
+              <li>5 endpoints</li>
+              <li>Right status codes</li>
+            </ul>
+          </div>
+          <div class="mm-branch">
+            <h4>🧠 Change tracking</h4>
+            <ul>
+              <li>Added / Modified / Deleted</li>
+              <li><code>SaveChangesAsync</code></li>
+              <li>Generates SQL</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h4>🧪 Verify</h4>
+            <ul>
+              <li>OpenAPI / <code>.http</code> files</li>
+              <li>Integration tests</li>
+              <li>All five pass</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>Wiring EF Core to SQL Server 🔌</h2></div>
+      <p><strong>Entity Framework Core</strong> is an ORM — an Object-Relational Mapper. It lets you work with C# objects and LINQ instead of hand-writing SQL; EF Core translates between your classes and database tables. Three pieces get us connected.</p>
+
+      <h3>Step 1 — Install the packages 📦</h3>
+      <div class="code">
+        <div class="code-head"><span class="lang">bash</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt"># The SQL Server provider (pulls in EF Core itself)</span>
+dotnet add package Microsoft.EntityFrameworkCore.SqlServer
+
+<span class="cmt"># Design-time support for the migrations commands</span>
+dotnet add package Microsoft.EntityFrameworkCore.Design</code></pre>
+      </div>
+
+      <h3>Step 2 — The entity and the DbContext 🧱</h3>
+      <p>The entity is a plain C# class that maps to a table. The <code>DbContext</code> is your gateway to the database: it exposes a <code>DbSet&lt;T&gt;</code> per table and takes its options through the constructor (so DI can configure it).</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Product.cs (the entity)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">Product</span>
+{
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }          <span class="cmt">// primary key — SQL Server auto-assigns it</span>
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;
+    <span class="kw">public decimal</span> Price { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — AppDbContext.cs</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">using</span> Microsoft.EntityFrameworkCore;
+
+<span class="kw">public class</span> <span class="ty">AppDbContext</span> : <span class="ty">DbContext</span>
+{
+    <span class="kw">public</span> <span class="fn">AppDbContext</span>(<span class="ty">DbContextOptions</span>&lt;<span class="ty">AppDbContext</span>&gt; options)
+        : <span class="kw">base</span>(options) { }
+
+    <span class="cmt">// One DbSet per table. This becomes the "Products" table.</span>
+    <span class="kw">public</span> <span class="ty">DbSet</span>&lt;<span class="ty">Product</span>&gt; Products =&gt; <span class="ty">Set</span>&lt;<span class="ty">Product</span>&gt;();
+}</code></pre>
+      </div>
+
+      <h3>Step 3 — Register it + a connection string 🔗</h3>
+      <p>Put the connection string in <code>appsettings.json</code>, then register the context in <code>Program.cs</code>. Recall from Day 7 that <code>AddDbContext</code> registers the context as <strong>scoped</strong> (one per request).</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">JSON — appsettings.json</span><button class="copy-btn">Copy</button></div>
+        <pre><code>{
+  <span class="str">"ConnectionStrings"</span>: {
+    <span class="str">"Default"</span>: <span class="str">"Server=localhost;Database=ShopDb;Trusted_Connection=True;TrustServerCertificate=True;"</span>
+  }
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+
+builder.Services.<span class="fn">AddControllers</span>();
+builder.Services.<span class="fn">AddDbContext</span>&lt;<span class="ty">AppDbContext</span>&gt;(opt =&gt;
+    opt.<span class="fn">UseSqlServer</span>(builder.Configuration.<span class="fn">GetConnectionString</span>(<span class="str">"Default"</span>)));
+
+<span class="cmt">// .NET 9+ ships native OpenAPI (no Swashbuckle) — more in section 07</span>
+builder.Services.<span class="fn">AddOpenApi</span>();
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+<span class="kw">if</span> (app.Environment.<span class="fn">IsDevelopment</span>()) app.<span class="fn">MapOpenApi</span>();
+app.<span class="fn">MapControllers</span>();
+app.<span class="fn">Run</span>();</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Connection string, decoded</span>
+        <p><code>Server=localhost</code> is your SQL Server instance; <code>Database=ShopDb</code> is created if it doesn't exist; <code>Trusted_Connection=True</code> uses Windows authentication (no username/password); <code>TrustServerCertificate=True</code> avoids a local dev TLS certificate error. For local development, <strong>LocalDB</strong> (<code>Server=(localdb)\\MSSQLLocalDB</code>) is a lightweight, on-demand SQL Server that needs no setup.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Migrations — Building the Schema 🏗️</h2></div>
+      <p>Your C# entity describes the shape of the data, but the database doesn't have a table yet. <strong>Migrations</strong> bridge that gap: EF Core generates versioned files that create and evolve the schema to match your model, without you writing SQL by hand.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">bash — the two commands you'll run constantly</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt"># 1) Generate a migration by comparing your model to the last snapshot</span>
+dotnet ef migrations add InitialCreate
+
+<span class="cmt"># 2) Apply pending migrations to the database (creates it if needed)</span>
+dotnet ef database update</code></pre>
+      </div>
+
+      <p>The first command creates a <code>Migrations/</code> folder with an <code>InitialCreate</code> class (an <code>Up</code> method that builds the table and a <code>Down</code> that reverses it) plus a model snapshot. The second runs that <code>Up</code> against SQL Server.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Two things EF Core creates for bookkeeping</span>
+        <p>A <strong><code>__EFMigrationsHistory</code></strong> table records which migrations have been applied, so they never run twice. A <strong><code>ModelSnapshot.cs</code></strong> captures your model's current state — the next <code>migrations add</code> diffs against it to figure out what changed. Because of the snapshot, you undo a migration with <code>dotnet ef migrations remove</code>, not by deleting the file.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The change workflow</span>
+        <p>Add a property to the entity → <code>dotnet ef migrations add AddDescription</code> → <code>dotnet ef database update</code>. Migrations <em>update</em> the schema while preserving existing data, which is exactly what you need once the app is live. Repeat this loop every time the model changes.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ EnsureCreated vs. Migrate — don't mix them</span>
+        <p><code>EnsureCreated()</code> quickly builds the database from the model but writes <em>no</em> migration history and can't evolve the schema later — fine for throwaway demos and tests, wrong for real apps. <code>Migrate()</code> applies migrations properly. Never use both on the same database. And avoid auto-running migrations on startup in production — prefer generating a SQL script (<code>dotnet ef migrations script</code>) and applying it in your deployment pipeline.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>How EF Core Tracks Changes 🧠</h2></div>
+      <p>Understanding this one idea makes all five operations obvious. When you load or add an entity, the <code>DbContext</code> <strong>tracks</strong> it and remembers its state. You don't write SQL — you change objects, then call <code>SaveChangesAsync()</code>, and EF Core looks at each tracked entity's state to decide what SQL to run.</p>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-green">Added</div><div class="idx">→ INSERT</div></div>
+          <div class="arr-cell"><div class="val">Unchanged</div><div class="idx">→ (nothing)</div></div>
+          <div class="arr-cell"><div class="val highlight-blue">Modified</div><div class="idx">→ UPDATE</div></div>
+          <div class="arr-cell"><div class="val neg">Deleted</div><div class="idx">→ DELETE</div></div>
+          <div class="arr-arrow">⟶ SaveChangesAsync() ⟶</div>
+          <div class="arr-cell"><div class="val highlight">SQL runs</div><div class="idx">one transaction</div></div>
+        </div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>You do this…</th><th>State becomes</th><th>SaveChangesAsync issues</th></tr></thead>
+          <tbody>
+            <tr><td><code>Add(entity)</code></td><td>Added</td><td><code>INSERT</code></td></tr>
+            <tr><td>Read from DB, then edit a property</td><td>Modified</td><td><code>UPDATE</code> (only changed columns)</td></tr>
+            <tr><td><code>Remove(entity)</code></td><td>Deleted</td><td><code>DELETE</code></td></tr>
+            <tr><td>Read from DB, leave it alone</td><td>Unchanged</td><td>nothing</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 SaveChangesAsync is your Unit of Work</span>
+        <p>All the changes you make between reads are batched and committed together in a single transaction when you call <code>SaveChangesAsync()</code> (recall Day 7 — the <code>DbContext</code> <em>is</em> the Unit of Work). If it throws, nothing is persisted. Always use the async version in a web app for scalability.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ AsNoTracking for read-only queries</span>
+        <p>When you're only reading data to return it (never editing), add <code>.AsNoTracking()</code> to the query. EF Core then skips setting up change-tracking for those entities — less memory, faster reads. Use it for your "read all" and "read one" list queries; skip it when you intend to modify and save.</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>Create &amp; Read 📖</h2></div>
+      <p>Here's the controller so far, wired to a service (Day 7) that returns DTOs (Day 5). We'll show the service methods alongside each operation so you see the full path. Start with the two <strong>Read</strong> operations and <strong>Create</strong>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — ProductsController (Read all, Read one, Create)</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/[controller]"</span>)]
+<span class="kw">public class</span> <span class="ty">ProductsController</span>(<span class="ty">IProductService</span> service) : <span class="ty">ControllerBase</span>
+{
+    <span class="cmt">// 1) READ ALL -> 200 with a list</span>
+    [<span class="ty">HttpGet</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">List</span>&lt;<span class="ty">ProductDto</span>&gt;&gt;&gt; <span class="fn">GetAll</span>() =&gt;
+        <span class="kw">await</span> service.<span class="fn">GetAllAsync</span>();
+
+    <span class="cmt">// 2) READ ONE -> 200 if found, 404 if not</span>
+    [<span class="ty">HttpGet</span>(<span class="str">"{id:int}"</span>)]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">ProductDto</span>&gt;&gt; <span class="fn">GetById</span>(<span class="kw">int</span> id)
+    {
+        <span class="kw">var</span> product = <span class="kw">await</span> service.<span class="fn">GetByIdAsync</span>(id);
+        <span class="kw">return</span> product <span class="kw">is null</span> ? <span class="fn">NotFound</span>() : product;
+    }
+
+    <span class="cmt">// 3) CREATE -> 201 with a Location header</span>
+    [<span class="ty">HttpPost</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ActionResult</span>&lt;<span class="ty">ProductDto</span>&gt;&gt; <span class="fn">Create</span>(<span class="ty">CreateProductRequest</span> request)
+    {
+        <span class="kw">var</span> dto = <span class="kw">await</span> service.<span class="fn">CreateAsync</span>(request);
+        <span class="kw">return</span> <span class="fn">CreatedAtAction</span>(<span class="kw">nameof</span>(GetById), <span class="kw">new</span> { id = dto.Id }, dto);
+    }
+}</code></pre>
+      </div>
+
+      <p>And the matching data-access work inside the service. Notice the EF Core calls: <code>ToListAsync</code>, <code>FindAsync</code>, <code>Add</code>, and <code>SaveChangesAsync</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — ProductService (the EF Core calls)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">ProductService</span>(<span class="ty">AppDbContext</span> db) : <span class="ty">IProductService</span>
+{
+    <span class="cmt">// READ ALL — project straight into the DTO, no tracking needed</span>
+    <span class="kw">public</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">ProductDto</span>&gt;&gt; <span class="fn">GetAllAsync</span>() =&gt;
+        db.Products
+          .<span class="fn">AsNoTracking</span>()
+          .<span class="fn">Select</span>(p =&gt; <span class="kw">new</span> <span class="ty">ProductDto</span>(p.Id, p.Name, p.Price))
+          .<span class="fn">ToListAsync</span>();
+
+    <span class="cmt">// READ ONE — FindAsync looks up by primary key</span>
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ProductDto</span>?&gt; <span class="fn">GetByIdAsync</span>(<span class="kw">int</span> id)
+    {
+        <span class="kw">var</span> p = <span class="kw">await</span> db.Products.<span class="fn">FindAsync</span>(id);
+        <span class="kw">return</span> p <span class="kw">is null</span> ? <span class="kw">null</span> : <span class="kw">new</span> <span class="ty">ProductDto</span>(p.Id, p.Name, p.Price);
+    }
+
+    <span class="cmt">// CREATE — Add marks it Added; SaveChanges issues the INSERT</span>
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ProductDto</span>&gt; <span class="fn">CreateAsync</span>(<span class="ty">CreateProductRequest</span> request)
+    {
+        <span class="kw">var</span> product = <span class="kw">new</span> <span class="ty">Product</span> { Name = request.Name, Price = request.Price };
+        db.Products.<span class="fn">Add</span>(product);
+        <span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();   <span class="cmt">// product.Id is now populated by SQL Server</span>
+        <span class="kw">return new</span> <span class="ty">ProductDto</span>(product.Id, product.Name, product.Price);
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The Id fills itself in</span>
+        <p>You never set <code>product.Id</code> yourself — it's the primary key, and SQL Server assigns it on <code>INSERT</code>. After <code>SaveChangesAsync()</code>, EF Core copies the generated value back into your entity, which is how <code>CreatedAtAction</code> can build the <code>Location</code> URL to the brand-new resource. (And because we bind a <code>CreateProductRequest</code> DTO, not the entity, there's no over-posting — Day 5.)</p>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>Update &amp; Delete ✏️🗑️</h2></div>
+      <p>These two both return <code>204 No Content</code> on success and <code>404</code> if the target doesn't exist. The pattern is the same: <strong>load the entity first</strong> (so EF Core tracks it), then modify or remove, then save.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — ProductsController (Update, Delete)</span><button class="copy-btn">Copy</button></div>
+        <pre><code>    <span class="cmt">// 4) UPDATE -> 204 on success, 404 if missing</span>
+    [<span class="ty">HttpPut</span>(<span class="str">"{id:int}"</span>)]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Update</span>(<span class="kw">int</span> id, <span class="ty">UpdateProductRequest</span> request)
+    {
+        <span class="kw">var</span> ok = <span class="kw">await</span> service.<span class="fn">UpdateAsync</span>(id, request);
+        <span class="kw">return</span> ok ? <span class="fn">NoContent</span>() : <span class="fn">NotFound</span>();
+    }
+
+    <span class="cmt">// 5) DELETE -> 204 on success, 404 if missing</span>
+    [<span class="ty">HttpDelete</span>(<span class="str">"{id:int}"</span>)]
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Delete</span>(<span class="kw">int</span> id)
+    {
+        <span class="kw">var</span> ok = <span class="kw">await</span> service.<span class="fn">DeleteAsync</span>(id);
+        <span class="kw">return</span> ok ? <span class="fn">NoContent</span>() : <span class="fn">NotFound</span>();
+    }</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — ProductService (Update, Delete)</span><button class="copy-btn">Copy</button></div>
+        <pre><code>    <span class="cmt">// UPDATE — load, mutate tracked entity, save (EF diffs the changes)</span>
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="kw">bool</span>&gt; <span class="fn">UpdateAsync</span>(<span class="kw">int</span> id, <span class="ty">UpdateProductRequest</span> request)
+    {
+        <span class="kw">var</span> product = <span class="kw">await</span> db.Products.<span class="fn">FindAsync</span>(id);
+        <span class="kw">if</span> (product <span class="kw">is null</span>) <span class="kw">return false</span>;
+
+        product.Name = request.Name;      <span class="cmt">// entity is tracked -> state becomes Modified</span>
+        product.Price = request.Price;
+        <span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();       <span class="cmt">// issues UPDATE for only the changed columns</span>
+        <span class="kw">return true</span>;
+    }
+
+    <span class="cmt">// DELETE — load, Remove marks it Deleted, save issues DELETE</span>
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="kw">bool</span>&gt; <span class="fn">DeleteAsync</span>(<span class="kw">int</span> id)
+    {
+        <span class="kw">var</span> product = <span class="kw">await</span> db.Products.<span class="fn">FindAsync</span>(id);
+        <span class="kw">if</span> (product <span class="kw">is null</span>) <span class="kw">return false</span>;
+
+        db.Products.<span class="fn">Remove</span>(product);
+        <span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();
+        <span class="kw">return true</span>;
+    }</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why "load first" for Update?</span>
+        <p>Loading the entity means EF Core is tracking it, so when you change a property its state flips to <em>Modified</em> and <code>SaveChangesAsync</code> generates an <code>UPDATE</code> touching only the changed columns. It also gives you a natural <code>404</code> when the id doesn't exist. (There's a faster "set-based" <code>ExecuteUpdateAsync</code> for bulk edits without loading, but load-then-save is the clearest default and the one to know first.)</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ PUT means "replace," so validate the whole thing</span>
+        <p><code>PUT</code> replaces the resource, so the <code>UpdateProductRequest</code> should carry all editable fields and be validated just like create (Day 4). The <code>id</code> comes from the route, never the body — that keeps identity server-controlled and avoids over-posting. For partial edits you'd use <code>PATCH</code> instead, which is a separate topic.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>Verifying by Hand — OpenAPI &amp; .http Files 🔎</h2></div>
+      <p>Before automated tests, you'll want to click through each endpoint yourself. Here's the modern .NET story, which changed recently and trips people up.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Swagger is no longer in the box (.NET 9+)</span>
+        <p>For years the Web API template bundled <strong>Swashbuckle</strong> (Swagger UI). Starting in <strong>.NET 9</strong>, ASP.NET Core dropped that dependency and ships its own native <code>Microsoft.AspNetCore.OpenApi</code> package instead. In <strong>.NET 10</strong> it generates OpenAPI <strong>3.1</strong> documents natively. The catch: the native package produces the OpenAPI <em>document</em> but <strong>no UI</strong>. Swashbuckle still exists as a community package if you want it.</p>
+      </div>
+
+      <p>With <code>AddOpenApi()</code> and <code>MapOpenApi()</code> (from section 02), the raw document is served at <code>/openapi/v1.json</code>. To get an interactive UI back, add a renderer — <strong>Scalar</strong> is the popular modern choice:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — add Scalar UI (Program.cs)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// dotnet add package Scalar.AspNetCore</span>
+<span class="kw">if</span> (app.Environment.<span class="fn">IsDevelopment</span>())
+{
+    app.<span class="fn">MapOpenApi</span>();                 <span class="cmt">// serves /openapi/v1.json</span>
+    app.<span class="fn">MapScalarApiReference</span>();       <span class="cmt">// interactive UI at /scalar/v1</span>
+}</code></pre>
+      </div>
+
+      <h3>Or skip the UI entirely — use a .http file 📝</h3>
+      <p>Visual Studio and VS Code (with the REST Client extension) can send requests straight from a checked-in <code>.http</code> file. It's the fastest way to exercise all five operations in order, and it lives in your repo as runnable documentation.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">HTTP — products.http (run each request in order)</span><button class="copy-btn">Copy</button></div>
+        <pre><code>@base = https://localhost:5001
+
+<span class="cmt">### 3) CREATE -> expect 201 Created + Location header</span>
+POST {{base}}/api/products
+Content-Type: application/json
+
+{ <span class="str">"name"</span>: <span class="str">"Notebook"</span>, <span class="str">"price"</span>: <span class="num">4.99</span> }
+
+<span class="cmt">### 1) READ ALL -> expect 200 + JSON array</span>
+GET {{base}}/api/products
+
+<span class="cmt">### 2) READ ONE -> expect 200 (use the id from the create response)</span>
+GET {{base}}/api/products/1
+
+<span class="cmt">### 4) UPDATE -> expect 204 No Content</span>
+PUT {{base}}/api/products/1
+Content-Type: application/json
+
+{ <span class="str">"name"</span>: <span class="str">"Notebook XL"</span>, <span class="str">"price"</span>: <span class="num">6.49</span> }
+
+<span class="cmt">### 5) DELETE -> expect 204; a second GET /1 then returns 404</span>
+DELETE {{base}}/api/products/1</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The manual smoke test</span>
+        <p>Run them top to bottom and watch the status codes: <code>201 → 200 → 200 → 204 → 204</code>, then a final <code>GET /1</code> should give <code>404</code>. If every code matches the table in section 01, all five operations are wired correctly. This 60-second loop catches most mistakes before you write a single automated test.</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>Automated Tests — Proving All Five 🧪</h2></div>
+      <p>Manual checks are great once; automated tests prove it stays working forever. The gold standard for a CRUD API is an <strong>integration test</strong>: spin up the whole app in memory with <code>WebApplicationFactory</code> and send real HTTP requests through an <code>HttpClient</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — integration test with WebApplicationFactory (xUnit)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">ProductsApiTests</span>(<span class="ty">WebApplicationFactory</span>&lt;<span class="ty">Program</span>&gt; factory)
+    : <span class="ty">IClassFixture</span>&lt;<span class="ty">WebApplicationFactory</span>&lt;<span class="ty">Program</span>&gt;&gt;
+{
+    <span class="kw">private readonly</span> <span class="ty">HttpClient</span> _client = factory.<span class="fn">CreateClient</span>();
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">Create_then_Get_returns_the_product</span>()
+    {
+        <span class="cmt">// CREATE -> 201</span>
+        <span class="kw">var</span> create = <span class="kw">await</span> _client.<span class="fn">PostAsJsonAsync</span>(<span class="str">"/api/products"</span>,
+            <span class="kw">new</span> { name = <span class="str">"Pen"</span>, price = <span class="num">1.20</span> });
+        <span class="ty">Assert</span>.<span class="fn">Equal</span>(<span class="ty">HttpStatusCode</span>.Created, create.StatusCode);
+
+        <span class="kw">var</span> created = <span class="kw">await</span> create.Content.<span class="fn">ReadFromJsonAsync</span>&lt;<span class="ty">ProductDto</span>&gt;();
+
+        <span class="cmt">// READ ONE -> 200 and the same data</span>
+        <span class="kw">var</span> get = <span class="kw">await</span> _client.<span class="fn">GetAsync</span>(<span class="str">$"/api/products/{created!.Id}"</span>);
+        <span class="ty">Assert</span>.<span class="fn">Equal</span>(<span class="ty">HttpStatusCode</span>.OK, get.StatusCode);
+    }
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">Get_missing_product_returns_404</span>()
+    {
+        <span class="kw">var</span> res = <span class="kw">await</span> _client.<span class="fn">GetAsync</span>(<span class="str">"/api/products/999999"</span>);
+        <span class="ty">Assert</span>.<span class="fn">Equal</span>(<span class="ty">HttpStatusCode</span>.NotFound, res.StatusCode);
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 What database do tests use?</span>
+        <p>You don't want tests hitting your real SQL Server. Two common choices: the <strong>EF Core InMemory</strong> provider (fast, but doesn't enforce relational rules like foreign keys or unique constraints — good for pure logic, misleading for query semantics), or <strong>SQLite in-memory</strong> / a <strong>containerized SQL Server</strong> (slower, but behaves like a real relational database). For CRUD you're testing real query behavior, so SQLite-in-memory or a test container gives the most trustworthy results.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Cover the five, plus the sad paths</span>
+        <p>A solid suite asserts each operation's happy path <em>and</em> its failure: create returns <code>201</code>; read-all returns the list; read-one returns <code>200</code> (and <code>404</code> for a missing id); update returns <code>204</code> (and <code>404</code>); delete returns <code>204</code>, after which the item is really gone (<code>404</code> on re-read). That last "delete then confirm gone" check is the one people forget — and it's exactly what proves the operation reached the database.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>End-to-End Trace: One POST 🧩</h2></div>
+      <p>Let's follow a single <code>POST /api/products</code> all the way down to SQL Server and back, so every layer's job is visible in one picture.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · 📥 bind &amp; validate</div>
+          <div class="sh">Request → CreateProductRequest DTO</div>
+          <p>Model binding fills the DTO; <code>[ApiController]</code> auto-returns <code>400</code> if validation fails (Day 4). No entity is exposed (Day 5).</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 2 · 🎛️ controller</div>
+          <div class="sh">Delegate to the service</div>
+          <p>The thin action calls <code>service.CreateAsync(request)</code> and awaits a <code>ProductDto</code> back (Day 7).</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 3 · 🧠 service + EF Core</div>
+          <div class="sh">Build entity, Add, SaveChanges</div>
+          <p>Creates a <code>Product</code>, calls <code>Add</code> (state → Added), then <code>SaveChangesAsync</code> — EF Core emits an <code>INSERT</code>.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 4 · 🗃️ SQL Server</div>
+          <div class="sh">Row inserted, Id generated</div>
+          <p>The database writes the row and assigns the identity <code>Id</code>, which flows back into the tracked entity.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 5 · 📤 response</div>
+          <div class="sh">201 Created + Location</div>
+          <p>The service returns a <code>ProductDto</code>; the controller wraps it in <code>CreatedAtAction</code> with a <code>Location</code> header (Day 6).</p>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The whole week in one request</span>
+        <p><code>Validation → DTO → Controller → Service → EF Core → SQL Server → status code</code>. Each day of this week owns one hop. When you can narrate this trace out loud — and repeat it for GET, PUT, and DELETE — you understand end-to-end CRUD.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🔁 CRUD = 5 endpoints</h4><p>Read splits into list + one, giving GET/GET-id/POST/PUT/DELETE.</p></div>
+        <div class="recap-card"><h4>🧩 EF Core</h4><p>An ORM mapping C# objects and LINQ to database tables.</p></div>
+        <div class="recap-card"><h4>📦 Packages</h4><p><code>EntityFrameworkCore.SqlServer</code> + <code>.Design</code> for migrations.</p></div>
+        <div class="recap-card"><h4>🧱 DbContext</h4><p>Gateway with a <code>DbSet&lt;T&gt;</code> per table; registered scoped.</p></div>
+        <div class="recap-card"><h4>🏗️ Migrations</h4><p><code>migrations add</code> then <code>database update</code> keep schema in sync.</p></div>
+        <div class="recap-card"><h4>🧠 Change tracking</h4><p>Added/Modified/Deleted decide the SQL at <code>SaveChangesAsync</code>.</p></div>
+        <div class="recap-card"><h4>➕ Create</h4><p><code>Add</code> + save → INSERT; SQL Server fills the Id; return 201.</p></div>
+        <div class="recap-card"><h4>📖 Read</h4><p><code>ToListAsync</code> / <code>FindAsync</code>; <code>AsNoTracking</code> for read-only.</p></div>
+        <div class="recap-card"><h4>✏️ Update</h4><p>Load, mutate tracked entity, save → UPDATE; 204 or 404.</p></div>
+        <div class="recap-card"><h4>🗑️ Delete</h4><p>Load, <code>Remove</code>, save → DELETE; 204 or 404.</p></div>
+        <div class="recap-card"><h4>🔎 OpenAPI</h4><p>.NET 9+ native OpenAPI, no Swagger; add Scalar for a UI.</p></div>
+        <div class="recap-card"><h4>🧪 Test all five</h4><p><code>WebApplicationFactory</code> integration tests + a delete-then-404 check.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Operation</th><th>EF Core call(s)</th><th>SQL</th><th>Status code(s)</th></tr></thead>
+          <tbody>
+            <tr><td>Read all</td><td><code>AsNoTracking().ToListAsync()</code></td><td><code>SELECT</code></td><td>200</td></tr>
+            <tr><td>Read one</td><td><code>FindAsync(id)</code></td><td><code>SELECT</code></td><td>200 / 404</td></tr>
+            <tr><td>Create</td><td><code>Add()</code> → <code>SaveChangesAsync()</code></td><td><code>INSERT</code></td><td>201</td></tr>
+            <tr><td>Update</td><td><code>FindAsync</code> → mutate → <code>SaveChangesAsync()</code></td><td><code>UPDATE</code></td><td>204 / 404</td></tr>
+            <tr><td>Delete</td><td><code>FindAsync</code> → <code>Remove()</code> → <code>SaveChangesAsync()</code></td><td><code>DELETE</code></td><td>204 / 404</td></tr>
+            <tr><td>Migrations</td><td><code>dotnet ef migrations add</code> / <code>database update</code></td><td>DDL</td><td>—</td></tr>
+            <tr><td>Explore</td><td><code>AddOpenApi()</code> / Scalar / <code>.http</code></td><td>—</td><td>—</td></tr>
+            <tr><td>Test</td><td><code>WebApplicationFactory</code> + <code>HttpClient</code></td><td>—</td><td>assert all</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What does CRUD stand for, and why is it five endpoints?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Create, Read, Update, Delete — the four basic operations on data. In a REST API it usually becomes five endpoints because Read splits into "read the whole collection" (<code>GET /products</code>) and "read one item" (<code>GET /products/{id}</code>), alongside <code>POST</code>, <code>PUT</code>, and <code>DELETE</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is Entity Framework Core?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>It's an ORM (Object-Relational Mapper) for .NET. It lets you work with C# classes and LINQ queries instead of writing SQL by hand, and it translates between your objects and database tables — reading rows into objects and turning object changes back into SQL.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What is a DbContext and a DbSet?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>The <code>DbContext</code> is your gateway to the database — it manages the connection, tracks changes, and saves them. A <code>DbSet&lt;T&gt;</code> is a property on the context representing a table for one entity type (e.g. <code>DbSet&lt;Product&gt;</code> maps to the Products table), and you query and modify it like a collection.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What are migrations, and which two commands do you use most?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Migrations are versioned files that keep the database schema in sync with your C# model. The two commands: <code>dotnet ef migrations add &lt;Name&gt;</code> to generate a migration from model changes, and <code>dotnet ef database update</code> to apply pending migrations to the database (creating it if needed).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">Which method actually saves changes to the database?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p><code>SaveChangesAsync()</code> (or its sync version). You add, edit, or remove tracked entities in memory, and nothing hits the database until you call it — at which point EF Core generates and runs the appropriate <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code> statements in a single transaction.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">How do you create a new record with EF Core?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Make a new entity object, call <code>db.Products.Add(product)</code> to mark it as Added, then <code>await db.SaveChangesAsync()</code>, which issues the <code>INSERT</code>. You don't set the <code>Id</code> — SQL Server generates it and EF Core copies it back into your object.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What status code should each CRUD operation return on success?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Read (list or one) → <code>200 OK</code>. Create → <code>201 Created</code> with a <code>Location</code> header. Update and Delete → <code>204 No Content</code>. And when a read/update/delete targets an id that doesn't exist → <code>404 Not Found</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">How do you read one record versus all records?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>All records: <code>await db.Products.ToListAsync()</code>. One record by primary key: <code>await db.Products.FindAsync(id)</code> (returns null if not found). For read-only queries you can add <code>.AsNoTracking()</code> to skip change-tracking and go faster.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">How does EF Core know whether to INSERT, UPDATE, or DELETE?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Through change tracking. Each tracked entity has a state: Added → <code>INSERT</code>, Modified → <code>UPDATE</code>, Deleted → <code>DELETE</code>, Unchanged → nothing. <code>Add</code> sets Added, editing a property of a loaded entity sets Modified, and <code>Remove</code> sets Deleted. <code>SaveChangesAsync</code> inspects those states and generates the matching SQL.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">Why load an entity before updating it?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Loading it makes EF Core track it, so changing a property flips its state to Modified and <code>SaveChangesAsync</code> emits an <code>UPDATE</code> for just the changed columns. It also gives you a clean <code>404</code> path when the id doesn't exist. (There's a set-based <code>ExecuteUpdateAsync</code> for bulk updates without loading, but load-then-save is the clearest default.)</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What's the difference between EnsureCreated and Migrate?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p><code>EnsureCreated()</code> builds the database from the current model but records no migration history and can't evolve the schema afterward — fine for tests/demos. <code>Migrate()</code> applies migrations, tracks them in <code>__EFMigrationsHistory</code>, and supports schema evolution — the right choice for real apps. Never mix the two on one database.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">What is AsNoTracking and when should you use it?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>It tells EF Core not to set up change-tracking for the entities a query returns, which uses less memory and runs faster. Use it for read-only queries where you'll only display or return the data (your list and read-one endpoints). Don't use it when you intend to modify the loaded entities and save them.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">Why shouldn't the client set the Id on create?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>The <code>Id</code> is a database-generated primary key — SQL Server assigns it on insert. Accepting it from the client invites conflicts and is a form of over-posting. That's why you bind a create DTO that omits <code>Id</code> (Day 5), let the database generate it, and read it back off the entity after <code>SaveChangesAsync</code> to build the <code>Location</code> header.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">What changed with Swagger in .NET 9 and 10?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>ASP.NET Core dropped the Swashbuckle (Swagger UI) dependency from the Web API template in .NET 9 and shipped native OpenAPI generation via <code>Microsoft.AspNetCore.OpenApi</code> (<code>AddOpenApi()</code>/<code>MapOpenApi()</code>), producing OpenAPI 3.1 documents in .NET 10 at <code>/openapi/v1.json</code>. The native package makes the document but no UI, so teams add a renderer like Scalar — or just use <code>.http</code> files. Swashbuckle still exists as a community package.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">How would you test all five CRUD operations?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Write integration tests with <code>WebApplicationFactory&lt;Program&gt;</code>, which hosts the app in memory and gives you an <code>HttpClient</code>. Send real requests and assert status codes and bodies: create → 201, read-all → 200, read-one → 200/404, update → 204/404, delete → 204 then a re-read returns 404. Point the app at a test database rather than production.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">What database should integration tests use — InMemory or something else?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>The EF Core InMemory provider is fast but doesn't enforce relational rules (foreign keys, unique constraints) and doesn't translate SQL, so it's good for pure logic and misleading for query behavior. For trustworthy CRUD tests, prefer SQLite in-memory or a containerized SQL Server, which behave like a real relational database.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Why avoid running migrations automatically on app startup in production?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Auto-migrating on startup can cause downtime and race conditions when multiple app instances start at once, and it couples schema changes to deploys with no review step. The safer pattern is to generate a SQL script (<code>dotnet ef migrations script</code>), review it, and apply it in a controlled deployment step — ideally with backward-compatible, phased migrations for zero-downtime releases.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">How do you handle concurrent updates to the same row?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Use optimistic concurrency with a concurrency token — on SQL Server, a <code>rowversion</code> column mapped via <code>.IsRowVersion()</code>, which the database maintains automatically. EF Core includes the original version in the <code>UPDATE</code>'s <code>WHERE</code>; if the row changed since you read it, no rows match and it throws <code>DbUpdateConcurrencyException</code>. Catch it, return <code>409 Conflict</code> with the current values, and let the client retry.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">PUT vs. PATCH — what's the difference for update?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p><code>PUT</code> is a full replacement: the body carries all editable fields and you validate it like a create. <code>PATCH</code> is a partial update: the body describes only the changes (often JSON Patch or a merge-patch document). PUT is simpler and idempotent; PATCH avoids sending the whole resource but needs careful handling of which fields are actually present versus intentionally null.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">When would you use ExecuteUpdate/ExecuteDelete instead of load-then-save?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>For bulk operations. <code>ExecuteUpdateAsync</code> / <code>ExecuteDeleteAsync</code> issue a single set-based SQL statement without loading entities into memory or tracking them — ideal for "delete all expired" or "raise all prices 10%." The trade-offs: they bypass change tracking, don't run <code>SaveChanges</code> interceptors or concurrency checks, and won't fire domain events, so use them for genuine bulk work, not single-entity edits where load-then-save is clearer and safer.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">How do you keep tests isolated so they don't pollute each other's data?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Give each test a clean database state. Common approaches: a fresh SQLite in-memory connection per test, wrapping each test in a transaction that's rolled back, or a customized <code>WebApplicationFactory</code> that swaps the real <code>DbContext</code> registration for a per-test database and re-seeds it. The goal is that tests can run in any order, in parallel, and repeatedly without shared state leaking between them.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">What N+1 and performance pitfalls show up in CRUD reads?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>The classic is the N+1 query: loading a list, then lazily loading a related property per item, firing one query per row. Fix it by eager-loading with <code>Include</code>, or better, projecting directly into a DTO with <code>Select</code> so EF Core fetches only needed columns in one query (Day 5). Also add <code>AsNoTracking</code> for reads, and paginate list endpoints (<code>Skip</code>/<code>Take</code>) so "read all" doesn't return an unbounded result set.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">How should a CRUD API represent "delete" — hard or soft?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>A hard delete removes the row (<code>Remove</code> + <code>DELETE</code>) — simple, but the data is gone and referential integrity can block it. A soft delete sets an <code>IsDeleted</code>/<code>DeletedAt</code> flag and filters it out (often via an EF Core global query filter), preserving history and audit trails at the cost of extra query complexity and care around unique constraints. Choose based on whether the business needs recoverability and audit; both still return <code>204</code> to the client.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Get the <strong>setup and change-tracking model</strong> solid first (Q2–Q5, Q9) — once you can explain how <code>SaveChangesAsync</code> turns entity states into SQL, every operation follows. Then drill the <strong>five operations and their status codes</strong> (Q6–Q8, Q10) since that's the day's "Do." Layer on the <strong>tooling reality</strong> (migrations, the .NET 9+ OpenAPI change, testing — Q11, Q14–Q16), and finish with the <strong>senior production concerns</strong> (concurrency, bulk ops, soft delete, N+1 — Q18, Q20, Q22–Q23). If you can build all five endpoints from a blank project and prove them with the <code>.http</code> file, you've earned this capstone.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 5 — The Options Pattern in ASP.NET Core</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; color:var(--ink);
+  background:
+    radial-gradient(1200px 600px at 12% -8%, #ece4f3aa, transparent 60%),
+    radial-gradient(1000px 700px at 100% 0%, #f0e2d088, transparent 55%),
+    var(--bg);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+}
+#progress{position:fixed; top:0; left:0; height:4px; width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose)); z-index:1000; transition:width .1s linear;}
+.shell{display:flex; max-width:1280px; margin:0 auto;}
+#sidebar{position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); min-width:var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:26px 16px 60px 22px; border-right:1px solid var(--line);
+  background:#fbf9f4cc; backdrop-filter:blur(4px);}
+#sidebar .brand{font-family:"Fraunces",serif; font-weight:600; font-size:1.15rem; margin:0 0 4px;}
+#sidebar .brand .em{color:var(--accent);}
+#sidebar .subtitle{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-soft); margin-bottom:20px;}
+.nav-group{margin-bottom:16px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace; font-size:.6rem; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--accent); margin:0 0 6px; padding-left:10px;}
+#sidebar a{display:block; text-decoration:none; color:var(--ink-soft); font-size:.86rem; line-height:1.35;
+  padding:6px 10px; border-radius:7px; border-left:2px solid transparent;
+  transition:background .15s,color .15s,border-color .15s;}
+#sidebar a .num{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:var(--accent); margin-right:7px;}
+#sidebar a:hover{background:var(--bg-soft); color:var(--ink);}
+#sidebar a.active{background:var(--accent-soft); color:var(--ink); border-left-color:var(--accent); font-weight:500;}
+main{flex:1; min-width:0; padding:0 clamp(20px,5vw,72px) 120px;}
+.section{max-width:820px; margin:0 auto; padding-top:26px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section[id]{scroll-margin-top:24px;}
+.hero{max-width:820px; margin:0 auto; padding:64px 0 20px;}
+.hero .eyebrow{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--accent); margin-bottom:14px;}
+.hero h1{font-family:"Fraunces",serif; font-weight:600; line-height:1.05;
+  font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 16px;}
+.hero .lede{font-size:1.18rem; color:var(--ink-soft); margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.7rem; letter-spacing:.04em;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft); padding:6px 12px; border-radius:999px;}
+h2{font-family:"Fraunces",serif; font-weight:600; font-size:1.85rem; line-height:1.15;
+  margin:8px 0 18px; display:flex; align-items:center; gap:14px;}
+h2 .badge{font-family:"JetBrains Mono",monospace; font-size:.85rem; font-weight:700;
+  color:#fff; background:var(--accent); padding:4px 10px; border-radius:8px; flex:none;}
+h3{font-family:"Fraunces",serif; font-weight:600; font-size:1.28rem; margin:30px 0 10px;}
+p{margin:0 0 16px;}
+a.inline{color:var(--accent);}
+:not(pre) > code{font-family:"JetBrains Mono",monospace; font-size:.82em; color:var(--accent);
+  background:var(--bg-soft); border:1px solid var(--line); border-radius:4px; padding:1px 6px;}
+.callout{border-left:4px solid var(--ink-soft); background:var(--bg-soft);
+  border-radius:0 10px 10px 0; padding:14px 18px; margin:20px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.64rem; letter-spacing:.14em;
+  text-transform:uppercase; font-weight:700; display:block; margin-bottom:4px;}
+.callout p{margin:0;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);}
+.callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);}
+.callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);}
+.callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);}
+.callout.warn .tag{color:var(--accent);}
+.code{background:var(--code-bg); border-radius:12px; overflow:hidden; margin:20px 0;
+  box-shadow:0 8px 22px -14px rgba(0,0,0,.5);}
+.code-head{display:flex; align-items:center; justify-content:space-between;
+  padding:8px 14px; background:#232229; border-bottom:1px solid #3a3944;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.14em;
+  text-transform:uppercase; color:#9d9aa8;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; cursor:pointer;
+  background:#34333d; color:#c9c6d4; border:1px solid #45444f; border-radius:6px; padding:3px 10px;
+  transition:background .15s,color .15s;}
+.copy-btn:hover{background:#403f4a;}
+.copy-btn.done{color:#c3e88d; border-color:#5a7d5a;}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.7; color:var(--code-ink);}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+.diagram{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px; margin:22px 0;}
+.diagram .cap{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-soft); margin-bottom:14px;}
+.arr-row{display:flex; flex-wrap:wrap; gap:10px; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:8px 12px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.78rem; color:var(--ink); text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.62rem; color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft); border-color:var(--rose); color:var(--rose);}
+.mindmap{margin:26px 0;}
+.mm-core{margin:0 auto 0; width:max-content; max-width:100%; text-align:center; background:var(--ink); color:var(--bg);
+  font-family:"Fraunces",serif; font-weight:600; font-size:1.15rem; padding:14px 26px; border-radius:12px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-branches{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+.mm-branch .cap{padding:10px 14px; font-family:"Fraunces",serif; font-weight:600; font-size:1rem; color:#fff;}
+.mm-branch.accent .cap{background:var(--accent);}
+.mm-branch.blue .cap{background:var(--blue);}
+.mm-branch.green .cap{background:var(--green);}
+.mm-branch.rose .cap{background:var(--rose);}
+.mm-branch.purple .cap{background:var(--purple);}
+.mm-branch ul{margin:0; padding:12px 16px 14px 30px;}
+.mm-branch li{font-size:.86rem; margin-bottom:5px; color:var(--ink-soft);}
+.flow{margin:24px 0; display:flex; flex-direction:column; align-items:center;}
+.flow-step{width:100%; max-width:560px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;}
+.flow-step .st-title{font-family:"Fraunces",serif; font-weight:600; font-size:1.02rem; margin-bottom:2px;}
+.flow-step .st-body{font-size:.86rem; color:var(--ink-soft);}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:26px; background:var(--accent); position:relative;}
+.flow-connector::after{content:"▼"; position:absolute; bottom:-4px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.7rem;}
+.complexity-badge{display:inline-flex; align-items:center; gap:6px; font-family:"JetBrains Mono",monospace;
+  font-size:.72rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px; padding:4px 12px; margin:3px 6px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);}
+.complexity-badge .v{color:var(--accent); font-weight:700;}
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 18px 20px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-4px); box-shadow:0 14px 28px -18px rgba(45,42,38,.5);}
+.card .glyph{font-family:"Fraunces",serif; font-size:1.7rem; display:block; margin-bottom:6px;}
+.card .t{font-weight:600; font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:4px;}
+.card .b{font-size:.85rem; color:var(--ink-soft);}
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.86rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.64rem; letter-spacing:.1em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:10px 12px; border-bottom:1px solid var(--line);}
+tbody td{padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody code{white-space:nowrap;}
+.qa{background:#fff; border:1px solid var(--line); border-radius:11px; margin:11px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:14px 18px; display:flex; align-items:center; gap:12px;
+  font-family:"Fraunces",serif; font-weight:600; font-size:1rem;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.7rem; font-weight:700; color:#fff;
+  background:var(--accent); border-radius:6px; padding:3px 8px; flex:none;}
+.qa summary .qtxt{flex:1;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.6rem; letter-spacing:.08em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:none;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa[open] summary{border-bottom:1px solid var(--line);}
+.qa .ans{padding:14px 18px 18px; font-size:.92rem; color:var(--ink-soft);}
+.qa .ans p{margin:0 0 10px;} .qa .ans p:last-child{margin:0;}
+.qa-group-h{font-family:"Fraunces",serif; font-weight:600; font-size:1.2rem; margin:26px 0 6px;}
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:20px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:14px 16px;}
+.recap-card .h{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:5px;}
+.recap-card .b{font-size:.86rem; color:var(--ink-soft);}
+#fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  border:none; cursor:pointer; background:var(--accent); color:#fff; font-size:1.4rem; box-shadow:0 8px 20px -6px rgba(181,101,29,.7);}
+#backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+@media(max-width:920px){
+  #sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%);
+    transition:transform .28s ease; box-shadow:0 0 40px -10px rgba(0,0,0,.4);}
+  #sidebar.open{transform:translateX(0);}
+  #backdrop.show{display:block;}
+  #fab{display:flex; align-items:center; justify-content:center;}
+  main{padding-left:20px; padding-right:20px;}
+  .hero{padding-top:44px;}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card{transition:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="shell">
+  <!-- ================= SIDEBAR ================= -->
+  <aside id="sidebar">
+    <p class="brand">📦 <span class="em">Options</span> Pattern</p>
+    <p class="subtitle">Day 5 · Study Notes</p>
+
+    <div class="nav-group">
+      <h4>Foundations</h4>
+      <a href="#s01"><span class="num">01</span>Why the Options Pattern</a>
+      <a href="#s02"><span class="num">02</span>The Big Picture</a>
+    </div>
+    <div class="nav-group">
+      <h4>Binding</h4>
+      <a href="#s03"><span class="num">03</span>Binding a Settings Class</a>
+      <a href="#s04"><span class="num">04</span>AddOptions &amp; BindConfiguration</a>
+    </div>
+    <div class="nav-group">
+      <h4>The Three Interfaces</h4>
+      <a href="#s05"><span class="num">05</span>IOptions&lt;T&gt;</a>
+      <a href="#s06"><span class="num">06</span>IOptionsSnapshot&lt;T&gt;</a>
+      <a href="#s07"><span class="num">07</span>IOptionsMonitor&lt;T&gt;</a>
+      <a href="#s08"><span class="num">08</span>Choosing Between Them</a>
+    </div>
+    <div class="nav-group">
+      <h4>Validation &amp; More</h4>
+      <a href="#s09"><span class="num">09</span>Validation</a>
+      <a href="#s10"><span class="num">10</span>Hands-On Walkthrough</a>
+      <a href="#s11"><span class="num">11</span>Named Options &amp; Extras</a>
+      <a href="#s12"><span class="num">12</span>Best Practices &amp; Pitfalls</a>
+    </div>
+    <div class="nav-group">
+      <h4>Review</h4>
+      <a href="#s13"><span class="num">13</span>Quick Recap</a>
+      <a href="#s14"><span class="num">14</span>Interview Questions</a>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// .NET FUNDAMENTALS · DAY 5</p>
+      <h1>The Options Pattern 📦</h1>
+      <p class="lede">Turn loose configuration keys into clean, strongly-typed C# classes you can inject anywhere — with three accessor interfaces for different refresh needs, and validation that fails loudly at startup instead of quietly at 3 a.m. in production.</p>
+      <div class="chips">
+        <span class="chip">🧱 IOptions&lt;T&gt;</span>
+        <span class="chip">📸 IOptionsSnapshot&lt;T&gt;</span>
+        <span class="chip">📡 IOptionsMonitor&lt;T&gt;</span>
+        <span class="chip">🔗 binding</span>
+        <span class="chip">✅ validation</span>
+        <span class="chip">🚦 ValidateOnStart</span>
+      </div>
+    </header>
+
+    <!-- ===== 01 ===== -->
+    <section class="section" id="s01">
+      <h2><span class="badge">01</span>Why the Options Pattern</h2>
+      <p>On Day 4 you read configuration with string keys — <code>config["EmailSettings:SmtpPort"]</code>. That works, but it has three quiet problems. A misspelled key like <code>"SmptPort"</code> compiles fine and returns <code>null</code> at runtime. There's no type safety — you convert strings by hand. And any class holding <code>IConfiguration</code> can read <em>every</em> setting in the app, including secrets it has no business touching.</p>
+
+      <p>The <strong>Options pattern</strong> fixes all three. You define a plain C# class whose properties mirror a configuration section, bind the section to it once at startup, and then inject that strongly-typed class wherever you need it. You get autocomplete, compile-time checking, a clear contract, and each class sees only its own slice of configuration.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🍳 Analogy</span>
+        <p>Reading raw configuration is like grabbing ingredients from an unlabeled pantry by shouting their shelf coordinates ("row 3, slot 7") and hoping you got the right jar. The Options pattern is like having a labeled <em>spice rack</em> handed to you: a small, named tray holding exactly the items this recipe needs — clearly marked, nothing extra, and you notice immediately if one is missing.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 One-line definition</span>
+        <p>The Options pattern binds a configuration section to a strongly-typed class and delivers it through dependency injection, so your code depends on <em>typed settings</em> rather than <em>magic strings</em>.</p>
+      </div>
+    </section>
+
+    <!-- ===== 02 ===== -->
+    <section class="section" id="s02">
+      <h2><span class="badge">02</span>The Big Picture</h2>
+      <p>There are only a few moving parts. A settings class, a registration step that binds a config section to it, an optional validation step, and one of three accessor interfaces you inject to read the values. Here's the whole territory at a glance.</p>
+
+      <div class="mindmap">
+        <div class="mm-core">📦 Options Pattern</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch accent">
+            <div class="cap">🧱 The settings class</div>
+            <ul>
+              <li>Plain C# class (a POCO)</li>
+              <li>Public get/set properties</li>
+              <li>Property names match config keys</li>
+              <li>Often holds a <code>SectionName</code> constant</li>
+            </ul>
+          </div>
+          <div class="mm-branch blue">
+            <div class="cap">🔗 Binding</div>
+            <ul>
+              <li><code>Configure&lt;T&gt;(section)</code>, or</li>
+              <li><code>AddOptions&lt;T&gt;().BindConfiguration(…)</code></li>
+              <li>Copies config values → object</li>
+              <li>Registers it in the DI container</li>
+            </ul>
+          </div>
+          <div class="mm-branch green">
+            <div class="cap">✅ Validation</div>
+            <ul>
+              <li>Data annotations (<code>[Required]</code>, <code>[Range]</code>)</li>
+              <li>Custom <code>.Validate(…)</code> lambdas</li>
+              <li><code>IValidateOptions&lt;T&gt;</code> classes</li>
+              <li><code>.ValidateOnStart()</code> — fail fast</li>
+            </ul>
+          </div>
+          <div class="mm-branch rose">
+            <div class="cap">📥 Accessor interfaces</div>
+            <ul>
+              <li><code>IOptions&lt;T&gt;</code> — static, singleton</li>
+              <li><code>IOptionsSnapshot&lt;T&gt;</code> — per request</li>
+              <li><code>IOptionsMonitor&lt;T&gt;</code> — live + notify</li>
+            </ul>
+          </div>
+          <div class="mm-branch purple">
+            <div class="cap">➕ Extras</div>
+            <ul>
+              <li>Named options (multiple instances)</li>
+              <li><code>PostConfigure</code> (tweak after binding)</li>
+              <li>Reload on file change</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <p>The rest of this page walks these parts in order: bind first (§03–04), pick an accessor (§05–08), validate (§09), then assemble the whole thing in the hands-on task (§10).</p>
+    </section>
+
+    <!-- ===== 03 ===== -->
+    <section class="section" id="s03">
+      <h2><span class="badge">03</span>Binding a Settings Class</h2>
+      <p>"Binding" means copying the values from a configuration section into the matching properties of a C# object. The framework matches by <strong>name</strong>: a JSON key called <code>SmtpPort</code> fills a property called <code>SmtpPort</code>. Start with the configuration section you want to represent:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">json · appsettings.json</span><button class="copy-btn">Copy</button></div>
+<pre><code>{
+  <span class="str">"EmailSettings"</span>: {
+    <span class="str">"SenderName"</span>: <span class="str">"Shop Notifications"</span>,
+    <span class="str">"FromAddress"</span>: <span class="str">"no-reply@myshop.com"</span>,
+    <span class="str">"SmtpPort"</span>: <span class="num">587</span>,
+    <span class="str">"RetryCount"</span>: <span class="num">3</span>
+  }
+}</code></pre>
+      </div>
+
+      <p>Now write a class whose property names line up with those keys. A <code>const</code> holding the section name is a common convention — it keeps the magic string in exactly one place.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · EmailSettings.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">EmailSettings</span>
+{
+    <span class="kw">public const string</span> SectionName = <span class="str">"EmailSettings"</span>;
+
+    <span class="kw">public string</span> SenderName  { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">string</span>.Empty;
+    <span class="kw">public string</span> FromAddress { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">string</span>.Empty;
+    <span class="kw">public int</span>    SmtpPort    { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public int</span>    RetryCount  { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+      </div>
+
+      <div class="diagram">
+        <div class="cap">Binding matches config keys → class properties by name</div>
+        <div class="arr-row">
+          <div class="arr-cell highlight-blue"><div class="val">"SenderName"</div><div class="idx">config key</div></div>
+          <div class="arr-cell highlight"><div class="val">→</div><div class="idx">bind</div></div>
+          <div class="arr-cell highlight-green"><div class="val">SenderName</div><div class="idx">C# property</div></div>
+          <div class="arr-cell"><div class="val">"587"</div><div class="idx">string → int</div></div>
+          <div class="arr-cell highlight"><div class="val">→</div><div class="idx">convert</div></div>
+          <div class="arr-cell highlight-green"><div class="val">587</div><div class="idx">int SmtpPort</div></div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Binding rules worth knowing</span>
+        <p>Properties need a public <strong>setter</strong> (or an <code>init</code> accessor) to be bound. Matching is <strong>case-insensitive</strong>. Properties with no matching key keep their default; keys with no matching property are simply ignored. String values are converted to your property's type, so <code>"587"</code> becomes an <code>int</code>.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Nested objects &amp; collections</span>
+        <p>Binding recurses into nested classes and lists, but be aware that data-annotation <em>validation</em> does <strong>not</strong> recurse by default — it only checks the top-level properties unless you opt in (more in §09).</p>
+      </div>
+    </section>
+
+    <!-- ===== 04 ===== -->
+    <section class="section" id="s04">
+      <h2><span class="badge">04</span>AddOptions &amp; BindConfiguration</h2>
+      <p>There are two ways to register the binding in <code>Program.cs</code>. Both put a bound <code>EmailSettings</code> into the DI container; they differ in how much you can chain onto them.</p>
+
+      <h3>The classic way — <code>Configure&lt;T&gt;</code></h3>
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · Program.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services.<span class="fn">Configure</span>&lt;<span class="ty">EmailSettings</span>&gt;(
+    builder.Configuration.<span class="fn">GetSection</span>(<span class="ty">EmailSettings</span>.SectionName));</code></pre>
+      </div>
+      <p>Short and familiar. Its limitation: <code>Configure&lt;T&gt;</code> returns the service collection, so you <em>can't</em> fluently chain validation onto it.</p>
+
+      <h3>The modern way — <code>AddOptions&lt;T&gt;</code></h3>
+      <p>Calling <code>AddOptions&lt;T&gt;()</code> returns an <code>OptionsBuilder&lt;T&gt;</code>, which is chainable. You can bind, validate, and configure start-up validation all in one fluent expression. In current .NET, <code>BindConfiguration</code> is the tidiest binder — it takes the section <em>path</em> as a string and also wires up reload-on-change automatically.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · the chainable, recommended form</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services
+    .<span class="fn">AddOptions</span>&lt;<span class="ty">EmailSettings</span>&gt;()
+    .<span class="fn">BindConfiguration</span>(<span class="ty">EmailSettings</span>.SectionName)   <span class="cmt">// bind the "EmailSettings" section</span>
+    .<span class="fn">ValidateDataAnnotations</span>()                    <span class="cmt">// enable [Required], [Range], etc.</span>
+    .<span class="fn">ValidateOnStart</span>();                            <span class="cmt">// check at launch, not first use</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Configure vs. AddOptions</span>
+        <p>Use <code>Configure&lt;T&gt;</code> for a plain bind with nothing else. Reach for <code>AddOptions&lt;T&gt;().BindConfiguration(…)</code> whenever you want to attach validation or start-up checks — it's the pattern current Microsoft docs lead with for new code.</p>
+      </div>
+
+      <p>Whichever you choose, the registration is done once. From here on, consuming code just asks for one of the three accessor interfaces.</p>
+    </section>
+
+    <!-- ===== 05 ===== -->
+    <section class="section" id="s05">
+      <h2><span class="badge">05</span>IOptions&lt;T&gt;</h2>
+      <p>The simplest accessor. You inject <code>IOptions&lt;EmailSettings&gt;</code> and read its <code>.Value</code> property to get the bound object.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · EmailSender.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> <span class="ty">Microsoft.Extensions.Options</span>;
+
+<span class="kw">public class</span> <span class="ty">EmailSender</span>(<span class="ty">IOptions</span>&lt;<span class="ty">EmailSettings</span>&gt; options)
+{
+    <span class="kw">private readonly</span> <span class="ty">EmailSettings</span> _settings = options.Value;
+
+    <span class="kw">public void</span> <span class="fn">Send</span>()
+        =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">$"From {_settings.SenderName} on port {_settings.SmtpPort}"</span>);
+}</code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">♾️</span><div class="t">Lifetime: Singleton</div><div class="b">One instance for the whole app. Can be injected into services of any lifetime.</div></div>
+        <div class="card"><span class="glyph">🧊</span><div class="t">Value: frozen</div><div class="b">Bound once and cached. Editing appsettings.json afterward has no effect — the value never changes.</div></div>
+        <div class="card"><span class="glyph">⚡</span><div class="t">Fastest</div><div class="b">No per-request recomputation, no file watching. The cheapest of the three.</div></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ When to use it</span>
+        <p>Use <code>IOptions&lt;T&gt;</code> for values that are effectively constant for the app's lifetime — connection strings, fixed service URLs, feature flags set at deploy time. It's the default choice, and the one you'll use most.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ It does not reload</span>
+        <p>This is the classic gotcha: change a value in <code>appsettings.json</code> while the app runs and <code>IOptions&lt;T&gt;</code> keeps serving the old value. If you need live updates, you need one of the next two interfaces.</p>
+      </div>
+    </section>
+
+    <!-- ===== 06 ===== -->
+    <section class="section" id="s06">
+      <h2><span class="badge">06</span>IOptionsSnapshot&lt;T&gt;</h2>
+      <p><code>IOptionsSnapshot&lt;T&gt;</code> is <strong>scoped</strong>: it's computed once per request (a fresh instance per DI scope) and re-bound from the current configuration each time. So within a single web request the value is stable, but the <em>next</em> request picks up any changes you saved to the config file in the meantime.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · reading a snapshot in an endpoint</span><button class="copy-btn">Copy</button></div>
+<pre><code>app.<span class="fn">MapGet</span>(<span class="str">"/email-config"</span>, (<span class="ty">IOptionsSnapshot</span>&lt;<span class="ty">EmailSettings</span>&gt; snapshot) =&gt;
+{
+    <span class="ty">EmailSettings</span> s = snapshot.Value;   <span class="cmt">// fresh per request</span>
+    <span class="kw">return</span> <span class="ty">Results</span>.<span class="fn">Ok</span>(<span class="kw">new</span> { s.SenderName, s.SmtpPort });
+});</code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔄</span><div class="t">Lifetime: Scoped</div><div class="b">One instance per request. Recomputed each request from current config.</div></div>
+        <div class="card"><span class="glyph">📸</span><div class="t">Reloads: yes</div><div class="b">Reflects config edits on the next request — ideal for request-handling code.</div></div>
+        <div class="card"><span class="glyph">🚫</span><div class="t">Not for singletons</div><div class="b">Being scoped, it can't be injected into a singleton service (see §08).</div></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ When to use it</span>
+        <p>Reach for <code>IOptionsSnapshot&lt;T&gt;</code> in controllers, Razor pages, and other <strong>per-request</strong> code where you'd like edited configuration to take effect without restarting the app.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ A small performance cost</span>
+        <p>Because it re-binds once per request, <code>IOptionsSnapshot&lt;T&gt;</code> is measurably slower than <code>IOptions&lt;T&gt;</code>. For hot paths with truly static config, prefer <code>IOptions&lt;T&gt;</code>.</p>
+      </div>
+    </section>
+
+    <!-- ===== 07 ===== -->
+    <section class="section" id="s07">
+      <h2><span class="badge">07</span>IOptionsMonitor&lt;T&gt;</h2>
+      <p><code>IOptionsMonitor&lt;T&gt;</code> is a <strong>singleton</strong> that always exposes the latest value through its <code>.CurrentValue</code> property (note: <code>CurrentValue</code>, not <code>.Value</code>). Because it's a singleton it can be injected anywhere — including into other singletons and long-lived background services — and it can notify you the moment configuration changes via <code>OnChange</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · a singleton background worker</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> <span class="ty">Microsoft.Extensions.Options</span>;
+
+<span class="kw">public class</span> <span class="ty">MailPollingService</span> : <span class="ty">BackgroundService</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">IOptionsMonitor</span>&lt;<span class="ty">EmailSettings</span>&gt; _monitor;
+
+    <span class="kw">public</span> <span class="fn">MailPollingService</span>(<span class="ty">IOptionsMonitor</span>&lt;<span class="ty">EmailSettings</span>&gt; monitor)
+    {
+        _monitor = monitor;
+
+        <span class="cmt">// React the instant config changes on disk</span>
+        _monitor.<span class="fn">OnChange</span>(updated =&gt;
+            <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">$"Config changed — port is now {updated.SmtpPort}"</span>));
+    }
+
+    <span class="kw">protected override async</span> <span class="ty">Task</span> <span class="fn">ExecuteAsync</span>(<span class="ty">CancellationToken</span> stop)
+    {
+        <span class="kw">while</span> (!stop.IsCancellationRequested)
+        {
+            <span class="kw">var</span> current = _monitor.CurrentValue;   <span class="cmt">// always up to date</span>
+            <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">$"Polling as {current.SenderName}"</span>);
+            <span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">Delay</span>(<span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">30</span>), stop);
+        }
+    }
+}</code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">♾️</span><div class="t">Lifetime: Singleton</div><div class="b">Injectable into any lifetime, including other singletons and hosted services.</div></div>
+        <div class="card"><span class="glyph">📡</span><div class="t">CurrentValue + OnChange</div><div class="b">Always current; fires a callback when the underlying config reloads.</div></div>
+        <div class="card"><span class="glyph">🎛️</span><div class="t">Get(name)</div><div class="b">Also reads named options by name — useful for multiple instances of one type.</div></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ OnChange can fire more than once</span>
+        <p>File systems sometimes raise multiple change events for a single save, so an <code>OnChange</code> handler may be invoked twice for one edit. Keep the callback idempotent, and remember <code>CurrentValue</code> reflects the newest values at the moment you read it.</p>
+      </div>
+    </section>
+
+    <!-- ===== 08 ===== -->
+    <section class="section" id="s08">
+      <h2><span class="badge">08</span>Choosing Between Them</h2>
+      <p>All three read the same bound settings — you don't change the registration, only which interface you inject. They differ in <strong>lifetime</strong> and <strong>whether they see changes after startup</strong>. This decision is the single most common Options interview question.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Interface</th><th>DI lifetime</th><th>Reads changes after start?</th><th>Access via</th><th>Best for</th></tr></thead>
+          <tbody>
+            <tr><td><code>IOptions&lt;T&gt;</code></td><td>Singleton</td><td>❌ No — bound once</td><td><code>.Value</code></td><td>Static config; the default choice; fastest</td></tr>
+            <tr><td><code>IOptionsSnapshot&lt;T&gt;</code></td><td>Scoped</td><td>✅ Yes — per request</td><td><code>.Value</code></td><td>Per-request code (controllers, pages)</td></tr>
+            <tr><td><code>IOptionsMonitor&lt;T&gt;</code></td><td>Singleton</td><td>✅ Yes — any time</td><td><code>.CurrentValue</code></td><td>Singletons &amp; background services; change notifications</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Use this flowchart to pick quickly:</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st-title">Start · Do the values change while the app runs? 🤔</div>
+          <div class="st-body">If they're set at deploy time and never touched again, you're on the easy path.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st-title">No → IOptions&lt;T&gt; 🧱</div>
+          <div class="st-body">Simplest and fastest. Bound once, injectable everywhere. Done.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">Yes · Where do you read them? 📍</div>
+          <div class="st-body">The consuming service's lifetime decides the rest.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">Inside a per-request scope → IOptionsSnapshot&lt;T&gt; 📸</div>
+          <div class="st-body">Controllers and pages. Fresh values each request; can't go in a singleton.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">Inside a singleton / background worker → IOptionsMonitor&lt;T&gt; 📡</div>
+          <div class="st-body">Use <code>CurrentValue</code>, and <code>OnChange</code> if you must react to updates.</div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why can't a singleton take IOptionsSnapshot?</span>
+        <p>A snapshot is <em>scoped</em> (per request). Injecting a scoped service into a singleton would trap one request's scope inside the singleton forever — a "captive dependency." The DI container's scope validation detects this and throws at startup. For live values in a singleton, use the singleton-friendly <code>IOptionsMonitor&lt;T&gt;</code>.</p>
+      </div>
+    </section>
+
+    <!-- ===== 09 ===== -->
+    <section class="section" id="s09">
+      <h2><span class="badge">09</span>Validation</h2>
+      <p>A missing or nonsensical setting shouldn't surface as a confusing crash on some rare code path. Options validation lets you declare the rules once and, with one extra call, check them the instant the app starts. There are three escalating styles.</p>
+
+      <h3>1 · Data annotations</h3>
+      <p>Decorate the settings class with attributes, then call <code>ValidateDataAnnotations()</code>. This needs the <code>Microsoft.Extensions.Options.DataAnnotations</code> package, which is already included for web SDK projects.</p>
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · EmailSettings.cs with rules</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> <span class="ty">System.ComponentModel.DataAnnotations</span>;
+
+<span class="kw">public class</span> <span class="ty">EmailSettings</span>
+{
+    <span class="kw">public const string</span> SectionName = <span class="str">"EmailSettings"</span>;
+
+    [<span class="ty">Required</span>]
+    <span class="kw">public string</span> SenderName  { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">string</span>.Empty;
+
+    [<span class="ty">Required</span>, <span class="ty">EmailAddress</span>]
+    <span class="kw">public string</span> FromAddress { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">string</span>.Empty;
+
+    [<span class="ty">Range</span>(<span class="num">1</span>, <span class="num">65535</span>)]
+    <span class="kw">public int</span> SmtpPort { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+      </div>
+
+      <h3>2 · A custom <code>.Validate(…)</code> lambda</h3>
+      <p>For a rule that spans multiple properties, chain a <code>Validate</code> delegate that returns <code>true</code> when valid, plus a message shown on failure.</p>
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · cross-property rule</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services
+    .<span class="fn">AddOptions</span>&lt;<span class="ty">EmailSettings</span>&gt;()
+    .<span class="fn">BindConfiguration</span>(<span class="ty">EmailSettings</span>.SectionName)
+    .<span class="fn">ValidateDataAnnotations</span>()
+    .<span class="fn">Validate</span>(s =&gt; s.SmtpPort != <span class="num">25</span>, <span class="str">"Port 25 is blocked; choose another."</span>)
+    .<span class="fn">ValidateOnStart</span>();</code></pre>
+      </div>
+
+      <h3>3 · An <code>IValidateOptions&lt;T&gt;</code> class</h3>
+      <p>For complex or reusable logic, move validation into its own testable class. It returns a <code>ValidateOptionsResult</code> — <code>Success</code> or <code>Fail(message)</code>.</p>
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · EmailSettingsValidator.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> <span class="ty">Microsoft.Extensions.Options</span>;
+
+<span class="kw">public class</span> <span class="ty">EmailSettingsValidator</span> : <span class="ty">IValidateOptions</span>&lt;<span class="ty">EmailSettings</span>&gt;
+{
+    <span class="kw">public</span> <span class="ty">ValidateOptionsResult</span> <span class="fn">Validate</span>(<span class="kw">string</span>? name, <span class="ty">EmailSettings</span> options)
+    {
+        <span class="kw">if</span> (options.RetryCount &lt; <span class="num">0</span>)
+            <span class="kw">return</span> <span class="ty">ValidateOptionsResult</span>.<span class="fn">Fail</span>(<span class="str">"RetryCount cannot be negative."</span>);
+
+        <span class="kw">return</span> <span class="ty">ValidateOptionsResult</span>.Success;
+    }
+}
+
+<span class="cmt">// register it:</span>
+builder.Services.<span class="fn">AddSingleton</span>&lt;<span class="ty">IValidateOptions</span>&lt;<span class="ty">EmailSettings</span>&gt;, <span class="ty">EmailSettingsValidator</span>&gt;();</code></pre>
+      </div>
+
+      <h3>Fail fast with ValidateOnStart</h3>
+      <p>By default, validation runs <em>lazily</em> — the first time the options are actually read. That means a bad value might not blow up until a specific request hits it. <code>ValidateOnStart()</code> forces the checks to run during application startup instead, so a misconfiguration crashes the launch with a clear <code>OptionsValidationException</code> rather than failing later in production.</p>
+
+      <div class="callout tip">
+        <span class="tag">✅ Rule of thumb</span>
+        <p>Add <code>.ValidateDataAnnotations().ValidateOnStart()</code> to every options registration. The cost is negligible and it converts "3 a.m. production incident" into "the deployment refused to start." There's also a convenience registration, <code>AddOptionsWithValidateOnStart&lt;T&gt;()</code>, that turns on start-up validation for you.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Annotations don't recurse by default</span>
+        <p>Data-annotation validation only inspects the top-level properties of the options class. To validate nested objects or list items, opt in with the <code>[ValidateObjectMembers]</code> and <code>[ValidateEnumeratedItems]</code> attributes.</p>
+      </div>
+    </section>
+
+    <!-- ===== 10 ===== -->
+    <section class="section" id="s10">
+      <h2><span class="badge">10</span>Hands-On Walkthrough</h2>
+      <p>Here's the day's task assembled end to end: <strong>bind a strongly-typed settings class and validate it on startup</strong>. Follow the flow, then read the full <code>Program.cs</code>.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st-title">1 · Add the config section 📄</div>
+          <div class="st-body">Put an <code>EmailSettings</code> block in <code>appsettings.json</code>.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">2 · Write the class + rules 🧱</div>
+          <div class="st-body">Properties mirror the keys; data annotations declare what "valid" means.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">3 · Bind it 🔗</div>
+          <div class="st-body"><code>AddOptions&lt;EmailSettings&gt;().BindConfiguration("EmailSettings")</code>.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st-title">4 · Validate on startup 🚦</div>
+          <div class="st-body"><code>.ValidateDataAnnotations().ValidateOnStart()</code> — the app refuses to launch if config is wrong.</div>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st-title">5 · Inject &amp; use ✅</div>
+          <div class="st-body">Consume <code>IOptions&lt;EmailSettings&gt;</code> wherever the settings are needed.</div>
+        </div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · complete Program.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> <span class="ty">System.ComponentModel.DataAnnotations</span>;
+<span class="kw">using</span> <span class="ty">Microsoft.Extensions.Options</span>;
+
+<span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+
+<span class="cmt">// (2–4) Bind EmailSettings and validate it at startup</span>
+builder.Services
+    .<span class="fn">AddOptions</span>&lt;<span class="ty">EmailSettings</span>&gt;()
+    .<span class="fn">BindConfiguration</span>(<span class="ty">EmailSettings</span>.SectionName)
+    .<span class="fn">ValidateDataAnnotations</span>()
+    .<span class="fn">Validate</span>(s =&gt; s.SmtpPort != <span class="num">25</span>, <span class="str">"Port 25 is blocked; choose another."</span>)
+    .<span class="fn">ValidateOnStart</span>();
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+<span class="cmt">// (5) Read the strongly-typed settings via IOptions</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/email-config"</span>, (<span class="ty">IOptions</span>&lt;<span class="ty">EmailSettings</span>&gt; opts) =&gt;
+{
+    <span class="ty">EmailSettings</span> s = opts.Value;
+    <span class="kw">return</span> <span class="ty">Results</span>.<span class="fn">Ok</span>(<span class="kw">new</span> { s.SenderName, s.FromAddress, s.SmtpPort, s.RetryCount });
+});
+
+app.<span class="fn">Run</span>();
+
+<span class="cmt">// ---- the settings class ----</span>
+<span class="kw">public class</span> <span class="ty">EmailSettings</span>
+{
+    <span class="kw">public const string</span> SectionName = <span class="str">"EmailSettings"</span>;
+
+    [<span class="ty">Required</span>]
+    <span class="kw">public string</span> SenderName  { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">string</span>.Empty;
+
+    [<span class="ty">Required</span>, <span class="ty">EmailAddress</span>]
+    <span class="kw">public string</span> FromAddress { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">string</span>.Empty;
+
+    [<span class="ty">Range</span>(<span class="num">1</span>, <span class="num">65535</span>)]
+    <span class="kw">public int</span> SmtpPort { <span class="kw">get</span>; <span class="kw">set</span>; }
+
+    [<span class="ty">Range</span>(<span class="num">0</span>, <span class="num">10</span>)]
+    <span class="kw">public int</span> RetryCount { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 What you get</span>
+        <p>If <code>FromAddress</code> is missing or <code>SmtpPort</code> is 70000, the app throws an <code>OptionsValidationException</code> during startup with a message naming the bad property — before it ever accepts a request. Fix the config, redeploy, done. That's the whole point of "validate on startup."</p>
+      </div>
+    </section>
+
+    <!-- ===== 11 ===== -->
+    <section class="section" id="s11">
+      <h2><span class="badge">11</span>Named Options &amp; Extras</h2>
+      <p>Two features round out the pattern for real-world apps.</p>
+
+      <h3>Named options — several instances of one class</h3>
+      <p>Sometimes you have multiple sections that share the same shape — say two payment tiers, or two email profiles. Instead of writing two classes, register the <em>same</em> class under different <strong>names</strong> and fetch each by name with <code>Get(name)</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · registering &amp; reading named options</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services
+    .<span class="fn">Configure</span>&lt;<span class="ty">EmailSettings</span>&gt;(<span class="str">"Transactional"</span>,
+        builder.Configuration.<span class="fn">GetSection</span>(<span class="str">"Email:Transactional"</span>))
+    .<span class="fn">Configure</span>&lt;<span class="ty">EmailSettings</span>&gt;(<span class="str">"Marketing"</span>,
+        builder.Configuration.<span class="fn">GetSection</span>(<span class="str">"Email:Marketing"</span>));
+
+app.<span class="fn">MapGet</span>(<span class="str">"/senders"</span>, (<span class="ty">IOptionsMonitor</span>&lt;<span class="ty">EmailSettings</span>&gt; monitor) =&gt;
+{
+    <span class="kw">var</span> tx = monitor.<span class="fn">Get</span>(<span class="str">"Transactional"</span>);
+    <span class="kw">var</span> mkt = monitor.<span class="fn">Get</span>(<span class="str">"Marketing"</span>);
+    <span class="kw">return</span> <span class="ty">Results</span>.<span class="fn">Ok</span>(<span class="kw">new</span> { tx.SenderName, mkt.SenderName });
+});</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Named options and IOptions&lt;T&gt;</span>
+        <p>The plain <code>IOptions&lt;T&gt;</code> interface does <strong>not</strong> support named options — it only ever gives you the default (unnamed) instance. To read named options, use <code>IOptionsSnapshot&lt;T&gt;.Get(name)</code> or <code>IOptionsMonitor&lt;T&gt;.Get(name)</code>.</p>
+      </div>
+
+      <h3>PostConfigure — adjust after binding</h3>
+      <p><code>PostConfigure&lt;T&gt;</code> runs <em>after</em> all normal configuration, letting you tweak or force a value once everything else has been applied — handy for derived defaults.</p>
+      <div class="code">
+        <div class="code-head"><span class="lang">csharp · PostConfigure</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services.<span class="fn">PostConfigure</span>&lt;<span class="ty">EmailSettings</span>&gt;(s =&gt;
+{
+    <span class="kw">if</span> (s.RetryCount == <span class="num">0</span>) s.RetryCount = <span class="num">3</span>;   <span class="cmt">// enforce a sane default</span>
+});</code></pre>
+      </div>
+    </section>
+
+    <!-- ===== 12 ===== -->
+    <section class="section" id="s12">
+      <h2><span class="badge">12</span>Best Practices &amp; Pitfalls</h2>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📦</span><div class="t">Bind, don't scatter</div><div class="b">Prefer a typed options class over <code>config["…"]</code> reads sprinkled across the codebase.</div></div>
+        <div class="card"><span class="glyph">🚦</span><div class="t">Always ValidateOnStart</div><div class="b">Fail at launch, not mid-request. Cheap insurance against a bad appsettings.json.</div></div>
+        <div class="card"><span class="glyph">🧱</span><div class="t">Default to IOptions</div><div class="b">Only upgrade to Snapshot or Monitor when you genuinely need runtime reloads.</div></div>
+        <div class="card"><span class="glyph">📡</span><div class="t">Monitor for singletons</div><div class="b">In a singleton or hosted service that needs live values, use <code>IOptionsMonitor.CurrentValue</code>.</div></div>
+        <div class="card"><span class="glyph">🔑</span><div class="t">One SectionName constant</div><div class="b">Keep the section string in the class as a <code>const</code> so it lives in exactly one place.</div></div>
+        <div class="card"><span class="glyph">🧪</span><div class="t">IValidateOptions for logic</div><div class="b">Move complex, reusable rules into a testable validator class instead of inline lambdas.</div></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Common gotchas</span>
+        <p><strong>Editing appsettings does nothing?</strong> You're probably injecting <code>IOptions&lt;T&gt;</code>, which never reloads — switch to Snapshot or Monitor. <strong>Startup throws about lifetimes?</strong> You injected scoped <code>IOptionsSnapshot</code> into a singleton — use Monitor. <strong>Reading <code>.Value</code> on a Monitor?</strong> It's <code>.CurrentValue</code>. <strong>Named option comes back empty?</strong> You asked <code>IOptions&lt;T&gt;</code> for it — it only serves the default; use <code>Get(name)</code>. <strong>Bad config only crashes later?</strong> You forgot <code>ValidateOnStart()</code>.</p>
+      </div>
+
+      <div class="complexity-badge"><span class="lbl">IOptions</span><span class="v">Singleton</span></div>
+      <div class="complexity-badge"><span class="lbl">IOptionsSnapshot</span><span class="v">Scoped</span></div>
+      <div class="complexity-badge"><span class="lbl">IOptionsMonitor</span><span class="v">Singleton</span></div>
+      <div class="complexity-badge"><span class="lbl">Monitor accessor</span><span class="v">CurrentValue</span></div>
+      <div class="complexity-badge"><span class="lbl">fail-fast call</span><span class="v">ValidateOnStart()</span></div>
+    </section>
+
+    <!-- ===== 13 ===== -->
+    <section class="section" id="s13">
+      <h2><span class="badge">13</span>Quick Recap</h2>
+      <div class="recap-grid">
+        <div class="recap-card"><div class="h">Why</div><div class="b">Replaces fragile string-key reads with typed, injectable, scoped-to-purpose settings classes.</div></div>
+        <div class="recap-card"><div class="h">Settings class</div><div class="b">A POCO with public setters whose property names match the config keys.</div></div>
+        <div class="recap-card"><div class="h">Binding</div><div class="b">Copies a config section into the object by name; case-insensitive; converts types.</div></div>
+        <div class="recap-card"><div class="h">Register</div><div class="b"><code>Configure&lt;T&gt;</code> for a plain bind; <code>AddOptions&lt;T&gt;().BindConfiguration()</code> to chain validation.</div></div>
+        <div class="recap-card"><div class="h">IOptions&lt;T&gt;</div><div class="b">Singleton, bound once, never reloads. Fastest and the default choice.</div></div>
+        <div class="recap-card"><div class="h">IOptionsSnapshot&lt;T&gt;</div><div class="b">Scoped, fresh per request, reloads. Not for singletons.</div></div>
+        <div class="recap-card"><div class="h">IOptionsMonitor&lt;T&gt;</div><div class="b">Singleton, <code>CurrentValue</code> always live, <code>OnChange</code> notifications.</div></div>
+        <div class="recap-card"><div class="h">Validation</div><div class="b">Data annotations, <code>.Validate()</code> lambdas, or <code>IValidateOptions&lt;T&gt;</code> classes.</div></div>
+        <div class="recap-card"><div class="h">ValidateOnStart</div><div class="b">Runs checks at launch so bad config crashes the deploy, not a request.</div></div>
+        <div class="recap-card"><div class="h">Named options</div><div class="b">Multiple instances of one class via <code>Get(name)</code>; unsupported by plain <code>IOptions</code>.</div></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it is</th><th>Key detail</th></tr></thead>
+          <tbody>
+            <tr><td>Options pattern</td><td>Config section bound to a class</td><td>Typed, injectable, per-class isolation</td></tr>
+            <tr><td>Settings class</td><td>Plain POCO</td><td>Public setters; names match keys</td></tr>
+            <tr><td><code>Configure&lt;T&gt;</code></td><td>Classic bind</td><td>Not chainable with validation</td></tr>
+            <tr><td><code>AddOptions&lt;T&gt;()</code></td><td>Returns OptionsBuilder</td><td>Chain <code>BindConfiguration</code> + validation</td></tr>
+            <tr><td><code>IOptions&lt;T&gt;</code></td><td>Static accessor</td><td>Singleton; <code>.Value</code>; no reload</td></tr>
+            <tr><td><code>IOptionsSnapshot&lt;T&gt;</code></td><td>Per-request accessor</td><td>Scoped; reloads; not in singletons</td></tr>
+            <tr><td><code>IOptionsMonitor&lt;T&gt;</code></td><td>Live accessor</td><td>Singleton; <code>.CurrentValue</code>; <code>OnChange</code></td></tr>
+            <tr><td><code>ValidateDataAnnotations</code></td><td>Attribute-based checks</td><td>Top-level only unless opted in</td></tr>
+            <tr><td><code>ValidateOnStart</code></td><td>Fail-fast trigger</td><td>Throws <code>OptionsValidationException</code> at launch</td></tr>
+            <tr><td><code>IValidateOptions&lt;T&gt;</code></td><td>Validation in a class</td><td>Returns <code>ValidateOptionsResult</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== 14 ===== -->
+    <section class="section" id="s14">
+      <h2><span class="badge">14</span>Interview Questions</h2>
+      <p>Click any question to reveal a plain-English answer. Grouped by level — start with 🌱 Junior and work down.</p>
+
+      <p class="qa-group-h">🌱 Junior <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);">(0–2 yrs)</span></p>
+
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtxt">What is the Options pattern, in one sentence?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It's a way to bind a section of configuration to a strongly-typed C# class and inject that class wherever you need it, so your code uses typed settings instead of loose string keys.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtxt">Why is it better than reading <code>IConfiguration</code> with string keys?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Three reasons: you get compile-time safety and autocomplete instead of typo-prone strings; values are already the right type, no manual conversion; and each class only sees its own settings rather than the entire configuration, which is cleaner and safer.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtxt">What does "binding" mean here?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Binding copies the values from a configuration section into the matching properties of a C# object. The framework matches by property name — a key called <code>SmtpPort</code> fills a property called <code>SmtpPort</code> — and converts the string value to the property's type.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtxt">What does a settings class need to be bindable?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It's a plain class with public properties that have setters (or <code>init</code>), whose names match the configuration keys. Matching is case-insensitive; properties without a matching key just keep their default value.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtxt">How do you register a settings class in <code>Program.cs</code>?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The simplest way is <code>builder.Services.Configure&lt;EmailSettings&gt;(builder.Configuration.GetSection("EmailSettings"))</code>. The modern, chainable alternative is <code>builder.Services.AddOptions&lt;EmailSettings&gt;().BindConfiguration("EmailSettings")</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtxt">How do you read the settings after binding them?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Inject one of the accessor interfaces and read its value. Most commonly you inject <code>IOptions&lt;EmailSettings&gt;</code> and read the <code>.Value</code> property to get the bound object.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtxt">Name the three Options interfaces.</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>IOptions&lt;T&gt;</code>, <code>IOptionsSnapshot&lt;T&gt;</code>, and <code>IOptionsMonitor&lt;T&gt;</code>. They all read the same bound settings but differ in lifetime and whether they notice configuration changes after startup.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtxt">What is the point of validating options?</span><span class="lvl lvl-jr">Junior</span></summary>
+        <div class="ans"><p>To catch a missing or wrong setting early and clearly. Instead of the app silently using a wrong default or crashing on some rare code path, validation lets you declare the rules and check them — ideally at startup — so problems surface immediately.</p></div></details>
+
+      <p class="qa-group-h">🟠 Mid <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);">(2–5 yrs)</span></p>
+
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtxt">Explain the difference between <code>IOptions</code>, <code>IOptionsSnapshot</code>, and <code>IOptionsMonitor</code>.</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>IOptions&lt;T&gt;</code> is a singleton bound once at startup — it never reflects later changes and is the fastest. <code>IOptionsSnapshot&lt;T&gt;</code> is scoped, recomputed once per request, so it picks up changes on the next request but can't be injected into a singleton. <code>IOptionsMonitor&lt;T&gt;</code> is a singleton that exposes the current value at any time through <code>CurrentValue</code> and can raise <code>OnChange</code> notifications — the right choice for singletons and background services.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtxt">Why doesn't <code>IOptions&lt;T&gt;</code> pick up changes to appsettings.json?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Because it binds the value once and caches it as a singleton for the app's lifetime. There's no re-binding and no file watching involved, so an edit after startup is never observed. That's a deliberate trade-off for speed and simplicity; if you need reloads you use Snapshot or Monitor.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtxt">How does <code>IOptionsMonitor</code> access its value, and how is that different from the others?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Through <code>CurrentValue</code>, not <code>.Value</code>. Each read of <code>CurrentValue</code> returns the latest bound value, so a long-lived singleton always sees current config. It also offers <code>OnChange</code> to run a callback when the configuration reloads, which the other two don't provide.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtxt">What's the difference between <code>Configure&lt;T&gt;</code> and <code>AddOptions&lt;T&gt;().BindConfiguration()</code>?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Both bind a section to a class and register it. <code>Configure&lt;T&gt;</code> returns the service collection, so you can't fluently chain validation onto it. <code>AddOptions&lt;T&gt;()</code> returns an <code>OptionsBuilder</code> that <em>is</em> chainable, letting you add <code>ValidateDataAnnotations</code>, <code>Validate</code>, and <code>ValidateOnStart</code> in one expression — which is why it's preferred for new code.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtxt">Walk through the three ways to validate options.</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>First, data annotations: decorate properties with attributes like <code>[Required]</code> and <code>[Range]</code> and call <code>ValidateDataAnnotations()</code>. Second, a custom lambda: chain <code>.Validate(x =&gt; …, "message")</code> for a rule spanning several properties. Third, an <code>IValidateOptions&lt;T&gt;</code> class: move the logic into a testable class whose <code>Validate</code> method returns <code>ValidateOptionsResult.Success</code> or <code>Fail(message)</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtxt">What does <code>ValidateOnStart()</code> change, and why use it?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>By default, options validation is lazy — it runs the first time the options are read, which could be deep into a request. <code>ValidateOnStart()</code> forces validation to run during application startup, so an invalid configuration throws an <code>OptionsValidationException</code> and prevents the app from starting. You use it so config mistakes fail the deployment loudly instead of surfacing unpredictably at runtime.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtxt">You edited appsettings.json but a controller still shows old values. What's likely wrong?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>The controller is probably injecting <code>IOptions&lt;T&gt;</code>, which is bound once and never reloads. Switching to <code>IOptionsSnapshot&lt;T&gt;</code> makes each request re-read the current configuration, so the edit shows up on the next request. (Also confirm the file's reload-on-change is active and you saved the file.)</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtxt">What are named options and when would you use them?</span><span class="lvl lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Named options let you register the same settings class multiple times under different names — useful when several config sections share the same shape (for example, two email profiles). You register each with a name and read a specific one with <code>Get("Name")</code> on <code>IOptionsSnapshot</code> or <code>IOptionsMonitor</code>. Plain <code>IOptions&lt;T&gt;</code> doesn't support them.</p></div></details>
+
+      <p class="qa-group-h">🔴 Senior <span style="font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);">(5–7 yrs)</span></p>
+
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtxt">Why can't <code>IOptionsSnapshot&lt;T&gt;</code> be injected into a singleton, and what happens if you try?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>IOptionsSnapshot</code> is registered as scoped, and injecting a scoped service into a singleton is a lifetime violation: the singleton would capture one request's scope and hold it forever — a "captive dependency" that leaks state and defeats the per-request semantics. With scope validation enabled (the default in development), the DI container detects this and throws at startup. The correct choice for live values inside a singleton is <code>IOptionsMonitor&lt;T&gt;</code>, which is itself a singleton.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtxt">How would you validate options in a background/hosted service, and what subtlety applies?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Register validation the usual way with <code>ValidateOnStart()</code> so bad config fails the launch. Inside the hosted service, inject <code>IOptionsMonitor&lt;T&gt;</code> and read <code>CurrentValue</code> so you always act on the latest config, optionally subscribing with <code>OnChange</code>. The subtlety: <code>OnChange</code> can fire more than once for a single file save because the file-system watcher may raise duplicate events, so keep the handler idempotent and avoid heavy work directly inside it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtxt">When would you choose <code>IValidateOptions&lt;T&gt;</code> over data annotations or a lambda?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p>When validation is complex, cross-cutting, or needs to be unit-tested and reused. A class implementing <code>IValidateOptions&lt;T&gt;</code> can express multi-field rules, return rich failure messages via <code>ValidateOptionsResult</code>, and be tested in isolation without spinning up the host. Data annotations are best for simple per-property rules; inline lambdas suit one-off cross-property checks; a validator class is the maintainable home for real business rules.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtxt">Data-annotation validation on a nested object isn't running. Why, and how do you fix it?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p>By default, <code>ValidateDataAnnotations</code> only validates the top-level properties of the options class; it doesn't recurse into nested objects or into items of a collection. You enable recursive validation explicitly with the <code>[ValidateObjectMembers]</code> attribute on the nested property and <code>[ValidateEnumeratedItems]</code> on collections — or move the logic into an <code>IValidateOptions&lt;T&gt;</code> that walks the graph itself.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtxt">What's the role of <code>IOptionsMonitorCache</code> and <code>IOptionsFactory</code>?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>IOptionsFactory&lt;T&gt;</code> is responsible for creating options instances — it runs all registered <code>IConfigureOptions</code> then <code>IPostConfigureOptions</code>, and distinguishes named from default instances. <code>IOptionsMonitor&lt;T&gt;</code> uses an <code>IOptionsMonitorCache&lt;T&gt;</code> to cache those instances; its <code>TryRemove</code> invalidates a cached instance so it's recomputed on next access, <code>TryAdd</code> injects one manually, and <code>Clear</code> forces all named instances to be recreated on demand. This machinery is what lets a singleton monitor return fresh values and support selective invalidation.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtxt">What does <code>PostConfigure</code> do and when is it the right tool?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>PostConfigure&lt;T&gt;</code> registers a delegate that runs <em>after</em> all normal <code>Configure</code> steps have applied, so it always has the last word. It's the right tool for derived or fallback values that must be computed once every other source has been merged — for example, filling a default when a key was left empty, or normalizing a value — without those adjustments being overwritten by a later configuration step. There's also <code>PostConfigureAll</code> to apply the adjustment across every named instance.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtxt">Some argue against injecting <code>IOptions&lt;T&gt;</code> directly into domain code. What's the reasoning and alternative?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The concern is that <code>IOptions&lt;T&gt;</code> is an infrastructure abstraction from <code>Microsoft.Extensions.Options</code>; threading it through business classes couples your domain to that framework type and forces consumers to know about <code>.Value</code>. A common alternative is to bind the options at composition root and register the <em>plain settings object</em> itself (for example, resolve <code>IOptions&lt;T&gt;.Value</code> once and add it as a singleton), so domain code depends only on <code>EmailSettings</code>. The trade-off is losing reload and named-options support, so it's a judgment call: keep <code>IOptions*</code> at the edges, inject the POCO into the core when reloads aren't needed.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span><span class="qtxt">How does options validation interact with the different accessors' timing?</span><span class="lvl lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Validation runs the first time an options instance is created, and it re-runs whenever the options are recomputed. So without <code>ValidateOnStart</code>, an <code>IOptions&lt;T&gt;</code> value is validated at first access and then never again (it's cached); an <code>IOptionsSnapshot&lt;T&gt;</code> is validated on the first access within each request, meaning a bad reload can surface per request; and an <code>IOptionsMonitor&lt;T&gt;</code> re-validates when the value is recomputed after a change. Calling <code>ValidateOnStart</code> forces the first creation to happen at startup, giving you a single, predictable failure point regardless of which accessor consumers later use.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Move through the page in order: understand <em>why</em> the pattern exists and how binding works (§01–04), then the three accessors and — crucially — <em>how to choose between them</em> (§05–08), then validation with <code>ValidateOnStart</code> (§09), and finally assemble the hands-on task (§10). Nail Q1–Q8 cold; the accessor comparison (Q9) and the captive-dependency question (Q17) are the two highest-value topics interviewers return to again and again.</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  var sidebar = document.getElementById('sidebar');
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  var progress = document.getElementById('progress');
+  var links = Array.prototype.slice.call(sidebar.querySelectorAll('a[href^="#"]'));
+  var sections = links.map(function(a){ return document.getElementById(a.getAttribute('href').slice(1)); });
+
+  function updateProgress(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var pct = max > 0 ? (h.scrollTop || document.body.scrollTop) / max * 100 : 0;
+    progress.style.width = pct + '%';
+  }
+
+  function updateActive(){
+    var pos = window.scrollY + 90;
+    var current = sections[0];
+    for (var i = 0; i < sections.length; i++){
+      if (sections[i] && sections[i].offsetTop <= pos) current = sections[i];
+    }
+    links.forEach(function(a, i){
+      var on = sections[i] === current;
+      a.classList.toggle('active', on);
+      if (on){
+        var target = a.offsetTop - sidebar.clientHeight / 2 + a.clientHeight / 2;
+        sidebar.scrollTo({ top: target, behavior: 'smooth' });
+      }
+    });
+  }
+
+  var ticking = false;
+  window.addEventListener('scroll', function(){
+    if (!ticking){
+      window.requestAnimationFrame(function(){ updateProgress(); updateActive(); ticking = false; });
+      ticking = true;
+    }
+  });
+  window.addEventListener('resize', updateProgress);
+
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', openNav);
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(a){ a.addEventListener('click', closeNav); });
+
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('code') : null;
+      if (!code) return;
+      var text = code.innerText;
+      function done(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try { document.execCommand('copy'); done(); } catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce || !('IntersectionObserver' in window)){
+    document.querySelectorAll('.section').forEach(function(s){ s.classList.add('visible'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){ e.target.classList.add('visible'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.section').forEach(function(s){ io.observe(s); });
+  }
+
+  updateProgress(); updateActive();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Decorator &amp; Flyweight Patterns — Session 20</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+.uml-class{border:1.5px solid var(--ink);border-radius:4px;display:inline-flex;flex-direction:column;min-width:150px;font-family:'JetBrains Mono',monospace;font-size:.7rem;margin:.4rem;vertical-align:top}
+.uml-class.iface{border-style:dashed}.uml-name{background:var(--bg-soft);padding:.3rem .7rem;border-bottom:1.5px solid var(--ink);font-weight:600;text-align:center}
+.uml-name .st{display:block;font-size:.58rem;font-style:italic;color:var(--ink-soft)}.uml-body{padding:.3rem .7rem;color:var(--ink-soft)}
+.uml-row{display:block;padding:.05rem 0}.uml-row.hi{color:var(--blue)}
+/* Cone layer diagram */
+.cone-diagram{width:100%;max-width:360px;margin:0 auto;display:flex;flex-direction:column;gap:3px}
+.cone-layer{border-radius:4px;padding:.35rem 1rem;font-family:'JetBrains Mono',monospace;font-size:.72rem;text-align:center;color:white}
+/* Memory bar */
+.mem-bar-wrap{margin:1rem 0}
+.mem-bar-label{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--ink-soft);margin-bottom:.3rem}
+.mem-bar{height:28px;border-radius:4px;display:flex;align-items:center;padding:0 .8rem;color:white;font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;transition:width .6s ease}
+/* Concentric rings diagram */
+.rings-diagram{position:relative;width:260px;height:260px;margin:1rem auto}
+.ring{position:absolute;border-radius:50%;border:2px solid var(--ink);display:flex;align-items:center;justify-content:center}
+.ring-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;color:var(--ink);text-align:center;line-height:1.3}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 20</div>
+  <div class="nav-group"><span class="nav-group-label">Overview</span><a class="nav-link" href="#hero">Introduction</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">Decorator Pattern</span>
+    <a class="nav-link" href="#s01">01 The Ice Cream Problem</a>
+    <a class="nav-link" href="#s02">02 Naïve Approach and Its Flaws</a>
+    <a class="nav-link" href="#s03">03 Decorator Pattern Defined</a>
+    <a class="nav-link" href="#s04">04 Step I — IceCream Interface</a>
+    <a class="nav-link" href="#s05">05 Step II — Base and Addon Types</a>
+    <a class="nav-link" href="#s06">06 Step III — Addon getCost / getDesc</a>
+    <a class="nav-link" href="#s07">07 Full Code + Nested Wrapping</a>
+    <a class="nav-link" href="#s08">08 Decorator: When to Use</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Flyweight Pattern</span>
+    <a class="nav-link" href="#s09">09 The PUBG Memory Problem</a>
+    <a class="nav-link" href="#s10">10 Intrinsic vs Extrinsic Properties</a>
+    <a class="nav-link" href="#s11">11 Flyweight Solution</a>
+    <a class="nav-link" href="#s12">12 Memory Calculation</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 20</p>
+  <h1>Decorator &amp; Flyweight Patterns</h1>
+  <p class="hero-lede">Two structural patterns. The Decorator adds behaviour to an object at runtime through recursive wrapping — no subclass explosion. The Flyweight slashes memory by sharing common immutable state across thousands of similar objects.</p>
+  <div class="agenda-chips">
+    <span class="chip">Decorator</span><span class="chip">Flyweight</span><span class="chip">Structural</span><span class="chip">Ice Cream Builder</span><span class="chip">PUBG Bullets</span><span class="chip">Intrinsic / Extrinsic</span>
+  </div>
+</section>
+
+<!-- 01 -->
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>The Ice Cream Problem</h2></div>
+  <p>Imagine an application that takes orders for custom ice cream cones. An ice cream can be built with different combinations of cone types, scoops, and syrups. The requirements are:</p>
+  <p>① Build the ice cream from a set of selectable ingredients. ② Compute its total cost. ③ Build its description string.</p>
+
+  <div class="diagram-box">
+    <div style="text-align:center;margin-bottom:1rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft)">EXAMPLE ORDER</div>
+    <div class="cone-diagram">
+      <div class="cone-layer" style="background:var(--rose);width:100%">Cherry (topping)</div>
+      <div class="cone-layer" style="background:#7a9e7a;width:92%;align-self:center">Blueberry Scoop</div>
+      <div class="cone-layer" style="background:#6a8eae;width:84%;align-self:center">Choco Scoop</div>
+      <div class="cone-layer" style="background:#c4a35a;width:72%;align-self:center">Choco Syrup</div>
+      <div class="cone-layer" style="background:var(--accent);width:56%;align-self:center">Orange Cone (base)</div>
+    </div>
+    <p style="text-align:center;font-size:.82rem;color:var(--ink-soft);margin-top:.8rem">Each layer is a separate ingredient. The final ice cream is the composition of all layers.</p>
+  </div>
+
+  <p>The two interfaces every ingredient must implement are: <code>getCost()</code> — returns the cumulative price — and <code>getDesc()</code> — returns a description string listing all components.</p>
+</section>
+
+<!-- 02 -->
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>Naïve Approach and Its Flaws</h2></div>
+  <p>The first instinct is to create an <code>IceCream</code> class that holds a <code>List&lt;Cone&gt;</code> and a <code>List&lt;Topping&gt;</code>, with separate hierarchies for each. This leads to an explosion of concrete classes for every combination, and the <code>IceCream</code> class needs to know about both <code>Cone</code> and <code>Topping</code> types.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Problems With This Approach</span>
+    <p>① <strong>Class explosion</strong>: with 3 cone types and 4 toppings you get dozens of combinations. ② The <code>getDesc()</code> output depends on the <em>order</em> of addition, which a flat list can't capture cleanly. ③ You can't add ingredients "at runtime" — the list is a static structure, not a dynamic composition chain.</p>
+  </div>
+</section>
+
+<!-- 03 -->
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Decorator Pattern Defined</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>The <strong>Decorator Pattern</strong> attaches additional responsibilities to an object dynamically. Decorators provide a flexible alternative to subclassing for extending functionality. Each decorator wraps an existing object of the same interface and adds its own behaviour before or after delegating to the wrapped object.</p>
+  </div>
+
+  <p>The core mechanic is that each ingredient class implements the <code>IceCream</code> interface <em>and</em> holds a reference to another <code>IceCream</code> object. Calling <code>getCost()</code> on the outermost wrapper recursively adds costs down through the chain until it hits the base (or <code>null</code>).</p>
+
+  <div class="diagram-box">
+    <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);margin-bottom:1rem">THE WRAPPING CHAIN</div>
+    <div class="rings-diagram">
+      <div class="ring" style="width:260px;height:260px;top:0;left:0"><div class="ring-label" style="position:absolute;top:8px;left:50%;transform:translateX(-50%)">Cherry</div></div>
+      <div class="ring" style="width:210px;height:210px;top:25px;left:25px"><div class="ring-label" style="position:absolute;top:8px;left:50%;transform:translateX(-50%)">Vanilla Scoop</div></div>
+      <div class="ring" style="width:162px;height:162px;top:49px;left:49px"><div class="ring-label" style="position:absolute;top:8px;left:50%;transform:translateX(-50%)">Choco Cone</div></div>
+      <div class="ring" style="width:114px;height:114px;top:73px;left:73px"><div class="ring-label" style="position:absolute;top:8px;left:50%;transform:translateX(-50%)">Choco Syrup</div></div>
+      <div class="ring" style="width:70px;height:70px;top:95px;left:95px;background:var(--accent-soft)"><div class="ring-label">Orange<br>Cone</div></div>
+    </div>
+    <p style="text-align:center;font-size:.82rem;color:var(--ink-soft);margin-top:.5rem">Each outer ring wraps an inner ring. <code>getCost()</code> sums inward to the core; <code>getDesc()</code> builds the string inward to the core.</p>
+  </div>
+</section>
+
+<!-- 04 -->
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Step I — Define the IceCream Interface</h2></div>
+  <p>Every ingredient — whether a base cone or an add-on — must implement the same <code>IceCream</code> interface. This is what makes the recursive wrapping possible.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — IceCream interface</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Step I: Define the interface all ingredients share</span>
+<span class="kw">interface</span> <span class="ty">IceCream</span> {
+    <span class="kw">double</span> <span class="fn">getCost</span>();
+    <span class="ty">String</span> <span class="fn">getDesc</span>();
+}</pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Why One Interface?</span>
+    <p>Because a <code>ChocoSyrup</code> must be able to <em>wrap</em> an <code>OrangeCone</code> (or any other <code>IceCream</code>). If they had different types, a syrup couldn't hold a cone reference polymorphically. Unifying them under one interface is the key insight of the Decorator pattern.</p>
+  </div>
+</section>
+
+<!-- 05 -->
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>Step II — Two Types of Ingredients</h2></div>
+  <p>There are two categories of ingredient:</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-wrap:wrap;gap:2rem">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--green);text-transform:uppercase;margin-bottom:.6rem">Base Addon (mandatory)</div>
+        <p style="font-size:.85rem">The starting object — has no inner <code>IceCream</code> reference (or holds <code>null</code>). Must always be present. Examples: OrangeCone, ChocolateCone.</p>
+        <ul style="font-size:.85rem;padding-left:1.3rem;margin-top:.4rem">
+          <li>OrangeCone</li>
+          <li>ChocolateCone</li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--blue);text-transform:uppercase;margin-bottom:.6rem">Normal Addon (optional)</div>
+        <p style="font-size:.85rem">Wraps an existing <code>IceCream</code>. Adds its own cost and name to whatever is already there. Examples: VanillaScoop, SBScoop, Cherry, ChocoSyrup.</p>
+        <ul style="font-size:.85rem;padding-left:1.3rem;margin-top:.4rem">
+          <li>VanillaScoop</li>
+          <li>SBScoop (Strawberry)</li>
+          <li>BBScoop (Blueberry)</li>
+          <li>Cherry</li>
+          <li>ChocoSyrup</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Design Difference</span>
+    <p><strong>Base Addon</strong> classes have a constructor that optionally accepts an <code>IceCream</code> reference (can be <code>null</code>). <strong>Normal Addon</strong> (decorator) classes require an <code>IceCream</code> argument in their constructor — there is no default/no-arg constructor. This enforces that every decorator must wrap something.</p>
+  </div>
+</section>
+
+<!-- 06 -->
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>Step III — How Addons Compute Cost and Description</h2></div>
+  <p>Every <strong>base addon</strong> (e.g. <code>OrangeCone</code>) handles the base case: if its inner <code>ic</code> reference is <code>null</code>, return just its own cost/name. Otherwise, add to what the inner object already has.</p>
+  <p>Every <strong>normal addon</strong> (decorator, e.g. <code>ChocoSyrup</code>) always has an <code>ic</code> object — it simply adds its own cost/description on top:</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-wrap:wrap;gap:1rem">
+      <div style="flex:1;min-width:260px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--accent);margin-bottom:.5rem">Base Addon — OrangeCone</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.8rem;line-height:1.8">
+          getCost() {<br>
+          &nbsp;&nbsp;if (ic == null) return 5;<br>
+          &nbsp;&nbsp;else return ic.getCost() + 5;<br>
+          }<br><br>
+          getDesc() {<br>
+          &nbsp;&nbsp;if (ic == null) return "OC";<br>
+          &nbsp;&nbsp;return ic.getDesc() + "OC";<br>
+          }
+        </div>
+      </div>
+      <div style="flex:1;min-width:260px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--blue);margin-bottom:.5rem">Normal Addon — ChocoSyrup</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.8rem;line-height:1.8">
+          getCost() {<br>
+          &nbsp;&nbsp;return ic.getCost() + 10;<br>
+          }<br><br>
+          getDesc() {<br>
+          &nbsp;&nbsp;return ic.getDesc() + "ChocoSyrup";<br>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p>The trace for <code>ic = new ChocoSyrup(new OrangeCone())</code>:</p>
+  <div class="diagram-box" style="font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:2">
+    <code>ChocoSyrup.getCost()</code><br>
+    → <code>OrangeCone.getCost()</code> + 10<br>
+    → (ic == null, so return 5) + 10<br>
+    → <strong>15</strong>
+  </div>
+</section>
+
+<!-- 07 -->
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>Full Code + Nested Wrapping</h2></div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — OrangeCone (Base Addon)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">OrangeCone</span> <span class="kw">implements</span> <span class="ty">IceCream</span> {
+    <span class="kw">private</span> <span class="ty">IceCream</span> ic;
+
+    <span class="cmt">// Base constructor — no inner object</span>
+    <span class="ty">OrangeCone</span>() { <span class="kw">this</span>.ic = <span class="kw">null</span>; }
+
+    <span class="cmt">// Also accepts a wrapping context (when used inside a chain)</span>
+    <span class="ty">OrangeCone</span>(<span class="ty">IceCream</span> ic) { <span class="kw">this</span>.ic = ic; }
+
+    <span class="kw">public double</span> <span class="fn">getCost</span>() {
+        <span class="kw">if</span> (ic == <span class="kw">null</span>) <span class="kw">return</span> <span class="num">5</span>;
+        <span class="kw">return</span> ic.<span class="fn">getCost</span>() + <span class="num">5</span>;
+    }
+
+    <span class="kw">public</span> <span class="ty">String</span> <span class="fn">getDesc</span>() {
+        <span class="kw">if</span> (ic == <span class="kw">null</span>) <span class="kw">return</span> <span class="str">"OC"</span>;
+        <span class="kw">return</span> ic.<span class="fn">getDesc</span>() + <span class="str">" OC"</span>;
+    }
+}</pre>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — ChocoSyrup (Normal Addon / Decorator)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">ChocoSyrup</span> <span class="kw">implements</span> <span class="ty">IceCream</span> {
+    <span class="kw">private</span> <span class="ty">IceCream</span> ic;
+
+    <span class="cmt">// No default constructor — must always wrap something</span>
+    <span class="ty">ChocoSyrup</span>(<span class="ty">IceCream</span> ic) { <span class="kw">this</span>.ic = ic; }
+
+    <span class="kw">public double</span> <span class="fn">getCost</span>() {
+        <span class="kw">return</span> ic.<span class="fn">getCost</span>() + <span class="num">10</span>;
+    }
+
+    <span class="kw">public</span> <span class="ty">String</span> <span class="fn">getDesc</span>() {
+        <span class="kw">return</span> ic.<span class="fn">getDesc</span>() + <span class="str">" ChocoSyrup"</span>;
+    }
+}</pre>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Building a full ice cream (nested constructors)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Build: SBScoop(BBScoop(ChocolateCone(ChocoSyrup(OrangeCone()))))</span>
+<span class="ty">IceCream</span> ic = <span class="kw">new</span> <span class="ty">SBScoop</span>(
+    <span class="kw">new</span> <span class="ty">BBScoop</span>(
+        <span class="kw">new</span> <span class="ty">ChocolateCone</span>(
+            <span class="kw">new</span> <span class="ty">ChocoSyrup</span>(
+                <span class="kw">new</span> <span class="ty">OrangeCone</span>()
+            )
+        )
+    )
+);
+
+<span class="cmt">// SBScoop.getCost() → BBScoop → ChocolateCone → ChocoSyrup → OrangeCone(5)</span>
+<span class="cmt">// 5 (OC) + 10 (CS) + 40 (CC) + 30 (BB) + 100 (SB) = 185</span>
+System.out.<span class="fn">println</span>(ic.<span class="fn">getCost</span>());   <span class="cmt">// 185.0</span>
+System.out.<span class="fn">println</span>(ic.<span class="fn">getDesc</span>());   <span class="cmt">// OC ChocoSyrup ChocolateCone BBScoop SBScoop</span></pre>
+  </div>
+</section>
+
+<!-- 08 -->
+<section id="s08" class="section">
+  <div class="section-header"><span class="section-num">08</span><h2>Decorator — When to Use</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Rule of Thumb</span>
+    <p>Use the Decorator pattern when you have an entity to which you may want to <strong>add behaviours dynamically at runtime</strong>, especially when the set of possible combinations would cause a subclass explosion if handled through inheritance.</p>
+  </div>
+
+  <p>Other real-world examples of Decorator in use:</p>
+
+  <table>
+    <thead><tr><th>Domain</th><th>Base Entity</th><th>Decorators</th></tr></thead>
+    <tbody>
+      <tr><td>UI components</td><td><code>Button</code></td><td><code>BlueMargin</code>, <code>OrangeMargin</code>, <code>PurpleShade</code></td></tr>
+      <tr><td>Coffee ordering</td><td><code>SimpleCoffee</code></td><td><code>Milk</code>, <code>Sugar</code>, <code>Caramel</code>, <code>WhipCream</code></td></tr>
+      <tr><td>Java I/O streams</td><td><code>FileInputStream</code></td><td><code>BufferedInputStream</code>, <code>GZIPInputStream</code>, <code>DataInputStream</code></td></tr>
+      <tr><td>Pizza ordering</td><td><code>PlainPizza</code></td><td><code>TomatoTopping</code>, <code>CheeseTopping</code>, <code>MushroomTopping</code></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <span class="callout-tag">Java I/O — Classic Example</span>
+    <p>Java's I/O library is the canonical Decorator implementation. <code>BufferedReader(new FileReader(file))</code> wraps a <code>FileReader</code> (base) with buffering behaviour (decorator). You can keep stacking: <code>new DataInputStream(new BufferedInputStream(new FileInputStream(file)))</code>.</p>
+  </div>
+</section>
+
+<!-- 09 -->
+<section id="s09" class="section">
+  <div class="section-header"><span class="section-num">09</span><h2>The PUBG Memory Problem</h2></div>
+  <p>Flyweight is a structural pattern that optimises memory when a large number of similar objects exist. Consider PUBG: a multiplayer battle game where each player carries up to 300 bullets. With 100 players in a match, you have up to 30,000 flying bullets active simultaneously — some scenarios can push this to 10<sup>5</sup> bullets across a session.</p>
+
+  <p>A straightforward <code>Bullet</code> class with all properties stored per object:</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-wrap:wrap;gap:1.5rem">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:600;color:var(--accent);margin-bottom:.5rem;text-transform:uppercase">Bullet class fields</div>
+        <table style="margin:0;font-size:.82rem">
+          <thead><tr><th>Field</th><th>Size</th></tr></thead>
+          <tbody>
+            <tr><td>weight</td><td>8 B (double)</td></tr>
+            <tr><td>radius</td><td>8 B (double)</td></tr>
+            <tr><td>speed</td><td>8 B (double)</td></tr>
+            <tr><td>length</td><td>8 B (double)</td></tr>
+            <tr><td>colour</td><td>4 B (int)</td></tr>
+            <tr><td>maxDamage</td><td>8 B (double)</td></tr>
+            <tr><td>maxRange</td><td>8 B (double)</td></tr>
+            <tr><td>curCoordinate</td><td>24 B</td></tr>
+            <tr><td>targetCoordinate</td><td>24 B</td></tr>
+            <tr><td>image</td><td>1 KB</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:600;color:var(--rose);margin-bottom:.5rem;text-transform:uppercase">Memory impact</div>
+        <div class="mem-bar-wrap">
+          <div class="mem-bar-label">1 Bullet object ≈ 1.1 KB</div>
+          <div class="mem-bar" style="background:var(--accent);width:80px">1.1 KB</div>
+        </div>
+        <div class="mem-bar-wrap">
+          <div class="mem-bar-label">10⁵ bullets × 1.1 KB</div>
+          <div class="mem-bar" style="background:var(--rose);width:220px">≈ 110 MB RAM</div>
+        </div>
+        <p style="font-size:.82rem;color:var(--ink-soft);margin-top:.8rem">110 MB just for bullet state — for a mobile game this is unacceptable.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Problem</span>
+    <p>Despite having 100,000 bullets, the game only has <strong>10 distinct bullet types</strong> (5.56mm, 7mm, 7.62mm, etc.). The image, weight, radius, length, colour, maxDamage, and maxRange are <em>identical</em> for all bullets of the same type. Storing them per-bullet is massive duplication.</p>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="s10" class="section">
+  <div class="section-header"><span class="section-num">10</span><h2>Intrinsic vs Extrinsic Properties</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Concepts</span>
+    <p><strong>Intrinsic properties</strong>: values that are the same for all objects of a particular type — they don't change over the object's lifetime. These can be safely shared. <strong>Extrinsic properties</strong>: values that are unique to each object instance and change over time. These must be stored per instance.</p>
+  </div>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-wrap:wrap;gap:1.5rem">
+      <div style="flex:1;min-width:200px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--blue);text-transform:uppercase;margin-bottom:.6rem">Intrinsic (shared)</div>
+        <ul style="font-size:.85rem;padding-left:1.3rem">
+          <li>weight</li>
+          <li>radius</li>
+          <li>length</li>
+          <li>colour</li>
+          <li>maxDamage</li>
+          <li>maxRange</li>
+          <li>image (1 KB)</li>
+        </ul>
+        <p style="font-size:.8rem;color:var(--ink-soft);margin-top:.5rem">Total: ≈ 1 KB per bullet type<br>× 10 types = <strong>10 KB</strong></p>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--rose);text-transform:uppercase;margin-bottom:.6rem">Extrinsic (per instance)</div>
+        <ul style="font-size:.85rem;padding-left:1.3rem">
+          <li>curCoordinate (24 B)</li>
+          <li>targetCoordinate (24 B)</li>
+          <li>speed (8 B)</li>
+          <li>direction (8 B)</li>
+          <li>bulletRef (8 B pointer)</li>
+        </ul>
+        <p style="font-size:.8rem;color:var(--ink-soft);margin-top:.5rem">Total: 72 B per flying bullet<br>× 10<sup>5</sup> bullets = <strong>7.2 MB</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="s11" class="section">
+  <div class="section-header"><span class="section-num">11</span><h2>Flyweight Solution</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>The <strong>Flyweight Pattern</strong> reduces memory usage by sharing as much data as possible with similar objects. When a class has both intrinsic and extrinsic state, split it into two classes: one that holds the shared intrinsic state (the Flyweight), and one that holds the per-instance extrinsic state (the context object).</p>
+  </div>
+
+  <p>We split <code>Bullet</code> into two classes: <code>Bullet</code> (intrinsic — one object per type, cached in a factory) and <code>FlyingBullet</code> (extrinsic — one object per active bullet in flight, holds a reference to its <code>Bullet</code> type).</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Bullet (intrinsic / shared Flyweight)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Intrinsic state — shared; one instance per bullet TYPE</span>
+<span class="kw">class</span> <span class="ty">Bullet</span> {
+    <span class="kw">double</span> weight, radius, length, maxDamage, maxRange;
+    <span class="kw">int</span> colour;
+    <span class="ty">Image</span> image;   <span class="cmt">// 1 KB — shared across all bullets of this type</span>
+
+    <span class="ty">Bullet</span>(<span class="kw">double</span> weight, <span class="kw">double</span> radius, <span class="kw">double</span> length,
+           <span class="kw">int</span> colour, <span class="kw">double</span> maxDamage, <span class="kw">double</span> maxRange, <span class="ty">Image</span> img) {
+        <span class="kw">this</span>.weight = weight; <span class="kw">this</span>.radius = radius; <span class="kw">this</span>.length = length;
+        <span class="kw">this</span>.colour = colour; <span class="kw">this</span>.maxDamage = maxDamage;
+        <span class="kw">this</span>.maxRange = maxRange; <span class="kw">this</span>.image = img;
+    }
+}</pre>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — FlyingBullet (extrinsic / per-instance context)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Extrinsic state — unique per bullet in flight</span>
+<span class="kw">class</span> <span class="ty">FlyingBullet</span> {
+    <span class="ty">Coordinate</span> curCoordinate;    <span class="cmt">// 24 B</span>
+    <span class="ty">Coordinate</span> targetCoordinate; <span class="cmt">// 24 B</span>
+    <span class="kw">double</span> speed;                 <span class="cmt">//  8 B</span>
+    <span class="kw">double</span> direction;             <span class="cmt">//  8 B</span>
+    <span class="ty">Bullet</span> bullet;               <span class="cmt">//  8 B reference — points to shared Bullet object</span>
+    <span class="cmt">// Total: 72 B per flying bullet</span>
+}</pre>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — BulletFactory (Flyweight cache)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">BulletFactory</span> {
+    <span class="kw">private static</span> <span class="ty">Map</span>&lt;<span class="ty">String</span>, <span class="ty">Bullet</span>&gt; cache = <span class="kw">new</span> <span class="ty">HashMap</span>&lt;&gt;();
+
+    <span class="kw">public static</span> <span class="ty">Bullet</span> <span class="fn">getBullet</span>(<span class="ty">String</span> type) {
+        <span class="kw">if</span> (!cache.<span class="fn">containsKey</span>(type)) {
+            cache.<span class="fn">put</span>(type, <span class="fn">createBullet</span>(type));
+        }
+        <span class="kw">return</span> cache.<span class="fn">get</span>(type); <span class="cmt">// returns the SAME shared object</span>
+    }
+}</pre>
+  </div>
+</section>
+
+<!-- 12 -->
+<section id="s12" class="section">
+  <div class="section-header"><span class="section-num">12</span><h2>Memory Calculation — Before vs After</h2></div>
+
+  <div class="diagram-box">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;color:var(--rose);text-transform:uppercase;margin-bottom:.8rem">Before Flyweight — 110 MB</div>
+    <div class="mem-bar-wrap">
+      <div class="mem-bar-label">10⁵ Bullet objects × 1.1 KB each</div>
+      <div class="mem-bar" style="background:var(--rose);width:100%">110 MB</div>
+    </div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;color:var(--green);text-transform:uppercase;margin:1.2rem 0 .8rem">After Flyweight — ≈ 8 MB</div>
+    <div class="mem-bar-wrap">
+      <div class="mem-bar-label">10⁵ FlyingBullet × 72 B = 7.2 MB</div>
+      <div class="mem-bar" style="background:var(--blue);width:65%">7.2 MB</div>
+    </div>
+    <div class="mem-bar-wrap">
+      <div class="mem-bar-label">10 Bullet types × 1 KB = 0.01 MB</div>
+      <div class="mem-bar" style="background:var(--green);width:5%">0.01 MB</div>
+    </div>
+    <p style="font-size:.88rem;color:var(--ink-soft);margin-top:.8rem"><strong>Total: ≈ 8 MB</strong> — a 93% reduction from 110 MB, achieved purely by sharing the intrinsic state.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">When to Use Flyweight</span>
+    <p>Use Flyweight when a class has a large number of instances and those instances share a significant portion of their state (intrinsic properties). If you notice a lot of memory being wasted because of duplicated immutable data across objects, consider splitting the class and applying Flyweight.</p>
+  </div>
+</section>
+
+<!-- Recap -->
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Decorator Intent</div><p>Add behaviours to a base entity at runtime through recursive wrapping. All decorators and the base share one common interface.</p></div>
+    <div class="recap-card"><div class="recap-card-title">IceCream Interface</div><p>getCost() and getDesc() — every ingredient (cone, scoop, syrup, cherry) implements the same IceCream interface. This enables wrapping.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Base vs Normal Addon</div><p>Base addons can have a null inner reference (they are the start). Normal addons (decorators) always require an inner IceCream — no default constructor.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Recursive Delegation</div><p>getCost() = ic.getCost() + own cost. getDesc() = ic.getDesc() + own name. Each call chains inward until it hits the base.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Flyweight Intent</div><p>Share intrinsic (immutable, type-level) state across thousands of instances. Each instance only stores its extrinsic (unique, mutable) state plus a reference to the shared object.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Intrinsic Properties</div><p>Same for all instances of a type. Never change. Examples: bullet weight, radius, image, maxDamage. These belong in the shared Flyweight object.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Extrinsic Properties</div><p>Unique per instance, change over time. Examples: bullet's current position, speed, direction. These stay in the context (FlyingBullet) object.</p></div>
+    <div class="recap-card"><div class="recap-card-title">PUBG Calculation</div><p>110 MB → 8 MB. 10⁵ FlyingBullet objects at 72 B each = 7.2 MB, plus 10 shared Bullet objects at ~1 KB each = 0.01 MB.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Flyweight Factory</div><p>A factory/cache stores one Bullet object per type. All FlyingBullets of the same type share the same Bullet reference.</p></div>
+  </div>
+</section>
+
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

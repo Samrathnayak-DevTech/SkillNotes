@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOLID Principles — Session 14</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:1.2rem 1.3rem;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(45,42,38,.08)}
+.card-glyph{font-family:'Fraunces',serif;font-size:1.4rem;color:var(--accent);margin-bottom:.4rem}
+.card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.card p{font-size:.82rem;color:var(--ink-soft)}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* UML class diagram styles */
+.uml-class{border:1.5px solid var(--ink);border-radius:4px;display:inline-block;min-width:160px;font-family:'JetBrains Mono',monospace;font-size:.72rem;margin:.4rem}
+.uml-class.abstract .uml-name{font-style:italic}
+.uml-name{background:var(--bg-soft);padding:.3rem .7rem;border-bottom:1.5px solid var(--ink);font-weight:600;text-align:center}
+.uml-name .stereotype{display:block;font-size:.6rem;font-style:italic;color:var(--ink-soft)}
+.uml-section{padding:.3rem .7rem;border-bottom:1px solid var(--line)}
+.uml-section:last-child{border-bottom:none}
+.uml-row{display:block;padding:.05rem 0;color:var(--ink-soft)}
+.uml-row.abstract{font-style:italic;color:var(--accent)}
+.uml-row.interface-method{color:var(--blue)}
+/* hierarchy / tree */
+.hier{font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:2;padding-left:1rem}
+.hier-node{display:flex;align-items:center;gap:.5rem;margin:.15rem 0}
+.hier-pill{padding:.12rem .5rem;border-radius:12px;font-size:.7rem;border:1px solid}
+.hier-pill.abstract{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.hier-pill.interface{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.hier-pill.concrete{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.hier-connector{color:var(--line);font-size:.9rem}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 14</div>
+  <div class="nav-group"><span class="nav-group-label">Overview</span><a class="nav-link" href="#hero">Introduction</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">Design Principles</span>
+    <a class="nav-link" href="#s01">01 What are Design Patterns?</a>
+    <a class="nav-link" href="#s02">02 Types of Design Patterns</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">SOLID</span>
+    <a class="nav-link" href="#s03">03 S — Single Responsibility</a>
+    <a class="nav-link" href="#s04">04 O — Open/Closed</a>
+    <a class="nav-link" href="#s05">05 L — Liskov Substitution</a>
+    <a class="nav-link" href="#s06">06 I — Interface Segregation</a>
+    <a class="nav-link" href="#s07">07 D — Dependency Inversion</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 14 · 12th Dec</p>
+  <h1>SOLID Design Principles</h1>
+  <p class="hero-lede">Five foundational rules for writing object-oriented code that is extensible, maintainable, readable, modular, and reusable — illustrated with a running Bird system example.</p>
+  <div class="agenda-chips">
+    <span class="chip">SRP</span><span class="chip">OCP</span><span class="chip">LSP</span><span class="chip">ISP</span><span class="chip">DIP</span><span class="chip">Design Patterns</span><span class="chip">GoF</span>
+  </div>
+</section>
+
+<!-- 01 -->
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>What are Design Patterns?</h2></div>
+  <p>A <strong>design pattern</strong> is a standard, reusable solution to a commonly occurring problem in software design. Think of them as templates — not finished code, but proven blueprints you can adapt to your situation.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Gang of Four (GoF)</span>
+    <p>In 1994, Erich Gamma, Richard Helm, Ralph Johnson, and John Vlissides published <em>Design Patterns: Elements of Reusable Object-Oriented Software</em>, cataloguing 23 patterns. These became the canonical reference for OOP design. The book is entirely focused on object-oriented programming.</p>
+  </div>
+
+  <p>Design principles (like SOLID) are the broader philosophical rules that <em>guide</em> how you design. Design patterns are concrete, named solutions that <em>apply</em> those principles to recurring structural problems. Good code aims to be:</p>
+
+  <div class="cards-grid">
+    <div class="card"><div class="card-glyph">⇡</div><div class="card-title">Extensible</div><p>Adding new features requires new code, not changes to existing stable code.</p></div>
+    <div class="card"><div class="card-glyph">⚙</div><div class="card-title">Maintainable</div><p>Bugs can be isolated and fixed without cascading side-effects across the codebase.</p></div>
+    <div class="card"><div class="card-glyph">◎</div><div class="card-title">Readable</div><p>Another engineer can understand the intent of a class or method at a glance.</p></div>
+    <div class="card"><div class="card-glyph">⬡</div><div class="card-title">Modular</div><p>The system is composed of loosely coupled, independently testable units.</p></div>
+    <div class="card"><div class="card-glyph">↺</div><div class="card-title">Reusable</div><p>Components can be composed in new contexts without modification.</p></div>
+  </div>
+</section>
+
+<!-- 02 -->
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>Types of Design Patterns</h2></div>
+  <p>The 23 GoF patterns are divided into three families based on their intent:</p>
+
+  <table>
+    <thead><tr><th>Family</th><th>Focus</th><th>Examples</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Creational</strong></td><td>Different ways to create an object — controlling object instantiation.</td><td>Singleton, Builder, Prototype, Factory Method, Abstract Factory</td></tr>
+      <tr><td><strong>Structural</strong></td><td>How classes and interfaces are composed and how they interact with each other.</td><td>Adapter, Facade, Decorator, Flyweight, Proxy, Composite, Bridge</td></tr>
+      <tr><td><strong>Behavioural</strong></td><td>How objects communicate, delegate responsibilities, and define algorithms.</td><td>Strategy, Observer, Command, Iterator, Template Method, State</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <span class="callout-tag">This Module</span>
+    <p>The Backend LLD course focuses primarily on Creational and Structural patterns. We begin with the five SOLID design <em>principles</em> that underpin all of them.</p>
+  </div>
+</section>
+
+<!-- 03 SRP -->
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>S — Single Responsibility Principle</h2></div>
+  <p><strong>Every code unit — method, class, or interface — should have a single, well-defined responsibility.</strong> Put differently: there should be only one reason to change a code unit.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Robert C. Martin's Definition</span>
+    <p>"A class should have one, and only one, reason to change." If two distinct actors (teams, requirements, stakeholders) can cause a class to change for different reasons, the class has too many responsibilities.</p>
+  </div>
+
+  <h3>The Bird Problem</h3>
+  <p>Consider a single <code>Bird</code> class designed to represent all birds — Pigeon, Sparrow, Owl, and more. Its <code>fly()</code> method looks like this:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">fly</span>() {
+    <span class="kw">if</span> (type.<span class="fn">equals</span>(<span class="str">"Pigeon"</span>)) {
+        <span class="cmt">// pigeon-specific flight logic …</span>
+    } <span class="kw">else if</span> (type.<span class="fn">equals</span>(<span class="str">"Sparrow"</span>)) {
+        <span class="cmt">// sparrow flight logic …</span>
+    } <span class="kw">else if</span> (type.<span class="fn">equals</span>(<span class="str">"Owl"</span>)) {
+        <span class="cmt">// owl flight logic …</span>
+    }
+    <span class="cmt">// … every new bird adds another else-if</span>
+}</pre>
+  </div>
+
+  <p>This violates SRP in four compounding ways:</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Problems with the God-Class approach</span>
+    <p><strong>1. Readability:</strong> A single method that handles every bird type becomes enormous and hard to follow. <strong>2. Testing:</strong> You cannot test Pigeon flight logic in isolation without running the entire if-else chain. <strong>3. Code duplication:</strong> Shared utility logic tends to get copy-pasted between branches. <strong>4. Low reusability:</strong> You cannot reuse the Pigeon logic elsewhere without dragging the whole method along.</p>
+  </div>
+
+  <h3>How to Spot SRP Violations</h3>
+  <p>Two reliable signals:</p>
+  <p><strong>Too many if-else conditions.</strong> If the branches contain independent, unrelated logic (each branch is a completely different behaviour), that logic probably belongs in separate classes. If the conditions are part of a unified algorithm or business rule, they may be fine.</p>
+  <p><strong>Monster methods.</strong> A method that does more than its name suggests. <code>saveToDB(User user)</code> that also builds a DB connection from scratch violates SRP — connection management and query execution are separate concerns.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — SRP Violation</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">saveToDB</span>(<span class="ty">User</span> user) {
+    <span class="ty">Database</span> db = <span class="kw">new</span> <span class="ty">Database</span>();
+    db.<span class="fn">setURL</span>(<span class="str">"jdbc:mysql://…"</span>);   <span class="cmt">// connection concern</span>
+    db.<span class="fn">setPort</span>(<span class="num">3306</span>);
+    <span class="ty">String</span> q = <span class="str">"INSERT INTO users …"</span>; <span class="cmt">// query concern</span>
+    db.<span class="fn">execute</span>(q);
+}</pre>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — SRP Fixed</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">void</span> <span class="fn">saveToDB</span>(<span class="ty">User</span> user) {
+    <span class="ty">String</span> q   = <span class="fn">createQuery</span>(user);          <span class="cmt">// delegated</span>
+    <span class="ty">Database</span> db = <span class="fn">getDBConnection</span>();          <span class="cmt">// delegated</span>
+    db.<span class="fn">execute</span>(q);
+}</pre>
+  </div>
+
+  <p>A practical project-level signal: a <code>Utils</code> package that contains one giant <code>Utils.java</code> file. Split it: <code>StringUtils.java</code>, <code>DateUtils.java</code>, <code>DBUtils.java</code>. Each file has one responsibility.</p>
+</section>
+
+<!-- 04 OCP -->
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>O — Open/Closed Principle</h2></div>
+  <p><strong>A module should be open for extension but closed for modification.</strong> Adding a new feature should require writing new code, not editing existing, tested code.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">The Core Idea</span>
+    <p>Adding a new feature should require minimal (ideally zero) changes to the existing codebase. You extend the system by adding new classes or methods, not by touching stable ones.</p>
+  </div>
+
+  <h3>Why Modification is Dangerous</h3>
+  <p>Every time you touch existing, production-tested code you risk introducing regressions — bugs in previously working functionality. This is the <strong>testing &amp; regression</strong> problem. The more if-else branches you add to an existing method, the greater the blast radius of a change.</p>
+
+  <h3>Applying OCP to the Bird Example</h3>
+  <p>The single <code>Bird</code> class with a <code>fly()</code> that branches on type violates OCP: adding an Eagle means editing <code>fly()</code>. The fix is to make <code>Bird</code> abstract and give each bird its own <code>fly()</code> override.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start">
+      <div>
+        <div class="uml-class abstract" style="min-width:180px">
+          <div class="uml-name"><span class="stereotype">&lt;&lt;abstract&gt;&gt;</span>Bird</div>
+          <div class="uml-section">
+            <span class="uml-row">name: String</span>
+            <span class="uml-row">age: int</span>
+            <span class="uml-row">color: String</span>
+            <span class="uml-row">weight: double</span>
+          </div>
+          <div class="uml-section">
+            <span class="uml-row abstract">fly(): void</span>
+            <span class="uml-row">eat(): void</span>
+            <span class="uml-row">walk(): void</span>
+            <span class="uml-row">makeSound(): void</span>
+          </div>
+        </div>
+        <div style="margin-left:1rem;margin-top:.3rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft)">↑ extends</div>
+        <div style="display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.3rem">
+          <div class="uml-class" style="min-width:100px">
+            <div class="uml-name">Pigeon</div>
+            <div class="uml-section"><span class="uml-row">fly() { … }</span></div>
+          </div>
+          <div class="uml-class" style="min-width:100px">
+            <div class="uml-name">Eagle</div>
+            <div class="uml-section"><span class="uml-row">fly() { … }</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:1rem;font-size:.82rem;color:var(--ink-soft)">Adding a new bird (Eagle, Flamingo, …) only requires creating a new subclass — no changes to the <code>Bird</code> base class or any existing bird class.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Rule of Thumb</span>
+    <p>The generic behaviour belongs in the parent. Behaviour that is <em>specific</em> to a particular variant belongs in that variant's own class. The parent class is the stable contract; subclasses are the extensions.</p>
+  </div>
+</section>
+
+<!-- 05 LSP -->
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>L — Liskov Substitution Principle</h2></div>
+  <p><strong>An object of any child class must be freely substitutable wherever a parent type is expected, without requiring any special-case code or causing unexpected behaviour.</strong></p>
+
+  <div class="callout key">
+    <span class="callout-tag">Barbara Liskov (1987)</span>
+    <p>If <code>S</code> is a subtype of <code>T</code>, then objects of type <code>T</code> may be replaced with objects of type <code>S</code> without altering any of the desirable properties of the program.</p>
+  </div>
+
+  <h3>The Penguin Problem</h3>
+  <p>We add a <code>Penguin</code> to our Bird hierarchy. Penguins are birds, but they cannot fly. If <code>Penguin</code> extends the abstract <code>Bird</code> that has a <code>fly()</code> method, Penguin must override it — but with what? Two bad options: throw an exception, or leave the body empty.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — LSP Violation</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">Bird</span> b = <span class="kw">new</span> <span class="ty">Pigeon</span>();
+b.<span class="fn">fly</span>();  <span class="cmt">// ✓ works fine</span>
+
+b = <span class="kw">new</span> <span class="ty">Penguin</span>();
+b.<span class="fn">fly</span>();  <span class="cmt">// ✗ throws RuntimeException — unexpected outcome!</span></pre>
+  </div>
+
+  <p>The client code has a reference of type <code>Bird</code>. It reasonably expects <code>fly()</code> to work. Substituting a <code>Penguin</code> breaks that contract — a clear LSP violation.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Ideal Solution</span>
+    <p>If an entity doesn't support a behaviour, it should not even have that method. Do not force a <code>fly()</code> override onto a class that cannot fly. Instead, restructure the hierarchy: separate <code>FlyingBird</code> and <code>NonFlyingBird</code> subclasses of the abstract <code>Bird</code>. Only <code>FlyingBird</code> carries the <code>fly()</code> method.</p>
+  </div>
+
+  <div class="diagram-box">
+    <div style="text-align:center;margin-bottom:1rem">
+      <div class="uml-class abstract" style="display:inline-block">
+        <div class="uml-name"><span class="stereotype">&lt;&lt;abstract&gt;&gt;</span>Bird</div>
+        <div class="uml-section">
+          <span class="uml-row">eat()</span>
+          <span class="uml-row">walk()</span>
+          <span class="uml-row">makeSound()</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:2rem;flex-wrap:wrap">
+      <div>
+        <div class="uml-class" style="background:var(--green-soft)">
+          <div class="uml-name">FlyingBird</div>
+          <div class="uml-section"><span class="uml-row">fly()</span></div>
+        </div>
+        <div style="font-size:.72rem;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);margin-top:.3rem">↑ Pigeon, Sparrow, Owl</div>
+      </div>
+      <div>
+        <div class="uml-class" style="background:var(--blue-soft)">
+          <div class="uml-name">NonFlyingBird</div>
+          <div class="uml-section"><span class="uml-row">(no fly method)</span></div>
+        </div>
+        <div style="font-size:.72rem;font-family:'JetBrains Mono',monospace;color:var(--ink-soft);margin-top:.3rem">↑ Penguin</div>
+      </div>
+    </div>
+    <p style="margin-top:1rem;font-size:.82rem;color:var(--ink-soft)">Now <code>Bird b = new Penguin()</code> is perfectly safe — the <code>NonFlyingBird</code> type never exposes a <code>fly()</code> method, so there is no false contract.</p>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Class Explosion Warning</span>
+    <p>If you combine behaviours purely through inheritance (FlyingDancingBird, FlyingNonDancingBird, NonFlyingDancingBird, …), you get a class explosion: 2 binary traits → 4 classes, 10 binary traits → 1024 classes. The next principle — ISP — solves this using interfaces.</p>
+  </div>
+</section>
+
+<!-- 06 ISP -->
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>I — Interface Segregation Principle</h2></div>
+  <p><strong>Interfaces should be as small (lean) as possible. No class should be forced to implement methods it does not use.</strong> This is SRP applied to interfaces.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">The Problem with Fat Interfaces</span>
+    <p>If you combine unrelated capabilities into one interface — say a <code>FlyDance</code> interface with both <code>fly()</code> and <code>dance()</code> — then every bird that can fly but not dance is still forced to implement <code>dance()</code>, either with a no-op or an exception. Both are bad.</p>
+  </div>
+
+  <h3>The Solution: Many Small Interfaces</h3>
+  <p>Split capabilities into separate, single-method interfaces. A class opts in by implementing only the interfaces that match its capabilities.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:flex-start">
+      <div class="uml-class abstract">
+        <div class="uml-name"><span class="stereotype">&lt;&lt;abstract&gt;&gt;</span>Bird</div>
+        <div class="uml-section">
+          <span class="uml-row">eat()</span>
+          <span class="uml-row">walk()</span>
+          <span class="uml-row">makeSound()</span>
+        </div>
+      </div>
+      <div class="uml-class">
+        <div class="uml-name"><span class="stereotype">&lt;&lt;interface&gt;&gt;</span>Flyable</div>
+        <div class="uml-section"><span class="uml-row interface-method">fly()</span></div>
+      </div>
+      <div class="uml-class">
+        <div class="uml-name"><span class="stereotype">&lt;&lt;interface&gt;&gt;</span>Danceable</div>
+        <div class="uml-section"><span class="uml-row interface-method">dance()</span></div>
+      </div>
+      <div class="uml-class">
+        <div class="uml-name"><span class="stereotype">&lt;&lt;interface&gt;&gt;</span>Swimmable</div>
+        <div class="uml-section"><span class="uml-row interface-method">swim()</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Pigeon: extends Bird, can fly AND dance</span>
+<span class="kw">class</span> <span class="ty">Pigeon</span> <span class="kw">extends</span> <span class="ty">Bird</span> <span class="kw">implements</span> <span class="ty">Flyable</span>, <span class="ty">Danceable</span> {
+    <span class="kw">public void</span> <span class="fn">fly</span>()   { <span class="cmt">/* flap wings */</span> }
+    <span class="kw">public void</span> <span class="fn">dance</span>() { <span class="cmt">/* head-bob */</span> }
+}
+
+<span class="cmt">// Penguin: extends Bird, can swim — NOT flyable, NOT danceable</span>
+<span class="kw">class</span> <span class="ty">Penguin</span> <span class="kw">extends</span> <span class="ty">Bird</span> <span class="kw">implements</span> <span class="ty">Swimmable</span> {
+    <span class="kw">public void</span> <span class="fn">swim</span>() { <span class="cmt">/* torpedo mode */</span> }
+}
+
+<span class="cmt">// Collect all flying birds — clean, type-safe list</span>
+<span class="ty">List</span>&lt;<span class="ty">Flyable</span>&gt; flyingBirds = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+flyingBirds.<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">Pigeon</span>());
+flyingBirds.<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">Sparrow</span>());
+<span class="cmt">// new Penguin() would be a compile error here — perfect!</span></pre>
+  </div>
+
+  <p>This also eliminates the class-explosion problem. With 10 behaviour types, no new subclasses are needed — each concrete class simply picks the interfaces that apply to it.</p>
+</section>
+
+<!-- 07 DIP -->
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>D — Dependency Inversion Principle</h2></div>
+  <p><strong>No two concrete classes should depend directly on each other. High-level modules should not depend on low-level modules. Both should depend on abstractions (interfaces or abstract classes).</strong></p>
+
+  <div class="callout key">
+    <span class="callout-tag">The Principle</span>
+    <p>1. High-level modules should not import low-level modules. Both should depend on abstractions. 2. Abstractions should not depend on details. Details (concrete implementations) should depend on abstractions.</p>
+  </div>
+
+  <h3>The Code Duplication Problem</h3>
+  <p>Both <code>Pigeon</code> and <code>Sparrow</code> implement <code>Flyable</code> and contain identical flight logic. The naive fix — copying the same <code>fly()</code> body into both — creates code duplication. A bug in the flight logic must now be fixed in two (or more) places.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — DIP Violation (direct concrete dependency)</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">Pigeon</span> <span class="kw">extends</span> <span class="ty">Bird</span> <span class="kw">implements</span> <span class="ty">Flyable</span> {
+    <span class="kw">public void</span> <span class="fn">fly</span>() {
+        <span class="cmt">// 10 lines of pigeon-sparrow flight logic here</span>
+    }
+}
+<span class="kw">class</span> <span class="ty">Sparrow</span> <span class="kw">extends</span> <span class="ty">Bird</span> <span class="kw">implements</span> <span class="ty">Flyable</span> {
+    <span class="kw">public void</span> <span class="fn">fly</span>() {
+        <span class="cmt">// exact same 10 lines — duplication!</span>
+    }
+}</pre>
+  </div>
+
+  <h3>The Solution: Depend on an Abstraction</h3>
+  <p>Extract the flight logic into a <code>FlyBehaviour</code> interface and a concrete implementation class. Both <code>Pigeon</code> and <code>Sparrow</code> <em>hold</em> a reference to <code>FlyBehaviour</code> (the abstraction) and delegate to it. This is also the foundation of the <strong>Strategy design pattern</strong>.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — DIP Applied</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Abstraction</span>
+<span class="kw">interface</span> <span class="ty">FlyBehaviour</span> {
+    <span class="kw">void</span> <span class="fn">makeFly</span>();
+}
+
+<span class="cmt">// Concrete implementation — encapsulates the shared logic once</span>
+<span class="kw">class</span> <span class="ty">PigeonSparrowFlyBehaviour</span> <span class="kw">implements</span> <span class="ty">FlyBehaviour</span> {
+    <span class="kw">public void</span> <span class="fn">makeFly</span>() {
+        <span class="cmt">// flight logic lives here exactly once</span>
+    }
+}
+
+<span class="cmt">// High-level classes depend on the interface, not the concrete class</span>
+<span class="kw">class</span> <span class="ty">Pigeon</span> <span class="kw">extends</span> <span class="ty">Bird</span> <span class="kw">implements</span> <span class="ty">Flyable</span> {
+    <span class="ty">FlyBehaviour</span> fb = <span class="kw">new</span> <span class="ty">PigeonSparrowFlyBehaviour</span>();
+    <span class="kw">public void</span> <span class="fn">fly</span>() { fb.<span class="fn">makeFly</span>(); }
+}
+<span class="kw">class</span> <span class="ty">Sparrow</span> <span class="kw">extends</span> <span class="ty">Bird</span> <span class="kw">implements</span> <span class="ty">Flyable</span> {
+    <span class="ty">FlyBehaviour</span> fb = <span class="kw">new</span> <span class="ty">PigeonSparrowFlyBehaviour</span>();
+    <span class="kw">public void</span> <span class="fn">fly</span>() { fb.<span class="fn">makeFly</span>(); }
+}</pre>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>Think of a power socket. Your laptop (high-level) doesn't depend directly on the power plant (low-level). Both depend on the standardised socket interface (abstraction). You can change the power provider without touching the laptop.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Dependency Injection (Bonus)</span>
+    <p>A complementary technique (not one of the five SOLID principles) is <strong>Dependency Injection</strong>: instead of a class creating its own <code>FlyBehaviour</code> with <code>new</code>, the behaviour is <em>injected</em> from the outside (via constructor or setter). This makes the class fully decoupled and trivially testable — you can inject a mock behaviour in tests.</p>
+  </div>
+</section>
+
+<!-- Recap -->
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">S — Single Responsibility</div><p>Every class/method has one reason to change. Watch for monster methods and Utils god-classes.</p></div>
+    <div class="recap-card"><div class="recap-card-title">O — Open/Closed</div><p>Extend with new classes; don't modify stable existing ones. Abstract base class + subclasses = OCP in practice.</p></div>
+    <div class="recap-card"><div class="recap-card-title">L — Liskov Substitution</div><p>A subclass must be a perfect behavioural substitute for its parent. Never force a subclass to throw exceptions for inherited methods it can't support.</p></div>
+    <div class="recap-card"><div class="recap-card-title">I — Interface Segregation</div><p>Keep interfaces lean — ideally one method each. Classes implement only what they actually support. Eliminates class explosion and forced no-op methods.</p></div>
+    <div class="recap-card"><div class="recap-card-title">D — Dependency Inversion</div><p>Concrete classes depend on abstractions (interfaces), not on each other directly. Enables swappable implementations and easy testing.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Design Patterns</div><p>23 GoF patterns grouped as Creational, Structural, and Behavioural. All are built on SOLID foundations.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Class Explosion</div><p>Combining N binary behaviours purely through inheritance needs 2ᴺ classes. Interface segregation solves this by letting classes opt-in selectively.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Dependency Injection</div><p>Passing dependencies from the outside rather than constructing them inside. Not a SOLID principle, but a natural companion to DIP.</p></div>
+  </div>
+</section>
+
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

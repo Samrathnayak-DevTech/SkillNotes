@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Intro to OOP — Session 02</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.card{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:1.2rem;transition:transform .2s ease,box-shadow .2s ease}
+.card:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(45,42,38,.08)}
+.card-glyph{font-size:1.4rem;margin-bottom:.5rem;display:block}
+.card-title{font-family:'Fraunces',serif;font-size:1.05rem;font-weight:600;color:var(--ink);margin-bottom:.4rem}
+.card p{font-size:.88rem;color:var(--ink-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}
+#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}
+h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* Memory diagram */
+.mem-diagram{display:flex;gap:2rem;flex-wrap:wrap;margin:1.5rem 0;font-family:'JetBrains Mono',monospace;font-size:.75rem}
+.mem-section{flex:1;min-width:180px}
+.mem-title{font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem}
+.mem-stack .mem-title{color:var(--blue)}.mem-heap .mem-title{color:var(--accent)}
+.mem-frame{border:1.5px solid var(--blue);border-radius:4px;padding:.5rem .8rem;background:var(--blue-soft);margin-bottom:.3rem;font-size:.72rem}
+.mem-obj{border:1.5px solid var(--accent);border-radius:4px;padding:.6rem .8rem;background:var(--accent-soft);margin-bottom:.3rem;font-size:.72rem}
+.mem-obj-title{font-weight:600;color:var(--accent);margin-bottom:.3rem;font-size:.7rem}
+.mem-arrow{color:var(--ink-soft);font-size:.8rem}
+/* Pillar cards */
+.pillar-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin:1.5rem 0}
+.pillar-card{border-radius:8px;padding:1.2rem;border:1px solid}
+.pillar-card.abs{background:var(--blue-soft);border-color:var(--blue)}
+.pillar-card.enc{background:var(--green-soft);border-color:var(--green)}
+.pillar-card.inh{background:var(--accent-soft);border-color:var(--accent)}
+.pillar-card.pol{background:var(--purple-soft);border-color:var(--purple)}
+.pillar-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:.4rem}
+.pillar-card.abs .pillar-label{color:var(--blue)}.pillar-card.enc .pillar-label{color:var(--green)}
+.pillar-card.inh .pillar-label{color:var(--accent)}.pillar-card.pol .pillar-label{color:var(--purple)}
+.pillar-title{font-family:'Fraunces',serif;font-size:1rem;font-weight:600;margin-bottom:.3rem}
+.pillar-card p{font-size:.84rem;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 02</div>
+  <div class="nav-group"><span class="nav-group-label">Getting Started</span><a class="nav-link" href="#hero">Overview</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">OOP Fundamentals</span>
+    <a class="nav-link" href="#s01">01 What is OOP?</a>
+    <a class="nav-link" href="#s02">02 Class &amp; Object</a>
+    <a class="nav-link" href="#s03">03 Memory: Stack &amp; Heap</a>
+    <a class="nav-link" href="#s04">04 References vs Objects</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">The Four Pillars</span>
+    <a class="nav-link" href="#s05">05 Abstraction</a>
+    <a class="nav-link" href="#s06">06 Encapsulation</a>
+    <a class="nav-link" href="#s07">07 Inheritance</a>
+    <a class="nav-link" href="#s08">08 Polymorphism</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Access Modifiers</span>
+    <a class="nav-link" href="#s09">09 Access Modifiers</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 02 · 10th Nov</p>
+  <h1>Introduction to Object-Oriented Programming</h1>
+  <p class="hero-lede">From procedural functions to objects with identity — the mental model shift that underpins all of modern software design.</p>
+  <div class="agenda-chips">
+    <span class="chip">OOP Paradigm</span><span class="chip">Class &amp; Object</span><span class="chip">Stack &amp; Heap</span><span class="chip">Abstraction</span><span class="chip">Encapsulation</span><span class="chip">Inheritance</span><span class="chip">Polymorphism</span><span class="chip">Access Modifiers</span>
+  </div>
+</section>
+
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>What is OOP?</h2></div>
+  <p>Before OOP, the dominant paradigm was <strong>procedural programming</strong> (think C). A program was a sequence of functions that operated on data. As systems grew, data and functions became increasingly hard to keep in sync — a function somewhere could modify a variable that another function depended on, with no mechanism to prevent misuse.</p>
+  <p>Object-Oriented Programming organises code around <strong>entities</strong> called objects. Each object bundles its own data (attributes) and the operations it can perform (behaviours/methods) into a single unit. Instead of asking "what functions do I need?", you ask "what entities exist in my problem domain, and what can they do?"</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>OOP is a software engineering paradigm that structures programs as collections of <strong>objects</strong> — each representing a real-world or conceptual entity with its own state (attributes) and behaviour (methods). In Java, OOP is the foundation of everything.</p>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy — PhonePe Example</span>
+    <p>In the real world, PhonePe sends money through a bank. In OOP, you model this exactly: a <code>PhonePe</code> object knows about a <code>Bank</code> object and asks it to transfer money. Data and behaviour live together. Later sessions will show how to make this relationship flexible using interfaces.</p>
+  </div>
+</section>
+
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>Class &amp; Object</h2></div>
+  <p>A <strong>class</strong> is a blueprint — it describes what attributes and behaviours an entity will have, but it doesn't occupy meaningful memory on its own (only metadata). An <strong>object</strong> is a concrete instance of that blueprint: it occupies real memory in the heap and holds actual values.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// CLASS — the blueprint</span>
+<span class="kw">class</span> <span class="ty">Student</span> {
+    <span class="cmt">// Attributes (state)</span>
+    <span class="ty">String</span> name;
+    <span class="kw">int</span>    age;
+    <span class="ty">String</span> batch;
+    <span class="kw">double</span> psp;         <span class="cmt">// problem-solving percentage</span>
+    <span class="kw">int</span>    attendance;
+
+    <span class="cmt">// Behaviours (methods)</span>
+    <span class="kw">void</span> <span class="fn">solveProblem</span>() { <span class="cmt">/* ... */</span> }
+    <span class="kw">void</span> <span class="fn">bookMockInterview</span>() { <span class="cmt">/* ... */</span> }
+}
+
+<span class="cmt">// OBJECT — a concrete instance</span>
+<span class="ty">Student</span> st = <span class="kw">new</span> <span class="ty">Student</span>();
+st.name = <span class="str">"Amit"</span>;
+st.age  = <span class="num">25</span>;
+st.<span class="fn">solveProblem</span>();   <span class="cmt">// calling behaviour on this specific object</span></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Properties of Objects</span>
+    <p>Every object is a <em>real instance</em> of its class. It occupies memory on the heap. All objects of the same class are <em>independent</em> of each other — changing one object's <code>name</code> field does not affect any other object.</p>
+  </div>
+</section>
+
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Memory: Stack &amp; Heap</h2></div>
+  <p>When you write <code>Student st = new Student()</code>, two things happen in two different memory areas. Understanding this is essential for understanding references, copying, and garbage collection.</p>
+
+  <div class="diagram-box">
+    <div class="mem-diagram">
+      <div class="mem-section mem-stack">
+        <div class="mem-title">Stack (references)</div>
+        <div class="mem-frame">st : @1750</div>
+        <div class="mem-frame">st1 : @1850</div>
+        <div style="color:var(--ink-soft); font-size:.7rem; margin-top:.4rem;">Local variables &amp; references live here. Each method call gets its own stack frame.</div>
+      </div>
+      <div style="display:flex;align-items:center;font-size:1.4rem;color:var(--ink-soft);">→</div>
+      <div class="mem-section mem-heap">
+        <div class="mem-title">Heap (objects)</div>
+        <div class="mem-obj">
+          <div class="mem-obj-title">Student @ 1750</div>
+          name = "Amit"<br>age = 25
+        </div>
+        <div class="mem-obj">
+          <div class="mem-obj-title">Student @ 1850</div>
+          name = null<br>age = 0
+        </div>
+        <div style="color:var(--ink-soft); font-size:.7rem; margin-top:.4rem;">Objects are allocated here by <code>new</code>. The heap is managed by the JVM's garbage collector.</div>
+      </div>
+    </div>
+  </div>
+
+  <p>The variable <code>st</code> on the stack holds a <strong>reference</strong> — a memory address (e.g., <code>@1750</code>). The actual <code>Student</code> object lives at that address on the heap. This distinction becomes critical when you assign one variable to another:</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">Student</span> st  = <span class="kw">new</span> <span class="ty">Student</span>();  <span class="cmt">// st → @1750</span>
+<span class="ty">Student</span> st1 = <span class="kw">new</span> <span class="ty">Student</span>();  <span class="cmt">// st1 → @1850 (different object)</span>
+
+<span class="ty">Student</span> st2 = st1;              <span class="cmt">// st2 → @1850 (SAME object as st1!)
+                                  // NO new object is created</span>
+
+st2.name = <span class="str">"Changed"</span>;
+<span class="ty">System</span>.out.<span class="fn">println</span>(st1.name);  <span class="cmt">// prints "Changed" — st1 and st2 point to same object</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Common Pitfall</span>
+    <p><code>Student st2 = st1</code> does NOT create a copy of the object. It copies the <em>reference</em> (the address). Both <code>st1</code> and <code>st2</code> now point to the exact same object in heap memory. Modifying through one variable affects the other. To create a true copy, you need a copy constructor (covered in Session 03).</p>
+  </div>
+</section>
+
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Breaking Down <code>new Student()</code></h2></div>
+  <p>Every object creation statement has four distinct parts, each with a specific role:</p>
+
+  <div class="diagram-box" style="font-family:'JetBrains Mono',monospace; font-size:.82rem;">
+    <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; justify-content:center; font-size:.9rem;">
+      <div style="background:var(--blue-soft); border:1.5px solid var(--blue); padding:.5rem 1rem; border-radius:4px; text-align:center;">
+        <div style="font-size:.6rem; color:var(--blue); text-transform:uppercase; margin-bottom:.2rem;">Data type of reference</div>
+        <strong>Student</strong>
+      </div>
+      <div style="background:var(--green-soft); border:1.5px solid var(--green); padding:.5rem 1rem; border-radius:4px; text-align:center;">
+        <div style="font-size:.6rem; color:var(--green); text-transform:uppercase; margin-bottom:.2rem;">Reference variable</div>
+        <strong>st</strong>
+      </div>
+      <span style="font-size:1.2rem;">=</span>
+      <div style="background:var(--rose-soft); border:1.5px solid var(--rose); padding:.5rem 1rem; border-radius:4px; text-align:center;">
+        <div style="font-size:.6rem; color:var(--rose); text-transform:uppercase; margin-bottom:.2rem;">Allocates heap memory</div>
+        <strong>new</strong>
+      </div>
+      <div style="background:var(--accent-soft); border:1.5px solid var(--accent); padding:.5rem 1rem; border-radius:4px; text-align:center;">
+        <div style="font-size:.6rem; color:var(--accent); text-transform:uppercase; margin-bottom:.2rem;">Constructor — creates the object</div>
+        <strong>Student()</strong>
+      </div>
+    </div>
+  </div>
+
+  <p>The <code>new</code> keyword allocates memory on the heap. The constructor initialises the object in that memory. The reference variable stores the address of that memory on the stack.</p>
+</section>
+
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>Pillar 1: Abstraction</h2></div>
+  <p>Abstraction means <em>hiding internal complexity and exposing only what the user needs</em>. When you call <code>st.solveProblem()</code>, you don't need to know how the method works internally — you just need to know it exists and what it does. The implementation details are hidden (abstracted) away.</p>
+  <p>Abstraction also means <em>representing things in terms of ideas rather than implementation details</em>. A <code>BankAPI</code> interface abstracts all banks — you don't need to know whether it's ICICI or YesBank underneath.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>When you drive a car, you press the accelerator — you don't need to understand the combustion engine, the fuel injection system, or the transmission. Those details are abstracted away behind a simple interface: pedals, a wheel, and a gear shift.</p>
+  </div>
+</section>
+
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>Pillar 2: Encapsulation</h2></div>
+  <p>Encapsulation has two complementary meanings. First: <em>bundling</em> — keeping an entity's attributes and behaviours together in one class. Second: <em>protection</em> — controlling who can access those attributes using access modifiers.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy — The Medicine Capsule</span>
+    <p>A capsule <em>holds</em> the medicine together (bundling) and <em>protects</em> it from the external environment (protection). A class is a capsule for an object's data and behaviour.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">BankAccount</span> {
+    <span class="kw">private double</span> balance;   <span class="cmt">// protected — can't be accessed directly</span>
+
+    <span class="kw">public void</span> <span class="fn">deposit</span>(<span class="kw">double</span> amount) {
+        <span class="kw">if</span> (amount > <span class="num">0</span>) balance += amount;  <span class="cmt">// controlled access</span>
+    }
+
+    <span class="kw">public double</span> <span class="fn">getBalance</span>() { <span class="kw">return</span> balance; }  <span class="cmt">// read-only access</span>
+}
+
+<span class="ty">BankAccount</span> acc = <span class="kw">new</span> <span class="ty">BankAccount</span>();
+<span class="cmt">// acc.balance = -9999;  ✗ Compile error — private field
+</span>acc.<span class="fn">deposit</span>(<span class="num">1000</span>);       <span class="cmt">// ✓ Controlled through method</span></pre>
+  </div>
+</section>
+
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>Pillar 3: Inheritance</h2></div>
+  <p>Inheritance allows a child class to automatically acquire all the attributes and behaviours of a parent class — without rewriting them. This models real-world IS-A relationships and dramatically reduces code duplication.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">User</span> {             <span class="cmt">// Parent class</span>
+    <span class="ty">String</span> name, email;
+    <span class="kw">void</span> <span class="fn">login</span>()  { <span class="cmt">/* ... */</span> }
+    <span class="kw">void</span> <span class="fn">signUp</span>() { <span class="cmt">/* ... */</span> }
+}
+
+<span class="kw">class</span> <span class="ty">Mentor</span> <span class="kw">extends</span> <span class="ty">User</span> {  <span class="cmt">// Mentor IS-A User</span>
+    <span class="ty">String</span> company;
+    <span class="kw">double</span> avgRating;
+    <span class="cmt">// Automatically has name, email, login(), signUp() from User</span>
+}
+
+<span class="ty">Mentor</span> m = <span class="kw">new</span> <span class="ty">Mentor</span>();
+m.name = <span class="str">"Deepak"</span>;    <span class="cmt">// ✓ inherited from User</span>
+m.<span class="fn">login</span>();             <span class="cmt">// ✓ inherited from User</span></pre>
+  </div>
+
+  <p>Inheritance is covered in depth in Session 04, but the key idea here is the IS-A relationship: a <code>Mentor</code> IS-A <code>User</code>, a <code>Dog</code> IS-AN <code>Animal</code>. Whenever this relationship holds, inheritance is appropriate.</p>
+</section>
+
+<section id="s08" class="section">
+  <div class="section-header"><span class="section-num">08</span><h2>Pillar 4: Polymorphism</h2></div>
+  <p><em>Polymorphism</em> means "many forms." A single method name or reference can behave differently depending on the actual object behind it. This is what lets you write general code that works with many specific types.</p>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">User</span> u;
+u = <span class="kw">new</span> <span class="ty">Mentor</span>();      <span class="cmt">// ✓ a Mentor IS-A User</span>
+u = <span class="kw">new</span> <span class="ty">Instructor</span>(); <span class="cmt">// ✓ an Instructor IS-A User</span>
+
+<span class="cmt">// One list holds all user types:</span>
+<span class="ty">List</span>&lt;<span class="ty">User</span>&gt; users = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+users.<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">Mentor</span>());
+users.<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">Instructor</span>());
+users.<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">Student</span>());
+
+<span class="cmt">// One method handles all user types:</span>
+<span class="kw">void</span> <span class="fn">changePassword</span>(<span class="ty">User</span> user, <span class="ty">String</span> newPass) { <span class="cmt">/* ... */</span> }</pre>
+  </div>
+
+  <p>Polymorphism is covered in depth in Session 04. For now, the key takeaway is: <em>you can store a child class object in a parent class reference</em>, but not vice versa.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Rule</span>
+    <p><code>User xyz = new Instructor()</code> ✓ — a parent reference holds a child object.<br><code>Instructor x = new User()</code> ✗ — a child reference cannot hold a parent object. A <code>User</code> is not necessarily an <code>Instructor</code>.</p>
+  </div>
+</section>
+
+<section id="s09" class="section">
+  <div class="section-header"><span class="section-num">09</span><h2>Access Modifiers</h2></div>
+  <p>Access modifiers control the visibility of classes, methods, and fields. Java has four, ordered from most to least permissive:</p>
+
+  <table>
+    <thead><tr><th>Modifier</th><th>Same Class</th><th>Same Package</th><th>Child Class (other package)</th><th>Everywhere</th></tr></thead>
+    <tbody>
+      <tr><td><code>public</code></td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td><code>protected</code></td><td>✓</td><td>✓</td><td>✓</td><td>✗</td></tr>
+      <tr><td><code>default</code> (no keyword)</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td></tr>
+      <tr><td><code>private</code></td><td>✓</td><td>✗</td><td>✗</td><td>✗</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <span class="callout-tag">Best Practice</span>
+    <p>Default to <code>private</code> for fields and expose them through <code>public</code> getter/setter methods. This is the essence of encapsulation — you control exactly how data is read and written.</p>
+  </div>
+</section>
+
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="pillar-grid">
+    <div class="pillar-card abs"><div class="pillar-label">Pillar 1</div><div class="pillar-title">Abstraction</div><p>Hide complexity; expose only what matters. Users work with ideas, not implementations.</p></div>
+    <div class="pillar-card enc"><div class="pillar-label">Pillar 2</div><div class="pillar-title">Encapsulation</div><p>Bundle data + behaviour together. Protect data using access modifiers.</p></div>
+    <div class="pillar-card inh"><div class="pillar-label">Pillar 3</div><div class="pillar-title">Inheritance</div><p>Child class inherits attributes &amp; behaviours from parent. Models IS-A relationships.</p></div>
+    <div class="pillar-card pol"><div class="pillar-label">Pillar 4</div><div class="pillar-title">Polymorphism</div><p>One reference, many forms. Parent reference can hold any child object.</p></div>
+  </div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Class</div><p>Blueprint of an entity. Defines attributes and behaviours. No memory by itself.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Object</div><p>Real instance of a class. Lives on the heap. Each object is independent.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Reference</div><p>A variable on the stack that stores an object's heap address. Assignment copies the address, not the object.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Stack vs Heap</div><p>Stack: references + method frames. Heap: objects. <code>new</code> allocates heap; constructor initialises.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Access Modifiers</div><p>public → protected → default → private. Strictness increases; use private by default for fields.</p></div>
+  </div>
+</section>
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interfaces, Abstract Classes & Static — LLD-1 Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+  --sidebar-w:   268px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; font-size: 18px; }
+
+body {
+  background: var(--bg);
+  background-image: radial-gradient(ellipse at 20% 10%, #ece4f320 0%, transparent 60%),
+                    radial-gradient(ellipse at 80% 90%, #dde9f320 0%, transparent 60%);
+  color: var(--ink);
+  font-family: 'Newsreader', Georgia, serif;
+  line-height: 1.75;
+  min-height: 100vh;
+}
+
+/* ── PROGRESS BAR ── */
+#progress-bar {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── LAYOUT ── */
+.layout { display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  position: sticky; top: 0; height: 100vh;
+  overflow-y: auto; overflow-x: hidden;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+  padding: 2rem 0 4rem;
+  flex-shrink: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+#sidebar::-webkit-scrollbar { width: 4px; }
+#sidebar::-webkit-scrollbar-track { background: transparent; }
+#sidebar::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+
+.sidebar-logo {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  padding: 0 1.4rem 1.2rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 1.2rem;
+}
+
+.nav-group { margin-bottom: 0.3rem; }
+
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1.4rem 0.3rem;
+  display: block;
+}
+
+.nav-link {
+  display: block;
+  padding: 0.35rem 1.4rem;
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-family: 'Newsreader', serif;
+  font-size: 0.85rem;
+  border-left: 3px solid transparent;
+  transition: all 0.18s ease;
+  line-height: 1.4;
+}
+
+.nav-link:hover { color: var(--accent); background: var(--accent-soft); }
+.nav-link.active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 500;
+}
+
+/* ── MAIN ── */
+main {
+  flex: 1;
+  max-width: 820px;
+  padding: 0 2.5rem 6rem;
+  min-width: 0;
+}
+
+/* ── HERO ── */
+.hero {
+  padding: 4rem 0 3rem;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 3rem;
+}
+
+.hero-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 1rem;
+}
+
+.hero h1 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--ink);
+  margin-bottom: 1.2rem;
+}
+
+.hero-lede {
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+  max-width: 580px;
+  margin-bottom: 1.8rem;
+}
+
+.agenda-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.chip {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  background: var(--bg-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── SECTIONS ── */
+.section {
+  margin-bottom: 4rem;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+
+.section-header {
+  display: flex; align-items: baseline; gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.section-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.section-header h2 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+/* ── CALLOUTS ── */
+.callout {
+  border-radius: 6px;
+  padding: 1rem 1.2rem;
+  margin: 1.5rem 0;
+  border-left: 4px solid;
+}
+.callout-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+.callout p, .callout ul { margin: 0; }
+.callout ul { padding-left: 1.2rem; }
+.callout li { margin-bottom: 0.2rem; }
+
+.callout.tip    { background: var(--green-soft);  border-color: var(--green);  }
+.callout.tip    .callout-tag { color: var(--green); }
+.callout.key    { background: var(--blue-soft);   border-color: var(--blue);   }
+.callout.key    .callout-tag { color: var(--blue); }
+.callout.analogy{ background: var(--rose-soft);   border-color: var(--rose);   }
+.callout.analogy .callout-tag { color: var(--rose); }
+.callout.warn   { background: var(--accent-soft); border-color: var(--accent); }
+.callout.warn   .callout-tag { color: var(--accent); }
+
+/* ── CODE BLOCKS ── */
+.code-wrap { margin: 1.5rem 0; border-radius: 8px; overflow: hidden; }
+.code-header {
+  background: #1e1d26;
+  padding: 0.5rem 1rem;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.code-lang {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #888;
+  background: none;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.copy-btn:hover { color: #ccc; border-color: #666; }
+.copy-btn.copied { color: var(--green); border-color: var(--green); }
+pre {
+  background: var(--code-bg);
+  color: var(--code-ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  padding: 1.2rem 1.4rem;
+  overflow-x: auto;
+  tab-size: 2;
+}
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* inline code */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+  color: var(--accent);
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+/* ── DIAGRAMS ── */
+.diagram-box {
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+}
+
+/* UML card */
+.uml-card {
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  display: inline-block;
+  min-width: 160px;
+  text-align: center;
+  background: var(--bg);
+}
+.uml-title {
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid var(--ink);
+  font-weight: 600;
+  font-style: italic;
+  color: var(--blue);
+}
+.uml-methods {
+  padding: 0.4rem 1rem;
+  text-align: left;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+.uml-interface .uml-title { color: var(--purple); }
+
+/* hierarchy diagram */
+.hier { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.hier-row { display: flex; gap: 1rem; justify-content: center; align-items: flex-start; }
+.hier-node {
+  background: var(--bg);
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 0.35rem 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  text-align: center;
+  white-space: nowrap;
+}
+.hier-node.interface-node { border-color: var(--purple); color: var(--purple); }
+.hier-node.abstract-node { border-color: var(--blue); color: var(--blue); border-style: dashed; }
+.hier-connector {
+  width: 2px; height: 28px;
+  background: var(--ink-soft);
+  margin: 0 auto;
+}
+.hier-branch { display: flex; flex-direction: column; align-items: center; }
+
+/* comparison table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+}
+thead th {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: var(--bg-soft);
+  padding: 0.6rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+tbody tr:hover td { background: var(--bg-soft); }
+
+/* ── FLOWCHART ── */
+.flow { display: flex; flex-direction: column; align-items: flex-start; margin: 1.5rem 0; }
+.flow-step {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.8rem 1.2rem;
+  max-width: 480px;
+  width: 100%;
+  position: relative;
+}
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.2rem;
+}
+.flow-connector {
+  width: 2px; height: 24px;
+  background: var(--line);
+  margin-left: 1.5rem;
+}
+
+/* ── CARDS GRID ── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.2rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(45,42,38,0.08); }
+.card-glyph {
+  font-size: 1.4rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+.card-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 0.4rem;
+}
+.card p { font-size: 0.88rem; color: var(--ink-soft); }
+
+/* ── RECAP ── */
+.recap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.recap-card {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 1rem 1.1rem;
+}
+.recap-card-title {
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--ink);
+  margin-bottom: 0.3rem;
+}
+.recap-card p { font-size: 0.83rem; color: var(--ink-soft); }
+
+/* ── LEETCODE ── */
+.lc-group { margin-bottom: 2rem; }
+.lc-group-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+.lc-item {
+  display: flex; align-items: flex-start; gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.lc-diff {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+.lc-diff.easy   { background: var(--green-soft);  color: var(--green); }
+.lc-diff.medium { background: var(--accent-soft); color: var(--accent); }
+.lc-diff.hard   { background: var(--rose-soft);   color: var(--rose); }
+.lc-content { flex: 1; }
+.lc-name {
+  color: var(--blue);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: inline-block;
+  margin-bottom: 0.15rem;
+}
+.lc-name:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+.lc-why { font-size: 0.8rem; color: var(--ink-soft); }
+
+/* ── COMPLEXITY BADGE ── */
+.complexity-badge {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 0.2rem 0.6rem;
+  margin: 0.2rem;
+}
+.complexity-badge .c-label { color: var(--ink-soft); }
+.complexity-badge .c-val   { color: var(--accent); font-weight: 600; }
+
+/* ── FAB (mobile) ── */
+#fab {
+  display: none;
+  position: fixed;
+  bottom: 1.5rem; left: 1.5rem;
+  width: 48px; height: 48px;
+  background: var(--accent);
+  color: white;
+  border: none; border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 900;
+  box-shadow: 0 4px 12px rgba(181,101,29,0.35);
+  align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+#fab:hover { background: #9a5219; }
+
+#overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(45,42,38,0.45);
+  backdrop-filter: blur(4px);
+  z-index: 800;
+}
+#overlay.open { display: block; }
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  #sidebar {
+    position: fixed;
+    left: -100%; top: 0;
+    height: 100vh;
+    z-index: 850;
+    transition: left 0.3s ease;
+    width: min(var(--sidebar-w), 85vw);
+  }
+  #sidebar.open { left: 0; }
+  main { padding: 0 1.2rem 4rem; }
+  #fab { display: flex; }
+  .hero h1 { font-size: 2rem; }
+}
+
+/* prose helpers */
+p { margin-bottom: 1rem; }
+p:last-child { margin-bottom: 0; }
+h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 1.5rem 0 0.5rem;
+}
+h4 {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin: 1.2rem 0 0.4rem;
+}
+
+/* PhonePe tight/loose diagram */
+.coupling-diagram {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin: 1.5rem 0;
+}
+.coupling-half { flex: 1; min-width: 240px; }
+.coupling-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+.coupling-label.tight { background: var(--rose-soft); color: var(--rose); }
+.coupling-label.loose { background: var(--green-soft); color: var(--green); }
+.bank-node {
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  background: var(--bg);
+  display: inline-block;
+  text-align: center;
+  padding: 0.3rem 0.7rem;
+  margin: 0.2rem;
+}
+.bank-node.phonePe { background: var(--accent-soft); border-color: var(--accent); }
+.bank-node.interface-node { border-color: var(--purple); color: var(--purple); border-style: dashed; }
+.arrow { color: var(--ink-soft); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; margin: 0.2rem 0; }
+
+/* static diagram */
+.static-row { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: flex-start; margin: 1rem 0; }
+.static-box {
+  border: 1.5px solid var(--line);
+  border-radius: 6px;
+  padding: 0.8rem 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  background: var(--bg);
+  flex: 1; min-width: 180px;
+}
+.static-box.class-level { border-color: var(--accent); background: var(--accent-soft); }
+.static-box.instance-level { border-color: var(--blue); background: var(--blue-soft); }
+.static-box-title {
+  font-weight: 600;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.5rem;
+}
+.static-box.class-level .static-box-title { color: var(--accent); }
+.static-box.instance-level .static-box-title { color: var(--blue); }
+
+/* diamond problem */
+.diamond-wrap {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0.2rem; padding: 1rem; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+}
+.diamond-row { display: flex; gap: 2rem; justify-content: center; }
+.diamond-node {
+  border: 1.5px solid var(--ink);
+  border-radius: 4px;
+  padding: 0.35rem 0.8rem;
+  background: var(--bg);
+  text-align: center;
+}
+.diamond-node.conflict { border-color: var(--rose); color: var(--rose); }
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+
+<div id="progress-bar"></div>
+
+<div class="layout">
+
+<!-- SIDEBAR -->
+<nav id="sidebar" aria-label="Page navigation">
+  <div class="sidebar-logo">LLD-1 · Session 05</div>
+
+  <div class="nav-group">
+    <span class="nav-group-label">Getting Started</span>
+    <a class="nav-link" href="#hero">Overview</a>
+  </div>
+
+  <div class="nav-group">
+    <span class="nav-group-label">Interfaces</span>
+    <a class="nav-link" href="#s01">01 What is an Interface?</a>
+    <a class="nav-link" href="#s02">02 Implementing an Interface</a>
+    <a class="nav-link" href="#s03">03 Program to Interface</a>
+    <a class="nav-link" href="#s04">04 Real-World: Stack Example</a>
+    <a class="nav-link" href="#s05">05 Java Collections &amp; List</a>
+    <a class="nav-link" href="#s06">06 PhonePe: Tight vs Loose Coupling</a>
+  </div>
+
+  <div class="nav-group">
+    <span class="nav-group-label">Multiple Inheritance</span>
+    <a class="nav-link" href="#s07">07 Diamond Problem &amp; Interfaces</a>
+  </div>
+
+  <div class="nav-group">
+    <span class="nav-group-label">Abstract Classes</span>
+    <a class="nav-link" href="#s08">08 Abstract Classes</a>
+    <a class="nav-link" href="#s09">09 Abstract vs Interface</a>
+    <a class="nav-link" href="#s10">10 Default Methods (Java 8+)</a>
+  </div>
+
+  <div class="nav-group">
+    <span class="nav-group-label">Static Keyword</span>
+    <a class="nav-link" href="#s11">11 Static Members</a>
+    <a class="nav-link" href="#s12">12 Static Rules &amp; Gotchas</a>
+  </div>
+
+  <div class="nav-group">
+    <span class="nav-group-label">Summary</span>
+    <a class="nav-link" href="#recap">Quick Recap</a>
+    <a class="nav-link" href="#leetcode">LeetCode Problems</a>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main>
+
+<!-- HERO -->
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 05 · 17th Nov</p>
+  <h1>Interfaces, Abstract Classes &amp; Static</h1>
+  <p class="hero-lede">The trio of Java constructs that separate <em>what</em> something does from <em>how</em> it does it — enabling loose coupling, clean inheritance hierarchies, and class-level shared state.</p>
+  <div class="agenda-chips">
+    <span class="chip">Interfaces</span>
+    <span class="chip">Program to Interface</span>
+    <span class="chip">Tight vs Loose Coupling</span>
+    <span class="chip">Diamond Problem</span>
+    <span class="chip">Abstract Classes</span>
+    <span class="chip">Default Methods</span>
+    <span class="chip">Static Keyword</span>
+  </div>
+</section>
+
+<!-- 01 -->
+<section id="s01" class="section">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2>What is an Interface?</h2>
+  </div>
+
+  <p>Recall that a <strong>class</strong> is a blueprint of an <em>entity</em> — it captures both attributes (fields) and behaviours (methods). An <strong>interface</strong> goes one step further in abstraction: it is a blueprint of <em>behaviours only</em>. It says "anything that calls itself an Animal must be able to eat, walk, and breathe" — but says nothing about how.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Concept</span>
+    <p>An interface is a pure contract. It declares method signatures without providing bodies. Any class that <code>implements</code> the interface is legally bound to provide concrete implementations of every declared method.</p>
+  </div>
+
+  <p>In Java, interface methods are implicitly <code>public abstract</code>, and interface fields are implicitly <code>public static final</code> (constants). You cannot instantiate an interface directly.</p>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="kw">interface</span> <span class="ty">Animal</span> {
+    <span class="kw">void</span> <span class="fn">eat</span>();       <span class="cmt">// implicitly public abstract</span>
+    <span class="kw">void</span> <span class="fn">walk</span>();
+    <span class="kw">void</span> <span class="fn">breathe</span>();
+}
+
+<span class="cmt">// ✗ Cannot instantiate an interface</span>
+<span class="ty">Animal</span> a = <span class="kw">new</span> <span class="ty">Animal</span>();  <span class="cmt">// Compile error!</span></pre>
+  </div>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>Think of an interface as a job description posting. It lists everything the candidate must be able to do. A concrete class is the actual employee who shows up and performs those duties in their own style.</p>
+  </div>
+
+  <div class="diagram-box">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
+      <div class="uml-card uml-interface" style="min-width:200px;">
+        <div class="uml-title">«Animal»</div>
+        <div class="uml-methods">
+          + eat() : void<br>
+          + walk() : void<br>
+          + breathe() : void
+        </div>
+      </div>
+      <div style="color:var(--ink-soft); font-family:'JetBrains Mono',monospace; font-size:0.75rem;">▲ implements</div>
+      <div style="display:flex; gap:0.8rem; flex-wrap:wrap; justify-content:center;">
+        <div class="hier-node">Dog</div>
+        <div class="hier-node">Cat</div>
+        <div class="hier-node">Tiger</div>
+        <div class="hier-node">Lion</div>
+        <div class="hier-node">Goat</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 -->
+<section id="s02" class="section">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2>Implementing an Interface</h2>
+  </div>
+
+  <p>A class uses the <code>implements</code> keyword. It <strong>must</strong> override every method in the interface; otherwise the compiler throws an error (unless the class is also declared <code>abstract</code>).</p>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="kw">class</span> <span class="ty">Dog</span> <span class="kw">implements</span> <span class="ty">Animal</span> {
+
+    <span class="kw">@Override</span>
+    <span class="kw">public void</span> <span class="fn">eat</span>() {
+        <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Dog is eating"</span>);
+    }
+
+    <span class="kw">@Override</span>
+    <span class="kw">public void</span> <span class="fn">walk</span>() {
+        <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Dog is walking"</span>);
+    }
+
+    <span class="kw">@Override</span>
+    <span class="kw">public void</span> <span class="fn">breathe</span>() {
+        <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Dog is breathing"</span>);
+    }
+}
+
+<span class="cmt">// ✓ You can create objects of implementing classes</span>
+<span class="ty">Dog</span> d = <span class="kw">new</span> <span class="ty">Dog</span>();
+
+<span class="cmt">// ✓ You can also hold them through the interface reference</span>
+<span class="ty">Animal</span> a = <span class="kw">new</span> <span class="ty">Dog</span>();
+a = <span class="kw">new</span> <span class="ty">Cat</span>();   <span class="cmt">// perfectly legal — reassign to another Animal</span></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Tip</span>
+    <p>Always add the <code>@Override</code> annotation. It makes your intent explicit and causes a compile-time error if you accidentally misspell the method name — catching bugs early.</p>
+  </div>
+</section>
+
+<!-- 03 -->
+<section id="s03" class="section">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2>Program to Interface</h2>
+  </div>
+
+  <p>This is one of the most important design principles you will ever learn. Instead of writing code that depends on a specific concrete class, depend on an interface. Your code becomes flexible, testable, and easy to extend.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Design Principle</span>
+    <p><strong>Program to an interface, not an implementation.</strong> This is the "D" in SOLID (Dependency Inversion Principle) expressed informally. Your high-level modules should depend on abstractions, not on concrete classes.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="kw">interface</span> <span class="ty">Runner</span> {
+    <span class="kw">void</span> <span class="fn">run</span>();
+}
+
+<span class="cmt">// Dog, Cat, Tiger all implement Runner
+// Now you can write a single method that works for ALL of them:</span>
+
+<span class="kw">void</span> <span class="fn">startRace</span>(<span class="ty">List</span>&lt;<span class="ty">Runner</span>&gt; runners) {
+    <span class="kw">for</span> (<span class="ty">Runner</span> r : runners) {
+        r.<span class="fn">run</span>();   <span class="cmt">// works for every Runner implementation</span>
+    }
+}
+
+<span class="cmt">// One list holds all animal types — no separate List&lt;Dog&gt;, List&lt;Cat&gt;...</span>
+<span class="ty">List</span>&lt;<span class="ty">Runner</span>&gt; runners = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+runners.<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">Dog</span>());
+runners.<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">Cat</span>());
+runners.<span class="fn">add</span>(<span class="kw">new</span> <span class="ty">Tiger</span>());</pre>
+  </div>
+
+  <p>Without this principle you would need separate lists and methods for every subtype — a maintenance nightmare. With it, adding a new <code>Horse</code> class requires zero changes to <code>startRace</code>.</p>
+</section>
+
+<!-- 04 -->
+<section id="s04" class="section">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2>Real-World Example: The Stack Interface</h2>
+  </div>
+
+  <p>A stack is a last-in, first-out (LIFO) data structure. The core behaviour is always <code>push</code> and <code>pop</code> — but there can be multiple implementations: array-based, linked-list-based, and so on. This is an ideal scenario for an interface.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:0.72rem; color:var(--purple); margin-bottom:0.3rem;">User code depends only on «Stack»</div>
+      <div class="uml-card uml-interface" style="min-width:220px;">
+        <div class="uml-title">«Stack»</div>
+        <div class="uml-methods">
+          + push(x) : void<br>
+          + pop() : int<br>
+          + isEmpty() : boolean
+        </div>
+      </div>
+      <div style="color:var(--ink-soft); font-family:'JetBrains Mono',monospace; font-size:0.75rem;">▲ implements</div>
+      <div style="display:flex; gap:1.5rem; flex-wrap:wrap; justify-content:center;">
+        <div class="uml-card" style="min-width:160px;">
+          <div class="uml-title" style="color:var(--blue)">ArrayBasedStack</div>
+          <div class="uml-methods">int[] A;<br>int top = -1;<br>+ push, pop, isEmpty</div>
+        </div>
+        <div class="uml-card" style="min-width:160px;">
+          <div class="uml-title" style="color:var(--green)">LLBasedStack</div>
+          <div class="uml-methods">Node head;<br>+ push, pop, isEmpty</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="kw">interface</span> <span class="ty">Stack</span> {
+    <span class="kw">void</span>    <span class="fn">push</span>(<span class="kw">int</span> x);
+    <span class="kw">int</span>     <span class="fn">pop</span>();
+    <span class="kw">boolean</span> <span class="fn">isEmpty</span>();
+}
+
+<span class="kw">class</span> <span class="ty">ArrayBasedStack</span> <span class="kw">implements</span> <span class="ty">Stack</span> {
+    <span class="kw">private int</span>[] A = <span class="kw">new int</span>[<span class="num">100</span>];
+    <span class="kw">private int</span>   top = -<span class="num">1</span>;
+
+    <span class="kw">public void</span> <span class="fn">push</span>(<span class="kw">int</span> x) { A[++top] = x; }
+    <span class="kw">public int</span>  <span class="fn">pop</span>()       { <span class="kw">return</span> A[top--]; }
+    <span class="kw">public boolean</span> <span class="fn">isEmpty</span>() { <span class="kw">return</span> top == -<span class="num">1</span>; }
+}
+
+<span class="kw">class</span> <span class="ty">LLBasedStack</span> <span class="kw">implements</span> <span class="ty">Stack</span> {
+    <span class="cmt">// linked-list-based internals...</span>
+    <span class="kw">public void</span> <span class="fn">push</span>(<span class="kw">int</span> x) { <span class="cmt">/* add to head */</span> }
+    <span class="kw">public int</span>  <span class="fn">pop</span>()       { <span class="cmt">/* remove from head */</span> }
+    <span class="kw">public boolean</span> <span class="fn">isEmpty</span>() { <span class="cmt">/* check head == null */</span> }
+}
+
+<span class="cmt">// ✗  Stack s = new Stack();     — can't instantiate interface
+// ✓  Swap implementations freely:</span>
+<span class="ty">Stack</span> s = <span class="kw">new</span> <span class="ty">ArrayBasedStack</span>();  <span class="cmt">// or LLBasedStack()</span>
+s.<span class="fn">push</span>(<span class="num">10</span>);
+s.<span class="fn">push</span>(<span class="num">20</span>);
+s.<span class="fn">pop</span>();    <span class="cmt">// returns 20</span></pre>
+  </div>
+
+  <p>The calling code uses only <code>Stack</code>. Changing from <code>ArrayBasedStack</code> to <code>LLBasedStack</code> requires editing exactly one line — the <code>new</code> call. That is the power of programming to an interface.</p>
+</section>
+
+<!-- 05 -->
+<section id="s05" class="section">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2>Java Collections &amp; the List Interface</h2>
+  </div>
+
+  <p>Java's own standard library is built on this exact principle. <code>List&lt;T&gt;</code> is an interface. <code>ArrayList</code>, <code>LinkedList</code>, and <code>Vector</code> are all concrete implementations.</p>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="cmt">// List is the interface — ArrayList is the implementation</span>
+<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; l = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+
+<span class="cmt">// You can swap to LinkedList later with zero changes elsewhere:</span>
+<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; l2 = <span class="kw">new</span> <span class="ty">LinkedList</span>&lt;&gt;();</pre>
+  </div>
+
+  <div class="diagram-box">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
+      <div class="uml-card uml-interface" style="min-width:180px;">
+        <div class="uml-title">«List&lt;T&gt;»</div>
+        <div class="uml-methods">+ add, remove, get, size…</div>
+      </div>
+      <div style="color:var(--ink-soft); font-family:'JetBrains Mono',monospace; font-size:0.75rem;">▲ implements</div>
+      <div style="display:flex; gap:0.8rem; flex-wrap:wrap; justify-content:center;">
+        <div class="hier-node">ArrayList</div>
+        <div class="hier-node">LinkedList</div>
+        <div class="hier-node">Vector</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Tip</span>
+    <p>Always declare variables as the interface type (<code>List&lt;T&gt;</code>) rather than the concrete type (<code>ArrayList&lt;T&gt;</code>). This makes it trivial to swap implementations without touching the rest of your code.</p>
+  </div>
+</section>
+
+<!-- 06 -->
+<section id="s06" class="section">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <h2>PhonePe Case Study: Tight vs Loose Coupling</h2>
+  </div>
+
+  <p>This real-world example shows why programming to an interface is critical in production code. Imagine PhonePe needs to process bank transactions.</p>
+
+  <h3>The Tight-Coupling Problem</h3>
+  <p>PhonePe hard-codes a dependency on <code>YesBank</code>. The <code>PhonePe</code> class holds a field <code>YB yb = new YesBank()</code> and calls <code>yb.transferMoney()</code> and <code>yb.checkBalance()</code> directly. This is <strong>tight coupling</strong>:</p>
+
+  <div class="coupling-diagram">
+    <div class="coupling-half">
+      <div class="coupling-label tight">❌ Tight Coupling</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:0.75rem; line-height:1.8; color:var(--ink-soft); padding:0.8rem; background:var(--rose-soft); border-radius:6px; border:1px solid var(--rose);">
+        <span style="color:var(--ink)">class PhonePe {</span><br>
+        &nbsp;&nbsp;<span style="color:var(--rose)">YesBank yb = new YesBank();</span><br>
+        &nbsp;&nbsp;<span style="color:var(--ink)">sendMoney(src,dest,x) {</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;yb.transferMoney(src,dest,x);<br>
+        &nbsp;&nbsp;}<br>
+        }
+      </div>
+      <p style="font-size:0.82rem; margin-top:0.6rem; color:var(--rose);">If YesBank fails or you want to add ICICI, you must rewrite PhonePe.</p>
+    </div>
+    <div class="coupling-half">
+      <div class="coupling-label loose">✓ Loose Coupling</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:0.75rem; line-height:1.8; color:var(--ink-soft); padding:0.8rem; background:var(--green-soft); border-radius:6px; border:1px solid var(--green);">
+        <span style="color:var(--ink)">class PhonePe {</span><br>
+        &nbsp;&nbsp;<span style="color:var(--green)">BankAPI api = new ICICI();</span><br>
+        &nbsp;&nbsp;<span style="color:var(--ink)">sendMoney(src,dest,x) {</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;api.transferMoney(src,dest,x);<br>
+        &nbsp;&nbsp;}<br>
+        }
+      </div>
+      <p style="font-size:0.82rem; margin-top:0.6rem; color:var(--green);">PhonePe only knows about BankAPI. Swap any bank with one line change.</p>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="cmt">// The contract PhonePe depends on</span>
+<span class="kw">interface</span> <span class="ty">BankAPI</span> {
+    <span class="kw">void</span> <span class="fn">checkBalance</span>(<span class="ty">String</span> account);
+    <span class="kw">void</span> <span class="fn">transferMoney</span>(<span class="ty">String</span> src, <span class="ty">String</span> dest, <span class="kw">double</span> amount);
+}
+
+<span class="cmt">// Multiple banks implement the same contract</span>
+<span class="kw">class</span> <span class="ty">YesBank</span>  <span class="kw">implements</span> <span class="ty">BankAPI</span> { <span class="cmt">/* ... */</span> }
+<span class="kw">class</span> <span class="ty">ICICI</span>    <span class="kw">implements</span> <span class="ty">BankAPI</span> { <span class="cmt">/* ... */</span> }
+<span class="kw">class</span> <span class="ty">SBI</span>      <span class="kw">implements</span> <span class="ty">BankAPI</span> { <span class="cmt">/* ... */</span> }
+<span class="kw">class</span> <span class="ty">HDFC</span>     <span class="kw">implements</span> <span class="ty">BankAPI</span> { <span class="cmt">/* ... */</span> }
+
+<span class="kw">class</span> <span class="ty">PhonePe</span> {
+    <span class="ty">BankAPI</span> api = <span class="kw">new</span> <span class="ty">ICICI</span>();  <span class="cmt">// swap to any bank here</span>
+
+    <span class="kw">void</span> <span class="fn">sendMoney</span>(<span class="ty">String</span> src, <span class="ty">String</span> dest, <span class="kw">double</span> x) {
+        api.<span class="fn">transferMoney</span>(src, dest, x);
+    }
+
+    <span class="kw">void</span> <span class="fn">getAllBalance</span>(<span class="ty">String</span> account) {
+        api.<span class="fn">checkBalance</span>(account);
+    }
+}</pre>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Insight</span>
+    <p><strong>Loose coupling</strong> = PhonePe depends on the <code>BankAPI</code> interface, not on any specific bank. This is exactly "Program to Interface" applied to a real payment system. Adding HDFC requires creating a new <code>HDFC</code> class — not touching PhonePe at all.</p>
+  </div>
+</section>
+
+<!-- 07 -->
+<section id="s07" class="section">
+  <div class="section-header">
+    <span class="section-num">07</span>
+    <h2>The Diamond Problem &amp; Multiple Interface Implementation</h2>
+  </div>
+
+  <p>Java does <strong>not</strong> support multiple inheritance for <em>classes</em>. The reason is the Diamond Problem: if class X extends both A and B, and both A and B define <code>fun()</code> with different bodies, which version does X inherit? The compiler cannot decide.</p>
+
+  <div class="diagram-box">
+    <div class="diamond-wrap">
+      <div class="diamond-row">
+        <div class="diamond-node">Z — fun() { "Hello" }</div>
+      </div>
+      <div style="display:flex; gap:4rem; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:1rem; color:var(--ink-soft);">↙ ↘</div>
+      <div class="diamond-row">
+        <div class="diamond-node">A — fun() { "Hi" }</div>
+        <div class="diamond-node">B — fun() { "Hey" }</div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:1rem; color:var(--ink-soft);">↖ ↗</div>
+      <div class="diamond-row">
+        <div class="diamond-node conflict">X extends A, B → ERROR 💥</div>
+      </div>
+      <p style="font-size:0.78rem; color:var(--rose); margin-top:0.5rem; text-align:center;">Which fun() does X.fun() call? Ambiguous → compile error.</p>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="cmt">// ✗ Multiple class inheritance — not allowed in Java</span>
+<span class="kw">class</span> <span class="ty">X</span> <span class="kw">extends</span> <span class="ty">A</span>, <span class="ty">B</span> { }   <span class="cmt">// Compile error</span>
+
+<span class="cmt">// ✓ Multiple interface implementation — perfectly fine!</span>
+<span class="kw">class</span> <span class="ty">X</span> <span class="kw">implements</span> <span class="ty">A</span>, <span class="ty">B</span> {
+    <span class="cmt">// X must provide its OWN body for all methods from A and B
+    // No ambiguity — X defines exactly one implementation</span>
+}</pre>
+  </div>
+
+  <p>Interfaces sidestep the Diamond Problem entirely because their methods have no body (prior to Java 8). When X implements A and B, X writes its own implementation — there is nothing to be ambiguous about.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Important</span>
+    <p>Interface fields are implicitly <code>public static final</code>. This means all constants declared in an interface are shared across all implementing classes and cannot be reassigned. They are effectively named constants.</p>
+  </div>
+</section>
+
+<!-- 08 -->
+<section id="s08" class="section">
+  <div class="section-header">
+    <span class="section-num">08</span>
+    <h2>Abstract Classes</h2>
+  </div>
+
+  <p>An abstract class sits between a regular class and an interface. It <em>can</em> have fields (attributes), constructors, and concrete method implementations — but it can also declare <code>abstract</code> methods that subclasses must implement. Like an interface, you cannot instantiate an abstract class directly.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Rule</span>
+    <p>If a class contains even one <code>abstract</code> method, the class itself must be declared <code>abstract</code>. A concrete subclass must implement all inherited abstract methods — or declare itself abstract too.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="kw">abstract class</span> <span class="ty">Animal</span> {
+    <span class="cmt">// Concrete fields — shared by all subclasses</span>
+    <span class="ty">String</span> name;
+    <span class="kw">int</span> age;
+
+    <span class="cmt">// Abstract methods — subclasses MUST implement these</span>
+    <span class="kw">abstract void</span> <span class="fn">eat</span>();
+    <span class="kw">abstract void</span> <span class="fn">walk</span>();
+
+    <span class="cmt">// Concrete method — provides a default implementation</span>
+    <span class="kw">void</span> <span class="fn">breathe</span>() {
+        <span class="ty">System</span>.out.<span class="fn">println</span>(name + <span class="str">" is breathing"</span>); <span class="cmt">// default impl</span>
+    }
+}
+
+<span class="cmt">// Dog provides bodies for eat() and walk()</span>
+<span class="kw">class</span> <span class="ty">Dog</span> <span class="kw">extends</span> <span class="ty">Animal</span> {
+    <span class="kw">void</span> <span class="fn">eat</span>()  { <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Dog is eating"</span>); }
+    <span class="kw">void</span> <span class="fn">walk</span>() { <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Dog is walking"</span>); }
+}
+
+<span class="cmt">// abstract Cat still leaves walk() abstract — also must be declared abstract</span>
+<span class="kw">abstract class</span> <span class="ty">Cat</span> <span class="kw">extends</span> <span class="ty">Animal</span> {
+    <span class="kw">void</span> <span class="fn">eat</span>() { <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Cat is eating"</span>); }
+    <span class="kw">abstract void</span> <span class="fn">walk</span>();   <span class="cmt">// still abstract — Tiger must implement it</span>
+}</pre>
+  </div>
+
+  <div class="diagram-box">
+    <div style="display:flex; flex-direction:column; align-items:center; gap:0.5rem;">
+      <div class="hier-node abstract-node">abstract Animal</div>
+      <div style="color:var(--ink-soft); font-family:'JetBrains Mono',monospace; font-size:0.75rem;">▲ extends</div>
+      <div style="display:flex; gap:1rem; flex-wrap:wrap; justify-content:center;">
+        <div class="hier-node">Dog</div>
+        <div class="hier-node abstract-node">abstract Cat</div>
+      </div>
+      <div style="color:var(--ink-soft); font-family:'JetBrains Mono',monospace; font-size:0.75rem; margin-left:120px;">▲ extends</div>
+      <div style="display:flex; gap:1rem; justify-content:flex-end; width:100%;">
+        <div class="hier-node" style="margin-right:1rem;">Tiger</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 09 -->
+<section id="s09" class="section">
+  <div class="section-header">
+    <span class="section-num">09</span>
+    <h2>Abstract Class vs Interface — Comparison</h2>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>Interface</th>
+        <th>Abstract Class</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Fields</td><td><code>public static final</code> only (constants)</td><td>Any modifier, any type</td></tr>
+      <tr><td>Method bodies</td><td>None (pre-Java 8) / <code>default</code> (Java 8+)</td><td>Mix of abstract and concrete</td></tr>
+      <tr><td>Constructors</td><td>Not allowed</td><td>Allowed</td></tr>
+      <tr><td>Multiple inheritance</td><td>A class can implement many interfaces</td><td>A class can extend only one abstract class</td></tr>
+      <tr><td>When to use</td><td>Define a contract / capability (e.g., <code>Runnable</code>, <code>Comparable</code>)</td><td>Share code and state across related classes</td></tr>
+      <tr><td>Keyword</td><td><code>implements</code></td><td><code>extends</code></td></tr>
+      <tr><td>Instantiation</td><td>Not allowed</td><td>Not allowed</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>An <strong>interface</strong> is like a certification (e.g., "CPR Certified"). It says what you can do. An <strong>abstract class</strong> is like a partial kit from a manufacturer — it gives you real parts (concrete methods, shared state) plus slots you must fill in yourself (abstract methods).</p>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="s10" class="section">
+  <div class="section-header">
+    <span class="section-num">10</span>
+    <h2>Default Methods in Interfaces (Java 8+)</h2>
+  </div>
+
+  <p>Before Java 8, adding a new method to a widely-used interface would break every class that implemented it — hundreds or even thousands of classes. Java 8 solved this with <strong>default methods</strong>: concrete method implementations inside an interface that all implementing classes inherit automatically.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">Why It Matters</span>
+    <p>Java 8 introduced <code>default</code> methods specifically to allow the Collections Framework to be extended (e.g., adding <code>forEach</code>, <code>stream()</code>) without breaking the thousands of existing classes that implemented <code>List</code>, <code>Collection</code>, etc.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="kw">interface</span> <span class="ty">X</span> {
+    <span class="kw">void</span> <span class="fn">abstractMethod</span>();   <span class="cmt">// must be implemented by all</span>
+
+    <span class="kw">default void</span> <span class="fn">fun</span>() {
+        <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Default implementation in interface"</span>);
+        <span class="cmt">// Classes A, B, C, D, E ... all inherit this for free
+        // They can still @Override it if they need custom behaviour</span>
+    }
+}
+
+<span class="cmt">// A, B, C, D, E ... implement X
+// They all get fun() without any code changes!</span>
+<span class="kw">class</span> <span class="ty">A</span> <span class="kw">implements</span> <span class="ty">X</span> {
+    <span class="kw">public void</span> <span class="fn">abstractMethod</span>() { <span class="cmt">/* ... */</span> }
+    <span class="cmt">// fun() inherited automatically — no need to override</span>
+}
+
+<span class="kw">class</span> <span class="ty">B</span> <span class="kw">implements</span> <span class="ty">X</span> {
+    <span class="kw">public void</span> <span class="fn">abstractMethod</span>() { <span class="cmt">/* ... */</span> }
+
+    <span class="kw">@Override</span>
+    <span class="kw">public void</span> <span class="fn">fun</span>() {
+        <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"B's custom implementation"</span>);
+    }
+}</pre>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="s11" class="section">
+  <div class="section-header">
+    <span class="section-num">11</span>
+    <h2>The Static Keyword</h2>
+  </div>
+
+  <p>The keyword <code>static</code> means "belongs to the class, not to any particular object." Static members are initialized at class-loading time (essentially compile/load time), whereas regular instance members are created when an object is instantiated at runtime.</p>
+
+  <div class="static-row">
+    <div class="static-box class-level">
+      <div class="static-box-title">Class Level (static)</div>
+      Shared by ALL objects of the class.<br>
+      Initialized once when the class loads.<br>
+      Accessed via <code>ClassName.member</code>.<br><br>
+      Examples: <code>Math.PI</code>, <code>Integer.MAX_VALUE</code>
+    </div>
+    <div class="static-box instance-level">
+      <div class="static-box-title">Instance Level (non-static)</div>
+      Each object gets its own copy.<br>
+      Initialized when <code>new</code> is called at runtime.<br>
+      Accessed via <code>objectRef.member</code>.<br><br>
+      Examples: <code>student.name</code>, <code>student.age</code>
+    </div>
+  </div>
+
+  <h3>Static Attributes</h3>
+  <p>A static field is stored once in the class area of memory, not in each object's heap space. All instances read and write the same memory location. The classic use case is a counter that tracks how many objects have been created.</p>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="kw">class</span> <span class="ty">Student</span> {
+    <span class="ty">String</span> name;           <span class="cmt">// instance field — each object has its own</span>
+    <span class="kw">static int</span> count = <span class="num">0</span>;   <span class="cmt">// class field — shared by ALL Student objects</span>
+
+    <span class="ty">Student</span>(<span class="ty">String</span> n) {
+        <span class="kw">this</span>.name = n;
+        count++;   <span class="cmt">// increments the single shared counter</span>
+    }
+}
+
+<span class="ty">Student</span> s1 = <span class="kw">new</span> <span class="ty">Student</span>(<span class="str">"Amit"</span>);
+<span class="ty">Student</span> s2 = <span class="kw">new</span> <span class="ty">Student</span>(<span class="str">"Priya"</span>);
+<span class="ty">System</span>.out.<span class="fn">println</span>(<span class="ty">Student</span>.count);  <span class="cmt">// prints 2</span></pre>
+  </div>
+
+  <h3>Static Methods</h3>
+  <p>A static method belongs to the class and can be called without creating an object. <code>public static void main(String[] args)</code> is the most common example — the JVM calls it directly on the class, before any object exists.</p>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="kw">class</span> <span class="ty">Student</span> {
+    <span class="ty">String</span> name;
+    <span class="kw">static int</span> count = <span class="num">0</span>;
+
+    <span class="kw">void</span> <span class="fn">solveAssignment</span>() {
+        <span class="ty">System</span>.out.<span class="fn">println</span>(name + <span class="str">" is solving"</span>);
+    }
+
+    <span class="kw">static void</span> <span class="fn">staticMethod</span>() {
+        <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Total students: "</span> + count);
+    }
+}
+
+<span class="ty">Student</span> s = <span class="kw">new</span> <span class="ty">Student</span>();
+s.<span class="fn">solveAssignment</span>();          <span class="cmt">// instance method — called on object</span>
+<span class="ty">Student</span>.<span class="fn">staticMethod</span>();         <span class="cmt">// static method  — called on class</span></pre>
+  </div>
+</section>
+
+<!-- 12 -->
+<section id="s12" class="section">
+  <div class="section-header">
+    <span class="section-num">12</span>
+    <h2>Static Rules &amp; Common Gotchas</h2>
+  </div>
+
+  <h3>Can a static method access non-static members?</h3>
+  <p>No. A static method has no implicit <code>this</code> reference — it does not belong to any object. So it cannot access instance fields or call instance methods directly. The fix is to pass an object reference as a parameter.</p>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="kw">class</span> <span class="ty">Example</span> {
+    <span class="ty">String</span> name = <span class="str">"Alice"</span>;   <span class="cmt">// instance field</span>
+    <span class="kw">static int</span> count = <span class="num">0</span>;    <span class="cmt">// static field</span>
+
+    <span class="kw">static void</span> <span class="fn">staticMethod</span>() {
+        <span class="ty">System</span>.out.<span class="fn">println</span>(count);  <span class="cmt">// ✓ OK — static accessing static</span>
+        <span class="cmt">// System.out.println(name); ✗ Compile error — can't access instance field</span>
+    }
+}
+
+<span class="cmt">// Correct invocation:</span>
+<span class="ty">Example</span>.<span class="fn">staticMethod</span>();   <span class="cmt">// via class name</span></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Common Gotcha</span>
+    <p>Objects are created at <strong>runtime</strong> (when <code>new</code> is called on the heap). Static attributes are initialized at <strong>class-load time</strong>, which happens before any object is created. This is why <code>main()</code> must be static — no object exists yet when the JVM starts.</p>
+  </div>
+
+  <h3>Static Classes (Nested)</h3>
+  <p>Java supports static nested classes — classes declared inside another class with the <code>static</code> modifier. A static nested class does not hold a reference to an instance of the outer class. This is commonly used in the <strong>Builder</strong> design pattern, where <code>SomeClass.Builder</code> is a static inner class that constructs <code>SomeClass</code> instances step by step.</p>
+
+  <div class="code-wrap">
+    <div class="code-header">
+      <span class="code-lang">Java</span>
+      <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+    </div>
+    <pre><span class="kw">class</span> <span class="ty">Student</span> {
+    <span class="kw">private final</span> <span class="ty">String</span> name;
+    <span class="kw">private final int</span>    age;
+
+    <span class="kw">private</span> <span class="ty">Student</span>(<span class="ty">Builder</span> b) { <span class="kw">this</span>.name = b.name; <span class="kw">this</span>.age = b.age; }
+
+    <span class="kw">static class</span> <span class="ty">Builder</span> {      <span class="cmt">// static inner class — Builder pattern</span>
+        <span class="ty">String</span> name;
+        <span class="kw">int</span>    age;
+
+        <span class="ty">Builder</span> <span class="fn">name</span>(<span class="ty">String</span> n) { <span class="kw">this</span>.name = n; <span class="kw">return this</span>; }
+        <span class="ty">Builder</span> <span class="fn">age</span>(<span class="kw">int</span>    a) { <span class="kw">this</span>.age  = a; <span class="kw">return this</span>; }
+        <span class="ty">Student</span> <span class="fn">build</span>()        { <span class="kw">return new</span> <span class="ty">Student</span>(<span class="kw">this</span>); }
+    }
+}
+
+<span class="ty">Student</span> s = <span class="kw">new</span> <span class="ty">Student</span>.<span class="ty">Builder</span>()
+                .<span class="fn">name</span>(<span class="str">"Deepak"</span>)
+                .<span class="fn">age</span>(<span class="num">30</span>)
+                .<span class="fn">build</span>();</pre>
+  </div>
+</section>
+
+<!-- RECAP -->
+<section id="recap" class="section">
+  <div class="section-header">
+    <span class="section-num">✦</span>
+    <h2>Quick Recap</h2>
+  </div>
+
+  <div class="recap-grid">
+    <div class="recap-card">
+      <div class="recap-card-title">Interface</div>
+      <p>A pure behavioural contract — no fields (only constants), no constructors, all methods abstract by default. Use <code>implements</code>.</p>
+    </div>
+    <div class="recap-card">
+      <div class="recap-card-title">Program to Interface</div>
+      <p>Declare variables and parameters as interface types so any implementation can be swapped with one line change.</p>
+    </div>
+    <div class="recap-card">
+      <div class="recap-card-title">Loose Coupling</div>
+      <p>When your class depends on an interface rather than a concrete class, swapping implementations requires no changes to the calling code.</p>
+    </div>
+    <div class="recap-card">
+      <div class="recap-card-title">Diamond Problem</div>
+      <p>Java bans multiple class inheritance to avoid ambiguity. Multiple interface implementation is allowed because X supplies its own method bodies.</p>
+    </div>
+    <div class="recap-card">
+      <div class="recap-card-title">Abstract Class</div>
+      <p>A partial class — may have fields, constructors, concrete methods, and abstract methods. Cannot be instantiated. Use <code>extends</code>.</p>
+    </div>
+    <div class="recap-card">
+      <div class="recap-card-title">Default Methods (Java 8+)</div>
+      <p>Concrete method implementations inside an interface. Let library authors add new methods without breaking existing implementors.</p>
+    </div>
+    <div class="recap-card">
+      <div class="recap-card-title">Static Attribute</div>
+      <p>A class-level field shared by all instances. Initialized at class-load time, not per-object. Accessed via <code>ClassName.field</code>.</p>
+    </div>
+    <div class="recap-card">
+      <div class="recap-card-title">Static Method</div>
+      <p>Belongs to the class, has no <code>this</code>. Cannot access instance fields. The entry point <code>main()</code> is static because no object exists yet.</p>
+    </div>
+    <div class="recap-card">
+      <div class="recap-card-title">Static Class (Nested)</div>
+      <p>A class nested inside another with <code>static</code>. Holds no outer-instance reference. Cornerstone of the Builder design pattern.</p>
+    </div>
+  </div>
+
+  <h3>Complexity / Characteristic Summary</h3>
+  <table>
+    <thead>
+      <tr><th>Construct</th><th>Can Instantiate?</th><th>Has Fields?</th><th>Multiple?</th><th>Keyword</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Interface</td><td>No</td><td>Constants only</td><td>implements many</td><td><code>implements</code></td></tr>
+      <tr><td>Abstract Class</td><td>No</td><td>Yes (any)</td><td>extends one</td><td><code>extends</code></td></tr>
+      <tr><td>Concrete Class</td><td>Yes</td><td>Yes (any)</td><td>extends one + implements many</td><td>both</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- LEETCODE -->
+<section id="leetcode" class="section">
+  <div class="section-header">
+    <span class="section-num">✦</span>
+    <h2>Related LeetCode Problems</h2>
+  </div>
+
+  <p>These problems reinforce the concepts from this session — particularly OOP design, interface-driven thinking, and the use of static/class-level constructs.</p>
+
+  <div class="lc-group">
+    <div class="lc-group-title">Interface &amp; Polymorphism (Design Problems)</div>
+    <div class="lc-item">
+      <span class="lc-diff medium">Medium</span>
+      <div class="lc-content">
+        <a class="lc-name" href="https://leetcode.com/problems/design-parking-system/" target="_blank" rel="noopener">Design Parking System ↗</a>
+        <div class="lc-why">Practise encapsulating state and using a clean interface-like API for a real-world entity.</div>
+      </div>
+    </div>
+    <div class="lc-item">
+      <span class="lc-diff medium">Medium</span>
+      <div class="lc-content">
+        <a class="lc-name" href="https://leetcode.com/problems/design-hashmap/" target="_blank" rel="noopener">Design HashMap ↗</a>
+        <div class="lc-why">Implement a concrete class that fulfils a Map interface contract — direct analogy to how Java's HashMap implements Map.</div>
+      </div>
+    </div>
+    <div class="lc-item">
+      <span class="lc-diff medium">Medium</span>
+      <div class="lc-content">
+        <a class="lc-name" href="https://leetcode.com/problems/design-linked-list/" target="_blank" rel="noopener">Design Linked List ↗</a>
+        <div class="lc-why">Implement a concrete class fulfilling a linked-list interface — mirrors the LLBasedStack example from class.</div>
+      </div>
+    </div>
+    <div class="lc-item">
+      <span class="lc-diff hard">Hard</span>
+      <div class="lc-content">
+        <a class="lc-name" href="https://leetcode.com/problems/design-search-autocomplete-system/" target="_blank" rel="noopener">Design Search Autocomplete System ↗</a>
+        <div class="lc-why">Complex OOP design — practise defining clean contracts between components before implementing them.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lc-group">
+    <div class="lc-group-title">Stack (ArrayBasedStack / LLBasedStack)</div>
+    <div class="lc-item">
+      <span class="lc-diff easy">Easy</span>
+      <div class="lc-content">
+        <a class="lc-name" href="https://leetcode.com/problems/implement-stack-using-queues/" target="_blank" rel="noopener">Implement Stack using Queues ↗</a>
+        <div class="lc-why">Directly mirrors the session's Stack interface — implement Stack behaviour with a different underlying data structure.</div>
+      </div>
+    </div>
+    <div class="lc-item">
+      <span class="lc-diff easy">Easy</span>
+      <div class="lc-content">
+        <a class="lc-name" href="https://leetcode.com/problems/min-stack/" target="_blank" rel="noopener">Min Stack ↗</a>
+        <div class="lc-why">Extend the Stack interface concept with an extra capability — good exercise in interface design and augmentation.</div>
+      </div>
+    </div>
+    <div class="lc-item">
+      <span class="lc-diff easy">Easy</span>
+      <div class="lc-content">
+        <a class="lc-name" href="https://leetcode.com/problems/valid-parentheses/" target="_blank" rel="noopener">Valid Parentheses ↗</a>
+        <div class="lc-why">Classic stack application — practise using the Stack interface abstraction rather than a concrete type.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lc-group">
+    <div class="lc-group-title">Abstract / Inheritance Patterns</div>
+    <div class="lc-item">
+      <span class="lc-diff medium">Medium</span>
+      <div class="lc-content">
+        <a class="lc-name" href="https://leetcode.com/problems/design-twitter/" target="_blank" rel="noopener">Design Twitter ↗</a>
+        <div class="lc-why">Multi-class design with shared and distinct behaviours — a natural fit for abstract base classes and interfaces.</div>
+      </div>
+    </div>
+    <div class="lc-item">
+      <span class="lc-diff medium">Medium</span>
+      <div class="lc-content">
+        <a class="lc-name" href="https://leetcode.com/problems/design-underground-system/" target="_blank" rel="noopener">Design Underground System ↗</a>
+        <div class="lc-why">Use static-style shared state and encapsulation to track commuter data efficiently.</div>
+      </div>
+    </div>
+    <div class="lc-item">
+      <span class="lc-diff medium">Medium</span>
+      <div class="lc-content">
+        <a class="lc-name" href="https://leetcode.com/problems/design-a-stack-with-increment-operation/" target="_blank" rel="noopener">Design a Stack with Increment Operation ↗</a>
+        <div class="lc-why">Extend the Stack contract with new behaviour — practise the open/closed principle alongside interface design.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Recommended Study Order</span>
+    <p>Start with <em>Implement Stack using Queues</em> and <em>Min Stack</em> to solidify the Stack interface example from class. Move to <em>Design Parking System</em> and <em>Design HashMap</em> for encapsulation practice. Tackle <em>Design Twitter</em> and <em>Design Underground System</em> once you're comfortable with inheritance hierarchies.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- FAB -->
+<button id="fab" aria-label="Open navigation menu">☰</button>
+<div id="overlay"></div>
+
+<script>
+// ── PROGRESS BAR ──
+const bar = document.getElementById('progress-bar');
+window.addEventListener('scroll', () => {
+  const pct = window.scrollY / (document.documentElement.scrollHeight - window.innerHeight) * 100;
+  bar.style.width = Math.min(pct, 100) + '%';
+}, { passive: true });
+
+// ── MOBILE FAB ──
+const fab     = document.getElementById('fab');
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
+
+fab.addEventListener('click', () => {
+  sidebar.classList.add('open');
+  overlay.classList.add('open');
+});
+overlay.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+});
+
+// ── SCROLL SPY ──
+const navLinks = document.querySelectorAll('.nav-link');
+const sections = document.querySelectorAll('section[id]');
+
+function updateActiveLink() {
+  let current = '';
+  sections.forEach(sec => {
+    const top = sec.getBoundingClientRect().top;
+    if (top <= 80) current = sec.id;
+  });
+  navLinks.forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('href') === '#' + current) {
+      link.classList.add('active');
+      // scroll sidebar to keep active link visible
+      const sbar = document.getElementById('sidebar');
+      const linkTop = link.offsetTop;
+      const sbarH = sbar.clientHeight;
+      const scrollPos = linkTop - sbarH / 2;
+      sbar.scrollTo({ top: scrollPos, behavior: 'smooth' });
+    }
+  });
+}
+
+window.addEventListener('scroll', updateActiveLink, { passive: true });
+updateActiveLink();
+
+// Close sidebar on nav click (mobile)
+navLinks.forEach(link => {
+  link.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+  });
+});
+
+// ── SCROLL REVEAL ──
+const revealObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.07 });
+
+document.querySelectorAll('.section').forEach(sec => revealObserver.observe(sec));
+
+// ── COPY BUTTONS ──
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  const text = pre.innerText;
+  try {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  }
+}
+</script>
+</body>
+</html>

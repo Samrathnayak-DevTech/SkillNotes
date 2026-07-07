@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minimal APIs &amp; Consolidation — Day 15 (Finale)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:14px 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 15 · ASP.NET Core</div>
+    <div class="brand-title">Minimal APIs &amp; Finale 🏁</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Minimal APIs</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>What &amp; Why</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>Core Syntax</span></a>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Results &amp; TypedResults</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Organizing</div>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>Endpoint Groups</span></a>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>Splitting Into Files</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Consolidation</div>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>Rebuild as Minimal API</span></a>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>The Whole Series, Wired</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Shipping</div>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>Push to GitHub</span></a>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>A Request, End to End</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 15 — the finale: less ceremony, whole picture</div>
+      <h1>Minimal APIs &amp; Consolidation 🏁</h1>
+      <p class="lede">Twelve days ago an endpoint meant a controller class, attributes, and boilerplate. <strong>Minimal APIs</strong> strip that to the essence: a route, a lambda, done — while keeping everything you've learned (validation, DTOs, results, DI, EF Core, paging, docs, error handling, auth, versioning). Today we rebuild one resource the minimal way, wire together the entire series into a single versioned, documented, secured CRUD API, and ship it to GitHub. This is graduation. 🎓</p>
+      <div class="chips">
+        <span class="chip">🪶 Minimal APIs</span>
+        <span class="chip">📦 Endpoint groups</span>
+        <span class="chip">🧩 Consolidation</span>
+        <span class="chip">🔢 Versioned</span>
+        <span class="chip">🔐 Secured</span>
+        <span class="chip">🐙 GitHub</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>Minimal APIs — What &amp; Why 🪶</h2></div>
+      <p>A <strong>Minimal API</strong> defines HTTP endpoints directly on the <code>WebApplication</code> with a route and a handler function — no controller class, no attributes required. Introduced in .NET 6 and matured every release since, it's the leaner counterpart to the controller model (Day 3 onward). Both run on the same ASP.NET Core foundation; they're two front-ends to the same routing, DI, and middleware.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the entire app, in a few lines</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+app.<span class="fn">MapGet</span>(<span class="str">"/hello"</span>, () =&gt; <span class="str">"Hello, world!"</span>);
+
+app.<span class="fn">Run</span>();</code></pre>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🍽️ Analogy — à la carte vs. prix fixe</span>
+        <p>Controllers are a prix-fixe menu: a full place setting arrives whether or not you need every fork. Minimal APIs are à la carte — you take exactly the pieces this endpoint needs and nothing else. Same kitchen, same ingredients; just less on the table you didn't order.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 It's not a different framework</span>
+        <p>Minimal APIs aren't a "lite" ASP.NET Core — they share the same request pipeline, dependency injection (Day 7), model binding, validation, authentication (Day 12), and OpenAPI (Day 10). What changes is <em>how you declare endpoints</em>, not what the platform can do. Everything from Days 4–14 still applies.</p>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">Minimal APIs</div>
+          <div class="s">route + handler, nothing spare</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch b-blue">
+            <h4>🗺️ Map*</h4>
+            <ul>
+              <li><code>MapGet/Post/Put/Delete</code></li>
+              <li>Route + lambda</li>
+              <li>On <code>WebApplication</code></li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>🎁 Binding</h4>
+            <ul>
+              <li>Route/query/body inferred</li>
+              <li>Services injected by type</li>
+              <li><code>[AsParameters]</code></li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>📤 Results</h4>
+            <ul>
+              <li><code>TypedResults</code></li>
+              <li><code>Results&lt;T1,T2&gt;</code> unions</li>
+              <li>Self-documenting</li>
+            </ul>
+          </div>
+          <div class="mm-branch">
+            <h4>📦 Groups</h4>
+            <ul>
+              <li><code>MapGroup</code> prefix</li>
+              <li>Shared metadata</li>
+              <li>Endpoint filters</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h4>🧵 Same platform</h4>
+            <ul>
+              <li>DI, auth, docs</li>
+              <li>Versioning, CORS</li>
+              <li>All of Days 4–14</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>Core Syntax &amp; Binding 🧱</h2></div>
+      <p>Each verb has a <code>Map*</code> method taking a route template and a handler. Parameters are <strong>bound automatically</strong> by source: route-template names come from the path, complex types from the JSON body, and registered services from DI — all inferred, no attributes needed in the common case.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the four verbs &amp; automatic binding</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// route param "id" binds from the path; ISomething comes from DI</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/products/{id:int}"</span>, (<span class="kw">int</span> id, <span class="ty">IProductService</span> svc) =&gt;
+    svc.<span class="fn">GetAsync</span>(id));
+
+<span class="cmt">// query string: ?page=2 binds to the "page" parameter</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/products"</span>, (<span class="kw">int</span> page, <span class="ty">IProductService</span> svc) =&gt;
+    svc.<span class="fn">ListAsync</span>(page));
+
+<span class="cmt">// complex type binds from the JSON request body</span>
+app.<span class="fn">MapPost</span>(<span class="str">"/products"</span>, (<span class="ty">CreateProductDto</span> dto, <span class="ty">IProductService</span> svc) =&gt;
+    svc.<span class="fn">CreateAsync</span>(dto));
+
+app.<span class="fn">MapPut</span>(<span class="str">"/products/{id:int}"</span>, (<span class="kw">int</span> id, <span class="ty">UpdateProductDto</span> dto, <span class="ty">IProductService</span> svc) =&gt;
+    svc.<span class="fn">UpdateAsync</span>(id, dto));
+
+app.<span class="fn">MapDelete</span>(<span class="str">"/products/{id:int}"</span>, (<span class="kw">int</span> id, <span class="ty">IProductService</span> svc) =&gt;
+    svc.<span class="fn">DeleteAsync</span>(id));</code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Handler parameter</th><th>Binds from</th></tr></thead>
+          <tbody>
+            <tr><td>Name matches a route token (<code>{id}</code>)</td><td>The URL path</td></tr>
+            <tr><td>Simple type, no route match</td><td>The query string</td></tr>
+            <tr><td>Complex type (a class/record)</td><td>The JSON request body</td></tr>
+            <tr><td>A registered service type</td><td>Dependency injection</td></tr>
+            <tr><td><code>HttpContext</code>, <code>ClaimsPrincipal</code>, <code>CancellationToken</code></td><td>Supplied by the framework</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Group many params with [AsParameters]</span>
+        <p>When a handler needs a lot of query parameters (like the paging/filter/sort inputs from Day 9), bundle them into a struct or record and mark it <code>[AsParameters]</code> — the framework binds each property from its matching source, keeping the signature clean. It's the Minimal API counterpart to the bound query DTO you used with <code>[FromQuery]</code>.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ You can still be explicit</span>
+        <p>Inference covers most cases, but when it's ambiguous you annotate: <code>[FromQuery]</code>, <code>[FromRoute]</code>, <code>[FromBody]</code>, <code>[FromHeader]</code>, <code>[FromServices]</code>. For example, a <code>string</code> you want from the body (not the query) needs <code>[FromBody]</code>. Reach for these only when the default guess would be wrong.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Results &amp; TypedResults 📤</h2></div>
+      <p>Day 6's return-type lessons land squarely here. A handler can return a plain object (serialized as 200 JSON), or an <code>IResult</code> for control over status codes. Prefer <strong><code>TypedResults</code></strong> — the concrete, strongly-typed factory — over the older <code>Results</code>, because it enables testing and feeds OpenAPI metadata automatically.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — TypedResults with a union return type</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Results&lt;...&gt; declares every outcome — self-documenting &amp; compile-checked</span>
+app.<span class="fn">MapGet</span>(<span class="str">"/products/{id:int}"</span>, <span class="kw">async</span> (<span class="kw">int</span> id, <span class="ty">IProductService</span> svc)
+    : <span class="ty">Task</span>&lt;<span class="ty">Results</span>&lt;<span class="ty">Ok</span>&lt;<span class="ty">ProductDto</span>&gt;, <span class="ty">NotFound</span>&gt;&gt; =&gt;
+{
+    <span class="kw">var</span> product = <span class="kw">await</span> svc.<span class="fn">GetAsync</span>(id);
+    <span class="kw">return</span> product <span class="kw">is null</span>
+        ? <span class="ty">TypedResults</span>.<span class="fn">NotFound</span>()          <span class="cmt">// 404</span>
+        : <span class="ty">TypedResults</span>.<span class="fn">Ok</span>(product);        <span class="cmt">// 200 + body</span>
+});</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why the Results&lt;T1,T2&gt; union matters</span>
+        <p>Declaring <code>Results&lt;Ok&lt;ProductDto&gt;, NotFound&gt;</code> tells the framework — and every reader — exactly which responses this endpoint can produce. OpenAPI (Day 10) infers the 200 and 404 automatically, with no <code>[ProducesResponseType]</code> to hand-write, and the compiler stops you returning anything outside the declared set. Self-documenting <em>and</em> checked.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ TypedResults skips content negotiation</span>
+        <p>As noted on Day 14: <code>HttpResults</code> (what <code>TypedResults</code> produces) write the response directly and bypass the output formatters, so they don't honor the <code>Accept</code> header. That's fine for a JSON API — but if you genuinely need XML/JSON negotiation on a Minimal API, you'd return a plain object rather than a <code>TypedResults</code> value.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>Endpoint Groups 📦</h2></div>
+      <p>Repeating <code>/api/products</code> on every endpoint — and re-applying auth, tags, and versioning each time — gets old fast. <code>MapGroup</code> creates a <strong>route group</strong>: a shared prefix plus shared metadata that every endpoint in the group inherits.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — a group with shared prefix &amp; metadata</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> products = app.<span class="fn">MapGroup</span>(<span class="str">"/api/products"</span>)
+    .<span class="fn">WithTags</span>(<span class="str">"Products"</span>)             <span class="cmt">// OpenAPI grouping (Day 10)</span>
+    .<span class="fn">RequireAuthorization</span>();          <span class="cmt">// every endpoint needs auth (Day 12)</span>
+
+<span class="cmt">// routes below are RELATIVE to the group prefix</span>
+products.<span class="fn">MapGet</span>(<span class="str">"/"</span>, GetAll);
+products.<span class="fn">MapGet</span>(<span class="str">"/{id:int}"</span>, GetById);
+products.<span class="fn">MapPost</span>(<span class="str">"/"</span>, Create).<span class="fn">RequireAuthorization</span>(<span class="str">"AdminOnly"</span>); <span class="cmt">// tighten one</span>
+products.<span class="fn">MapPut</span>(<span class="str">"/{id:int}"</span>, Update);
+products.<span class="fn">MapDelete</span>(<span class="str">"/{id:int}"</span>, Delete);</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Groups nest and layer</span>
+        <p>Anything you can put on an endpoint you can put on a group: <code>.WithTags</code>, <code>.RequireAuthorization</code>, <code>.RequireCors</code> (Day 14), <code>.CacheOutput</code> (Day 14), <code>.ProducesProblem</code> (Day 10), and endpoint filters. Groups can even nest — a versioned outer group containing a resource inner group — so cross-cutting concerns are declared once at the right level.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Endpoint filters — the Minimal API "action filter"</span>
+        <p>Minimal APIs support <code>AddEndpointFilter</code>, letting you run logic before/after a handler — validation, logging, timing — across a whole group. It's the leaner cousin of MVC action filters, and a clean place to centralize a concern (like DTO validation) for every endpoint in a group at once.</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>Splitting Into Files 🗂️</h2></div>
+      <p>The one fair criticism of Minimal APIs — "everything piles into <code>Program.cs</code>" — is solved by convention, not framework magic. Move each resource's endpoints into an <strong>extension method</strong> on <code>IEndpointRouteBuilder</code>, with handlers as named static methods. <code>Program.cs</code> stays a table of contents.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — ProductEndpoints.cs</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public static class</span> <span class="ty">ProductEndpoints</span>
+{
+    <span class="kw">public static</span> <span class="ty">IEndpointRouteBuilder</span> <span class="fn">MapProductEndpoints</span>(
+        <span class="kw">this</span> <span class="ty">IEndpointRouteBuilder</span> app)
+    {
+        <span class="kw">var</span> group = app.<span class="fn">MapGroup</span>(<span class="str">"/products"</span>).<span class="fn">WithTags</span>(<span class="str">"Products"</span>);
+
+        group.<span class="fn">MapGet</span>(<span class="str">"/{id:int}"</span>, GetById);
+        group.<span class="fn">MapPost</span>(<span class="str">"/"</span>, Create);
+        <span class="kw">return</span> app;
+    }
+
+    <span class="cmt">// named handlers = unit-testable like controller actions</span>
+    <span class="kw">public static async</span> <span class="ty">Task</span>&lt;<span class="ty">Results</span>&lt;<span class="ty">Ok</span>&lt;<span class="ty">ProductDto</span>&gt;, <span class="ty">NotFound</span>&gt;&gt; <span class="fn">GetById</span>(
+        <span class="kw">int</span> id, <span class="ty">IProductService</span> svc)
+    {
+        <span class="kw">var</span> dto = <span class="kw">await</span> svc.<span class="fn">GetAsync</span>(id);
+        <span class="kw">return</span> dto <span class="kw">is null</span> ? <span class="ty">TypedResults</span>.<span class="fn">NotFound</span>() : <span class="ty">TypedResults</span>.<span class="fn">Ok</span>(dto);
+    }
+
+    <span class="kw">public static async</span> <span class="ty">Task</span>&lt;<span class="ty">Created</span>&lt;<span class="ty">ProductDto</span>&gt;&gt; <span class="fn">Create</span>(
+        <span class="ty">CreateProductDto</span> dto, <span class="ty">IProductService</span> svc)
+    {
+        <span class="kw">var</span> created = <span class="kw">await</span> svc.<span class="fn">CreateAsync</span>(dto);
+        <span class="kw">return</span> <span class="ty">TypedResults</span>.<span class="fn">Created</span>(<span class="str">$"/products/{created.Id}"</span>, created);
+    }
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs stays a clean index</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+app.<span class="fn">MapProductEndpoints</span>();   <span class="cmt">// one line per resource</span>
+app.<span class="fn">MapOrderEndpoints</span>();
+
+app.<span class="fn">Run</span>();</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Named handlers are testable</span>
+        <p>Because <code>GetById</code> and <code>Create</code> are ordinary static methods, you unit-test them exactly like controller actions — call the method with a fake service, assert on the returned <code>TypedResults</code> type and value. The "Minimal APIs can't be tested" myth comes from inlining logic into lambdas; named handlers dissolve it.</p>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>Rebuild the Resource as a Minimal API 🔧</h2></div>
+      <p>Today's first "Do": take the Products resource you built with controllers (Day 8's CRUD) and rebuild it minimally — versioned, secured, documented, all in one group. This is the whole series in one artifact.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs (the composition root)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">using</span> Asp.Versioning;
+
+<span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+
+builder.Services.<span class="fn">AddDbContext</span>&lt;<span class="ty">AppDbContext</span>&gt;(o =&gt;
+    o.<span class="fn">UseSqlServer</span>(builder.Configuration.<span class="fn">GetConnectionString</span>(<span class="str">"Default"</span>)));
+builder.Services.<span class="fn">AddScoped</span>&lt;<span class="ty">IProductService</span>, <span class="ty">ProductService</span>&gt;();  <span class="cmt">// Day 7</span>
+builder.Services.<span class="fn">AddApiVersioning</span>();                                <span class="cmt">// Day 14</span>
+builder.Services.<span class="fn">AddAuthentication</span>().<span class="fn">AddJwtBearer</span>();               <span class="cmt">// Day 12</span>
+builder.Services.<span class="fn">AddAuthorization</span>();                               <span class="cmt">// Day 13</span>
+builder.Services.<span class="fn">AddProblemDetails</span>();                              <span class="cmt">// Day 11</span>
+builder.Services.<span class="fn">AddExceptionHandler</span>&lt;<span class="ty">GlobalExceptionHandler</span>&gt;();  <span class="cmt">// Day 11</span>
+builder.Services.<span class="fn">AddOpenApi</span>();                                     <span class="cmt">// Day 10</span>
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+app.<span class="fn">UseExceptionHandler</span>();          <span class="cmt">// Day 11 — first</span>
+app.<span class="fn">MapOpenApi</span>();                   <span class="cmt">// Day 10</span>
+app.<span class="fn">UseAuthentication</span>();
+app.<span class="fn">UseAuthorization</span>();            <span class="cmt">// Days 12–13</span>
+
+app.<span class="fn">MapProductEndpoints</span>();
+app.<span class="fn">Run</span>();</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the versioned, secured, documented CRUD group</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public static</span> <span class="ty">IEndpointRouteBuilder</span> <span class="fn">MapProductEndpoints</span>(
+    <span class="kw">this</span> <span class="ty">IEndpointRouteBuilder</span> app)
+{
+    <span class="kw">var</span> versionSet = app.<span class="fn">NewApiVersionSet</span>()          <span class="cmt">// Day 14</span>
+        .<span class="fn">HasApiVersion</span>(<span class="kw">new</span> <span class="ty">ApiVersion</span>(<span class="num">1</span>, <span class="num">0</span>))
+        .<span class="fn">HasApiVersion</span>(<span class="kw">new</span> <span class="ty">ApiVersion</span>(<span class="num">2</span>, <span class="num">0</span>))
+        .<span class="fn">ReportApiVersions</span>()
+        .<span class="fn">Build</span>();
+
+    <span class="kw">var</span> group = app
+        .<span class="fn">MapGroup</span>(<span class="str">"/api/v{version:apiVersion}/products"</span>)
+        .<span class="fn">WithApiVersionSet</span>(versionSet)
+        .<span class="fn">WithTags</span>(<span class="str">"Products"</span>)                      <span class="cmt">// Day 10 — docs</span>
+        .<span class="fn">RequireAuthorization</span>()                   <span class="cmt">// Days 12–13</span>
+        .<span class="fn">ProducesProblem</span>(<span class="ty">StatusCodes</span>.Status500InternalServerError);
+
+    group.<span class="fn">MapGet</span>(<span class="str">"/"</span>, ListAsync);                  <span class="cmt">// paging/filter/sort — Day 9</span>
+    group.<span class="fn">MapGet</span>(<span class="str">"/{id:int}"</span>, GetAsync);
+    group.<span class="fn">MapPost</span>(<span class="str">"/"</span>, CreateAsync)
+         .<span class="fn">MapToApiVersion</span>(<span class="num">2</span>, <span class="num">0</span>);              <span class="cmt">// v2-only shape</span>
+    group.<span class="fn">MapPut</span>(<span class="str">"/{id:int}"</span>, UpdateAsync);
+    group.<span class="fn">MapDelete</span>(<span class="str">"/{id:int}"</span>, DeleteAsync)
+         .<span class="fn">RequireAuthorization</span>(<span class="str">"AdminOnly"</span>);      <span class="cmt">// tighter policy — Day 13</span>
+
+    <span class="kw">return</span> app;
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Read that group declaration again</span>
+        <p>In roughly ten lines, that one group is <strong>versioned</strong> (v1 &amp; v2), <strong>secured</strong> (auth required, admin-only delete), <strong>documented</strong> (tagged, problem responses declared), and <strong>error-safe</strong> (global handler upstream). Every concern from the series is present — declared once, at the level where it belongs. That density is the reward for the last eleven days.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>The Whole Series, Wired Together 🧩</h2></div>
+      <p>Step back and see how the pieces compose into one production-shaped API. Each day contributed a layer; the finished resource uses all of them at once.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Day</th><th>Concern</th><th>Where it lives in the finished API</th></tr></thead>
+          <tbody>
+            <tr><td>4</td><td>Validation</td><td>Data annotations on DTOs; auto-400 <code>ValidationProblemDetails</code></td></tr>
+            <tr><td>5</td><td>DTOs &amp; mapping</td><td>Request/response records; entities never leave the service</td></tr>
+            <tr><td>6</td><td>Results</td><td><code>TypedResults</code> + <code>Results&lt;Ok&lt;T&gt;, NotFound&gt;</code> unions</td></tr>
+            <tr><td>7</td><td>DI &amp; services</td><td><code>IProductService</code> injected into handlers; business logic out of endpoints</td></tr>
+            <tr><td>8</td><td>CRUD + EF Core</td><td><code>AppDbContext</code>, migrations, five endpoints</td></tr>
+            <tr><td>9</td><td>List endpoints</td><td><code>ListAsync</code> with paging/filter/sort + <code>[AsParameters]</code></td></tr>
+            <tr><td>10</td><td>OpenAPI docs</td><td><code>AddOpenApi</code>, <code>.WithTags</code>, inferred responses</td></tr>
+            <tr><td>11</td><td>Error handling</td><td><code>IExceptionHandler</code> + <code>ProblemDetails</code>, first in pipeline</td></tr>
+            <tr><td>12</td><td>Authentication</td><td>JWT bearer; <code>UseAuthentication</code></td></tr>
+            <tr><td>13</td><td>Authorization</td><td><code>RequireAuthorization</code>, <code>"AdminOnly"</code> policy</td></tr>
+            <tr><td>14</td><td>Cross-cutting</td><td>Versioning (v1/v2), CORS, caching, negotiation</td></tr>
+            <tr><td>15</td><td>Minimal APIs</td><td>The group itself — the frame holding it all</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The mental model to keep</span>
+        <p>A request enters, passes cross-cutting middleware (errors, auth), routes to a versioned endpoint, binds &amp; validates its input, delegates to a service that talks to EF Core, and returns a typed result shaped as a DTO — with the whole contract documented in OpenAPI. Every arrow in that sentence is a day you've done. The API is not twelve topics; it's one system with twelve facets.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🏛️ Analogy — you've built the whole house</span>
+        <p>Foundations (routing, DI), plumbing and wiring (cross-cutting concerns), locks on the doors (auth), a floor plan others can read (OpenAPI), and rooms that do their jobs (CRUD endpoints). Early days felt like isolated bricks. Today you can stand in the finished building.</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>Ship It — Push to GitHub 🐙</h2></div>
+      <p>Today's second "Do": get the project into version control and up on GitHub. Two things first — a proper <code>.gitignore</code> so build artifacts and secrets don't get committed, and a <code>README</code> so the repo explains itself.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">bash — generate a .NET-aware .gitignore</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt"># The .NET SDK ships a curated ignore file — use it, don't hand-write one</span>
+dotnet new gitignore
+
+<span class="cmt"># It excludes bin/, obj/, .vs/, *.user, and other build/IDE noise</span></code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">bash — initialize, commit, and push</span><button class="copy-btn">Copy</button></div>
+        <pre><code>git init
+git add .
+git commit -m <span class="str">"Initial commit: versioned, secured, documented Products API"</span>
+git branch -M main
+
+<span class="cmt"># create the empty repo on github.com first, then wire the remote:</span>
+git remote add origin https://github.com/&lt;you&gt;/products-api.git
+git push -u origin main</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Or let the GitHub CLI do it in one step</span>
+        <p>With the GitHub CLI installed and authenticated (<code>gh auth login</code>), <code>gh repo create products-api --public --source=. --push</code> creates the remote repo and pushes your current commit in a single command — no clicking around the website. Handy once you've done the manual flow enough to understand it.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Never commit secrets</span>
+        <p>Your JWT signing key and database connection string (Days 8, 12) must <strong>not</strong> land in the repo. Keep them out of <code>appsettings.json</code>: use <em>user-secrets</em> in development (<code>dotnet user-secrets set "Jwt:Key" "…"</code>, stored outside the project tree) and environment variables or a secrets vault in production. If a secret ever <em>is</em> committed, rotate it — Git history remembers, so deleting the line later isn't enough. This is the single most common way beginners leak credentials.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 What belongs in the README</span>
+        <p>A good API README states: what the service does, prerequisites (.NET version, SQL Server), how to configure secrets, how to run migrations and start it (<code>dotnet run</code>), where the docs live (the OpenAPI/Scalar URL from Day 10), and how to authenticate (get a token, send the <code>Bearer</code> header from Day 12). Someone should go from clone to a working call without asking you a question.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>A Request, End to End 🔄</h2></div>
+      <p>To close the loop, trace one authenticated <code>POST /api/v2/products</code> through the finished Minimal API — every layer of the series, in order.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · 🧵 middleware</div>
+          <div class="sh">Exception handler, then auth</div>
+          <p>The request passes the global exception handler (Day 11), then <code>UseAuthentication</code> validates the JWT and builds the user (Day 12).</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 2 · 🗺️ route + version</div>
+          <div class="sh">Matched to the v2 handler</div>
+          <p>Routing resolves <code>v2</code> from the URL and selects <code>CreateAsync</code>; the group's <code>RequireAuthorization</code> confirms access (Days 13–14).</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 3 · 🎁 bind + validate</div>
+          <div class="sh">Body → DTO, checked</div>
+          <p>The JSON body binds to <code>CreateProductDto</code> and its data annotations validate (Days 4–5); invalid input short-circuits to a 400.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 4 · 🧠 service + EF Core</div>
+          <div class="sh">Business logic → database</div>
+          <p>The handler calls <code>IProductService</code> (Day 7), which persists via <code>AppDbContext</code> and <code>SaveChangesAsync</code> (Day 8).</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 5 · 📤 typed result</div>
+          <div class="sh">201 Created + DTO</div>
+          <p><code>TypedResults.Created</code> returns a 201 with the response DTO and <code>Location</code> header — a shape already described in the OpenAPI doc (Days 6, 10).</p>
+        </div>
+      </div>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-blue">POST v2</div><div class="idx">request</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val">auth ✓</div><div class="idx">Day 12</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val">validate ✓</div><div class="idx">Day 4</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val">service</div><div class="idx">Day 7–8</div></div>
+          <div class="arr-arrow">→</div>
+          <div class="arr-cell"><div class="val highlight-green">201 DTO</div><div class="idx">Day 6</div></div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Verify the finished API</span>
+        <p>Call <code>POST /api/v2/products</code> with no token → <strong>401</strong>. With a valid token but non-admin, try <code>DELETE</code> → <strong>403</strong>. Create a product → <strong>201</strong> with a <code>Location</code> header. Fetch the OpenAPI doc → both v1 and v2 appear. Hit <code>/api/v1/products</code> and <code>/api/v2/products</code> → different shapes. If all five hold, every layer of the series is working together.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the finale:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🪶 Minimal = less ceremony</h4><p>Route + handler on <code>WebApplication</code>; same platform as controllers.</p></div>
+        <div class="recap-card"><h4>🗺️ Map* verbs</h4><p><code>MapGet/Post/Put/Delete</code> take a route template and a lambda.</p></div>
+        <div class="recap-card"><h4>🎁 Inferred binding</h4><p>Route, query, body, and services bind by convention.</p></div>
+        <div class="recap-card"><h4>📤 TypedResults</h4><p>Prefer over <code>Results</code>; unions self-document &amp; compile-check.</p></div>
+        <div class="recap-card"><h4>📦 MapGroup</h4><p>Shared prefix + metadata (auth, tags, version) for many endpoints.</p></div>
+        <div class="recap-card"><h4>🧪 Endpoint filters</h4><p>Cross-cutting logic per group — the Minimal API action filter.</p></div>
+        <div class="recap-card"><h4>🗂️ Extension methods</h4><p>Split endpoints into files; keep <code>Program.cs</code> an index.</p></div>
+        <div class="recap-card"><h4>🧩 One dense group</h4><p>Versioned + secured + documented CRUD in a dozen lines.</p></div>
+        <div class="recap-card"><h4>🙈 .gitignore first</h4><p><code>dotnet new gitignore</code> keeps <code>bin/</code>, <code>obj/</code>, secrets out.</p></div>
+        <div class="recap-card"><h4>🔑 No secrets in Git</h4><p>User-secrets in dev, vault in prod; rotate if leaked.</p></div>
+        <div class="recap-card"><h4>🐙 init → commit → push</h4><p>Or <code>gh repo create --source=. --push</code> in one shot.</p></div>
+        <div class="recap-card"><h4>📄 README earns trust</h4><p>Run steps, docs URL, auth flow — clone to call with no questions.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>Syntax</th><th>Key detail</th></tr></thead>
+          <tbody>
+            <tr><td>Define endpoint</td><td><code>app.MapGet("/x", handler)</code></td><td>Verb methods on <code>WebApplication</code></td></tr>
+            <tr><td>Bind input</td><td>Handler parameters</td><td>Route/query/body/services inferred</td></tr>
+            <tr><td>Many query params</td><td><code>[AsParameters]</code></td><td>Bundle into a record/struct</td></tr>
+            <tr><td>Return statuses</td><td><code>Results&lt;Ok&lt;T&gt;, NotFound&gt;</code></td><td>Self-documenting; feeds OpenAPI</td></tr>
+            <tr><td>Group routes</td><td><code>app.MapGroup("/prefix")</code></td><td>Shared prefix + metadata</td></tr>
+            <tr><td>Secure a group</td><td><code>.RequireAuthorization("Policy")</code></td><td>Applies to every endpoint in it</td></tr>
+            <tr><td>Version a group</td><td><code>.WithApiVersionSet(set)</code></td><td><code>NewApiVersionSet</code> + <code>MapToApiVersion</code></td></tr>
+            <tr><td>Organize</td><td>Extension on <code>IEndpointRouteBuilder</code></td><td>Named handlers = testable</td></tr>
+            <tr><td>Ignore artifacts</td><td><code>dotnet new gitignore</code></td><td>Excludes bin/obj/secrets</td></tr>
+            <tr><td>Publish</td><td><code>git push -u origin main</code></td><td>Or <code>gh repo create --push</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is a Minimal API?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A way to define HTTP endpoints directly on the <code>WebApplication</code> with a route and a handler function, without a controller class or attributes. Introduced in .NET 6, it reduces boilerplate for smaller services and microservices. It runs on the same ASP.NET Core platform as controllers — same routing, DI, middleware, and auth.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">How do you define a GET endpoint in a Minimal API?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Call <code>app.MapGet("/route", handler)</code>, where the handler is a lambda or method. For example, <code>app.MapGet("/products/{id:int}", (int id) =&gt; ...)</code>. There are matching methods for the other verbs: <code>MapPost</code>, <code>MapPut</code>, <code>MapDelete</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">How does a handler get a route parameter, query value, or the request body?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>By parameter binding convention: a parameter whose name matches a route token (<code>{id}</code>) comes from the path, a simple type with no route match comes from the query string, and a complex type (a class or record) comes from the JSON body. You can be explicit with <code>[FromRoute]</code>, <code>[FromQuery]</code>, <code>[FromBody]</code> when needed.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What is an endpoint group?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A set of endpoints sharing a route prefix and metadata, created with <code>app.MapGroup("/prefix")</code>. Endpoints mapped on the group have routes relative to the prefix and inherit anything applied to the group — tags, authorization, versioning — so you configure cross-cutting settings once instead of per endpoint.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">How do you use a service (dependency injection) in a Minimal API handler?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Just add it as a handler parameter — <code>(int id, IProductService svc) =&gt; ...</code>. The framework resolves any registered service type from DI automatically (Day 7). You rarely need <code>[FromServices]</code>; it's inferred. This is the same container you registered services in via <code>builder.Services</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What's the main difference between Minimal APIs and controllers?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>How you declare endpoints. Controllers use classes, attributes, and convention-based discovery; Minimal APIs use explicit <code>Map*</code> calls with handler functions and less ceremony. They share the same underlying platform, so both support DI, validation, auth, and OpenAPI — the choice is about structure and preference, not capability.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What is a .gitignore, and why does a .NET project need one?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A file listing paths Git should not track. A .NET project produces build output (<code>bin/</code>, <code>obj/</code>) and IDE files that shouldn't be committed — they're regenerated and would bloat the repo. Run <code>dotnet new gitignore</code> to get the official .NET ignore file. It also helps keep secret files out of version control.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What are the basic git commands to push a project to GitHub?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p><code>git init</code> to create the repo, <code>git add .</code> to stage files, <code>git commit -m "message"</code> to save a snapshot, <code>git branch -M main</code> to name the branch, <code>git remote add origin &lt;url&gt;</code> to link the GitHub repo, and <code>git push -u origin main</code> to upload. You create the empty repo on GitHub first (or use the <code>gh</code> CLI to do both at once).</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">How do you return different status codes from a Minimal API handler?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Return an <code>IResult</code> via the <code>Results</code> or <code>TypedResults</code> factories: <code>TypedResults.Ok(dto)</code>, <code>TypedResults.NotFound()</code>, <code>TypedResults.Created(uri, dto)</code>, <code>TypedResults.BadRequest()</code>, etc. To declare multiple possible outcomes, use a union return type like <code>Results&lt;Ok&lt;ProductDto&gt;, NotFound&gt;</code>, which is compile-checked and self-documenting.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">TypedResults vs. Results — what's the difference and which is preferred?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p><code>Results</code> returns an opaque <code>IResult</code>; <code>TypedResults</code> returns concrete strongly-typed values like <code>Ok&lt;T&gt;</code>. <code>TypedResults</code> is preferred because it makes handlers unit-testable (you can assert on the concrete return type) and automatically contributes response metadata to OpenAPI. Combined with a <code>Results&lt;T1, T2&gt;</code> union, it documents every outcome without manual attributes.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">How do you apply authorization or tags to a whole group of endpoints?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Chain the metadata onto the group: <code>app.MapGroup("/api/products").WithTags("Products").RequireAuthorization()</code>. Every endpoint mapped on that group inherits it. You can still tighten an individual endpoint — e.g. <code>.RequireAuthorization("AdminOnly")</code> on the delete — and groups can nest to layer concerns at different levels.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">How do you version Minimal API endpoints?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>With the <code>Asp.Versioning.Http</code> package: build a version set with <code>app.NewApiVersionSet().HasApiVersion(new ApiVersion(1,0)).HasApiVersion(new ApiVersion(2,0)).Build()</code>, attach it to a group or endpoint via <code>.WithApiVersionSet(set)</code>, and bind specific endpoints to a version with <code>.MapToApiVersion(2, 0)</code>. A URL-segment route like <code>/api/v{version:apiVersion}/products</code> then routes v1 and v2 correctly.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">How do you keep Minimal APIs from cluttering Program.cs?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Move each resource's endpoints into an extension method on <code>IEndpointRouteBuilder</code> in its own file (e.g. <code>ProductEndpoints.MapProductEndpoints</code>), with the handlers as named static methods. <code>Program.cs</code> then just calls <code>app.MapProductEndpoints()</code> per resource, staying a readable index. This also makes the handlers unit-testable.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">How do you secure a Minimal API endpoint?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Call <code>.RequireAuthorization()</code> on the endpoint or its group to require an authenticated user, or <code>.RequireAuthorization("PolicyName")</code> / <code>.RequireAuthorization(p =&gt; p.RequireRole("Admin"))</code> for role/policy rules (Days 12–13). Ensure <code>UseAuthentication</code> and <code>UseAuthorization</code> are in the pipeline. Use <code>.AllowAnonymous()</code> to exempt specific endpoints like login.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">How do Minimal API endpoints show up in OpenAPI/Swagger?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>The native <code>Microsoft.AspNetCore.OpenApi</code> package (Day 10) discovers them automatically. You enrich the docs with fluent metadata — <code>.WithTags</code>, <code>.WithSummary</code>, <code>.WithDescription</code>, <code>.Produces&lt;T&gt;()</code>, <code>.ProducesProblem()</code> — and returning <code>TypedResults</code> or a <code>Results&lt;...&gt;</code> union lets responses be inferred. (With Swashbuckle you'd also call <code>AddEndpointsApiExplorer</code>.)</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">What should a good API project README contain?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>What the service does; prerequisites (.NET version, database); how to configure secrets (user-secrets/env vars); how to run migrations and start it; where the API docs live (the OpenAPI/Scalar URL); and how to authenticate. The goal is that a new developer can go from <code>git clone</code> to a successful authenticated request without asking the author anything.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">When would you choose Minimal APIs over controllers for a real project?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Minimal APIs suit smaller services, microservices, and high-throughput or AOT-targeted APIs where you want less ceremony and lower overhead. Controllers still shine for large apps with many endpoints that benefit from convention-based organization, model binding features, filters, and teams already fluent in MVC. It's not capability — both do DI, auth, validation, and docs — it's a fit-to-context and team-familiarity decision. Many codebases mix both.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">How do you unit test Minimal API endpoints?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Write handlers as named static methods rather than inline lambdas, then call them directly in a test with fake dependencies and assert on the returned <code>TypedResults</code> type and value — exactly like testing a controller action. For full-stack coverage, add integration tests with <code>WebApplicationFactory&lt;Program&gt;</code> (Day 8) that send real HTTP requests and assert status codes and bodies. The "Minimal APIs aren't testable" claim only applies to logic buried in lambdas.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">What are endpoint filters, and how do they compare to MVC action filters?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Endpoint filters (<code>AddEndpointFilter</code>) run logic before and after a Minimal API handler — inspecting or short-circuiting the request, transforming the result — and can be applied to a single endpoint or a whole group. They're the Minimal API analog of MVC action filters, useful for cross-cutting concerns like input validation, logging, or timing. They compose in order and can pass control down the chain, similar to middleware but scoped to endpoints with access to the handler's arguments.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How do you keep secrets like connection strings and signing keys out of the repo?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Don't put them in committed config. In development use the Secret Manager (<code>dotnet user-secrets</code>), which stores values outside the project directory; in production use environment variables or a managed secrets store (Azure Key Vault, AWS Secrets Manager). The <code>.gitignore</code> should exclude any local secrets files. Critically, if a secret is ever committed, <em>rotate it</em> — Git history preserves it even after you delete the line, so removal alone doesn't undo the exposure.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">Walk through how a request flows through the consolidated API.</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>It enters the middleware pipeline: the global exception handler wraps everything (Day 11), then authentication validates the JWT and builds the user (Day 12). Routing matches the versioned endpoint and authorization enforces the group's policy (Days 13–14). The body binds to a DTO and validates (Days 4–5); on failure it short-circuits to a 400. The handler delegates to a service (Day 7) that uses EF Core to hit the database (Day 8), then returns a <code>TypedResults</code> shaped as a DTO (Day 6) — a response already described in OpenAPI (Day 10). Each stage is one day of the series.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">What's the performance and AOT story for Minimal APIs?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Minimal APIs have lower per-request overhead than controllers (less of the MVC pipeline) and are the recommended model for Native AOT, where the request-delegate generator produces trimming- and AOT-friendly code with reduced startup time and memory. For most apps the difference is modest, but for high-throughput microservices or serverless/cold-start-sensitive workloads it's a real advantage. Note that some reflection-heavy features are constrained under AOT, which Minimal APIs' source-generation approach is designed to accommodate.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">How would you structure a production-ready versioned, secured, documented CRUD API?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Register services in <code>Program.cs</code> (DbContext, services, versioning, auth, ProblemDetails, OpenAPI) and order the middleware correctly (exception handler first, then auth, then caching — Days 11, 14). Put each resource's endpoints in an extension method with named, testable handlers, grouped via <code>MapGroup</code> with a versioned prefix, shared authorization, and OpenAPI tags. Use DTOs and a service layer to keep endpoints thin and entities internal (Days 5, 7). Keep secrets out of source control, document responses via typed results, add integration tests, and publish with a clear README. The result is thin endpoints over a well-layered core — every concern declared once, at the right level.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip — and a send-off</span>
+        <p>Nail the <strong>basics first</strong> (Q1–Q6): syntax, binding, groups, DI — these open every Minimal API interview. Then <strong>results and organization</strong> (Q9–Q13, Q18): <code>TypedResults</code> unions and the extension-method pattern are what separate "I've seen Minimal APIs" from "I ship them." Cover the <strong>shipping hygiene</strong> (Q7–Q8, Q16, Q20) — <code>.gitignore</code>, secrets, README — because sloppy repos sink otherwise-good candidates. Finish with the <strong>senior framing</strong> (Q17, Q19, Q21–Q23): when to choose Minimal APIs, filters, the end-to-end flow, AOT, and how to structure the whole thing. If you can rebuild a versioned, secured, documented CRUD resource as a Minimal API group and explain every layer from memory — you've finished the series. Well done. 🎓</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

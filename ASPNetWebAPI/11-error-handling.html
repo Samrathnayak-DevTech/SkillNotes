@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Error Handling for APIs — IExceptionHandler &amp; ProblemDetails — Day 11</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:14px 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 11 · ASP.NET Core</div>
+    <div class="brand-title">Error Handling 🧯</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>Why Centralize Errors?</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>ProblemDetails Recap</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">The Approaches</div>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>The Evolution</span></a>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>IExceptionHandler</span></a>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>Wiring It Up</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Going Further</div>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>Chaining Handlers</span></a>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>Custom Exceptions → Codes</span></a>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>Safety &amp; Logging</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Practice</div>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>Request-to-Error Flow</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 11 — one place to catch everything</div>
+      <h1>Error Handling for APIs 🧯</h1>
+      <p class="lede">Things go wrong: a record isn't found, a rule is violated, a database times out, a bug throws. What separates a professional API from a fragile one is what the <em>client</em> sees when that happens — a consistent, structured error, never a raw stack trace or an inconsistent shape that changes per endpoint. Today we centralize all of it: a single global handler that catches unhandled exceptions and returns standardized <code>ProblemDetails</code>, built on ASP.NET Core's <code>IExceptionHandler</code>.</p>
+      <div class="chips">
+        <span class="chip">🎯 Centralized</span>
+        <span class="chip">🧾 ProblemDetails</span>
+        <span class="chip">🪝 IExceptionHandler</span>
+        <span class="chip">🔗 UseExceptionHandler</span>
+        <span class="chip">🔒 No leaks</span>
+        <span class="chip">📝 Logged</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>Why Centralize Error Handling? 🎯</h2></div>
+      <p>Without a central strategy, error handling scatters into a <code>try/catch</code> in every action. That's repetitive, easy to get wrong, and guarantees inconsistency — one endpoint returns <code>{ "error": "not found" }</code>, another a plain string, a third leaks a full stack trace. Clients can't reliably parse any of it, and sensitive internals leak to the outside world.</p>
+
+      <p>Centralized handling flips this: your business code simply <strong>throws</strong> when something is wrong, and one component at the edge of the pipeline catches <em>every</em> unhandled exception, logs it, and shapes a single consistent response. Your controllers and services stay clean and focused on the happy path.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🚑 Analogy — the emergency room</span>
+        <p>You don't put a doctor in every hallway of a hospital. You have one ER where anyone in trouble is routed, triaged, and treated consistently. A global exception handler is that ER: no matter where in the app something collapses, it ends up in one place that responds calmly and uniformly — instead of every room improvising its own first aid.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Three jobs of a good error strategy</span>
+        <p><strong>1. Consistency</strong> — every error looks the same shape (we use <code>ProblemDetails</code>). <strong>2. Safety</strong> — clients never see stack traces or internal details in production. <strong>3. Observability</strong> — every failure is logged with enough context to debug, and correlated by a trace id.</p>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">API Error Handling</div>
+          <div class="s">throw → catch once → shape</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch b-rose">
+            <h4>🧾 ProblemDetails</h4>
+            <ul>
+              <li>RFC 9457 shape</li>
+              <li>One consistent contract</li>
+              <li><code>AddProblemDetails()</code></li>
+            </ul>
+          </div>
+          <div class="mm-branch b-blue">
+            <h4>🪝 IExceptionHandler</h4>
+            <ul>
+              <li>One <code>TryHandleAsync</code></li>
+              <li>Central callback</li>
+              <li>Singleton, DI-friendly</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>🔗 Middleware</h4>
+            <ul>
+              <li><code>UseExceptionHandler()</code></li>
+              <li>First in the pipeline</li>
+              <li>Catches everything after</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>🔀 Map to codes</h4>
+            <ul>
+              <li>Custom exceptions</li>
+              <li>NotFound → 404</li>
+              <li>Chain handlers</li>
+            </ul>
+          </div>
+          <div class="mm-branch">
+            <h4>🔒 Safe &amp; logged</h4>
+            <ul>
+              <li>Hide internals</li>
+              <li>Log with trace id</li>
+              <li>Dev vs. prod detail</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>ProblemDetails — the Error Contract 🧾</h2></div>
+      <p>We met <code>ProblemDetails</code> back on Day 6: it's the standard, machine-readable error format defined by RFC 9457 (formerly 7807), served as <code>application/problem+json</code>. Centralized handling and <code>ProblemDetails</code> are a pair — the handler catches the exception; <code>ProblemDetails</code> is the shape it returns.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">JSON — the standard error shape</span><button class="copy-btn">Copy</button></div>
+        <pre><code>{
+  <span class="str">"type"</span>:     <span class="str">"https://tools.ietf.org/html/rfc9110#section-15.5.5"</span>,
+  <span class="str">"title"</span>:    <span class="str">"Not Found"</span>,
+  <span class="str">"status"</span>:   <span class="num">404</span>,
+  <span class="str">"detail"</span>:   <span class="str">"No product with id 42 exists."</span>,
+  <span class="str">"instance"</span>: <span class="str">"GET /api/products/42"</span>,
+  <span class="str">"traceId"</span>:  <span class="str">"00-8fa7...c3-01"</span>
+}</code></pre>
+      </div>
+
+      <p>Registering it is one line — and it does more than you might expect. <code>AddProblemDetails()</code> registers the <code>IProblemDetailsService</code>, which the framework uses to turn error status codes (and unhandled exceptions, once a handler is wired) into this shape automatically.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">AddProblemDetails</span>();</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Two flavors, from earlier days</span>
+        <p><code>ProblemDetails</code> is the base shape (Day 6). <code>ValidationProblemDetails</code> extends it with an <code>errors</code> dictionary keyed by field, and the <code>[ApiController]</code> attribute produces it automatically on model-validation failures (Day 4). Today's global handler covers everything <em>else</em> — the exceptions your code throws or that escape unhandled.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Add a trace id for correlation</span>
+        <p>Include a correlation id (from <code>Activity.Current?.Id</code> or <code>HttpContext.TraceIdentifier</code>) in every error. When a client reports "I got a 500 at 3pm," that id lets you find the exact log entry instantly. <code>AddProblemDetails()</code> can be configured to attach it to every response automatically.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>The Evolution of Error Handling 🪜</h2></div>
+      <p>ASP.NET Core has offered several ways to handle errors globally. Knowing the progression explains <em>why</em> <code>IExceptionHandler</code> is the modern recommendation.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Approach</th><th>How</th><th>Verdict</th></tr></thead>
+          <tbody>
+            <tr><td>Per-action <code>try/catch</code></td><td>Wrap logic in each method</td><td>❌ Repetitive, inconsistent; use only for local recovery</td></tr>
+            <tr><td>Custom middleware</td><td>A <code>try/catch</code> around <code>next(context)</code></td><td>🟠 Works everywhere, but you hand-write the plumbing</td></tr>
+            <tr><td><code>UseExceptionHandler(lambda)</code></td><td>Inline handler in <code>Program.cs</code></td><td>🟠 Built-in, but logic crammed into startup</td></tr>
+            <tr><td><code>IExceptionHandler</code></td><td>A class per concern, DI-registered</td><td>✅ Clean, testable, modular — the modern default</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Here's the "old but everywhere" middleware version, so you recognize it — a single <code>try/catch</code> wrapping the rest of the pipeline:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the classic middleware pattern (for context)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">ExceptionMiddleware</span>(<span class="ty">RequestDelegate</span> next, <span class="ty">ILogger</span>&lt;<span class="ty">ExceptionMiddleware</span>&gt; logger)
+{
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">InvokeAsync</span>(<span class="ty">HttpContext</span> context)
+    {
+        <span class="kw">try</span>
+        {
+            <span class="kw">await</span> next(context);          <span class="cmt">// run the rest of the pipeline</span>
+        }
+        <span class="kw">catch</span> (<span class="ty">Exception</span> ex)
+        {
+            logger.<span class="fn">LogError</span>(ex, <span class="str">"Unhandled exception"</span>);
+            context.Response.StatusCode = <span class="ty">StatusCodes</span>.Status500InternalServerError;
+            <span class="kw">await</span> context.Response.<span class="fn">WriteAsJsonAsync</span>(<span class="kw">new</span> <span class="ty">ProblemDetails</span>
+            {
+                Status = <span class="ty">StatusCodes</span>.Status500InternalServerError,
+                Title = <span class="str">"Server error"</span>
+            });
+        }
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why IExceptionHandler wins</span>
+        <p>It plugs directly into ASP.NET Core's built-in exception-handling middleware, so you inherit all its edge-case handling (client disconnects, response-already-started, clearing the context) for free — and get improvements automatically as the framework evolves. It works across the whole pipeline including Minimal APIs, relies on DI, and lets you split concerns into small, testable classes instead of one growing <code>try/catch</code>.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>IExceptionHandler — the Modern Way 🪝</h2></div>
+      <p><code>IExceptionHandler</code> (introduced in .NET 8) is an interface with a single method, <code>TryHandleAsync</code>, giving you a central callback for handling exceptions. You implement it in a class, and ASP.NET Core's exception middleware invokes it when something is thrown.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — a global exception handler</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">using</span> Microsoft.AspNetCore.Diagnostics;
+
+<span class="kw">internal sealed class</span> <span class="ty">GlobalExceptionHandler</span>(
+    <span class="ty">IProblemDetailsService</span> problemDetailsService,
+    <span class="ty">ILogger</span>&lt;<span class="ty">GlobalExceptionHandler</span>&gt; logger) : <span class="ty">IExceptionHandler</span>
+{
+    <span class="kw">public async</span> <span class="ty">ValueTask</span>&lt;<span class="kw">bool</span>&gt; <span class="fn">TryHandleAsync</span>(
+        <span class="ty">HttpContext</span> httpContext,
+        <span class="ty">Exception</span> exception,
+        <span class="ty">CancellationToken</span> cancellationToken)
+    {
+        logger.<span class="fn">LogError</span>(exception, <span class="str">"Unhandled exception: {Message}"</span>, exception.Message);
+
+        httpContext.Response.StatusCode = <span class="ty">StatusCodes</span>.Status500InternalServerError;
+
+        <span class="cmt">// Let the ProblemDetails service write the standardized body.</span>
+        <span class="kw">return await</span> problemDetailsService.<span class="fn">TryWriteAsync</span>(<span class="kw">new</span> <span class="ty">ProblemDetailsContext</span>
+        {
+            HttpContext = httpContext,
+            Exception = exception,
+            ProblemDetails = <span class="kw">new</span> <span class="ty">ProblemDetails</span>
+            {
+                Status = <span class="ty">StatusCodes</span>.Status500InternalServerError,
+                Title = <span class="str">"An unexpected error occurred."</span>
+            }
+        });
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The return value is the whole contract</span>
+        <p><code>TryHandleAsync</code> returns a <code>bool</code>: return <strong><code>true</code></strong> to say "I handled this exception — stop here," or <strong><code>false</code></strong> to pass it to the next handler (or, if none remain, the default handling). That single boolean is what makes handler <em>chaining</em> work (section 06).</p>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">1️⃣</span><h4>One method</h4><p><code>TryHandleAsync(context, exception, ct)</code> — that's the entire interface.</p></div>
+        <div class="card"><span class="glyph">💉</span><h4>DI-friendly</h4><p>Inject loggers, the <code>IProblemDetailsService</code>, or anything else through the constructor.</p></div>
+        <div class="card"><span class="glyph">♻️</span><h4>Singleton</h4><p>Handlers are registered as singletons, so keep them stateless (resolve scoped services per-request if needed).</p></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Prefer TryWriteAsync over manual JSON</span>
+        <p>Using <code>problemDetailsService.TryWriteAsync(...)</code> (rather than hand-serializing with <code>WriteAsJsonAsync</code>) lets your registered <code>ProblemDetails</code> customizations — like the trace id and content type — apply consistently. It also respects the content negotiation the service is configured for.</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>Wiring It Up — the Two Steps 🔗</h2></div>
+      <p>Like all DI in ASP.NET Core (Day 7), it's register + use. Two calls, plus <code>AddProblemDetails()</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs (the complete wiring)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> builder = <span class="ty">WebApplication</span>.<span class="fn">CreateBuilder</span>(args);
+
+builder.Services.<span class="fn">AddControllers</span>();
+builder.Services.<span class="fn">AddProblemDetails</span>();                       <span class="cmt">// the error shape service</span>
+builder.Services.<span class="fn">AddExceptionHandler</span>&lt;<span class="ty">GlobalExceptionHandler</span>&gt;(); <span class="cmt">// register the handler</span>
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+app.<span class="fn">UseExceptionHandler</span>();   <span class="cmt">// add the middleware — FIRST in the pipeline</span>
+
+app.<span class="fn">MapControllers</span>();
+app.<span class="fn">Run</span>();</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The gotcha that catches everyone</span>
+        <p>Calling <code>AddExceptionHandler&lt;T&gt;()</code> alone isn't enough — you must also add the middleware with <code>UseExceptionHandler()</code>. And bare <code>UseExceptionHandler()</code> only works if you've <em>also</em> registered <code>AddProblemDetails()</code>; otherwise it throws "the ExceptionHandler property must be set." If you haven't added ProblemDetails, you'd need <code>UseExceptionHandler(_ =&gt; {})</code> with an empty lambda. Register <code>AddProblemDetails()</code> and the plain call just works.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Put UseExceptionHandler first</span>
+        <p>Place <code>UseExceptionHandler()</code> at the very start of the pipeline so it wraps everything downstream — middleware, routing, and your endpoints. An exception thrown in middleware registered <em>before</em> it won't be caught. First position = catches the most.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 .NET 10 change — no more duplicate logs</span>
+        <p>In .NET 8 and 9, the exception middleware always logged the exception at <code>Error</code> level even when your handler already logged it — producing duplicate log entries. <strong>.NET 10 changes the default</strong>: when your <code>TryHandleAsync</code> returns <code>true</code>, the middleware no longer emits its own diagnostic log. You can fine-tune this with the middleware's <code>SuppressDiagnosticsCallback</code> if you want different behavior.</p>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>Chaining Multiple Handlers 🔀</h2></div>
+      <p>You can register several handlers, each responsible for one kind of exception. They run <strong>in the order registered</strong>, and the first one whose <code>TryHandleAsync</code> returns <code>true</code> wins — so order specific handlers before your catch-all fallback.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — a specific handler that only claims its exception</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">internal sealed class</span> <span class="ty">NotFoundExceptionHandler</span>(
+    <span class="ty">IProblemDetailsService</span> problemDetailsService) : <span class="ty">IExceptionHandler</span>
+{
+    <span class="kw">public async</span> <span class="ty">ValueTask</span>&lt;<span class="kw">bool</span>&gt; <span class="fn">TryHandleAsync</span>(
+        <span class="ty">HttpContext</span> httpContext, <span class="ty">Exception</span> exception, <span class="ty">CancellationToken</span> ct)
+    {
+        <span class="cmt">// Not my exception? Decline — let the next handler try.</span>
+        <span class="kw">if</span> (exception <span class="kw">is not</span> <span class="ty">NotFoundException</span> notFound)
+            <span class="kw">return false</span>;
+
+        httpContext.Response.StatusCode = <span class="ty">StatusCodes</span>.Status404NotFound;
+        <span class="kw">return await</span> problemDetailsService.<span class="fn">TryWriteAsync</span>(<span class="kw">new</span> <span class="ty">ProblemDetailsContext</span>
+        {
+            HttpContext = httpContext,
+            Exception = notFound,
+            ProblemDetails = <span class="kw">new</span> <span class="ty">ProblemDetails</span>
+            {
+                Status = <span class="ty">StatusCodes</span>.Status404NotFound,
+                Title = <span class="str">"Resource not found"</span>,
+                Detail = notFound.Message
+            }
+        });
+    }
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — register specific first, fallback last</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">AddExceptionHandler</span>&lt;<span class="ty">NotFoundExceptionHandler</span>&gt;();   <span class="cmt">// tried 1st</span>
+builder.Services.<span class="fn">AddExceptionHandler</span>&lt;<span class="ty">ValidationExceptionHandler</span>&gt;(); <span class="cmt">// tried 2nd</span>
+builder.Services.<span class="fn">AddExceptionHandler</span>&lt;<span class="ty">GlobalExceptionHandler</span>&gt;();     <span class="cmt">// catch-all, last</span></code></pre>
+      </div>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-blue">NotFound?</div><div class="idx">→ true → 404</div></div>
+          <div class="arr-arrow">false ↓</div>
+          <div class="arr-cell"><div class="val highlight-green">Validation?</div><div class="idx">→ true → 400</div></div>
+          <div class="arr-arrow">false ↓</div>
+          <div class="arr-cell"><div class="val highlight">Global</div><div class="idx">→ true → 500</div></div>
+        </div>
+        <p style="margin:14px 0 0; font-size:.85rem; color:var(--ink-soft);">Each handler either claims the exception (<code>true</code>, stop) or declines (<code>false</code>, pass on). The fallback returns <code>true</code> for anything, so it must be registered last.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ One job per handler</span>
+        <p>Chaining keeps each handler tiny and single-purpose — one for "not found," one for validation, one catch-all — which is far more testable than a giant <code>switch</code> on exception type. That said, a <code>switch</code> expression inside one handler is a perfectly good simpler alternative for small apps.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>Custom Exceptions → Status Codes 🔀</h2></div>
+      <p>The cleanest pattern: define domain exceptions that <em>mean</em> something, throw them from your service layer (Day 7), and let handlers translate each into the right status code. Your business logic reads naturally and never touches HTTP.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — meaningful domain exceptions</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">NotFoundException</span>(<span class="kw">string</span> message) : <span class="ty">Exception</span>(message);
+<span class="kw">public class</span> <span class="ty">DuplicateNameException</span>(<span class="kw">string</span> name)
+    : <span class="ty">Exception</span>(<span class="str">$"A product named '{name}' already exists."</span>);</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the service just throws; no HTTP concerns</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">ProductDto</span>&gt; <span class="fn">GetByIdAsync</span>(<span class="kw">int</span> id)
+{
+    <span class="kw">var</span> product = <span class="kw">await</span> _repo.<span class="fn">GetByIdAsync</span>(id)
+        ?? <span class="kw">throw new</span> <span class="ty">NotFoundException</span>(<span class="str">$"No product with id {id} exists."</span>);
+    <span class="kw">return</span> product.<span class="fn">ToDto</span>();
+}</code></pre>
+      </div>
+
+      <p>A single handler can map many exception types to codes with a <code>switch</code> — a compact alternative to one handler per type:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — mapping exceptions to status codes in one handler</span><button class="copy-btn">Copy</button></div>
+        <pre><code>(<span class="kw">int</span> status, <span class="kw">string</span> title) = exception <span class="kw">switch</span>
+{
+    <span class="ty">NotFoundException</span>      =&gt; (<span class="ty">StatusCodes</span>.Status404NotFound,   <span class="str">"Not found"</span>),
+    <span class="ty">DuplicateNameException</span> =&gt; (<span class="ty">StatusCodes</span>.Status409Conflict,   <span class="str">"Conflict"</span>),
+    <span class="ty">ValidationException</span>    =&gt; (<span class="ty">StatusCodes</span>.Status400BadRequest, <span class="str">"Validation failed"</span>),
+    _                       =&gt; (<span class="ty">StatusCodes</span>.Status500InternalServerError, <span class="str">"Server error"</span>)
+};
+
+httpContext.Response.StatusCode = status;
+<span class="kw">return await</span> problemDetailsService.<span class="fn">TryWriteAsync</span>(<span class="kw">new</span>()
+{
+    HttpContext = httpContext,
+    Exception = exception,
+    ProblemDetails = <span class="kw">new</span>() { Status = status, Title = title, Detail = exception.Message }
+});</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Ties the whole week together</span>
+        <p>This is the payoff of the layered design: the <strong>service</strong> (Day 7) expresses <em>what</em> went wrong by throwing a domain exception; the <strong>handler</strong> decides the <em>HTTP status</em> (Day 6); and <strong>ProblemDetails</strong> gives it a consistent body. Controllers no longer need <code>try/catch</code> or manual <code>NotFound()</code> calls for these cases — throwing is enough.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Don't use exceptions for ordinary control flow</span>
+        <p>Exceptions are for <em>exceptional</em> conditions. Throwing on a genuinely-missing resource is reasonable, but for high-frequency expected outcomes, returning a result (or a <code>404</code> directly from the controller, Day 6) can be cheaper than throwing, since exceptions carry overhead. Use judgment: domain exceptions for real rule violations, plain returns for routine "not found" on hot paths.</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>Safety &amp; Logging 🔒</h2></div>
+      <p>Two responsibilities the handler must never neglect: don't leak internals to clients, and do record enough to debug.</p>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Never serve sensitive error detail to clients</span>
+        <p>Microsoft is explicit: serving raw exception detail is a security risk. A stack trace or database error message can reveal your schema, file paths, library versions, and logic to an attacker. In <strong>production</strong>, return a generic <code>Detail</code> ("An unexpected error occurred"); keep the specifics in your logs. Only in <strong>development</strong> should you surface exception details for debugging.</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — dev vs. prod detail</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public</span> <span class="fn">GlobalExceptionHandler</span>(
+    <span class="ty">IProblemDetailsService</span> pds, <span class="ty">IHostEnvironment</span> env, <span class="ty">ILogger</span>&lt;<span class="ty">GlobalExceptionHandler</span>&gt; log)
+    { _pds = pds; _env = env; _log = log; }
+
+<span class="cmt">// ... inside TryHandleAsync:</span>
+<span class="kw">var</span> detail = _env.<span class="fn">IsDevelopment</span>()
+    ? exception.<span class="fn">ToString</span>()          <span class="cmt">// full detail — DEV ONLY</span>
+    : <span class="str">"An unexpected error occurred."</span>; <span class="cmt">// safe generic message in prod</span></code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📝</span><h4>Log the real thing</h4><p>Always log the full exception server-side with <code>logger.LogError(ex, ...)</code> — that's where the detail belongs, not in the response.</p></div>
+        <div class="card"><span class="glyph">🔖</span><h4>Correlate</h4><p>Attach a trace id to both the log and the response so a reported error maps to one log entry.</p></div>
+        <div class="card"><span class="glyph">🎚️</span><h4>Right level</h4><p>Log unexpected 500s at <code>Error</code>; expected 404/400 domain cases can be <code>Information</code>/<code>Warning</code> to avoid noise.</p></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Customize ProblemDetails globally</span>
+        <p><code>AddProblemDetails(options =&gt; options.CustomizeProblemDetails = ctx =&gt; { ... })</code> lets you enrich every error once — e.g. always add the trace id and the request path — so individual handlers stay lean and every response is uniform.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>Request-to-Error Flow 🔄</h2></div>
+      <p>Here's the full journey of a request that throws, from endpoint to structured response — today's "Do" in motion.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · 📥 request enters</div>
+          <div class="sh">Passes UseExceptionHandler</div>
+          <p>The exception middleware sits first, wrapping everything downstream in its safety net, then hands off to routing.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 2 · 🧠 service throws</div>
+          <div class="sh">A domain exception is raised</div>
+          <p>The service can't find the product and throws <code>NotFoundException</code> — no HTTP code, no try/catch, just intent.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 3 · 🪝 middleware catches</div>
+          <div class="sh">Handlers run in order</div>
+          <p>The exception unwinds to the middleware, which calls each <code>IExceptionHandler</code> until one returns <code>true</code>.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 4 · 🧾 shape + log</div>
+          <div class="sh">ProblemDetails written, error logged</div>
+          <p>The matching handler sets <code>404</code>, writes a <code>ProblemDetails</code> body via <code>TryWriteAsync</code>, and logs with a trace id.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 5 · 📤 client responds</div>
+          <div class="sh">Consistent structured error</div>
+          <p>The client receives <code>application/problem+json</code> with a clear status, title, and safe detail — same shape every time.</p>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The clean-code payoff</span>
+        <p>Notice what's <em>absent</em>: no <code>try/catch</code> in the controller, no manual error JSON, no leaked stack trace. The business code throws; the edge of the app handles. That separation is the entire point of centralized error handling.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🎯 Centralize</h4><p>One handler at the edge beats a try/catch in every action.</p></div>
+        <div class="recap-card"><h4>🧾 ProblemDetails</h4><p>RFC 9457 error shape; register with <code>AddProblemDetails()</code>.</p></div>
+        <div class="recap-card"><h4>🪝 IExceptionHandler</h4><p>One <code>TryHandleAsync</code> method; the modern approach (.NET 8+).</p></div>
+        <div class="recap-card"><h4>↩️ true / false</h4><p>Return <code>true</code> = handled &amp; stop; <code>false</code> = pass to next.</p></div>
+        <div class="recap-card"><h4>💉 DI + singleton</h4><p>Handlers are singletons; inject logger &amp; ProblemDetails service.</p></div>
+        <div class="recap-card"><h4>🔗 Register + use</h4><p><code>AddExceptionHandler&lt;T&gt;()</code> + <code>UseExceptionHandler()</code>.</p></div>
+        <div class="recap-card"><h4>⚠️ Needs ProblemDetails</h4><p>Bare <code>UseExceptionHandler()</code> requires <code>AddProblemDetails()</code>.</p></div>
+        <div class="recap-card"><h4>🥇 First in pipeline</h4><p>Place the middleware first so it catches everything after.</p></div>
+        <div class="recap-card"><h4>🔀 Chain by order</h4><p>Specific handlers first, catch-all fallback last.</p></div>
+        <div class="recap-card"><h4>🎭 Exceptions → codes</h4><p>Throw domain exceptions; map each to a status code.</p></div>
+        <div class="recap-card"><h4>🔒 Hide internals</h4><p>Generic detail in prod; full exception only in dev.</p></div>
+        <div class="recap-card"><h4>📝 .NET 10 logging</h4><p>Handled exceptions no longer double-logged by the middleware.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>Syntax</th><th>Key detail</th></tr></thead>
+          <tbody>
+            <tr><td>Error shape</td><td><code>AddProblemDetails()</code></td><td>Registers <code>IProblemDetailsService</code>; RFC 9457</td></tr>
+            <tr><td>Handler</td><td><code>IExceptionHandler.TryHandleAsync</code></td><td>Single method; return bool</td></tr>
+            <tr><td>Register</td><td><code>AddExceptionHandler&lt;T&gt;()</code></td><td>Singleton; order matters</td></tr>
+            <tr><td>Use</td><td><code>UseExceptionHandler()</code></td><td>First in pipeline; needs ProblemDetails</td></tr>
+            <tr><td>Write body</td><td><code>problemDetailsService.TryWriteAsync</code></td><td>Applies your customizations; over manual JSON</td></tr>
+            <tr><td>Chaining</td><td>Multiple <code>AddExceptionHandler</code></td><td>First to return <code>true</code> wins</td></tr>
+            <tr><td>Map codes</td><td>Custom exceptions + <code>switch</code></td><td>Throw in service, translate in handler</td></tr>
+            <tr><td>Safety</td><td><code>IsDevelopment()</code> gate</td><td>Generic detail in prod; never leak internals</td></tr>
+            <tr><td>Logging</td><td><code>logger.LogError(ex, ...)</code></td><td>Full detail server-side + trace id</td></tr>
+            <tr><td>.NET 10</td><td><code>SuppressDiagnosticsCallback</code></td><td>Handled exceptions not double-logged by default</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">Why centralize error handling instead of using try/catch everywhere?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A try/catch in every action is repetitive and leads to inconsistent error responses — each endpoint might return a different shape. Centralizing means one component catches all unhandled exceptions and returns a single consistent format, keeps controllers focused on the happy path, and ensures internals aren't leaked. Business code just throws; the edge handles it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is ProblemDetails?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A standardized, machine-readable error format (RFC 9457, formerly 7807) served as <code>application/problem+json</code>. It has fields like <code>type</code>, <code>title</code>, <code>status</code>, and <code>detail</code>. Using it means every client gets the same predictable error shape to parse. You enable it with <code>AddProblemDetails()</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What is IExceptionHandler?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>An interface (introduced in .NET 8) for handling exceptions centrally. It has one method, <code>TryHandleAsync(HttpContext, Exception, CancellationToken)</code>, where you write your handling logic. You implement it in a class, register it with <code>AddExceptionHandler&lt;T&gt;()</code>, and ASP.NET Core's exception middleware calls it when something is thrown.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What two steps wire up an exception handler?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>First, register the handler in DI: <code>builder.Services.AddExceptionHandler&lt;GlobalExceptionHandler&gt;()</code>. Second, add the middleware to the pipeline: <code>app.UseExceptionHandler()</code>. You also register <code>AddProblemDetails()</code> so the standardized error body is produced and the bare <code>UseExceptionHandler()</code> call works.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What does TryHandleAsync return, and why?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A <code>bool</code>. Return <code>true</code> to say "I handled this exception; stop here," or <code>false</code> to let the next handler (or the default behavior) deal with it. That boolean is what lets you chain multiple handlers, each responsible for a different exception type.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">Why shouldn't you return a stack trace to the client?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>It's a security risk. A stack trace or raw exception message can reveal your database schema, file paths, library versions, and internal logic to an attacker. In production you return a generic message and keep the real detail in your server logs; full detail is only appropriate in a development environment.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">Where should UseExceptionHandler go in the pipeline?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>At the very start, before other middleware. It works by wrapping everything downstream, so placing it first means it catches exceptions from all subsequent middleware, routing, and endpoints. Anything registered before it wouldn't be caught by it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What's the benefit of a consistent error format?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Clients can write one piece of code to parse and handle errors instead of special-casing every endpoint. Consistency also makes generated SDKs, logging, and monitoring reliable. <code>ProblemDetails</code> gives you that one standard shape across success-adjacent failures and unexpected crashes alike.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">How do you chain multiple exception handlers?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Register several with <code>AddExceptionHandler&lt;T&gt;()</code>. They run in registration order, and the first whose <code>TryHandleAsync</code> returns <code>true</code> handles the exception. Each specific handler checks the exception type and returns <code>false</code> if it's not theirs. Register specific handlers first and a catch-all fallback last, since the fallback always returns <code>true</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">Why does bare UseExceptionHandler() sometimes throw at startup?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Because the middleware needs to know how to produce a response. With no arguments it requires either an <code>ExceptionHandlingPath</code>/handler configured, or a registered <code>ProblemDetails</code> service. If you've called <code>AddProblemDetails()</code>, the plain <code>UseExceptionHandler()</code> works; otherwise you must pass an empty lambda <code>UseExceptionHandler(_ =&gt; {})</code> or configure options. Registering ProblemDetails is the clean fix.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">How would you map custom exceptions to specific status codes?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Define domain exceptions (e.g. <code>NotFoundException</code>, <code>DuplicateNameException</code>), throw them from the service layer, and in the handler map each type to a code — either one handler per type, or a single handler with a <code>switch</code> on the exception type setting the status and title. The service stays HTTP-free; the handler owns the translation.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">IExceptionHandler vs. exception-handling middleware — which and why?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p><code>IExceptionHandler</code> is the modern recommendation. Both work across the pipeline, but the handler plugs into the framework's built-in middleware, so you inherit its edge-case handling (client disconnects, response already started, context clearing) and future improvements for free, keep concerns in small testable DI-registered classes, and avoid hand-writing the try/catch plumbing. Custom middleware is still valid but reinvents what the framework gives you.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">What lifetime is an IExceptionHandler, and what does that imply?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Singleton — one instance for the app's lifetime. So keep handlers stateless and don't inject scoped services (like a <code>DbContext</code>) directly into the constructor, or you'll create a captive dependency (Day 7). If you need a scoped service, resolve it per-request from the <code>HttpContext.RequestServices</code> inside <code>TryHandleAsync</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">Why prefer IProblemDetailsService.TryWriteAsync over WriteAsJsonAsync?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p><code>TryWriteAsync</code> routes the response through the registered <code>ProblemDetails</code> service, so your global customizations (trace id, content type, extension members) apply uniformly, and it respects the configured negotiation. Hand-serializing with <code>WriteAsJsonAsync</code> bypasses all that, risking inconsistent bodies across handlers.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">How do you handle validation errors versus thrown exceptions?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>They're separate paths. Model-validation failures are handled automatically by <code>[ApiController]</code>, which returns <code>ValidationProblemDetails</code> (a 400 with a per-field <code>errors</code> dictionary) before your action runs (Day 4). The global exception handler covers everything else — exceptions your code throws or that escape unhandled. Both produce a ProblemDetails-family response, so the client sees a consistent shape either way.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">How do you correlate an error report with your logs?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Include a trace/correlation id in both the logged entry and the <code>ProblemDetails</code> response — typically from <code>Activity.Current?.Id</code> or <code>HttpContext.TraceIdentifier</code>. When a user reports "I got a 500 and it said traceId X," you search logs for X and find the exact request. You can attach it globally via <code>AddProblemDetails</code>' customize callback.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">What changed about exception logging in .NET 10?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>In .NET 8/9 the exception-handling middleware always emitted an <code>Error</code>-level diagnostic log for every exception, even when your <code>IExceptionHandler</code> already logged it — causing duplicate log entries. In .NET 10 the default changed: when <code>TryHandleAsync</code> returns <code>true</code>, the middleware no longer emits its own diagnostic by default. You can control this precisely with the middleware's <code>SuppressDiagnosticsCallback</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">Should you use exceptions for expected control flow like "not found"?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Cautiously. Exceptions carry real overhead (stack capture), so for high-frequency, fully-expected outcomes on hot paths, returning a result or a direct <code>404</code> from the controller can be cheaper and clearer. Domain exceptions are appropriate for genuine rule violations and keeping deep call stacks clean. It's a judgment call — many teams use a result pattern for expected cases and reserve exceptions for the truly exceptional.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">How do you globally enrich every ProblemDetails response?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Configure <code>AddProblemDetails(options =&gt; options.CustomizeProblemDetails = ctx =&gt; { ... })</code>. In the callback you can add extension members to every response — a trace id, the request path/method, a support code, an environment tag — so all errors are uniform without repeating that code in each handler. It runs for both exception responses and generated status-code responses.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How would you test exception handlers?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Unit test the handler in isolation: construct it with a fake logger and ProblemDetails service, build a <code>DefaultHttpContext</code>, call <code>TryHandleAsync</code> with a sample exception, and assert the return value and the status code set on the response. For end-to-end confidence, add integration tests with <code>WebApplicationFactory</code> (Day 8) that hit an endpoint which throws and assert the response is the expected status and ProblemDetails shape.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">How does centralized handling interact with the service/layered architecture?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>It completes the separation of concerns: the service layer (Day 7) throws domain exceptions expressing <em>what</em> went wrong with no HTTP knowledge; the handler at the edge translates those into HTTP status codes (Day 6) and a ProblemDetails body. Controllers shrink to the happy path — no try/catch, no manual error results. The layers stay decoupled and each has one responsibility for errors.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">How do you keep a scoped dependency out of a singleton handler safely?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Don't inject the scoped service into the singleton handler's constructor — that's a captive dependency and scope validation will flag it. Instead resolve it per request from <code>httpContext.RequestServices.GetRequiredService&lt;T&gt;()</code> inside <code>TryHandleAsync</code>, which gives you the correctly-scoped instance for that request. Better still, keep handlers free of scoped dependencies where possible; they should mostly log and shape responses.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">What's the difference between the developer exception page and a global handler?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>The Developer Exception Page (<code>UseDeveloperExceptionPage</code>, on by default in development) shows rich diagnostic detail — stack trace, headers, query — to help <em>you</em> debug, and must never run in production. The global exception handler (<code>UseExceptionHandler</code> + <code>IExceptionHandler</code>) is the <em>production</em> strategy that returns safe, structured <code>ProblemDetails</code> to clients. Typical setup: dev page in development, exception handler in production — gated by the environment.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Start with <em>why</em> centralize and the <strong>ProblemDetails</strong> contract (Q1–Q2, Q8) — the motivation frames everything. Then the mechanics of <strong>IExceptionHandler</strong> and its two-step wiring (Q3–Q5, Q7, Q10), the part most likely to trip you up in practice. Practice <strong>chaining and mapping exceptions to codes</strong> (Q9, Q11) since that's the day's "Do." Lock in <strong>safety and logging</strong> (Q6, Q16) — interviewers always probe whether you leak internals. Finish with <strong>senior nuance</strong>: the .NET 10 logging change, exceptions-as-control-flow, singleton/scoped pitfalls, and testing (Q17–Q23). If you can wire a global handler that maps a thrown <code>NotFoundException</code> to a 404 ProblemDetails from memory, you own this topic.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

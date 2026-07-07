@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Executors, Callables &amp; Futures — Session 07</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* thread pool diagram */
+.pool-box{border:2px solid var(--blue);border-radius:8px;padding:1rem;background:var(--blue-soft);margin:.8rem 0}
+.pool-title{font-family:'JetBrains Mono',monospace;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:.6rem}
+.pool-threads{display:flex;gap:.5rem;flex-wrap:wrap}
+.pool-thread{border:1.5px solid var(--blue);border-radius:4px;width:44px;height:54px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--blue);font-weight:600}
+.queue-box{border:2px solid var(--accent);border-radius:4px;padding:.5rem .8rem;background:var(--accent-soft);font-family:'JetBrains Mono',monospace;font-size:.75rem;margin-bottom:.5rem}
+/* merge sort tree */
+.ms-node{border:1.5px solid var(--purple);border-radius:4px;padding:.25rem .5rem;background:var(--purple-soft);font-family:'JetBrains Mono',monospace;font-size:.72rem;display:inline-block;margin:.1rem}
+.ms-node.sorted{border-color:var(--green);background:var(--green-soft)}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 07</div>
+  <div class="nav-group"><span class="nav-group-label">Getting Started</span><a class="nav-link" href="#hero">Overview</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">ExecutorService</span>
+    <a class="nav-link" href="#s01">01 The Thread-Reuse Problem</a>
+    <a class="nav-link" href="#s02">02 ExecutorService &amp; Thread Pool</a>
+    <a class="nav-link" href="#s03">03 Using ExecutorService</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Callable &amp; Future</span>
+    <a class="nav-link" href="#s04">04 Callable vs Runnable</a>
+    <a class="nav-link" href="#s05">05 Future — Non-Blocking Results</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Case Study</span>
+    <a class="nav-link" href="#s06">06 Multithreaded Merge Sort</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 07 · 21st Nov</p>
+  <h1>Executors, Callables &amp; Futures</h1>
+  <p class="hero-lede">Why creating raw threads is wasteful, how thread pools fix that, and how to get return values from concurrent tasks using Callable and Future.</p>
+  <div class="agenda-chips">
+    <span class="chip">ExecutorService</span><span class="chip">Thread Pool</span><span class="chip">Callable</span><span class="chip">Future</span><span class="chip">Merge Sort</span>
+  </div>
+</section>
+
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>The Thread-Reuse Problem</h2></div>
+  <p>Creating and destroying threads is expensive. A thread needs its own stack (typically 512 KB–1 MB), OS registration, and scheduler bookkeeping. If you spin up a new thread for every task and discard it afterward, you waste CPU time and memory — especially when tasks are short-lived.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy — Tata Motors Assembly Line</span>
+    <p>Imagine Tata Motors builds a brand-new factory line for each individual Nexon car — then demolishes it after that one car is made. Absurd. Instead, they build a set of manufacturing lines once and reuse them for every car that comes through. The line is the thread; the car is the task.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Principle</span>
+    <p>Ideally, we should try to reuse threads as much as possible, assigning new tasks to idle threads rather than creating new threads for every task. This is the core idea behind the <strong>thread pool</strong>.</p>
+  </div>
+</section>
+
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>ExecutorService &amp; Thread Pool</h2></div>
+  <p><code>ExecutorService</code> is Java's framework for managing a pool of reusable threads. Instead of creating threads manually, you submit tasks to the executor — it handles all thread lifecycle management for you.</p>
+
+  <div class="diagram-box">
+    <div class="queue-box">Waiting Queue: T₁₁, T₁₂, T₁₃, T₁₄ … (tasks waiting for a free thread)</div>
+    <div class="pool-box">
+      <div class="pool-title">Thread Pool (fixed size)</div>
+      <div class="pool-threads">
+        <div class="pool-thread">T₀</div>
+        <div class="pool-thread">T₅</div>
+        <div class="pool-thread">T₆</div>
+        <div class="pool-thread">T₂</div>
+        <div class="pool-thread">T₉</div>
+        <div class="pool-thread">T₁</div>
+        <div class="pool-thread">T₈</div>
+        <div class="pool-thread">T₄</div>
+        <div class="pool-thread">T₇</div>
+        <div class="pool-thread">T₃</div>
+      </div>
+    </div>
+    <p style="font-size:.78rem; color:var(--ink-soft); margin-top:.6rem;">When a thread finishes its task, it picks up the next one from the waiting queue rather than being destroyed.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">import</span> java.util.concurrent.*;
+
+<span class="cmt">// Create a fixed thread pool with 4 threads</span>
+<span class="ty">ExecutorService</span> executor = <span class="ty">Executors</span>.<span class="fn">newFixedThreadPool</span>(<span class="num">4</span>);
+
+<span class="cmt">// Submit 100 tasks — only 4 threads do the work, reusing as tasks complete</span>
+<span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">1</span>; i &lt;= <span class="num">100</span>; i++) {
+    <span class="kw">final int</span> num = i;
+    executor.<span class="fn">submit</span>(() -&gt; <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Printing: "</span> + num));
+}
+
+executor.<span class="fn">shutdown</span>();  <span class="cmt">// no new tasks; waits for current tasks to finish</span></pre>
+  </div>
+
+  <table>
+    <thead><tr><th>Factory Method</th><th>Pool Type</th><th>When to Use</th></tr></thead>
+    <tbody>
+      <tr><td><code>newFixedThreadPool(n)</code></td><td>Fixed <em>n</em> threads</td><td>Known workload; CPU-bound tasks</td></tr>
+      <tr><td><code>newCachedThreadPool()</code></td><td>Grows/shrinks dynamically</td><td>Many short-lived tasks; I/O-bound</td></tr>
+      <tr><td><code>newSingleThreadExecutor()</code></td><td>Exactly 1 thread</td><td>Strict task ordering required</td></tr>
+      <tr><td><code>newScheduledThreadPool(n)</code></td><td>Fixed <em>n</em>, supports delay/period</td><td>Cron-like scheduled tasks</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Using ExecutorService</h2></div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">ExecutorService</span> executor = <span class="ty">Executors</span>.<span class="fn">newFixedThreadPool</span>(<span class="num">4</span>);
+
+<span class="cmt">// submit() with a Runnable (no return value)</span>
+executor.<span class="fn">submit</span>(() -&gt; <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Hello from pool"</span>));
+
+<span class="cmt">// execute() — equivalent, but doesn't return a Future</span>
+executor.<span class="fn">execute</span>(() -&gt; <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Another task"</span>));
+
+<span class="cmt">// Always shut down when done to release thread resources</span>
+executor.<span class="fn">shutdown</span>();           <span class="cmt">// graceful — waits for running tasks</span>
+executor.<span class="fn">shutdownNow</span>();        <span class="cmt">// forceful — interrupts running tasks</span>
+executor.<span class="fn">awaitTermination</span>(<span class="num">10</span>, <span class="ty">TimeUnit</span>.SECONDS);  <span class="cmt">// wait up to 10s</span></pre>
+  </div>
+</section>
+
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Callable vs Runnable</h2></div>
+  <p><code>Runnable</code>'s <code>run()</code> returns <code>void</code> — once you submit it, you have no way to get a result back. <code>Callable&lt;T&gt;</code> solves this: its <code>call()</code> method returns a value of type <code>T</code> and can also throw checked exceptions.</p>
+
+  <table>
+    <thead><tr><th>Feature</th><th>Runnable</th><th>Callable&lt;T&gt;</th></tr></thead>
+    <tbody>
+      <tr><td>Method</td><td><code>run()</code></td><td><code>call()</code></td></tr>
+      <tr><td>Return type</td><td><code>void</code></td><td>Generic <code>T</code> (any type)</td></tr>
+      <tr><td>Throws checked exceptions?</td><td>No</td><td>Yes — <code>throws Exception</code></td></tr>
+      <tr><td>Submit to executor via</td><td><code>submit()</code> or <code>execute()</code></td><td><code>submit()</code> only (returns <code>Future&lt;T&gt;</code>)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">SumTask</span> <span class="kw">implements</span> <span class="ty">Callable</span>&lt;<span class="ty">Integer</span>&gt; {
+    <span class="kw">private final int</span>[] arr;
+
+    <span class="ty">SumTask</span>(<span class="kw">int</span>[] arr) { <span class="kw">this</span>.arr = arr; }
+
+    <span class="kw">@Override</span>
+    <span class="kw">public</span> <span class="ty">Integer</span> <span class="fn">call</span>() {
+        <span class="kw">int</span> sum = <span class="num">0</span>;
+        <span class="kw">for</span> (<span class="kw">int</span> x : arr) sum += x;
+        <span class="kw">return</span> sum;          <span class="cmt">// ✓ returns a value</span>
+    }
+}</pre>
+  </div>
+</section>
+
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>Future — Non-Blocking Results</h2></div>
+  <p>When you submit a <code>Callable</code> to an executor, it returns a <code>Future&lt;T&gt;</code> immediately — without blocking. The <code>Future</code> is a <em>promise</em>: a placeholder for the result that will eventually be available. You can continue doing other work and retrieve the result later by calling <code>future.get()</code>.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>You send your friend (M) to pick up a package for person (B). Your friend says "I'll get it" and leaves — that's the <code>Future</code>. You don't stand at the door waiting (blocking). You go do other things. When you need the package, you call your friend and ask "got it yet?" That's <code>future.get()</code>.</p>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">ExecutorService</span> executor = <span class="ty">Executors</span>.<span class="fn">newFixedThreadPool</span>(<span class="num">2</span>);
+
+<span class="ty">Callable</span>&lt;<span class="ty">Integer</span>&gt; task1 = <span class="kw">new</span> <span class="ty">SumTask</span>(<span class="kw">new int</span>[]{<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>});
+<span class="ty">Callable</span>&lt;<span class="ty">Integer</span>&gt; task2 = <span class="kw">new</span> <span class="ty">SumTask</span>(<span class="kw">new int</span>[]{<span class="num">4</span>,<span class="num">5</span>,<span class="num">6</span>});
+
+<span class="cmt">// submit() returns immediately (non-blocking) — tasks run in parallel</span>
+<span class="ty">Future</span>&lt;<span class="ty">Integer</span>&gt; f1 = executor.<span class="fn">submit</span>(task1);
+<span class="ty">Future</span>&lt;<span class="ty">Integer</span>&gt; f2 = executor.<span class="fn">submit</span>(task2);
+
+<span class="cmt">// Do other work here while tasks run concurrently...</span>
+
+<span class="cmt">// get() BLOCKS until result is available</span>
+<span class="kw">int</span> result1 = f1.<span class="fn">get</span>();   <span class="cmt">// 6</span>
+<span class="kw">int</span> result2 = f2.<span class="fn">get</span>();   <span class="cmt">// 15</span>
+<span class="ty">System</span>.out.<span class="fn">println</span>(result1 + result2);  <span class="cmt">// 21</span>
+
+executor.<span class="fn">shutdown</span>();</pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="callout-tag">Key Methods on Future</span>
+    <p><code>get()</code> — blocks until result is ready (throws <code>InterruptedException</code>, <code>ExecutionException</code>).<br>
+    <code>get(timeout, unit)</code> — blocks up to a timeout; throws <code>TimeoutException</code> if result not ready.<br>
+    <code>isDone()</code> — returns true if task completed (non-blocking check).<br>
+    <code>cancel(true)</code> — attempts to interrupt the running task.</p>
+  </div>
+</section>
+
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>Case Study: Multithreaded Merge Sort</h2></div>
+  <p>Merge sort is a perfect candidate for parallelism — the two halves are completely independent and can be sorted simultaneously. With <code>Callable</code> and <code>Future</code>, we can assign each half to a separate thread pool and merge the results.</p>
+
+  <div class="diagram-box">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:.75rem; text-align:center;">
+      <div style="margin-bottom:.4rem;"><span class="ms-node">4 | 1 | 8 | 7 | 2 | 6 | 3 | 5</span> <span style="color:var(--ink-soft); font-size:.65rem; margin-left:.5rem;">Pool-1</span></div>
+      <div style="display:flex; gap:3rem; justify-content:center; margin:.3rem 0;">
+        <div><span class="ms-node">4 | 1 | 8 | 7</span> <span style="color:var(--blue); font-size:.65rem;">T₁ (Pool-2)</span></div>
+        <div><span class="ms-node">2 | 6 | 3 | 5</span> <span style="color:var(--rose); font-size:.65rem;">T₂ (Pool-2)</span></div>
+      </div>
+      <div style="display:flex; gap:1rem; justify-content:center; margin:.3rem 0;">
+        <span class="ms-node sorted">1 | 4 | 7 | 8</span>
+        <span style="color:var(--ink-soft); line-height:2;">+</span>
+        <span class="ms-node sorted">2 | 3 | 5 | 6</span>
+      </div>
+      <div style="margin-top:.4rem; color:var(--green); font-weight:600; font-size:.78rem;">↓ Merge → 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8</div>
+    </div>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">class</span> <span class="ty">MergeSorter</span> <span class="kw">implements</span> <span class="ty">Callable</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt;&gt; {
+    <span class="kw">private final</span> <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; list;
+    <span class="kw">private final</span> <span class="ty">ExecutorService</span> executor;
+
+    <span class="ty">MergeSorter</span>(<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; list, <span class="ty">ExecutorService</span> executor) {
+        <span class="kw">this</span>.list = list; <span class="kw">this</span>.executor = executor;
+    }
+
+    <span class="kw">@Override</span>
+    <span class="kw">public</span> <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; <span class="fn">call</span>() <span class="kw">throws</span> <span class="ty">Exception</span> {
+        <span class="kw">if</span> (list.<span class="fn">size</span>() &lt;= <span class="num">1</span>) <span class="kw">return</span> list;
+
+        <span class="kw">int</span> mid = list.<span class="fn">size</span>() / <span class="num">2</span>;
+        <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; leftHalf  = list.<span class="fn">subList</span>(<span class="num">0</span>, mid);
+        <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; rightHalf = list.<span class="fn">subList</span>(mid, list.<span class="fn">size</span>());
+
+        <span class="cmt">// Submit both halves to the thread pool — they run in parallel!</span>
+        <span class="ty">Future</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt;&gt; leftFuture  = executor.<span class="fn">submit</span>(<span class="kw">new</span> <span class="ty">MergeSorter</span>(leftHalf,  executor));
+        <span class="ty">Future</span>&lt;<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt;&gt; rightFuture = executor.<span class="fn">submit</span>(<span class="kw">new</span> <span class="ty">MergeSorter</span>(rightHalf, executor));
+
+        <span class="cmt">// Collect results (get() blocks until each half is sorted)</span>
+        <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; leftSorted  = leftFuture.<span class="fn">get</span>();
+        <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; rightSorted = rightFuture.<span class="fn">get</span>();
+
+        <span class="kw">return</span> <span class="fn">merge</span>(leftSorted, rightSorted);
+    }
+
+    <span class="kw">private</span> <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; <span class="fn">merge</span>(<span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; l, <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; r) {
+        <span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; result = <span class="kw">new</span> <span class="ty">ArrayList</span>&lt;&gt;();
+        <span class="kw">int</span> i = <span class="num">0</span>, j = <span class="num">0</span>;
+        <span class="kw">while</span> (i &lt; l.<span class="fn">size</span>() &amp;&amp; j &lt; r.<span class="fn">size</span>())
+            result.<span class="fn">add</span>(l.<span class="fn">get</span>(i) &lt;= r.<span class="fn">get</span>(j) ? l.<span class="fn">get</span>(i++) : r.<span class="fn">get</span>(j++));
+        <span class="kw">while</span> (i &lt; l.<span class="fn">size</span>()) result.<span class="fn">add</span>(l.<span class="fn">get</span>(i++));
+        <span class="kw">while</span> (j &lt; r.<span class="fn">size</span>()) result.<span class="fn">add</span>(r.<span class="fn">get</span>(j++));
+        <span class="kw">return</span> result;
+    }
+}</pre>
+  </div>
+</section>
+
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Thread Reuse</div><p>Creating/destroying threads is expensive. Reuse threads via a pool for efficient resource utilization.</p></div>
+    <div class="recap-card"><div class="recap-card-title">ExecutorService</div><p>Manages a thread pool. Submit tasks via <code>submit()</code> or <code>execute()</code>. Always call <code>shutdown()</code> when done.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Thread Pool</div><p>A fixed set of reusable worker threads. Idle threads pick up queued tasks. Prevents thread explosion.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Callable&lt;T&gt;</div><p>Like Runnable but returns a value via <code>call()</code>. Can throw checked exceptions. Use when you need the task's result.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Future&lt;T&gt;</div><p>Returned by <code>executor.submit(callable)</code>. Non-blocking submission. <code>get()</code> blocks until result ready.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Multithreaded Merge Sort</div><p>Split array in two halves, submit each to executor, get both futures, then merge. Left and right halves sort in parallel.</p></div>
+  </div>
+</section>
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

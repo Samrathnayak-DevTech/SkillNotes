@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 13 — Unit Testing: xUnit, Moq, Testing DI Services &amp; Arranging Fakes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">🧪 Day 13 · Unit Testing</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Foundations</div>
+    <a href="#s01"><span class="n">01</span>Why Unit Test?</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>xUnit Basics</a>
+    <a href="#s04"><span class="n">04</span>Arrange-Act-Assert</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Test Doubles</div>
+    <a href="#s05"><span class="n">05</span>Fakes, Stubs &amp; Mocks</a>
+    <a href="#s06"><span class="n">06</span>Moq: Setup</a>
+    <a href="#s07"><span class="n">07</span>Moq: Verify</a>
+    <a href="#s08"><span class="n">08</span>Testing a DI Service</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Going Further</div>
+    <a href="#s09"><span class="n">09</span>Theories &amp; Edge Cases</a>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 13 · ASP.NET Core Fundamentals</div>
+  <h1>🧪 Unit Testing: Proving Your Code Works</h1>
+  <p class="lede">Everything you've built this fortnight — services, EF queries, HTTP clients, workers — was designed around <strong>dependency injection</strong>. Today that pays off: because your classes depend on interfaces, you can swap real dependencies for fakes and test your logic in complete isolation. You'll use xUnit to run tests and Moq to build the fakes.</p>
+  <div class="agenda">
+    <span class="chip">✅ xUnit</span>
+    <span class="chip">🎭 Moq</span>
+    <span class="chip">📐 Arrange-Act-Assert</span>
+    <span class="chip">🔌 Testing DI Services</span>
+    <span class="chip">🔍 Verify Interactions</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>🎯 Why Unit Test?</h2>
+
+  <p>A <strong>unit test</strong> is a small, fast, automated check that one piece of code — usually one method — does what it should. "Unit" means <em>in isolation</em>: you test your service's logic without touching a real database, real network, or real anything. If it fails, you know the bug is <em>right there</em>, not somewhere in a tangle of systems.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🏭 Analogy</span>
+    <p>Unit tests are the <strong>quality-control station on an assembly line</strong>. Each part is checked <em>before</em> it goes into the product, on its own, against a spec — is this bolt the right size? does this switch click? You don't wait until the whole car is built and someone crashes it (that's the slow, expensive end-to-end test). Catching a bad part at the station is cheap; catching it after assembly is not.</p>
+  </div>
+
+  <h3>What tests buy you 💰</h3>
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">🐛</span><b>Catch bugs early</b><p>Failures surface in seconds on your machine, not days later in production where they're costly to trace.</p></div>
+    <div class="card"><span class="glyph">🛡️</span><b>Refactor without fear</b><p>A green test suite is a safety net — change the internals freely, and tests tell you instantly if behavior broke.</p></div>
+    <div class="card"><span class="glyph">📖</span><b>Living documentation</b><p>A well-named test states exactly what the code is supposed to do — and unlike comments, it can't drift out of date.</p></div>
+    <div class="card"><span class="glyph">🎨</span><b>Better design pressure</b><p>Code that's hard to test is usually badly coupled. Writing tests nudges you toward clean, injectable design.</p></div>
+  </div>
+
+  <h3>The test pyramid 🔺</h3>
+  <p>Not all tests are equal. The classic guidance: <strong>lots of fast unit tests, fewer integration tests, very few end-to-end tests</strong> — because the higher you go, the slower, more brittle, and more expensive they get.</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-green"><div class="val">🧪 Unit</div><div class="idx">many · ms · isolated</div></div>
+      <div class="arr-cell highlight"><div class="val">🔗 Integration</div><div class="idx">some · seconds · real DB</div></div>
+      <div class="arr-cell neg"><div class="val">🌐 End-to-End</div><div class="idx">few · slow · whole system</div></div>
+    </div>
+    <div class="arr-caption">The test pyramid · a broad base of unit tests, a thin cap of E2E · today is the base</div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 The Golden Properties</span>
+    <p>A good unit test is <strong>F.I.R.S.T.</strong>: Fast (milliseconds), Isolated (no shared state, no real dependencies), Repeatable (same result every run), Self-validating (passes or fails, no manual inspection), and Timely (written alongside the code). If a test hits a real database or the network, it's an <em>integration</em> test, not a unit test — a different, slower tier.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <div class="mindmap">
+    <div class="mm-core">Unit Testing<small>xUnit + Moq + AAA</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-blue">
+        <h4>✅ xUnit</h4>
+        <ul>
+          <li>The test runner</li>
+          <li><code>[Fact]</code> / <code>[Theory]</code></li>
+          <li><code>Assert</code> checks</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-accent">
+        <h4>📐 AAA</h4>
+        <ul>
+          <li>Arrange the setup</li>
+          <li>Act — one call</li>
+          <li>Assert the outcome</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-rose">
+        <h4>🎭 Test Doubles</h4>
+        <ul>
+          <li>Fake / stub / mock</li>
+          <li>Stand in for real deps</li>
+          <li>Isolation!</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>🎬 Moq</h4>
+        <ul>
+          <li><code>Setup</code> — canned answers</li>
+          <li><code>Verify</code> — check calls</li>
+          <li><code>It.IsAny</code>, <code>Times</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>🔌 SUT</h4>
+        <ul>
+          <li>System Under Test</li>
+          <li>Inject the mock's <code>.Object</code></li>
+          <li>DI makes it testable</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p>The whole workflow in one sentence: create fake dependencies with Moq, inject them into your real service (the SUT), call one method, and assert on what it returned or how it used its fakes. Everything today is a variation on that loop.</p>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>✅ xUnit Basics</h2>
+
+  <p><strong>xUnit</strong> is the most popular test framework for modern .NET. It <em>runs</em> your tests, reports pass/fail, and gives you the attributes and assertions to write them. You put tests in a separate test project that references the project it tests.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal · set up a test project</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># Create an xUnit test project next to your app:</span>
+dotnet new xunit -n MyShop.Tests
+
+<span class="cmt"># Reference the project under test so you can use its classes:</span>
+dotnet add MyShop.Tests reference MyShop
+
+<span class="cmt"># Add Moq for mocking dependencies:</span>
+dotnet add MyShop.Tests package Moq
+
+<span class="cmt"># Run everything:</span>
+dotnet test
+</code></pre>
+  </div>
+
+  <h3>Facts and Theories 🏷️</h3>
+  <p>Two attributes mark a method as a test:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · [Fact] and [Theory]</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Xunit;
+
+<span class="kw">public class</span> <span class="ty">CalculatorTests</span>
+{
+    <span class="cmt">// [Fact]: a single test with no parameters — one fixed scenario.</span>
+    [<span class="ty">Fact</span>]
+    <span class="kw">public void</span> <span class="fn">Add_TwoAndThree_ReturnsFive</span>()
+    {
+        <span class="kw">var</span> calc = <span class="kw">new</span> <span class="ty">Calculator</span>();
+        <span class="kw">int</span> result = calc.<span class="fn">Add</span>(<span class="num">2</span>, <span class="num">3</span>);
+        <span class="ty">Assert</span>.<span class="fn">Equal</span>(<span class="num">5</span>, result);   <span class="cmt">// expected first, actual second</span>
+    }
+
+    <span class="cmt">// [Theory]: one test run once per data row — same logic, many inputs.</span>
+    [<span class="ty">Theory</span>]
+    [<span class="ty">InlineData</span>(<span class="num">2</span>, <span class="num">3</span>, <span class="num">5</span>)]
+    [<span class="ty">InlineData</span>(-<span class="num">1</span>, <span class="num">1</span>, <span class="num">0</span>)]
+    [<span class="ty">InlineData</span>(<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>)]
+    <span class="kw">public void</span> <span class="fn">Add_VariousInputs_ReturnsSum</span>(<span class="kw">int</span> a, <span class="kw">int</span> b, <span class="kw">int</span> expected)
+    {
+        <span class="kw">var</span> calc = <span class="kw">new</span> <span class="ty">Calculator</span>();
+        <span class="ty">Assert</span>.<span class="fn">Equal</span>(expected, calc.<span class="fn">Add</span>(a, b));
+    }
+}
+</code></pre>
+  </div>
+
+  <h3>Common assertions</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Assertion</th><th>Checks that…</th></tr></thead>
+    <tbody>
+      <tr><td><code>Assert.Equal(expected, actual)</code></td><td>Two values are equal (note the order: expected first).</td></tr>
+      <tr><td><code>Assert.True(x)</code> / <code>Assert.False(x)</code></td><td>A boolean is true / false.</td></tr>
+      <tr><td><code>Assert.Null(x)</code> / <code>Assert.NotNull(x)</code></td><td>A reference is null / not null.</td></tr>
+      <tr><td><code>Assert.Contains(item, collection)</code></td><td>A collection contains an item.</td></tr>
+      <tr><td><code>Assert.Throws&lt;T&gt;(() =&gt; ...)</code></td><td>The code throws exception type <code>T</code>.</td></tr>
+      <tr><td><code>await Assert.ThrowsAsync&lt;T&gt;(...)</code></td><td>Async version for awaited calls.</td></tr>
+      <tr><td><code>Assert.IsType&lt;T&gt;(x)</code></td><td>An object is exactly type <code>T</code> (great for testing controller results).</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 A Fresh Instance Per Test</span>
+    <p>xUnit creates a <strong>new instance of the test class for every test method</strong>. That's deliberate — it guarantees tests don't share state and can't contaminate each other. Any setup you put in the test class's <em>constructor</em> runs fresh before each test (xUnit's replacement for old "SetUp" methods); cleanup goes in <code>Dispose</code>.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Naming Convention</span>
+    <p>The widely-used pattern is <code>MethodName_Scenario_ExpectedBehavior</code>, e.g. <code>PlaceOrder_EmptyCart_ThrowsValidationException</code>. When a test fails, its name alone tells you what broke and under what condition — no need to open the code. Self-documenting names are half the value of a test suite.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>📐 Arrange-Act-Assert</h2>
+
+  <p>Every good test has the same three-part shape, known as <strong>AAA</strong>. Keeping the parts visually separate makes tests instantly readable — anyone can see the setup, the action, and the check at a glance.</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="emoji">🧰</span>
+      <div><b>Arrange</b><span class="desc">Set up everything the test needs: create the object under test, build its fake dependencies, prepare input data and expected values.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="emoji">▶️</span>
+      <div><b>Act</b><span class="desc">Call the <em>one</em> method you're testing. Just one action — that's what this test is about.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">✅</span>
+      <div><b>Assert</b><span class="desc">Check the outcome: the return value is what you expected, or the right thing happened, or the right exception was thrown.</span></div>
+    </div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · AAA labeled</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">Fact</span>]
+<span class="kw">public void</span> <span class="fn">ApplyDiscount_Over1000_Gives10PercentOff</span>()
+{
+    <span class="cmt">// Arrange</span>
+    <span class="kw">var</span> pricing = <span class="kw">new</span> <span class="ty">PricingService</span>();
+    <span class="kw">decimal</span> orderTotal = <span class="num">2000m</span>;
+
+    <span class="cmt">// Act</span>
+    <span class="kw">decimal</span> result = pricing.<span class="fn">ApplyDiscount</span>(orderTotal);
+
+    <span class="cmt">// Assert</span>
+    <span class="ty">Assert</span>.<span class="fn">Equal</span>(<span class="num">1800m</span>, result);
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 One Act, One Reason to Fail</span>
+    <p>Keep a single <strong>Act</strong> per test. If a test calls three methods, and it fails, you can't tell which one broke. One action, focused assertions, a self-explaining name — that's a test that <em>diagnoses</em>, not just detects. Multiple scenarios? Write multiple tests (or a <code>[Theory]</code>).</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Don't Test Trivia, Don't Test Privates</span>
+    <p>Test <em>behavior</em>, not implementation details. Don't write tests for getters/setters with no logic, and don't try to reach into <code>private</code> methods — they're implementation details tested indirectly through the public method that calls them. If a private method feels like it needs its own test, that's often a hint it should be its own class.</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>🎭 Test Doubles: Fakes, Stubs &amp; Mocks</h2>
+
+  <p>Your <code>OrderService</code> depends on an <code>IOrderRepository</code> (which hits the database) and an <code>IEmailSender</code> (which hits the network). To unit-test <code>OrderService</code> in isolation, you replace those real dependencies with <strong>test doubles</strong> — stand-ins you control. This is the whole reason we've been coding against interfaces all fortnight.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🎬 Analogy</span>
+    <p>Test doubles are <strong>stunt doubles and stage props on a film set</strong>. You don't crash a <em>real</em> car or hire the <em>real</em> A-list star for a dangerous shot — you use a stunt double that behaves how the scene needs. A test double stands in for a real dependency so you can test your scene (your method) safely, cheaply, and exactly the way you want, without the real database or network showing up.</p>
+  </div>
+
+  <h3>The three flavors (they overlap in casual use) 🎭</h3>
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">📋</span><b>Stub</b><p>Provides <em>canned data</em> so the code can run. "When asked for order 1, return this fixed order." It answers questions; it doesn't judge the test.</p></div>
+    <div class="card"><span class="glyph">🔍</span><b>Mock</b><p>Also <em>verifies interactions</em>. "Was <code>SendEmail</code> called exactly once with the right address?" A mock can make the test fail based on <em>how</em> it was used.</p></div>
+    <div class="card"><span class="glyph">🛠️</span><b>Fake</b><p>A lightweight <em>working implementation</em> — e.g. an in-memory list standing in for a repository. Real logic, just not production-grade.</p></div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 The Distinction That Matters</span>
+    <p>A <strong>stub</strong> feeds your code inputs (state-based testing: "given this data, did I get the right answer?"). A <strong>mock</strong> checks outputs to collaborators (interaction-based testing: "did I call the right dependency the right way?"). Moq creates objects that can do <em>both</em> — you <code>Setup</code> them like stubs and <code>Verify</code> them like mocks. In everyday speech people call them all "mocks," but knowing which behavior you're relying on keeps tests focused.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Don't Over-Mock</span>
+    <p>Mock the <em>boundaries</em> — things that are slow, external, or nondeterministic (databases, HTTP, clocks, file systems). Don't mock simple value objects, DTOs, or the very class you're testing. Over-mocking produces tests that verify your code calls methods in a certain order rather than that it produces correct results — brittle tests that break on every refactor while proving little.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>🎬 Moq: Setting Up Fakes</h2>
+
+  <p><strong>Moq</strong> generates a test double from an interface at runtime — no hand-written fake class needed. You create one, teach it how to respond, and hand its <code>.Object</code> to your service.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Creating and setting up a mock</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Moq;
+
+<span class="cmt">// 1. Create a mock of the interface:</span>
+<span class="kw">var</span> repoMock = <span class="kw">new</span> <span class="ty">Mock</span>&lt;<span class="ty">IOrderRepository</span>&gt;();
+
+<span class="cmt">// 2. Setup: "when GetByIdAsync(1) is called, return this order":</span>
+repoMock
+    .<span class="fn">Setup</span>(r =&gt; r.<span class="fn">GetByIdAsync</span>(<span class="num">1</span>))
+    .<span class="fn">ReturnsAsync</span>(<span class="kw">new</span> <span class="ty">Order</span> { Id = <span class="num">1</span>, Total = <span class="num">500m</span> });
+
+<span class="cmt">// 3. Hand the fake to your real service via its constructor (DI!):</span>
+<span class="kw">var</span> service = <span class="kw">new</span> <span class="ty">OrderService</span>(repoMock.Object);
+</code></pre>
+  </div>
+
+  <h3>Matching arguments with <code>It</code> 🎯</h3>
+  <p>You rarely want to hard-code every argument. The <code>It</code> helpers match flexibly:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Argument matchers</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// Match ANY int argument:</span>
+repoMock.<span class="fn">Setup</span>(r =&gt; r.<span class="fn">GetByIdAsync</span>(<span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="kw">int</span>&gt;()))
+    .<span class="fn">ReturnsAsync</span>(<span class="kw">new</span> <span class="ty">Order</span> { Id = <span class="num">99</span> });
+
+<span class="cmt">// Match arguments meeting a condition:</span>
+repoMock.<span class="fn">Setup</span>(r =&gt; r.<span class="fn">GetByIdAsync</span>(<span class="ty">It</span>.<span class="fn">Is</span>&lt;<span class="kw">int</span>&gt;(id =&gt; id &gt; <span class="num">0</span>)))
+    .<span class="fn">ReturnsAsync</span>(<span class="kw">new</span> <span class="ty">Order</span>());
+
+<span class="cmt">// Return a value that depends on the input:</span>
+repoMock.<span class="fn">Setup</span>(r =&gt; r.<span class="fn">GetByIdAsync</span>(<span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="kw">int</span>&gt;()))
+    .<span class="fn">ReturnsAsync</span>((<span class="kw">int</span> id) =&gt; <span class="kw">new</span> <span class="ty">Order</span> { Id = id });
+
+<span class="cmt">// Make it throw, to test error paths:</span>
+repoMock.<span class="fn">Setup</span>(r =&gt; r.<span class="fn">GetByIdAsync</span>(<span class="num">0</span>))
+    .<span class="fn">ThrowsAsync</span>(<span class="kw">new</span> <span class="ty">ArgumentException</span>(<span class="str">"Invalid ID"</span>));
+</code></pre>
+  </div>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Method</th><th>Use for</th></tr></thead>
+    <tbody>
+      <tr><td><code>.Returns(value)</code></td><td>A synchronous method's return value.</td></tr>
+      <tr><td><code>.ReturnsAsync(value)</code></td><td>An async method returning <code>Task&lt;T&gt;</code>.</td></tr>
+      <tr><td><code>.ThrowsAsync(ex)</code> / <code>.Throws(ex)</code></td><td>Simulating a failure.</td></tr>
+      <tr><td><code>It.IsAny&lt;T&gt;()</code></td><td>Match any argument of type <code>T</code>.</td></tr>
+      <tr><td><code>It.Is&lt;T&gt;(predicate)</code></td><td>Match arguments meeting a condition.</td></tr>
+      <tr><td><code>.Callback(...)</code></td><td>Capture the argument passed, or run side-effect code.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Unconfigured Methods Return Defaults — Silently</span>
+    <p>By default a Moq mock is "loose": call a method you <em>didn't</em> set up and it returns a harmless default (<code>null</code>, <code>0</code>, an empty collection) rather than complaining. Convenient, but it can hide the fact that your test isn't exercising what you think. For critical dependencies, consider <code>new Mock&lt;T&gt;(MockBehavior.Strict)</code>, which <strong>throws</strong> on any unconfigured call — forcing you to be explicit about every interaction the test expects.</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>🔍 Moq: Verifying Interactions</h2>
+
+  <p>Some behavior has no return value to assert on — did the service <em>actually send the email</em>? <em>save the order</em>? That's an <strong>interaction</strong>, and you check it with <code>Verify</code>: assert that a method on a mock was (or wasn't) called, how many times, and with what arguments.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Verify calls</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// Assert SaveAsync was called exactly once, with any Order:</span>
+repoMock.<span class="fn">Verify</span>(r =&gt; r.<span class="fn">SaveAsync</span>(<span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="ty">Order</span>&gt;()), <span class="ty">Times</span>.<span class="fn">Once</span>);
+
+<span class="cmt">// Assert an email went to a specific address:</span>
+emailMock.<span class="fn">Verify</span>(e =&gt; e.<span class="fn">SendAsync</span>(
+    <span class="ty">It</span>.<span class="fn">Is</span>&lt;<span class="kw">string</span>&gt;(to =&gt; to == <span class="str">"customer@example.com"</span>),
+    <span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="kw">string</span>&gt;()), <span class="ty">Times</span>.<span class="fn">Once</span>);
+
+<span class="cmt">// Assert something did NOT happen (payment bounced → no shipment):</span>
+shipMock.<span class="fn">Verify</span>(s =&gt; s.<span class="fn">ShipAsync</span>(<span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="ty">Order</span>&gt;()), <span class="ty">Times</span>.<span class="fn">Never</span>);
+</code></pre>
+  </div>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th><code>Times.</code></th><th>Asserts the call happened…</th></tr></thead>
+    <tbody>
+      <tr><td><code>Once</code></td><td>Exactly one time.</td></tr>
+      <tr><td><code>Never</code></td><td>Zero times — great for "this should NOT happen" safety checks.</td></tr>
+      <tr><td><code>Exactly(n)</code></td><td>Exactly <code>n</code> times.</td></tr>
+      <tr><td><code>AtLeastOnce</code> / <code>AtMostOnce</code></td><td>At least / at most one time.</td></tr>
+      <tr><td><code>AtLeast(n)</code> / <code>AtMost(n)</code></td><td>At least / at most <code>n</code> times.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Verify Behavior Worth Verifying</span>
+    <p>The <code>Times.Never</code> check is quietly powerful: it proves your code <em>didn't</em> do something dangerous — didn't ship an unpaid order, didn't charge a card twice, didn't email when it shouldn't. Those "it must not happen" guarantees are often more valuable than the happy-path ones, and only interaction verification can express them.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Assert on Results Where You Can</span>
+    <p>Prefer asserting on <em>return values and state</em> over verifying <em>calls</em> when both are possible. A test full of <code>Verify</code> calls tends to mirror the implementation line-by-line, so any refactor breaks it even when behavior is unchanged. Reach for <code>Verify</code> when the interaction <em>is</em> the observable behavior (an email was sent, a row was saved) and there's no return value to check.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>🔌 Testing a Service That Uses DI</h2>
+
+  <p>Now the payoff. Here's a realistic service with two dependencies — exactly the shape you've built all fortnight. We'll test it thoroughly without a database or an email server in sight.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · The service under test</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">OrderService</span>(<span class="ty">IOrderRepository</span> repo, <span class="ty">IEmailSender</span> email)
+{
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">Order</span>&gt; <span class="fn">PlaceOrderAsync</span>(<span class="ty">Order</span> order, <span class="ty">CancellationToken</span> ct = <span class="kw">default</span>)
+    {
+        <span class="kw">if</span> (order.Items.Count == <span class="num">0</span>)
+            <span class="kw">throw new</span> <span class="ty">ValidationException</span>(<span class="str">"Order must have at least one item."</span>);
+
+        order.PlacedAt = <span class="ty">DateTime</span>.UtcNow;
+        <span class="kw">await</span> repo.<span class="fn">SaveAsync</span>(order, ct);
+        <span class="kw">await</span> email.<span class="fn">SendAsync</span>(order.CustomerEmail, <span class="str">"Order confirmed"</span>, ct);
+        <span class="kw">return</span> order;
+    }
+}
+</code></pre>
+  </div>
+
+  <p>The test class arranges the mocks once in its constructor (fresh per test, remember), so each test reads cleanly:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · OrderServiceTests.cs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">OrderServiceTests</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">Mock</span>&lt;<span class="ty">IOrderRepository</span>&gt; _repoMock = <span class="kw">new</span>();
+    <span class="kw">private readonly</span> <span class="ty">Mock</span>&lt;<span class="ty">IEmailSender</span>&gt; _emailMock = <span class="kw">new</span>();
+    <span class="kw">private readonly</span> <span class="ty">OrderService</span> _sut;   <span class="cmt">// "System Under Test"</span>
+
+    <span class="kw">public</span> <span class="fn">OrderServiceTests</span>()
+    {
+        <span class="cmt">// Runs fresh before EVERY test — clean mocks each time.</span>
+        _sut = <span class="kw">new</span> <span class="ty">OrderService</span>(_repoMock.Object, _emailMock.Object);
+    }
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">PlaceOrder_ValidOrder_SavesAndSendsEmail</span>()
+    {
+        <span class="cmt">// Arrange</span>
+        <span class="kw">var</span> order = <span class="kw">new</span> <span class="ty">Order</span>
+        {
+            CustomerEmail = <span class="str">"priya@example.com"</span>,
+            Items = { <span class="kw">new</span> <span class="ty">OrderItem</span> { ProductId = <span class="num">1</span>, Quantity = <span class="num">2</span> } }
+        };
+
+        <span class="cmt">// Act</span>
+        <span class="kw">var</span> result = <span class="kw">await</span> _sut.<span class="fn">PlaceOrderAsync</span>(order);
+
+        <span class="cmt">// Assert — state:</span>
+        <span class="ty">Assert</span>.<span class="fn">NotEqual</span>(<span class="kw">default</span>, result.PlacedAt);
+        <span class="cmt">// Assert — interactions: it saved once and emailed the right person:</span>
+        _repoMock.<span class="fn">Verify</span>(r =&gt; r.<span class="fn">SaveAsync</span>(order, <span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="ty">CancellationToken</span>&gt;()), <span class="ty">Times</span>.<span class="fn">Once</span>);
+        _emailMock.<span class="fn">Verify</span>(e =&gt; e.<span class="fn">SendAsync</span>(<span class="str">"priya@example.com"</span>,
+            <span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="kw">string</span>&gt;(), <span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="ty">CancellationToken</span>&gt;()), <span class="ty">Times</span>.<span class="fn">Once</span>);
+    }
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">PlaceOrder_EmptyCart_ThrowsAndSavesNothing</span>()
+    {
+        <span class="cmt">// Arrange — an order with no items</span>
+        <span class="kw">var</span> order = <span class="kw">new</span> <span class="ty">Order</span> { CustomerEmail = <span class="str">"x@example.com"</span> };
+
+        <span class="cmt">// Act + Assert — the exception:</span>
+        <span class="kw">await</span> <span class="ty">Assert</span>.<span class="fn">ThrowsAsync</span>&lt;<span class="ty">ValidationException</span>&gt;(
+            () =&gt; _sut.<span class="fn">PlaceOrderAsync</span>(order));
+
+        <span class="cmt">// Assert — the safety guarantee: nothing was saved or emailed:</span>
+        _repoMock.<span class="fn">Verify</span>(r =&gt; r.<span class="fn">SaveAsync</span>(<span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="ty">Order</span>&gt;(),
+            <span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="ty">CancellationToken</span>&gt;()), <span class="ty">Times</span>.<span class="fn">Never</span>);
+        _emailMock.<span class="fn">Verify</span>(e =&gt; e.<span class="fn">SendAsync</span>(<span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="kw">string</span>&gt;(),
+            <span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="kw">string</span>&gt;(), <span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="ty">CancellationToken</span>&gt;()), <span class="ty">Times</span>.<span class="fn">Never</span>);
+    }
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 This Is Why We Used Interfaces</span>
+    <p>Notice what made this effortless: <code>OrderService</code> takes <code>IOrderRepository</code> and <code>IEmailSender</code>, not concrete classes. So in the test we simply pass fakes into the same constructor DI uses in production. <strong>Testability isn't a testing technique — it's a design property</strong>, and dependency injection (Day 3) is what granted it. Code that <code>new</code>s up its own dependencies internally is nearly impossible to unit test.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ What About the DbContext?</span>
+    <p>Notice we tested against <code>IOrderRepository</code>, not a raw <code>DbContext</code>. Mocking EF Core directly is painful and often misleading (it doesn't replicate real query translation — Day 8). Best practice: put data access behind a repository interface or test the query logic with <em>integration</em> tests against a real (containerized) database. Unit tests are for your <em>business logic</em>; the database deserves the real thing.</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>🎲 Theories &amp; Edge Cases</h2>
+
+  <p>Real confidence comes from testing the <strong>sad paths</strong>, not just the happy one. And when the same logic needs checking against many inputs, a <code>[Theory]</code> saves you from copy-pasting near-identical tests.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Data-driven tests</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// InlineData: quick literal rows, checked in one test method:</span>
+[<span class="ty">Theory</span>]
+[<span class="ty">InlineData</span>(<span class="num">100</span>, <span class="num">100</span>)]      <span class="cmt">// under threshold → no discount</span>
+[<span class="ty">InlineData</span>(<span class="num">1000</span>, <span class="num">900</span>)]     <span class="cmt">// at threshold → 10% off</span>
+[<span class="ty">InlineData</span>(<span class="num">2000</span>, <span class="num">1800</span>)]    <span class="cmt">// well over → 10% off</span>
+<span class="kw">public void</span> <span class="fn">ApplyDiscount_VariousTotals_DiscountsCorrectly</span>(<span class="kw">decimal</span> total, <span class="kw">decimal</span> expected)
+{
+    <span class="kw">var</span> pricing = <span class="kw">new</span> <span class="ty">PricingService</span>();
+    <span class="ty">Assert</span>.<span class="fn">Equal</span>(expected, pricing.<span class="fn">ApplyDiscount</span>(total));
+}
+
+<span class="cmt">// MemberData: for complex objects that don't fit in an attribute:</span>
+[<span class="ty">Theory</span>]
+[<span class="ty">MemberData</span>(nameof(InvalidOrders))]
+<span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">PlaceOrder_InvalidInput_Throws</span>(<span class="ty">Order</span> order)
+{
+    <span class="kw">await</span> <span class="ty">Assert</span>.<span class="fn">ThrowsAsync</span>&lt;<span class="ty">ValidationException</span>&gt;(() =&gt; _sut.<span class="fn">PlaceOrderAsync</span>(order));
+}
+
+<span class="kw">public static</span> <span class="ty">IEnumerable</span>&lt;<span class="kw">object</span>[]&gt; InvalidOrders =&gt; <span class="kw">new</span>[]
+{
+    <span class="kw">new object</span>[] { <span class="kw">new</span> <span class="ty">Order</span> { Items = { } } },              <span class="cmt">// empty</span>
+    <span class="kw">new object</span>[] { <span class="kw">new</span> <span class="ty">Order</span> { CustomerEmail = <span class="kw">null</span>! } },   <span class="cmt">// no email</span>
+};
+</code></pre>
+  </div>
+
+  <h3>The edge cases worth remembering 🧩</h3>
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">0️⃣</span><b>Empty &amp; zero</b><p>Empty collections, empty strings, zero amounts, the number 0. Boundaries are where bugs live.</p></div>
+    <div class="card"><span class="glyph">🚫</span><b>Null</b><p>Null inputs, null returns from dependencies. What does your code do when a mock returns null?</p></div>
+    <div class="card"><span class="glyph">💥</span><b>Failure</b><p>Dependency throws — set up <code>ThrowsAsync</code> and assert your code handles it (retries, logs, rethrows).</p></div>
+    <div class="card"><span class="glyph">📏</span><b>Boundaries</b><p>Exactly at the threshold (1000), one below (999), one above (1001). Off-by-one errors hide here.</p></div>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Test the Failure Paths First</span>
+    <p>The happy path is the one you'll notice is broken anyway. The <em>sad</em> paths — empty input, a downstream failure, the boundary value — are where silent bugs hide and where good tests earn their keep. A suite that only tests success is a suite that lies about its coverage.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 InlineData vs MemberData</span>
+    <p><code>[InlineData]</code> is for simple compile-time constants (numbers, strings, bools) written right on the method. <code>[MemberData]</code> (and <code>[ClassData]</code>) pull rows from a property or method, so they can supply <em>objects</em> and computed data that won't fit in an attribute. Reach for MemberData the moment your cases stop being simple literals.</p>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: Test a Service, Mock Its Dependencies</h2>
+
+  <p>Today's <strong>Do</strong>: pick one service you built earlier — ideally one with a dependency or two (a repository, an email sender, an HTTP client) — and write a focused set of unit tests, mocking those dependencies. The path:</p>
+
+  <ol>
+    <li>📦 Create the test project: <code>dotnet new xunit</code>, reference your app project, and <code>dotnet add package Moq</code>.</li>
+    <li>🏗️ Set up the test class: fields for each <code>Mock&lt;IDependency&gt;</code>, and a constructor that builds the SUT with the mocks' <code>.Object</code> (fresh per test).</li>
+    <li>✅ <strong>Happy path:</strong> arrange the mocks to return sensible data (<code>Setup</code> + <code>ReturnsAsync</code>), act on the method, and assert on the return value.</li>
+    <li>🔍 <strong>Interaction:</strong> add a <code>Verify(..., Times.Once)</code> to confirm the service called a key dependency correctly (saved the order, sent the email).</li>
+    <li>🚫 <strong>Safety check:</strong> write a test where the input is invalid, assert it throws with <code>ThrowsAsync</code>, <em>and</em> verify the dangerous dependency was called <code>Times.Never</code>.</li>
+    <li>💥 <strong>Failure path:</strong> set up a dependency to <code>ThrowsAsync</code>, and assert your service handles or propagates it as designed.</li>
+    <li>🎲 <strong>Data-driven:</strong> convert a set of similar cases (boundaries: 999 / 1000 / 1001) into one <code>[Theory]</code> with <code>[InlineData]</code>.</li>
+    <li>▶️ Run <code>dotnet test</code>, watch them pass, then <em>break the service on purpose</em> (change a <code>&gt;=</code> to <code>&gt;</code>) and confirm a test catches it. A test that never fails proves nothing.</li>
+  </ol>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · A complete failure-path test</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">Fact</span>]
+<span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">PlaceOrder_WhenRepositoryFails_PropagatesAndSkipsEmail</span>()
+{
+    <span class="cmt">// Arrange — the repository will blow up on save:</span>
+    <span class="kw">var</span> order = <span class="kw">new</span> <span class="ty">Order</span>
+    {
+        CustomerEmail = <span class="str">"a@b.com"</span>,
+        Items = { <span class="kw">new</span> <span class="ty">OrderItem</span> { ProductId = <span class="num">1</span>, Quantity = <span class="num">1</span> } }
+    };
+    _repoMock
+        .<span class="fn">Setup</span>(r =&gt; r.<span class="fn">SaveAsync</span>(<span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="ty">Order</span>&gt;(), <span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="ty">CancellationToken</span>&gt;()))
+        .<span class="fn">ThrowsAsync</span>(<span class="kw">new</span> <span class="ty">DbUpdateException</span>(<span class="str">"DB down"</span>));
+
+    <span class="cmt">// Act + Assert — the failure surfaces:</span>
+    <span class="kw">await</span> <span class="ty">Assert</span>.<span class="fn">ThrowsAsync</span>&lt;<span class="ty">DbUpdateException</span>&gt;(() =&gt; _sut.<span class="fn">PlaceOrderAsync</span>(order));
+
+    <span class="cmt">// Assert — no confirmation email went out after a failed save:</span>
+    _emailMock.<span class="fn">Verify</span>(e =&gt; e.<span class="fn">SendAsync</span>(<span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="kw">string</span>&gt;(),
+        <span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="kw">string</span>&gt;(), <span class="ty">It</span>.<span class="fn">IsAny</span>&lt;<span class="ty">CancellationToken</span>&gt;()), <span class="ty">Times</span>.<span class="fn">Never</span>);
+}
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>From your own tests: (1) Which dependencies did you mock, and why those and not others? (2) Did you assert on a return value <em>and</em> verify at least one interaction? (3) Do you have at least one <code>Times.Never</code> test proving something bad didn't happen? (4) When you deliberately broke the service, did a test go red — and did its <em>name</em> tell you what broke?</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>🎯 Unit test</b>A fast, isolated, automated check of one method's behavior — the broad base of the test pyramid, FIRST in spirit.</div>
+    <div class="recap-card"><b>✅ xUnit</b>The runner: <code>[Fact]</code> for one scenario, <code>[Theory]</code> + <code>[InlineData]</code> for many, <code>Assert.*</code> to check. New class instance per test.</div>
+    <div class="recap-card"><b>📐 AAA</b>Arrange (set up + fakes), Act (one call), Assert (outcome). One Act per test, self-documenting name.</div>
+    <div class="recap-card"><b>🎭 Test doubles</b>Stub feeds data, mock verifies interactions, fake is a working stand-in. Mock the boundaries, not everything.</div>
+    <div class="recap-card"><b>🎬 Moq Setup</b><code>Setup(...).ReturnsAsync(...)</code> gives canned answers; <code>It.IsAny</code>/<code>It.Is</code> match arguments; <code>ThrowsAsync</code> tests failure.</div>
+    <div class="recap-card"><b>🔍 Moq Verify</b><code>Verify(..., Times.Once/Never)</code> asserts a dependency was (or wasn't) called — the only way to check side-effect behavior.</div>
+    <div class="recap-card"><b>🔌 DI = testable</b>Because services take interfaces, you inject fakes into the same constructor DI uses. Testability is a design property.</div>
+    <div class="recap-card"><b>🎲 Edge cases</b>Test null, empty, zero, boundaries, and failures — the sad paths are where real bugs and real value live.</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Concept</th><th>Tool / syntax</th><th>Purpose</th><th>Remember</th></tr></thead>
+    <tbody>
+      <tr><td>Single test</td><td><code>[Fact]</code></td><td>One fixed scenario</td><td>Name it Method_Scenario_Expected</td></tr>
+      <tr><td>Parameterized test</td><td><code>[Theory]</code> + <code>[InlineData]</code></td><td>Same logic, many inputs</td><td>MemberData for objects</td></tr>
+      <tr><td>Create a fake</td><td><code>new Mock&lt;IDep&gt;()</code></td><td>Stand in for a dependency</td><td>Pass <code>.Object</code> to the SUT</td></tr>
+      <tr><td>Canned answer</td><td><code>Setup(...).ReturnsAsync(...)</code></td><td>Control what the fake returns</td><td>Unconfigured calls return defaults</td></tr>
+      <tr><td>Match arguments</td><td><code>It.IsAny&lt;T&gt;()</code> / <code>It.Is&lt;T&gt;(...)</code></td><td>Flexible argument matching</td><td>Be as specific as the test needs</td></tr>
+      <tr><td>Check a call</td><td><code>Verify(..., Times.Once)</code></td><td>Assert an interaction happened</td><td><code>Times.Never</code> proves it didn't</td></tr>
+      <tr><td>Test an exception</td><td><code>Assert.ThrowsAsync&lt;T&gt;(...)</code></td><td>Assert the sad path throws</td><td>Verify no side effects fired too</td></tr>
+      <tr><td>Isolation</td><td>constructor setup, fresh per test</td><td>No shared state</td><td>Helper methods over shared fields</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is a unit test and how is it different from other tests?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A unit test is a small, fast, automated check that one piece of code (usually one method) behaves correctly <em>in isolation</em> — no real database, network, or file system. If it fails, you know the problem is in that specific code. It differs from integration tests (which test several components working together, often with a real database) and end-to-end tests (which drive the whole running system). Unit tests are the fastest and most numerous; the others are slower and fewer — that's the test pyramid.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is xUnit, and what do [Fact] and [Theory] mean?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>xUnit is a popular testing framework for .NET — it discovers and runs your tests and reports results. <code>[Fact]</code> marks a method as a single test with no parameters — one fixed scenario. <code>[Theory]</code> marks a parameterized test that runs once per data row (supplied by <code>[InlineData]</code> or <code>[MemberData]</code>), letting you check the same logic against many inputs without duplicating the test.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">Explain the Arrange-Act-Assert pattern.</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It's the three-part structure of a clean test. <strong>Arrange</strong>: set up everything needed — create the object under test, its fake dependencies, and input data. <strong>Act</strong>: call the one method you're testing. <strong>Assert</strong>: check the outcome — the return value, a thrown exception, or that a dependency was called. Keeping the sections visually separate (often with comments) makes the test easy to read: setup, action, verification.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What is a mock, and why would you use one?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A mock is a fake object that stands in for a real dependency during a test. You use it to isolate the code you're testing: instead of your service calling a real database or email server, it calls a mock you control — you tell the mock what to return, and you can check how it was called. This makes tests fast, repeatable, and focused on your code's logic rather than the behavior of external systems.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">In Moq, what do Setup and Verify do?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>Setup</code> configures how the mock responds — "when <code>GetByIdAsync(1)</code> is called, return this order" (via <code>.ReturnsAsync(...)</code>), or make it throw. <code>Verify</code> checks, after the act, that a method was actually called — how many times and with what arguments — e.g. <code>Verify(r =&gt; r.SaveAsync(order), Times.Once)</code>. Setup controls inputs to your code; Verify checks the calls your code made to its dependencies.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">How do you test that a method throws an exception?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Use <code>Assert.Throws&lt;TException&gt;(() =&gt; ...)</code> for synchronous code, or <code>await Assert.ThrowsAsync&lt;TException&gt;(() =&gt; ...)</code> for async. You pass the code that should throw as a lambda; the assertion fails if it doesn't throw, or throws a different type. You can also capture the returned exception to assert on its message. It's good practice to also verify that no unwanted side effects (like a save or email) happened when the exception was thrown.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">Why does dependency injection make code easier to test?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Because a class that receives its dependencies through its constructor (as interfaces) lets you pass in <em>fakes</em> during a test — the exact same way the DI container passes real ones in production. You just call the constructor with mock objects. In contrast, a class that creates its own dependencies internally (<code>new SqlRepository()</code>) gives you no seam to substitute a fake, making it nearly impossible to unit test in isolation. Testability is a benefit you get "for free" from good DI design.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What makes a good unit test? Name a few properties.</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>The FIRST properties: <strong>Fast</strong> (runs in milliseconds), <strong>Isolated</strong> (no shared state, no real external systems), <strong>Repeatable</strong> (same result every time — no dependence on dates, randomness, or order), <strong>Self-validating</strong> (clearly passes or fails, no manual checking), and <strong>Timely</strong> (written close to the code). Add a clear name (Method_Scenario_Expected) and a single Act, and you have a test that both catches bugs and documents intent.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">What's the difference between a stub and a mock?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>A <strong>stub</strong> provides canned data so your code can run — it answers queries but doesn't affect whether the test passes ("when asked for order 1, return this"). It supports <em>state-based</em> testing: given this input, did I compute the right result? A <strong>mock</strong> additionally <em>verifies interactions</em> — it can make the test fail based on whether (and how) it was called. It supports <em>interaction-based</em> testing: did my code call the dependency the right way? In strict literature they're distinct; in practice Moq objects do both — you <code>Setup</code> them like stubs and <code>Verify</code> them like mocks — so people loosely call everything a "mock." Knowing which behavior you're relying on keeps a test focused on one thing.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">When should you prefer asserting on return values versus verifying interactions?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Prefer asserting on <strong>return values and observable state</strong> whenever the behavior produces one — it's more robust because it tests <em>what</em> the code achieves, not <em>how</em>, so refactoring the internals doesn't break the test. Reach for <strong>interaction verification</strong> (<code>Verify</code>) when the side effect <em>is</em> the observable behavior and there's nothing to return — an email was sent, a row was saved, a message was published. Over-relying on Verify produces brittle tests that mirror the implementation line-by-line and break on every refactor while proving little about correctness.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What is Times.Never useful for? Give an example.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>It proves your code <em>didn't</em> do something it shouldn't — a negative guarantee that's often more valuable than a positive one. Example: in a checkout service, if payment fails, you must <em>not</em> ship the order. <code>shipMock.Verify(s =&gt; s.ShipAsync(It.IsAny&lt;Order&gt;()), Times.Never)</code> asserts exactly that. Other cases: not charging a card twice, not sending an email when validation failed, not saving an invalid record. These "must not happen" rules can only be expressed through interaction verification, since there's no positive result to assert on.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">Moq mocks return defaults for unconfigured methods. What problem can that cause, and what's the alternative?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>By default Moq uses "loose" behavior: any method you didn't <code>Setup</code> returns a harmless default (null, 0, empty collection) without complaint. The risk is silent false confidence — your test passes because a method returned null, not because the code is correct, and you may not realize a dependency wasn't exercised as intended. The alternative is <code>new Mock&lt;T&gt;(MockBehavior.Strict)</code>, which <em>throws</em> on any unconfigured call, forcing you to explicitly set up every interaction the code is expected to make. Strict mocks catch unexpected calls and make the test's assumptions explicit, at the cost of more setup and more brittleness — use them where precise interaction control matters.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">How do you avoid shared state between tests in xUnit?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Largely, xUnit does it for you: it creates a <em>new instance of the test class for every test method</em>, so instance fields (like your mocks and SUT) are re-created fresh each time — no leakage between tests. Put per-test setup in the constructor (xUnit's equivalent of a SetUp method) and cleanup in <code>Dispose</code>. Avoid <code>static</code> fields and shared mutable state, which <em>do</em> persist across tests and cause order-dependent, flaky failures. For expensive shared setup that's genuinely read-only (like a database fixture), use <code>IClassFixture</code>/<code>ICollectionFixture</code> deliberately rather than static state.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">Why is mocking a DbContext usually discouraged, and what do you do instead?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Because a mocked <code>DbContext</code>/<code>DbSet</code> doesn't behave like the real thing — LINQ that a real database translates to SQL runs as in-memory LINQ against your fakes, so queries can pass in tests but fail (or behave differently) in production; you end up testing your mock setup, not your data access. Instead: put data access behind a repository interface and mock <em>that</em> for unit tests of business logic, and/or write <em>integration</em> tests that run against a real database (SQL Server in a container via Testcontainers, or LocalDB) so query translation is genuinely exercised. The EF Core in-memory provider is tempting but also diverges from relational behavior. Unit-test the logic; integration-test the data layer.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">What are InlineData, MemberData, and ClassData, and when do you use each?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>All three feed rows to a <code>[Theory]</code>. <code>[InlineData(...)]</code> puts literal values right on the method — best for simple constants (numbers, strings, bools). <code>[MemberData(nameof(X))]</code> pulls rows from a static property or method returning <code>IEnumerable&lt;object[]&gt;</code> — needed when cases are complex objects or computed values that can't be constant expressions. <code>[ClassData(typeof(X))]</code> uses a dedicated class implementing <code>IEnumerable&lt;object[]&gt;</code> — good for reusing a data set across multiple test classes or when the generation logic is substantial. Rule of thumb: literals → InlineData; objects/computed → MemberData; reusable/complex → ClassData.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">How would you unit-test code that depends on the current date/time?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Don't call <code>DateTime.Now</code> directly in the code — that makes tests non-repeatable (they depend on when they run). Inject an abstraction for the clock. On .NET 8+, the framework provides <code>TimeProvider</code>: your code takes a <code>TimeProvider</code> and calls <code>GetUtcNow()</code>, and in tests you pass a <code>FakeTimeProvider</code> (from <code>Microsoft.Extensions.TimeProvider.Testing</code>) whose time you set and even advance. Before .NET 8 the pattern was a custom <code>IClock</code>/<code>IDateTimeProvider</code> interface, mocked in tests. Either way the principle is the same as any dependency: make the nondeterministic thing injectable so the test controls it.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Your team's tests are brittle — they break on every refactor. Diagnose and fix.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Brittleness almost always means tests are coupled to <em>implementation</em> rather than <em>behavior</em>. Common causes: over-verification (asserting every internal call and its order with <code>Verify</code>, so any restructure fails even when the result is identical); over-mocking (mocking collaborators that aren't real boundaries, turning the test into a mirror of the code); testing private methods or internal structure; and mocks configured with exact arguments where <code>It.Is</code> conditions would be more meaningful. Fixes: assert on outputs and observable state wherever possible; reserve <code>Verify</code> for genuine side effects (email sent, row saved); mock only true boundaries (I/O, external services, clock); test through the public API; and treat the test's job as "does the behavior meet the contract," not "does the code do these exact steps." Well-designed behavioral tests survive refactors — that's the whole point of the safety net.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">What is code coverage, and why is a high coverage number not the goal?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Coverage measures how much of your code executes during tests (lines/branches). It's a useful <em>diagnostic</em> — low coverage reliably flags untested areas — but a poor <em>target</em>, because it measures execution, not <em>verification</em>. You can hit 100% coverage with tests that call every line and assert nothing meaningful, or that only exercise happy paths. Chasing a number invites gaming: tests written to touch lines rather than to catch bugs, and tests for trivial getters that add noise. Better to use coverage to find blind spots (especially untested branches and error paths), aim for meaningful assertions on important logic, and accept that some code (thin wiring, generated code) doesn't warrant unit tests. Quality of assertions &gt; quantity of covered lines.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">Where's the line between unit and integration tests, and how do you decide what belongs where?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>A unit test isolates one unit of behavior with all real dependencies replaced by doubles — fast, deterministic, no I/O. An integration test exercises real collaboration across a boundary — a real database, the real DI container, the real HTTP stack — accepting slower, less isolated runs for higher-fidelity confidence. Decide by what you're actually validating: <em>business logic and branching</em> (discount rules, validation, orchestration) → unit tests, mocking the boundaries; <em>things that only fail against the real component</em> (EF query translation, migrations, SQL constraints, serialization on the wire, middleware pipeline behavior) → integration tests, because a mock would give false confidence. Practically: broad base of unit tests for logic, a targeted set of integration tests for the seams that mocks can't faithfully represent, and a few end-to-end tests for critical user journeys. The anti-pattern is unit-testing things that need the real component (mocked EF) or integration-testing pure logic (slow and redundant).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How do you test the async and cancellation behavior of a service?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>For async methods: make the tests <code>async Task</code> and <code>await</code> the SUT; set up mocks with <code>ReturnsAsync</code>/<code>ThrowsAsync</code>; assert exceptions with <code>Assert.ThrowsAsync</code>. Don't block with <code>.Result</code> in tests (same deadlock/starvation risks as production, Day 10). For cancellation: pass a token you control. To test that cancellation is honored, create a <code>CancellationTokenSource</code>, cancel it (immediately or via <code>CancelAfter</code>), pass its token, and assert the method throws <code>OperationCanceledException</code> — and, importantly, verify it <em>propagates</em> the token to its dependencies (<code>Verify</code> the mock was called with the expected token, or set the mock to throw on the cancelled token). You can also verify that no side effects ran after cancellation. The subtle part is proving the token actually flows through, not just that the top-level call cancels — a common real bug is a token dropped halfway down.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">Explain TDD and its cycle. What are its real benefits and costs?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Test-Driven Development follows Red-Green-Refactor: write a failing test for the next small piece of behavior (Red), write the minimum code to make it pass (Green), then improve the design while keeping tests green (Refactor). Benefits: it forces you to define behavior before implementing, yields a comprehensive test suite as a byproduct, drives clean, decoupled, testable design (you feel coupling immediately when a test is hard to write), and gives fast feedback. Costs and caveats: it's a skill with a learning curve; done dogmatically it can produce over-specified tests or waste effort on trivial code; it works best for logic with clear input/output and less well for exploratory or heavily I/O-bound work. Many strong teams practice it selectively — TDD for gnarly business rules, test-after for straightforward wiring. The value isn't ritual purity; it's that thinking about verifiability up front tends to produce better-designed code.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">A test passes locally but fails intermittently in CI. How do you approach a flaky test?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Flakiness is a bug in the test (or the code) — never "just re-run it." Common causes and fixes: <strong>shared/leaking state</strong> between tests exposed by parallel execution or different ordering (xUnit runs tests in parallel by default) → remove static mutable state, ensure per-test isolation; <strong>time dependence</strong> (<code>DateTime.Now</code>, time zones) → inject a clock; <strong>ordering assumptions</strong> (relying on another test's side effect) → make each test self-contained; <strong>real async races</strong> or arbitrary <code>Task.Delay</code>-based waits → use deterministic synchronization or fake timers instead of sleeping; <strong>external resources</strong> (network, real DB with unclean state) → those belong in integration tests with proper isolation (transaction rollback, fresh DB per test), not unit tests. Approach: reproduce by running repeatedly and in parallel, isolate the offending test, identify the nondeterministic input, and remove it. A flaky suite erodes trust until people ignore failures — so flakiness is treated as a priority defect, not a nuisance.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">How do you keep a large test suite maintainable as the codebase grows?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Treat test code as production code — it needs the same care. Practices: reduce duplication with builders/object mothers for test data (a <code>OrderBuilder</code> that produces valid orders with overridable fields) rather than repeating construction everywhere; keep setup close to the test (helper methods over sprawling shared fixtures, so a test is readable top-to-bottom); test behavior not implementation so refactors don't cascade into test churn (the biggest maintenance sink); name tests clearly so failures are self-diagnosing; keep tests fast so the suite stays run-on-every-change; delete redundant or obsolete tests deliberately rather than accumulating them; and organize tests to mirror the code structure. Also invest in the boundary contracts you mock — if an interface changes, you want one place to update. The meta-principle: a test suite is an asset only while it's trusted and fast; the moment it's slow, flaky, or brittle it becomes a liability people route around, so maintainability <em>is</em> the point.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">When is mocking the wrong choice, and what are the alternatives?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Mocking is wrong when it makes the test less truthful or more brittle than the alternative. Cases: mocking types you don't own (a third-party SDK, EF Core) — the mock encodes your <em>assumption</em> of their behavior, which can be wrong and won't update when they change; prefer a thin adapter you own and mock that, or an integration test against the real thing. Mocking things that are cheap and deterministic (value objects, pure functions, simple in-memory collaborators) — just use the real object; a mock adds noise and couples the test to call patterns. Complex interaction-heavy mock setups that become harder to read than the code — a hand-written <em>fake</em> (e.g. an in-memory repository implementing the interface) is often clearer and reusable across tests. And for anything where fidelity matters more than speed — query translation, serialization, concurrency — an integration test beats a mock. The judgment: mock true, owned, expensive boundaries; use real objects for cheap deterministic ones; use fakes for stateful collaborators; and reach for integration tests when only the real component tells the truth.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Nail Q1–Q8 first — AAA, Fact vs Theory, Setup vs Verify, and "why DI makes code testable" are the questions that always open a testing interview. Then own Q9 and Q10 together: the stub-vs-mock distinction and "assert results vs verify interactions" are what separate someone who <em>uses</em> Moq from someone who <em>understands</em> testing. Save the senior set (Q17 brittleness, Q19 unit-vs-integration, Q22 flaky tests) for after the hands-on — once you've felt a test break on a harmless refactor, "test behavior not implementation" becomes a conviction rather than a slogan.</p>
+  </div>
+</section>
+
+<footer>Day 13 of the .NET series · Unit Testing: xUnit, Moq, Testing DI Services &amp; Arranging Fakes · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

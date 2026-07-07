@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 12 — Background Services: IHostedService, BackgroundService, Scopes &amp; Periodic Work</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">⚙️ Day 12 · Background Services</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Foundations</div>
+    <a href="#s01"><span class="n">01</span>Work Without a Request</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>IHostedService</a>
+    <a href="#s04"><span class="n">04</span>BackgroundService</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Doing It Right</div>
+    <a href="#s05"><span class="n">05</span>Periodic Work</a>
+    <a href="#s06"><span class="n">06</span>The Scoped Service Problem</a>
+    <a href="#s07"><span class="n">07</span>Graceful Shutdown</a>
+    <a href="#s08"><span class="n">08</span>Error Handling</a>
+    <a href="#s09"><span class="n">09</span>Queues &amp; Scheduling</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Practice</div>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 12 · ASP.NET Core Fundamentals</div>
+  <h1>⚙️ Background Services: Work That Runs Itself</h1>
+  <p class="lede">Not everything happens because a user made a request. Emails need sending, caches need refreshing, old data needs cleaning, queues need draining — continuously, in the background, for as long as the app is alive. Today you'll build these with <code>BackgroundService</code>, run work on a timer, and solve the one gotcha that trips everyone: using scoped services like <code>DbContext</code> inside them.</p>
+  <div class="agenda">
+    <span class="chip">🏠 IHostedService</span>
+    <span class="chip">⚙️ BackgroundService</span>
+    <span class="chip">⏰ PeriodicTimer</span>
+    <span class="chip">🔒 Scoped Services</span>
+    <span class="chip">🛑 Graceful Shutdown</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>🏭 Work Without a Request</h2>
+
+  <p>Every ASP.NET Core feature so far has been <strong>request-driven</strong>: a user hits an endpoint, code runs, a response goes back. But real applications also have work that isn't tied to any request — it just needs to happen, over and over, while the app runs:</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">📧</span><b>Draining a queue</b><p>Process outbound emails, notifications, or jobs that other parts of the app enqueued.</p></div>
+    <div class="card"><span class="glyph">🧹</span><b>Cleanup</b><p>Delete expired sessions, archive old orders, purge stale cache entries every hour.</p></div>
+    <div class="card"><span class="glyph">🔄</span><b>Syncing</b><p>Poll an external API for exchange rates or stock levels every few minutes (Day 11 tie-in).</p></div>
+    <div class="card"><span class="glyph">💓</span><b>Health &amp; metrics</b><p>Emit heartbeats, recompute dashboards, or check dependencies on a schedule.</p></div>
+  </div>
+
+  <p>In .NET, this is the job of a <strong>hosted service</strong>: a class the host starts when the app boots and stops when it shuts down, running independently of the request pipeline. The base class you'll almost always use is <code>BackgroundService</code>.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🏢 Analogy</span>
+    <p>Your web endpoints are the <strong>front-desk staff</strong> — they only act when a customer walks in. A background service is the <strong>building's night-shift crew and facilities systems</strong>: the cleaner who comes through every hour, the boiler that cycles on a timer, the mail room that processes the outgoing pile. Nobody "requests" them each time — they run on their own schedule for as long as the building is open, and they shut down cleanly when it closes.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>A hosted service's lifetime is <strong>the application's lifetime</strong>. The host starts it at boot and signals it to stop at shutdown. Your job is to do useful work in between — and to stop <em>promptly and cleanly</em> when asked. Everything today builds on the async and cancellation skills from Day 10.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <div class="mindmap">
+    <div class="mm-core">Background Services<small>work that runs itself</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-blue">
+        <h4>🏠 IHostedService</h4>
+        <ul>
+          <li><code>StartAsync</code> / <code>StopAsync</code></li>
+          <li>The raw contract</li>
+          <li>Registered as singleton</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-accent">
+        <h4>⚙️ BackgroundService</h4>
+        <ul>
+          <li>Base class, one method</li>
+          <li><code>ExecuteAsync</code></li>
+          <li>The everyday choice</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>⏰ Periodic Work</h4>
+        <ul>
+          <li><code>PeriodicTimer</code></li>
+          <li><code>WaitForNextTickAsync</code></li>
+          <li>Run every N seconds</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-rose">
+        <h4>🔒 Scoped Services</h4>
+        <ul>
+          <li>Singleton can't inject scoped</li>
+          <li><code>CreateScope()</code> per tick</li>
+          <li>DbContext lives here</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>🛑 Robustness</h4>
+        <ul>
+          <li>Honor the stopping token</li>
+          <li>Catch exceptions per tick</li>
+          <li>Graceful shutdown</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p>The arc: understand the raw contract (03), adopt the friendly base class (04), run on a timer (05), then solve the three things that bite people in production — scoped services (06), shutdown (07), and errors (08) — before looking at queues and real scheduling (09).</p>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>🏠 IHostedService: The Raw Contract</h2>
+
+  <p>At the bottom of it all is a tiny interface with just two methods. The host calls one when the app starts and the other when it stops:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · The interface</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public interface</span> <span class="ty">IHostedService</span>
+{
+    <span class="ty">Task</span> <span class="fn">StartAsync</span>(<span class="ty">CancellationToken</span> cancellationToken);  <span class="cmt">// runs once at boot</span>
+    <span class="ty">Task</span> <span class="fn">StopAsync</span>(<span class="ty">CancellationToken</span> cancellationToken);   <span class="cmt">// runs once at shutdown</span>
+}
+</code></pre>
+  </div>
+
+  <p>You register an implementation with <code>AddHostedService&lt;T&gt;()</code>, and the host takes care of calling it. Use the raw interface directly when you have <strong>one-off startup/shutdown work</strong> — warm a cache, register with a service discovery system, open and later close a connection:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · A simple startup task</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">StartupWarmupService</span>(<span class="ty">ILogger</span>&lt;<span class="ty">StartupWarmupService</span>&gt; logger) : <span class="ty">IHostedService</span>
+{
+    <span class="kw">public</span> <span class="ty">Task</span> <span class="fn">StartAsync</span>(<span class="ty">CancellationToken</span> ct)
+    {
+        logger.<span class="fn">LogInformation</span>(<span class="str">"Warming up on startup"</span>);
+        <span class="cmt">// ... one-time work ...</span>
+        <span class="kw">return</span> <span class="ty">Task</span>.CompletedTask;
+    }
+
+    <span class="kw">public</span> <span class="ty">Task</span> <span class="fn">StopAsync</span>(<span class="ty">CancellationToken</span> ct) =&gt; <span class="ty">Task</span>.CompletedTask;
+}
+
+<span class="cmt">// Program.cs:</span>
+builder.Services.<span class="fn">AddHostedService</span>&lt;<span class="ty">StartupWarmupService</span>&gt;();
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ StartAsync Blocks Startup — Don't Loop In It</span>
+    <p><code>StartAsync</code> runs as part of the host starting up, and the host <strong>waits for it to return</strong> before the app is fully up. So a <code>while (true)</code> loop in <code>StartAsync</code> would block your app from ever finishing startup. Startup work here must be <em>quick</em> and return promptly. For continuous or long-running work, you want <code>BackgroundService</code> (next section) — not the raw interface.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Registered as a Singleton</span>
+    <p>Every hosted service, however registered, is a <strong>singleton</strong> — one instance for the whole app lifetime. That single fact is the root of the scoped-service problem in section 06, so hold onto it.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>⚙️ BackgroundService: The Everyday Choice</h2>
+
+  <p>Implementing <code>StartAsync</code>/<code>StopAsync</code> correctly for long-running work (kicking off a task without blocking startup, tracking it, stopping it cleanly) is fiddly. <code>BackgroundService</code> is an abstract base class that does all that plumbing and leaves you <strong>one method to override</strong>: <code>ExecuteAsync</code>. It's the right choice for virtually all continuous background work.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · The minimal worker</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">Worker</span>(<span class="ty">ILogger</span>&lt;<span class="ty">Worker</span>&gt; logger) : <span class="ty">BackgroundService</span>
+{
+    <span class="cmt">// stoppingToken is signaled when the host is shutting down.</span>
+    <span class="kw">protected override async</span> <span class="ty">Task</span> <span class="fn">ExecuteAsync</span>(<span class="ty">CancellationToken</span> stoppingToken)
+    {
+        <span class="kw">while</span> (!stoppingToken.IsCancellationRequested)
+        {
+            logger.<span class="fn">LogInformation</span>(<span class="str">"Worker running at {Time}"</span>, <span class="ty">DateTimeOffset</span>.Now);
+            <span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">Delay</span>(<span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">5</span>), stoppingToken);
+        }
+    }
+}
+
+<span class="cmt">// Program.cs:</span>
+builder.Services.<span class="fn">AddHostedService</span>&lt;<span class="ty">Worker</span>&gt;();
+</code></pre>
+  </div>
+
+  <p>How the host drives it, start to finish:</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="emoji">🚀</span>
+      <div><b>1. App boots → host calls StartAsync</b><span class="desc"><code>BackgroundService</code>'s built-in StartAsync kicks off <code>ExecuteAsync</code> and returns immediately — startup isn't blocked.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🔁</span>
+      <div><b>2. ExecuteAsync runs your loop</b><span class="desc">Your work runs concurrently with the rest of the app for its whole lifetime — usually a loop that does work, then awaits a delay.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="emoji">🛑</span>
+      <div><b>3. Shutdown → stoppingToken is cancelled</b><span class="desc">On Ctrl+C or app stop, the host cancels the token. Your loop condition and awaited delays observe it and exit the loop.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">⏳</span>
+      <div><b>4. Host waits (briefly) for ExecuteAsync to finish</b><span class="desc">StopAsync blocks until your task completes or a shutdown timeout elapses — so finishing promptly matters (section 07).</span></div>
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Don't Block Before the First await</span>
+    <p>The host considers startup "still going" until <code>ExecuteAsync</code> hits its first <code>await</code>. If you do heavy synchronous work at the top of <code>ExecuteAsync</code> before any await, you delay the entire app's startup. Get to an <code>await</code> quickly (the loop's <code>await Task.Delay</code> counts), and do heavy work inside the loop.</p>
+  </div>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Use…</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td><code>IHostedService</code> directly</td><td>Quick one-off work at startup/shutdown that returns fast.</td></tr>
+      <tr><td><code>BackgroundService</code></td><td>Continuous or periodic long-running work — the overwhelming majority of cases.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>⏰ Running Work Every N Seconds</h2>
+
+  <p>The naive loop above uses <code>Task.Delay</code>, which works but has a subtle flaw: the interval is <em>delay + work time</em>, so it drifts. If your work takes 2 seconds and you delay 5, ticks land ~7 seconds apart. The modern, purpose-built tool is <strong><code>PeriodicTimer</code></strong> — you <code>await WaitForNextTickAsync</code> and it accounts for elapsed time, and it doesn't waste a thread while waiting.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · PeriodicTimer — the recommended pattern</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">PeriodicWorker</span>(<span class="ty">ILogger</span>&lt;<span class="ty">PeriodicWorker</span>&gt; logger) : <span class="ty">BackgroundService</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">TimeSpan</span> _period = <span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">10</span>);
+
+    <span class="kw">protected override async</span> <span class="ty">Task</span> <span class="fn">ExecuteAsync</span>(<span class="ty">CancellationToken</span> stoppingToken)
+    {
+        <span class="kw">using</span> <span class="ty">PeriodicTimer</span> timer = <span class="kw">new</span>(_period);
+
+        <span class="cmt">// WaitForNextTickAsync returns true each tick, false when cancelled:</span>
+        <span class="kw">while</span> (<span class="kw">await</span> timer.<span class="fn">WaitForNextTickAsync</span>(stoppingToken))
+        {
+            logger.<span class="fn">LogInformation</span>(<span class="str">"Tick at {Time}"</span>, <span class="ty">DateTimeOffset</span>.Now);
+            <span class="cmt">// ... do the periodic work ...</span>
+        }
+    }
+}
+</code></pre>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">🚇 Analogy</span>
+    <p><code>Task.Delay</code> is like a bus driver who, at each stop, waits exactly 5 minutes <em>after unloading</em> before leaving — so the more passengers (work) at a stop, the later everything downstream runs; the schedule drifts. <code>PeriodicTimer</code> is a <strong>metro on a fixed timetable</strong>: trains are <em>scheduled</em> every 10 minutes regardless of how long each stop took. Same rhythm every time, no accumulating lateness.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Run Immediately, Then on Schedule</span>
+    <p><code>WaitForNextTickAsync</code> waits <em>before</em> the first tick, so nothing runs for the first period. If you want the work to fire once at startup and then every N seconds, call your <code>DoWork()</code> once before the loop, then enter the timer loop — a common and tidy pattern.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Long Work vs. the Interval</span>
+    <p><code>PeriodicTimer</code> ticks are <em>not</em> reentrant — a new tick won't overlap while you're still awaiting the previous iteration's work. If a tick's work takes longer than the period, the next tick simply fires as soon as you're free (you don't get pile-up, but you do get catch-up). If overlap-free spacing matters, that behavior is exactly what you want; if you need strict fixed timing regardless of work duration, you'd run the work on a separate task — but for most jobs, the built-in non-overlap is the safe default.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>🔒 The Scoped Service Problem</h2>
+
+  <p>Here's the wall almost everyone hits. You want your worker to use the <code>DbContext</code> from Days 7–9, so you inject it into the constructor — and the app crashes at startup with:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Error · at startup</span><button class="copy-btn">Copy</button></div>
+<pre><code>Cannot consume scoped service <span class="str">'ShopContext'</span> from singleton
+<span class="str">'Microsoft.Extensions.Hosting.IHostedService'</span>.
+</code></pre>
+  </div>
+
+  <p>Why? Recall two facts we've established: hosted services are <strong>singletons</strong> (section 03), and <code>DbContext</code> is registered <strong>scoped</strong> — one per request, disposed when the request ends (Day 7). A singleton lives for the whole app; a scoped service is meant to live briefly. Letting a singleton hold a scoped service forever would keep one <code>DbContext</code> alive for the app's entire lifetime — exactly the bug the DI container refuses to let you create.</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell neg"><div class="val">Singleton worker</div><div class="idx">lives forever</div></div>
+      <div class="arr-cell"><div class="val">✗ can't inject →</div><div class="idx"></div></div>
+      <div class="arr-cell neg"><div class="val">Scoped DbContext</div><div class="idx">meant to be brief</div></div>
+    </div>
+    <div class="arr-caption">Lifetime mismatch · a long-lived singleton must not permanently hold a short-lived scoped service</div>
+  </div>
+
+  <h3>The fix: create a scope per unit of work 🎯</h3>
+  <p>Inject <code>IServiceScopeFactory</code> (a singleton, so allowed), and each tick <strong>open a fresh scope</strong>, resolve your scoped services from it, do the work, and dispose the scope. That mirrors what a web request does automatically — one scope per unit of work, one <code>DbContext</code> per scope:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · The correct pattern</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">OrderArchiverWorker</span>(
+    <span class="ty">IServiceScopeFactory</span> scopeFactory,
+    <span class="ty">ILogger</span>&lt;<span class="ty">OrderArchiverWorker</span>&gt; logger) : <span class="ty">BackgroundService</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">TimeSpan</span> _period = <span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">30</span>);
+
+    <span class="kw">protected override async</span> <span class="ty">Task</span> <span class="fn">ExecuteAsync</span>(<span class="ty">CancellationToken</span> stoppingToken)
+    {
+        <span class="kw">using</span> <span class="ty">PeriodicTimer</span> timer = <span class="kw">new</span>(_period);
+        <span class="kw">while</span> (<span class="kw">await</span> timer.<span class="fn">WaitForNextTickAsync</span>(stoppingToken))
+        {
+            <span class="cmt">// 🎯 A fresh scope per tick — like a mini-request:</span>
+            <span class="kw">await using var</span> scope = scopeFactory.<span class="fn">CreateAsyncScope</span>();
+            <span class="kw">var</span> db = scope.ServiceProvider.<span class="fn">GetRequiredService</span>&lt;<span class="ty">ShopContext</span>&gt;();
+
+            <span class="kw">var</span> cutoff = <span class="ty">DateTime</span>.UtcNow.<span class="fn">AddYears</span>(-<span class="num">1</span>);
+            <span class="kw">var</span> archived = <span class="kw">await</span> db.Orders
+                .<span class="fn">Where</span>(o =&gt; o.Status == <span class="ty">OrderStatus</span>.Cancelled &amp;&amp; o.PlacedAt &lt; cutoff)
+                .<span class="fn">ExecuteUpdateAsync</span>(s =&gt; s.<span class="fn">SetProperty</span>(o =&gt; o.IsArchived, <span class="kw">true</span>), stoppingToken);
+
+            logger.<span class="fn">LogInformation</span>(<span class="str">"Archived {Count} old orders"</span>, archived);
+            <span class="cmt">// scope disposed here → DbContext disposed, connection released</span>
+        }
+    }
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 The Mental Model</span>
+    <p>A web request creates a DI scope for you; a background service doesn't get one automatically. So <strong>you create one yourself</strong>, per iteration. Think of each timer tick as a tiny self-made "request": open scope → resolve scoped deps → work → dispose. Never hold the scope (or its <code>DbContext</code>) across ticks — a fresh one each time keeps you clean and avoids stale, ever-growing state.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Delegate to a Scoped Service</span>
+    <p>Cleaner still: put the actual work in its own scoped service (e.g. <code>IOrderArchiver</code>), and have the worker's only job be "each tick, create a scope, resolve the archiver, call it." The worker handles timing; the scoped service handles logic — testable in isolation, and the scope boundary is obvious.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ CreateScope vs CreateAsyncScope</span>
+    <p>Use <code>CreateAsyncScope()</code> (with <code>await using</code>) when the scope contains services that implement <code>IAsyncDisposable</code> — which <code>DbContext</code> does. Plain <code>CreateScope()</code> with <code>using</code> works too but disposes synchronously; for EF Core, the async scope is the tidier match.</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>🛑 Graceful Shutdown</h2>
+
+  <p>When the app stops — a deploy, a container scaling down, Ctrl+C — the host wants your worker to <strong>finish what it's doing and exit promptly</strong>. Two mechanisms make this work: the <strong>stopping token</strong> and an optional <code>StopAsync</code> override.</p>
+
+  <h3>Honor the stopping token everywhere 🚦</h3>
+  <p>The <code>stoppingToken</code> passed to <code>ExecuteAsync</code> is cancelled at shutdown. Your loop condition checks it, and — critically — you pass it into every awaited call (Day 10!) so in-flight work can abort. That's what lets the app stop in milliseconds instead of hanging.</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell"><div class="val">Shutdown signal</div><div class="idx">Ctrl+C / SIGTERM</div></div>
+      <div class="arr-cell highlight"><div class="val">stoppingToken cancelled</div><div class="idx">host fires it</div></div>
+      <div class="arr-cell highlight-green"><div class="val">loop &amp; awaits observe it</div><div class="idx">exit cleanly</div></div>
+      <div class="arr-cell"><div class="val">StopAsync completes</div><div class="idx">app exits</div></div>
+    </div>
+    <div class="arr-caption">Graceful shutdown chain · a token nobody checks means a hang, then a forced kill</div>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ The Shutdown Timeout</span>
+    <p>The host gives your service a limited window to stop (default ~30 seconds, configurable via <code>HostOptions.ShutdownTimeout</code>). If <code>ExecuteAsync</code> doesn't return within it — because you ignored the token and are mid-work — the host <strong>forcibly kills</strong> the process. That can mean half-finished work, an unflushed log, or a dangling transaction. Honoring the token isn't optional politeness; it's how you avoid data corruption on shutdown.</p>
+  </div>
+
+  <h3>Override StopAsync for cleanup 🧹</h3>
+  <p>For "finish the current item, then stop accepting new ones" logic — common with queues — override <code>StopAsync</code> to run extra cleanup after the token fires:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Custom stop logic</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public override async</span> <span class="ty">Task</span> <span class="fn">StopAsync</span>(<span class="ty">CancellationToken</span> cancellationToken)
+{
+    logger.<span class="fn">LogInformation</span>(<span class="str">"Worker stopping — finishing in-flight work"</span>);
+    <span class="cmt">// e.g. stop pulling new queue items, let the current one complete</span>
+    <span class="kw">await base</span>.<span class="fn">StopAsync</span>(cancellationToken);   <span class="cmt">// let the base do its part too</span>
+}
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Two Different Tokens</span>
+    <p>Don't confuse them: the <code>stoppingToken</code> in <code>ExecuteAsync</code> signals "begin stopping." The <code>cancellationToken</code> parameter of <code>StopAsync</code> represents the shutdown-timeout deadline for cleanup itself. In modern hosting they behave consistently, but the mental split — "stop working" vs "you have this long to clean up" — is worth keeping.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>🧯 Error Handling: Don't Let One Failure Kill the Worker</h2>
+
+  <p>The nastiest background-service bug is silent death. If an <strong>unhandled exception escapes <code>ExecuteAsync</code></strong>, the task faults and your worker simply <em>stops running</em> — permanently, until the app restarts. No more ticks, often no obvious error, just a job that mysteriously quit hours ago.</p>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ A Thrown Exception Ends the Loop Forever</span>
+    <p>An exception from inside your loop that isn't caught propagates out of <code>ExecuteAsync</code>, the task enters the faulted state (Day 10!), and the <code>BackgroundService</code> is done. The rest of your app keeps running, which is why this is so easy to miss. The fix is to <strong>wrap each iteration's work in try/catch</strong> so one bad tick is logged and the loop lives on.</p>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Resilient loop</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">protected override async</span> <span class="ty">Task</span> <span class="fn">ExecuteAsync</span>(<span class="ty">CancellationToken</span> stoppingToken)
+{
+    <span class="kw">using</span> <span class="ty">PeriodicTimer</span> timer = <span class="kw">new</span>(_period);
+    <span class="kw">while</span> (<span class="kw">await</span> timer.<span class="fn">WaitForNextTickAsync</span>(stoppingToken))
+    {
+        <span class="kw">try</span>
+        {
+            <span class="kw">await using var</span> scope = scopeFactory.<span class="fn">CreateAsyncScope</span>();
+            <span class="kw">var</span> svc = scope.ServiceProvider.<span class="fn">GetRequiredService</span>&lt;<span class="ty">IEmailDispatcher</span>&gt;();
+            <span class="kw">await</span> svc.<span class="fn">SendPendingAsync</span>(stoppingToken);
+        }
+        <span class="kw">catch</span> (<span class="ty">OperationCanceledException</span>) <span class="kw">when</span> (stoppingToken.IsCancellationRequested)
+        {
+            <span class="kw">break</span>;   <span class="cmt">// expected on shutdown — leave the loop quietly</span>
+        }
+        <span class="kw">catch</span> (<span class="ty">Exception</span> ex)
+        {
+            <span class="cmt">// Log and KEEP GOING — one failed tick shouldn't kill the worker</span>
+            logger.<span class="fn">LogError</span>(ex, <span class="str">"Email dispatch tick failed; will retry next period"</span>);
+        }
+    }
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Catch Inside the Loop, Not Around It</span>
+    <p>Put the try/catch <em>inside</em> the <code>while</code> so a failure aborts only the current iteration; the next tick tries again. A try/catch <em>around</em> the whole loop would still end the worker on the first error. And distinguish shutdown cancellation (expected — <code>break</code>) from real errors (log and continue).</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Since .NET 6: BackgroundServiceExceptionBehavior</span>
+    <p>By default in modern .NET, an unhandled exception in a hosted service will <strong>stop the entire host</strong> (fail-fast — arguably better than a silently-dead worker, because you notice). You can tune this with <code>HostOptions.BackgroundServiceExceptionBehavior</code>. But don't rely on it — handle exceptions per-tick as above so a transient blip (a brief DB hiccup) doesn't take anything down. Reserve fail-fast for truly unrecoverable states.</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>📮 Queues &amp; Real Scheduling</h2>
+
+  <p>Two patterns extend the periodic worker into the shapes real systems need.</p>
+
+  <h3>Queued background work 📮</h3>
+  <p>Remember Day 10's warning against fire-and-forget? This is the correct alternative. An endpoint that needs to hand off slow work (send an email, generate a report) <strong>enqueues</strong> an item; a background service <strong>dequeues</strong> and processes it. The modern tool is <code>System.Threading.Channels</code> — a thread-safe async producer/consumer queue:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Channel-based queue + consumer</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// A singleton queue both sides share:</span>
+<span class="kw">public class</span> <span class="ty">EmailQueue</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">Channel</span>&lt;<span class="ty">EmailJob</span>&gt; _channel = <span class="ty">Channel</span>.<span class="fn">CreateUnbounded</span>&lt;<span class="ty">EmailJob</span>&gt;();
+    <span class="kw">public</span> <span class="ty">ValueTask</span> <span class="fn">EnqueueAsync</span>(<span class="ty">EmailJob</span> job) =&gt; _channel.Writer.<span class="fn">WriteAsync</span>(job);
+    <span class="kw">public</span> <span class="ty">IAsyncEnumerable</span>&lt;<span class="ty">EmailJob</span>&gt; <span class="fn">ReadAllAsync</span>(<span class="ty">CancellationToken</span> ct) =&gt; _channel.Reader.<span class="fn">ReadAllAsync</span>(ct);
+}
+
+<span class="cmt">// The consumer runs continuously, one scope per job:</span>
+<span class="kw">public class</span> <span class="ty">EmailWorker</span>(<span class="ty">EmailQueue</span> queue, <span class="ty">IServiceScopeFactory</span> scopeFactory) : <span class="ty">BackgroundService</span>
+{
+    <span class="kw">protected override async</span> <span class="ty">Task</span> <span class="fn">ExecuteAsync</span>(<span class="ty">CancellationToken</span> stoppingToken)
+    {
+        <span class="kw">await foreach</span> (<span class="kw">var</span> job <span class="kw">in</span> queue.<span class="fn">ReadAllAsync</span>(stoppingToken))
+        {
+            <span class="kw">try</span>
+            {
+                <span class="kw">await using var</span> scope = scopeFactory.<span class="fn">CreateAsyncScope</span>();
+                <span class="kw">var</span> sender = scope.ServiceProvider.<span class="fn">GetRequiredService</span>&lt;<span class="ty">IEmailSender</span>&gt;();
+                <span class="kw">await</span> sender.<span class="fn">SendAsync</span>(job, stoppingToken);
+            }
+            <span class="kw">catch</span> (<span class="ty">Exception</span> ex) { <span class="cmt">/* log &amp; continue */</span> }
+        }
+    }
+}
+</code></pre>
+  </div>
+
+  <h3>Scheduling: "every day at 2 AM" ⏰</h3>
+  <p><code>PeriodicTimer</code> handles "every N seconds/minutes/hours." For <strong>calendar schedules</strong> — 2 AM daily, Mondays only — compute the next occurrence and <code>Task.Delay</code> until it, typically with a cron library:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Cron-style scheduling (sketch)</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// Using a cron expression (e.g. via the Cronos library):</span>
+<span class="kw">while</span> (!stoppingToken.IsCancellationRequested)
+{
+    <span class="ty">DateTimeOffset</span> now = <span class="ty">DateTimeOffset</span>.Now;
+    <span class="ty">DateTimeOffset</span>? next = _cron.<span class="fn">GetNextOccurrence</span>(now, _timeZone);
+    <span class="kw">if</span> (next <span class="kw">is null</span>) <span class="kw">break</span>;
+
+    <span class="kw">var</span> delay = next.Value - now;
+    <span class="kw">if</span> (delay &gt; <span class="ty">TimeSpan</span>.Zero)
+        <span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">Delay</span>(delay, stoppingToken);   <span class="cmt">// wait until the scheduled time</span>
+
+    <span class="kw">await</span> <span class="fn">DoWorkAsync</span>(stoppingToken);
+}
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Multiple Instances = Multiple Runs</span>
+    <p>Background services run <strong>in every instance</strong> of your app. Scale to three pods and your "nightly cleanup" runs three times, at once — possibly corrupting each other. For scheduled jobs in a scaled-out deployment you need coordination: a distributed lock (only one instance wins the job), a leader-election mechanism, or a dedicated scheduler like Hangfire/Quartz.NET with a shared store. In-process timers are perfect for single-instance apps and per-instance work (like draining that instance's own queue); think twice before using them for cluster-wide scheduled tasks.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ When to Reach for a Real Job Framework</span>
+    <p>Built-in background services are ideal for simple, in-process, best-effort work. When you need <strong>persistence</strong> (jobs survive restarts), <strong>retries with history</strong>, a <strong>dashboard</strong>, or <strong>guaranteed single execution across a cluster</strong>, graduate to Hangfire or Quartz.NET, or offload to a message queue (RabbitMQ, Azure Service Bus) with dedicated consumers. Know the ceiling of the built-in tools.</p>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: A Worker That Runs Every N Seconds</h2>
+
+  <p>Today's <strong>Do</strong>: build a worker that runs a task on an interval. Reuse the shop <code>DbContext</code> from earlier days so you also practice the scoped-service pattern. The path:</p>
+
+  <ol>
+    <li>⚙️ Create a class deriving from <code>BackgroundService</code> and register it with <code>builder.Services.AddHostedService&lt;YourWorker&gt;()</code>.</li>
+    <li>⏰ In <code>ExecuteAsync</code>, use a <code>PeriodicTimer</code> with a period like 10 seconds and a <code>while (await timer.WaitForNextTickAsync(stoppingToken))</code> loop — log a message each tick to confirm it fires.</li>
+    <li>🔒 Do real work that needs a scoped service: inject <code>IServiceScopeFactory</code>, and each tick <code>await using var scope = scopeFactory.CreateAsyncScope();</code> then resolve <code>ShopContext</code>. Count the orders, or archive old ones.</li>
+    <li>🧯 Wrap the per-tick work in try/catch so one failure logs and the loop continues; distinguish shutdown cancellation (<code>break</code>) from real errors (log &amp; continue).</li>
+    <li>🛑 Verify graceful shutdown: run the app, watch the ticks, press Ctrl+C — confirm it stops promptly and logs a stopping message rather than hanging.</li>
+    <li>💥 Prove the failure mode: temporarily <code>throw</code> inside the loop <em>without</em> a try/catch, watch the worker die silently while the app keeps running — then add the try/catch back and watch it survive.</li>
+    <li>🎛️ Bonus: move the actual work into a scoped service (e.g. <code>IOrderArchiver.RunAsync</code>) and have the worker only handle timing + scope creation. Notice how testable the logic becomes.</li>
+    <li>🔬 Bonus: try the "run immediately, then every N seconds" variant by calling the work once before the timer loop.</li>
+  </ol>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Complete, runnable worker</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">OrderStatsWorker</span>(
+    <span class="ty">IServiceScopeFactory</span> scopeFactory,
+    <span class="ty">ILogger</span>&lt;<span class="ty">OrderStatsWorker</span>&gt; logger) : <span class="ty">BackgroundService</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">TimeSpan</span> _period = <span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">10</span>);
+
+    <span class="kw">protected override async</span> <span class="ty">Task</span> <span class="fn">ExecuteAsync</span>(<span class="ty">CancellationToken</span> stoppingToken)
+    {
+        logger.<span class="fn">LogInformation</span>(<span class="str">"OrderStatsWorker started"</span>);
+        <span class="kw">using</span> <span class="ty">PeriodicTimer</span> timer = <span class="kw">new</span>(_period);
+
+        <span class="kw">while</span> (<span class="kw">await</span> timer.<span class="fn">WaitForNextTickAsync</span>(stoppingToken))
+        {
+            <span class="kw">try</span>
+            {
+                <span class="kw">await using var</span> scope = scopeFactory.<span class="fn">CreateAsyncScope</span>();
+                <span class="kw">var</span> db = scope.ServiceProvider.<span class="fn">GetRequiredService</span>&lt;<span class="ty">ShopContext</span>&gt;();
+
+                <span class="kw">int</span> total = <span class="kw">await</span> db.Orders.<span class="fn">CountAsync</span>(stoppingToken);
+                <span class="kw">decimal</span> today = <span class="kw">await</span> db.Orders
+                    .<span class="fn">Where</span>(o =&gt; o.PlacedAt.Date == <span class="ty">DateTime</span>.UtcNow.Date)
+                    .<span class="fn">SumAsync</span>(o =&gt; o.Total, stoppingToken);
+
+                logger.<span class="fn">LogInformation</span>(
+                    <span class="str">"Order stats — total: {Total}, today's revenue: {Today:C}"</span>, total, today);
+            }
+            <span class="kw">catch</span> (<span class="ty">OperationCanceledException</span>) <span class="kw">when</span> (stoppingToken.IsCancellationRequested)
+            {
+                <span class="kw">break</span>;
+            }
+            <span class="kw">catch</span> (<span class="ty">Exception</span> ex)
+            {
+                logger.<span class="fn">LogError</span>(ex, <span class="str">"Order stats tick failed; continuing"</span>);
+            }
+        }
+
+        logger.<span class="fn">LogInformation</span>(<span class="str">"OrderStatsWorker stopping"</span>);
+    }
+}
+
+<span class="cmt">// Program.cs:</span>
+builder.Services.<span class="fn">AddHostedService</span>&lt;<span class="ty">OrderStatsWorker</span>&gt;();
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>Answer from your own worker: (1) Why can't you inject <code>ShopContext</code> straight into the constructor, and what do you inject instead? (2) What exactly happens if a tick throws and there's no try/catch? (3) When you press Ctrl+C, which token fires, and which line notices it? (4) If you deployed this to three instances, how many times would each tick's work run — and does that matter for what your worker does?</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>🏭 Purpose</b>Hosted services run work not tied to any request — queues, cleanup, syncing — for the app's whole lifetime.</div>
+    <div class="recap-card"><b>🏠 IHostedService</b>The raw contract: <code>StartAsync</code> (quick, at boot) + <code>StopAsync</code> (at shutdown). Don't loop in StartAsync — it blocks startup.</div>
+    <div class="recap-card"><b>⚙️ BackgroundService</b>The base class for continuous work: override one method, <code>ExecuteAsync(stoppingToken)</code>. The everyday choice.</div>
+    <div class="recap-card"><b>⏰ PeriodicTimer</b><code>while (await timer.WaitForNextTickAsync(stoppingToken))</code> gives drift-free intervals without wasting a thread.</div>
+    <div class="recap-card"><b>🔒 Scoped services</b>Hosted services are singletons; can't inject scoped deps. Inject <code>IServiceScopeFactory</code>, create a scope per tick, resolve there.</div>
+    <div class="recap-card"><b>🛑 Shutdown</b>Honor the <code>stoppingToken</code> in the loop and every await; finish before the shutdown timeout or the host force-kills you.</div>
+    <div class="recap-card"><b>🧯 Errors</b>An unhandled exception ends the worker forever. try/catch <em>inside</em> the loop so one bad tick logs and the loop lives on.</div>
+    <div class="recap-card"><b>📮 Queues &amp; scale</b><code>Channel</code> for producer/consumer work; cron libs for calendar schedules; coordinate or use Hangfire/Quartz when scaled out.</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Concept</th><th>Do this</th><th>Not this</th><th>Because</th></tr></thead>
+    <tbody>
+      <tr><td>Continuous work</td><td>derive from <code>BackgroundService</code></td><td>loop inside <code>StartAsync</code></td><td>StartAsync blocks app startup</td></tr>
+      <tr><td>Interval timing</td><td><code>PeriodicTimer</code> + <code>WaitForNextTickAsync</code></td><td>work then <code>Task.Delay</code></td><td>Delay drifts by the work duration</td></tr>
+      <tr><td>Using a DbContext</td><td>inject <code>IServiceScopeFactory</code>, scope per tick</td><td>inject <code>DbContext</code> directly</td><td>Singleton can't hold a scoped service</td></tr>
+      <tr><td>Scope disposal</td><td><code>await using CreateAsyncScope()</code></td><td>hold one scope across ticks</td><td>Stale, growing state; DbContext is async-disposable</td></tr>
+      <tr><td>Shutdown</td><td>check &amp; pass <code>stoppingToken</code></td><td>ignore the token</td><td>Force-kill after the shutdown timeout</td></tr>
+      <tr><td>A tick fails</td><td>try/catch inside the loop, log, continue</td><td>let it escape <code>ExecuteAsync</code></td><td>Escaping ends the worker permanently</td></tr>
+      <tr><td>Queued work</td><td><code>System.Threading.Channels</code> + consumer worker</td><td>fire-and-forget from an endpoint</td><td>Owned lifetime, own scope, observed errors</td></tr>
+      <tr><td>Scaled-out schedule</td><td>distributed lock / Hangfire / Quartz</td><td>assume it runs once</td><td>The timer runs in every instance</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is a hosted service and when would you use one?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A hosted service is a class that runs background work managed by the .NET host — it starts when the app boots and stops when the app shuts down, independently of any HTTP request. You use one for work that isn't triggered by a user: processing a queue of jobs, cleaning up old data on a schedule, polling an external API for updates, emitting metrics. Anything that "just needs to keep happening" while the app runs.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What's the difference between IHostedService and BackgroundService?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>IHostedService</code> is the raw interface with two methods — <code>StartAsync</code> (called at boot) and <code>StopAsync</code> (called at shutdown). <code>BackgroundService</code> is an abstract base class that already implements <code>IHostedService</code> and handles the tricky plumbing for long-running work, leaving you one method to override: <code>ExecuteAsync</code>. Use the raw interface for quick one-off startup/shutdown tasks; use <code>BackgroundService</code> for continuous or periodic work, which is almost always what you want.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">How do you register a background service?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>In <code>Program.cs</code>, call <code>builder.Services.AddHostedService&lt;MyWorker&gt;()</code>. That tells the host to create and manage the service's lifetime — starting it when the app runs and stopping it on shutdown. You can register multiple hosted services; they all run concurrently for the app's lifetime.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What is the stoppingToken in ExecuteAsync for?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It's a <code>CancellationToken</code> the host cancels when the app is shutting down. Your work loop checks it (<code>while (!stoppingToken.IsCancellationRequested)</code>) and passes it into every awaited call, so the service can stop promptly and cleanly when asked instead of running forever. It's the same cooperative-cancellation idea from the async lesson, applied to the service's whole lifetime.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">How do you run a task every N seconds in a background service?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>The recommended way is <code>PeriodicTimer</code>: create one with your interval, then loop with <code>while (await timer.WaitForNextTickAsync(stoppingToken)) { /* work */ }</code>. Each tick fires roughly every N seconds. It's better than doing work and then <code>Task.Delay(N)</code>, because that approach adds the work's duration to the interval and drifts over time, whereas <code>PeriodicTimer</code> keeps a steady rhythm.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">Why can't you inject a DbContext directly into a BackgroundService?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Because hosted services are registered as <strong>singletons</strong> (one instance for the whole app), but <code>DbContext</code> is registered as <strong>scoped</strong> (a short-lived instance meant to last one operation). The DI container refuses to let a long-lived singleton permanently hold a short-lived scoped service — it throws at startup. Instead you inject <code>IServiceScopeFactory</code>, create a scope when you need to work, and resolve the DbContext from that scope.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">Roughly how do you use a scoped service inside a background service?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Inject <code>IServiceScopeFactory</code> into the worker. Each time you need to do work (e.g. each timer tick), create a scope with <code>await using var scope = scopeFactory.CreateAsyncScope();</code>, then get your scoped service from <code>scope.ServiceProvider.GetRequiredService&lt;T&gt;()</code>, use it, and let the scope dispose at the end of the block. Each scope is like a mini-request with its own fresh DbContext.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">Give two real-world examples of background service work.</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Examples: processing a queue of outbound emails or notifications that endpoints enqueued; periodically cleaning up expired sessions or archiving old orders; polling an external API every few minutes to refresh cached exchange rates; emitting heartbeat/health metrics on a schedule; running a nightly report generation. The common thread: work that recurs or runs continuously and isn't tied to a specific user request.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">Why is PeriodicTimer preferred over a work-then-Task.Delay loop?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Two reasons. <strong>Accuracy</strong>: with "do work, then <code>Task.Delay(period)</code>," the real interval becomes <em>work time + delay</em>, so ticks drift later as work takes longer — a job "every 10s" that does 3s of work actually runs every 13s. <code>PeriodicTimer</code> schedules ticks on the interval itself, accounting for elapsed work, so timing stays steady. <strong>Design</strong>: it's purpose-built for this, reads cleanly (<code>await WaitForNextTickAsync</code>), integrates cancellation, doesn't tie up a thread while waiting, and its ticks don't overlap — a new tick won't start until the previous iteration's awaited work finishes.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">Explain the singleton/scoped lifetime mismatch and exactly how you resolve it.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>A hosted service is a singleton — constructed once, lives for the app's lifetime. Scoped services (like DbContext) are designed to live for one unit of work and then be disposed. If a singleton captured a scoped service via constructor injection, that scoped instance would live forever inside the singleton — defeating scoping and, for DbContext, accumulating tracked entities and holding a connection indefinitely. The DI container detects this and throws at startup. Resolution: inject <code>IServiceScopeFactory</code> (itself a singleton, so injectable), and for each unit of work call <code>CreateScope()</code>/<code>CreateAsyncScope()</code>, resolve the scoped service from that scope, do the work, and dispose the scope — recreating per iteration the scope boundary that a web request would provide automatically.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What happens if an unhandled exception escapes ExecuteAsync?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>The Task returned by <code>ExecuteAsync</code> faults, and the background service <strong>stops running</strong> — it won't tick again until the app restarts. In modern .NET (since 6), the default <code>BackgroundServiceExceptionBehavior</code> is actually to <strong>stop the whole host</strong> (fail-fast), which at least makes the failure loud rather than a silently dead worker; you can change it to <code>Ignore</code>. Either way, the fix isn't to rely on that setting — it's to wrap each iteration's work in try/catch <em>inside</em> the loop, log the error, and continue, so a transient failure (a brief DB blip) costs one tick, not the whole worker.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">Why put the try/catch inside the loop rather than around it?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Scope of recovery. A try/catch <em>inside</em> the <code>while</code> catches a failure from a single iteration, logs it, and lets the loop proceed to the next tick — the worker survives a bad tick. A try/catch <em>around</em> the whole loop catches the exception only after the loop has already been torn out from under it, so the worker still stops on the first error. You want per-iteration isolation. You also typically special-case <code>OperationCanceledException</code> when the stopping token is set — that's expected shutdown, so you break out quietly rather than logging it as an error.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">How does graceful shutdown work, and what's the shutdown timeout?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>On shutdown (Ctrl+C, SIGTERM, deploy), the host cancels the <code>stoppingToken</code> and then waits for <code>ExecuteAsync</code> to return, calling <code>StopAsync</code>. Your loop and awaited calls observe the token and exit promptly. But the host only waits so long — the shutdown timeout (default ~30 seconds, set via <code>HostOptions.ShutdownTimeout</code>). If your service ignores the token and is still mid-work when the timeout elapses, the host <strong>forcibly terminates</strong> the process, risking half-finished work, unflushed logs, or dangling transactions. So honoring the token (checking it, passing it into every await) is what makes shutdown both graceful and safe.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">You need to process work items enqueued by API endpoints. How do you structure that?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Producer/consumer with a shared queue and a background consumer — the correct alternative to fire-and-forget. Use <code>System.Threading.Channels</code>: register a singleton wrapping a <code>Channel&lt;WorkItem&gt;</code>; endpoints call <code>Writer.WriteAsync(item)</code> and return immediately; a <code>BackgroundService</code> loops with <code>await foreach (var item in channel.Reader.ReadAllAsync(stoppingToken))</code>, creating a fresh DI scope per item, resolving scoped dependencies, processing, and catching exceptions per item. This gives the work an owned lifetime (it doesn't die with the request), its own scope (fresh DbContext), and observed errors — everything bare fire-and-forget lacks.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">Should you inject a scoped service into StartAsync of a raw IHostedService? What's the catch?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>You can't inject scoped services into the constructor (the service is a singleton) — same rule as BackgroundService. Inside <code>StartAsync</code> you can create a scope and resolve scoped services from it for one-time startup work. The bigger catch is that <code>StartAsync</code> runs during host startup and the host waits for it to return before the app is ready — so it must be <em>quick</em>. Don't do a long loop or heavy blocking work there, or you delay (or prevent) the app from starting. For anything long-running, use <code>BackgroundService.ExecuteAsync</code>, which is designed not to block startup.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">CreateScope vs CreateAsyncScope — when does the difference matter?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><code>CreateScope()</code> returns a scope disposed synchronously (<code>using</code>); <code>CreateAsyncScope()</code> returns one disposed asynchronously (<code>await using</code>). The difference matters when the scope holds services implementing <code>IAsyncDisposable</code> — notably EF Core's <code>DbContext</code>, which has async disposal to flush/close things properly. With a synchronous scope disposing an async-disposable service, you can miss the async cleanup path (and some setups throw). So when your scope resolves a DbContext or other async-disposable resource, prefer <code>await using var scope = factory.CreateAsyncScope();</code>.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Your app scales to multiple instances. What breaks in a naive periodic worker, and how do you fix it?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Background services run <em>in every instance</em>, so a "nightly cleanup" or "send digest emails" job that assumes a single execution now fires once per instance — three pods, three simultaneous runs — causing duplicate emails, double-processing, or writes racing each other. Fixes depend on the work: for <em>per-instance</em> work (draining this instance's own in-memory queue) it's correct as-is. For <em>cluster-wide singleton</em> work you need coordination: a distributed lock (e.g. via Redis or a database row/advisory lock) so only the instance that acquires it runs the job; leader election so one instance owns scheduled tasks; or, best for anything nontrivial, a dedicated scheduler like Hangfire or Quartz.NET backed by a shared store that guarantees single execution and gives retries, history, and a dashboard. The design question to ask first is "is this work per-instance or global?" — that determines the whole approach.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">Walk through implementing graceful shutdown for a worker draining a queue with in-flight items.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Goal: on shutdown, stop accepting new items but finish (or safely abandon) what's in progress, within the shutdown budget. Approach: the consumer loops on <code>ReadAllAsync(stoppingToken)</code>; when the token cancels, the enumeration ends and no new items are pulled. For in-flight items, decide the policy — either let the current item complete before exiting (track active count, await it), or make item processing itself cancellation-aware and idempotent so a re-run after restart is safe. Override <code>StopAsync</code> to log and coordinate the drain, and mind the shutdown timeout: if draining could exceed it, either raise <code>HostOptions.ShutdownTimeout</code> deliberately or design items to be re-processable so an abrupt stop loses nothing. The robust real-world answer usually combines "finish the current item + idempotent processing + a durable queue," so that whatever wasn't finished is simply picked up again after restart — you stop trying to guarantee completion in-process and instead guarantee it's never lost.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">A background worker calls an external API and a database every 30 seconds. How do you make it production-grade?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Layer the concerns from earlier days. <strong>Scope per tick</strong> for the DbContext (scoped, disposed each iteration). <strong>Resilience</strong> on the HTTP call — a typed client with <code>AddStandardResilienceHandler</code> (Day 11) so a flaky API retries/circuit-breaks rather than throwing every tick. <strong>Cancellation</strong> threaded from <code>stoppingToken</code> into both the HTTP and EF calls so shutdown is instant. <strong>Per-tick try/catch</strong> so one failed cycle logs and the worker survives; classify errors (transient → fine, keep going; persistent → alert). <strong>Idempotency</strong> so re-running after a restart or a scaled-out double-run doesn't corrupt data. <strong>Observability</strong> — structured logs with a correlation/run id, metrics on success/failure counts and duration, and a health check reflecting the worker's last successful run so ops can see it silently dying. <strong>Config</strong> — interval and toggles from configuration, not hard-coded. And decide the <strong>single-vs-multi-instance</strong> story (Q17). That combination turns a demo loop into something you can trust unattended.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How would you schedule "run at 2 AM every day" reliably, and why isn't PeriodicTimer enough?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p><code>PeriodicTimer</code> only does fixed <em>intervals</em>, not <em>calendar</em> times — "every 24 hours from when the app started" drifts relative to wall-clock 2 AM and breaks across restarts and daylight-saving changes. For calendar schedules you compute the next occurrence from a cron expression (Cronos/NCrontab), honoring a specific time zone, and <code>Task.Delay</code> until then, looping. But the harder problems are operational: across multiple instances it'd fire multiple times (needs a distributed lock or leader election); if the app is down at 2 AM the run is simply missed (needs catch-up/misfire handling); and there's no history or retry. Once you need time-zone correctness, missed-run handling, single execution across a cluster, persistence, and a dashboard, the honest answer is to stop hand-rolling it and use Quartz.NET or Hangfire with a shared store — reliable scheduling is a solved problem, and rebuilding it is where subtle bugs live.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">How do you unit/integration test a BackgroundService?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Keep the <em>logic</em> out of the timing loop so it's testable. Push the real work into a scoped service (e.g. <code>IOrderArchiver.RunAsync</code>) and unit-test that directly with mocked dependencies — no host, no timer. For the worker itself, test its orchestration: because <code>BackgroundService</code> exposes <code>StartAsync</code>/<code>StopAsync</code>, you can start it, let it run a tick or two (using a short interval, or a fake timer/abstraction you inject so you control ticks deterministically), assert the collaborator was invoked, then stop it and assert it shuts down promptly and honors cancellation. Inject an <code>IServiceScopeFactory</code> from a real test service provider so scope creation is exercised. For end-to-end confidence, an integration test hosts the service against a real (containerized) database and verifies the effect. Avoid tests that sleep for real seconds — abstract the timer so the test drives ticks instantly.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">When do the built-in background services stop being the right tool?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>They're ideal for simple, in-process, best-effort work whose loss on a restart is acceptable. They stop being enough when you need: <strong>durability</strong> (jobs must survive process crashes/restarts — an in-memory Channel loses its contents), <strong>guaranteed-once execution across a cluster</strong>, <strong>retries with backoff and a record of attempts</strong>, <strong>scheduling with missed-run handling</strong>, a <strong>management dashboard</strong>, or <strong>heavy throughput</strong> that warrants separate scaling. At that point graduate to Hangfire or Quartz.NET (persistent jobs, scheduling, retries, dashboard) for in-app job processing, or offload to a real message broker (RabbitMQ, Azure Service Bus, Kafka) with dedicated consumer services for decoupled, durable, scalable pipelines. The skill is recognizing the ceiling early — before you've reimplemented a fragile half of a job framework inside a <code>while</code> loop.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">Two hosted services must run in a specific order at startup, and one does slow initialization. How do you handle it?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>First, know the default: hosted services' <code>StartAsync</code> methods run in <em>registration order</em>, and (in modern hosting) the host awaits each before starting the next by default, so registration order gives you basic sequencing — but relying on that for real dependencies is fragile. Better options: for a slow one-time init that must complete before others, do it in a dedicated startup <code>IHostedService</code> whose <code>StartAsync</code> performs the work (accepting that it blocks startup — appropriate if later services genuinely depend on it), or move init out of the hosted-service lifecycle entirely (e.g. run migrations/seeding as an explicit step, Day 9). If services must coordinate at <em>runtime</em> rather than startup, use an explicit signal — a shared <code>TaskCompletionSource</code>/readiness gate that the dependent service awaits — instead of ordering tricks. And avoid heavy blocking work in <code>ExecuteAsync</code> before the first await, which delays overall startup. The principle: make dependencies explicit (a readiness signal) rather than implicit (registration order), and separate one-time init from the long-running loop.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">A worker silently stopped in production three days ago and nobody noticed. What went wrong and how do you prevent a repeat?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Almost certainly an unhandled exception escaped <code>ExecuteAsync</code> and faulted the task, so the worker died while the web app kept serving — no crash, no alert, just a job that quietly stopped ticking. Root cause: no per-iteration try/catch, and no visibility. Prevention is two-pronged. <strong>Resilience</strong>: wrap each tick in try/catch so transient failures log and the loop continues; only fail-fast (stop the host) on truly unrecoverable state, and if you do let it fail-fast, ensure the orchestrator (Kubernetes, etc.) restarts the process. <strong>Observability</strong>: emit a heartbeat/last-successful-run timestamp and expose it via a health check, then alert when it goes stale ("no successful run in 3× the interval"); add metrics on tick success/failure counts and log every caught exception with structured context. The meta-lesson: a background worker with no health signal is invisible when it dies — the monitoring is as important as the code, because silent failure is the default failure mode here.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Lock in Q1–Q8 first — "IHostedService vs BackgroundService," the stopping token, PeriodicTimer, and especially the scoped-service fix (Q6/Q7) are the questions that always come up. Then own Q10 and Q11 together: the singleton/scoped mismatch and "what happens when an exception escapes" are the two answers that prove you've actually run one of these in production. Save the operational questions (Q17 scale-out, Q24 silent death) for after the hands-on — once you've watched your own worker die silently from an unhandled throw, monitoring stops being an afterthought.</p>
+  </div>
+</section>
+
+<footer>Day 12 of the .NET series · Background Services: IHostedService, BackgroundService, Scopes &amp; Periodic Work · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

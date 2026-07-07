@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Validation in ASP.NET Core — Day 4</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:0 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.qa .ans{padding-top:14px;}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 04 · ASP.NET Core</div>
+    <div class="brand-title">Model Validation 🛡️</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>What Model Validation Is</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>The Validation Pipeline</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">The Tools</div>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Data Annotations</span></a>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>ModelState</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Returning Errors</div>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>Automatic 400 Responses</span></a>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>Returning Proper Errors</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Custom Rules</div>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>Custom Attributes</span></a>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>IValidatableObject</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Going Deeper</div>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>Config &amp; Gotchas</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 4 — never trust input</div>
+      <h1>Model Validation in ASP.NET Core 🛡️</h1>
+      <p class="lede">Every request that reaches your API is a stranger holding a form. Model validation is the polite-but-firm doorkeeper that checks the form <em>before</em> your code runs — rejecting nonsense with a clean, predictable error and letting good data through untouched. Today we wire up rules with data annotations, read the verdict from <code>ModelState</code>, let <code>[ApiController]</code> return automatic <code>400</code>s, and build our own rules when the built-in ones fall short.</p>
+      <div class="chips">
+        <span class="chip">🏷️ Data annotations</span>
+        <span class="chip">📋 ModelState</span>
+        <span class="chip">🚫 Automatic 400s</span>
+        <span class="chip">🧩 Custom attributes</span>
+        <span class="chip">🔗 IValidatableObject</span>
+        <span class="chip">📨 Proper error responses</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>What Model Validation Is 🤔</h2></div>
+      <p><strong>Model validation</strong> is the step where ASP.NET Core checks that the data a client sent obeys your rules <em>before</em> your controller action runs. A "model" here is just the C# class the incoming data is copied into — a <code>CreateBookRequest</code>, a <code>LoginForm</code>, and so on. Validation asks: is the title actually filled in? Is the price a sensible number? Is that really an email address?</p>
+
+      <p>It sits directly after <strong>model binding</strong> (the step that copies raw HTTP values — JSON, form fields, query strings — into your model's properties). The two are easy to confuse, so hold them apart:</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Key distinction</span>
+        <p><strong>Model binding</strong> catches <em>conversion</em> errors — e.g. someone typed <code>"x"</code> where an <code>int</code> was expected. <strong>Model validation</strong> catches <em>business-rule</em> errors — e.g. a rating of <code>0</code> was sent where the range is 1–5. Both finish before your action executes, and both dump their findings into the same place: <code>ModelState</code>.</p>
+      </div>
+
+      <h3>Why bother — isn't the front-end enough? 🧐</h3>
+      <p>Client-side (browser) validation is a convenience: it saves a round-trip and gives instant feedback. It is <strong>not</strong> security. Anyone can bypass the browser with a tool like Postman or <code>curl</code> and send whatever they like. Server-side validation is the real gate. The rule of thumb: validate on the client for <em>friendliness</em>, validate on the server for <em>truth</em>.</p>
+
+      <div class="callout analogy">
+        <span class="tag">🎟️ Analogy — the concert door</span>
+        <p>Client-side validation is the sign at the parking lot saying "tickets required." Helpful, but a determined person can walk right past it. Server-side validation is the staff member at the actual door scanning every ticket. Only one of them actually keeps the venue safe — and it's not the sign.</p>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <p>Here's the whole topic on one page. Everything below is just a zoom-in on one of these branches.</p>
+
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">Model Validation</div>
+          <div class="s">the doorkeeper</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch">
+            <h4>🏷️ Declare rules</h4>
+            <ul>
+              <li>Data annotation attributes</li>
+              <li><code>[Required]</code>, <code>[Range]</code>, <code>[StringLength]</code>…</li>
+              <li>Custom error messages</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-blue">
+            <h4>📋 Read the verdict</h4>
+            <ul>
+              <li><code>ModelState.IsValid</code></li>
+              <li><code>ModelStateDictionary</code></li>
+              <li><code>AddModelError()</code></li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>📨 Respond</h4>
+            <ul>
+              <li>Automatic <code>400</code> via <code>[ApiController]</code></li>
+              <li><code>ValidationProblemDetails</code></li>
+              <li>Custom / <code>422</code> responses</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h4>🧩 Extend</h4>
+            <ul>
+              <li>Custom <code>ValidationAttribute</code></li>
+              <li><code>IValidatableObject</code></li>
+              <li>Cross-field checks</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>⚙️ Tune</h4>
+            <ul>
+              <li>Max errors / max depth</li>
+              <li>Nullable behavior</li>
+              <li>.NET 10 packaging</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>The Validation Pipeline 🔄</h2></div>
+      <p>A single request travels through a fixed sequence of stages. Knowing the order tells you exactly where each kind of error comes from — and why your action either runs with clean data or never runs at all.</p>
+
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · 📥 incoming</div>
+          <div class="sh">HTTP request arrives</div>
+          <p>Raw JSON, form data, route values, and query strings — all still just text.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 2 · 🔗 model binding</div>
+          <div class="sh">Bind values into the model</div>
+          <p>The framework copies raw values into your C# object. Type mismatches (letters in a number field) become <em>binding</em> errors here.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 3 · 🛡️ model validation</div>
+          <div class="sh">Run the validation rules</div>
+          <p>Every data annotation, custom attribute, and <code>IValidatableObject.Validate</code> runs. Failures are added to <code>ModelState</code>.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 4 · ⚖️ the verdict</div>
+          <div class="sh">Is ModelState valid?</div>
+          <p>With <code>[ApiController]</code>, an invalid state short-circuits into an automatic <code>400</code>. Otherwise, your action inspects <code>ModelState.IsValid</code> itself.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 5 · ✅ your action runs</div>
+          <div class="sh">Action executes with trusted data</div>
+          <p>Only reached when the data is valid (or you chose to handle invalid data manually).</p>
+        </div>
+      </div>
+
+      <p>Think of <code>ModelState</code> as a scorecard that fills up as the request moves through steps 2 and 3. By the time your action is considered, the scorecard is either empty (valid) or holds a list of complaints keyed by field name:</p>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-green">Title ✓</div><div class="idx">bound + valid</div></div>
+          <div class="arr-cell"><div class="val neg">Isbn ✗</div><div class="idx">too short</div></div>
+          <div class="arr-cell"><div class="val neg">Price ✗</div><div class="idx">out of range</div></div>
+          <div class="arr-cell"><div class="val highlight-green">Email ✓</div><div class="idx">valid</div></div>
+          <div class="arr-arrow">⟶</div>
+          <div class="arr-cell"><div class="val highlight">IsValid = false</div><div class="idx">2 errors</div></div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Tip</span>
+        <p>Both binding and validation always run to completion <em>before</em> your action is invoked. You never have to call validation manually in the normal flow — it has already happened. Your only job is to react to the result.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Data Annotations — Rules as Attributes 🏷️</h2></div>
+      <p>The most common way to declare rules is with <strong>data annotations</strong>: small attributes you place in square brackets above a property. They live in the <code>System.ComponentModel.DataAnnotations</code> namespace and read almost like plain English.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">using</span> System.ComponentModel.DataAnnotations;
+
+<span class="kw">public class</span> <span class="ty">CreateBookRequest</span>
+{
+    [<span class="ty">Required</span>]
+    [<span class="ty">StringLength</span>(<span class="num">100</span>, <span class="ty">MinimumLength</span> = <span class="num">2</span>)]
+    <span class="kw">public string</span> Title { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;
+
+    [<span class="ty">Required</span>]
+    [<span class="ty">StringLength</span>(<span class="num">13</span>, <span class="ty">MinimumLength</span> = <span class="num">13</span>,
+        <span class="ty">ErrorMessage</span> = <span class="str">"ISBN must be exactly 13 characters."</span>)]
+    <span class="kw">public string</span> Isbn { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;
+
+    [<span class="ty">Range</span>(<span class="num">0</span>, <span class="num">999.99</span>)]
+    <span class="kw">public decimal</span> Price { <span class="kw">get</span>; <span class="kw">set</span>; }
+
+    [<span class="ty">EmailAddress</span>]
+    <span class="kw">public string</span>? ContactEmail { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+      </div>
+
+      <p>Read top to bottom, this says: a title is mandatory and 2–100 characters; an ISBN is mandatory and exactly 13 characters (with a friendlier message); a price must fall between 0 and 999.99; and if a contact email is present, it must look like an email. No <code>if</code> statements, no repetition — the rules travel with the data.</p>
+
+      <h3>The built-in attributes you'll actually use 📚</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Attribute</th><th>Checks that…</th><th>Example</th></tr></thead>
+          <tbody>
+            <tr><td><code>[Required]</code></td><td>the value isn't null (and, for strings, not empty)</td><td><code>[Required]</code></td></tr>
+            <tr><td><code>[StringLength]</code></td><td>a string's length is within a max (and optional min)</td><td><code>[StringLength(100, MinimumLength = 2)]</code></td></tr>
+            <tr><td><code>[MaxLength]</code> / <code>[MinLength]</code></td><td>length ceilings/floors for strings or collections</td><td><code>[MaxLength(250)]</code></td></tr>
+            <tr><td><code>[Range]</code></td><td>a number (or date) falls within min–max</td><td><code>[Range(1, 5)]</code></td></tr>
+            <tr><td><code>[RegularExpression]</code></td><td>a string matches a pattern</td><td><code>[RegularExpression(@"^\d{3}-\d{4}$")]</code></td></tr>
+            <tr><td><code>[EmailAddress]</code></td><td>the value has an email shape</td><td><code>[EmailAddress]</code></td></tr>
+            <tr><td><code>[Phone]</code></td><td>the value has a phone-number shape</td><td><code>[Phone]</code></td></tr>
+            <tr><td><code>[Url]</code></td><td>the value has a URL shape</td><td><code>[Url]</code></td></tr>
+            <tr><td><code>[CreditCard]</code></td><td>the value has a credit-card format</td><td><code>[CreditCard]</code></td></tr>
+            <tr><td><code>[Compare]</code></td><td>two properties match (e.g. password + confirm)</td><td><code>[Compare("Password")]</code></td></tr>
+            <tr><td><code>[Remote]</code></td><td>a value is valid by calling a server action (client-side)</td><td><code>[Remote("VerifyEmail", "Users")]</code></td></tr>
+            <tr><td><code>[ValidateNever]</code></td><td><em>skips</em> a property/parameter during validation</td><td><code>[ValidateNever]</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 StringLength vs. MaxLength</span>
+        <p>They look similar but differ in intent. <code>[MaxLength]</code> also feeds the database schema (via EF Core) to size the column. <code>[StringLength]</code> is purely a validation rule and adds a convenient <code>MinimumLength</code>. On an API DTO, either validates input; on an entity, prefer <code>[MaxLength]</code> so the column and the rule stay in sync.</p>
+      </div>
+
+      <h3>Custom error messages &amp; placeholders 💬</h3>
+      <p>Every attribute accepts an <code>ErrorMessage</code>. Internally the message is run through <code>String.Format</code>, so you can use numbered placeholders — <code>{0}</code> is the field name, and later numbers are the attribute's own arguments (order varies per attribute).</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// {0} = field name, {1} = max, {2} = min (for StringLength)</span>
+[<span class="ty">StringLength</span>(<span class="num">8</span>, <span class="ty">MinimumLength</span> = <span class="num">6</span>,
+    <span class="ty">ErrorMessage</span> = <span class="str">"{0} length must be between {2} and {1}."</span>)]
+<span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;
+
+<span class="cmt">// Applied to "Name" this produces:</span>
+<span class="cmt">// "Name length must be between 6 and 8."</span></code></pre>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>ModelState — Reading the Verdict 📋</h2></div>
+      <p><code>ModelState</code> is a property on <code>ControllerBase</code> of type <code>ModelStateDictionary</code>. It's a dictionary keyed by field name; each entry holds any errors found for that field (from binding <em>or</em> validation). Two members do most of the work:</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">⚖️</span><h4><code>ModelState.IsValid</code></h4><p>Returns <code>true</code> only if every field is error-free. This is the single boolean your action checks.</p></div>
+        <div class="card"><span class="glyph">➕</span><h4><code>AddModelError(key, msg)</code></h4><p>Lets you inject your own error — for rules that need the database or services the attributes can't reach.</p></div>
+      </div>
+
+      <h3>The classic MVC pattern (controllers &amp; views) 🖥️</h3>
+      <p>In a page-rendering app, the action inspects <code>IsValid</code> and, if the data is bad, redisplays the same page so the user can fix it. The errors are already attached to the model, so the view can show them.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpPost</span>]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Create</span>(<span class="ty">CreateBookRequest</span> request)
+{
+    <span class="kw">if</span> (!ModelState.IsValid)
+    {
+        <span class="cmt">// Send the user back to the form with error messages.</span>
+        <span class="kw">return</span> <span class="fn">View</span>(request);
+    }
+
+    <span class="kw">await</span> _repository.<span class="fn">AddAsync</span>(request);
+    <span class="kw">return</span> <span class="fn">RedirectToAction</span>(<span class="kw">nameof</span>(Index));
+}</code></pre>
+      </div>
+
+      <h3>Adding an error the attributes can't express ➕</h3>
+      <p>Some rules need data only the server has — "is this email already taken?" No attribute can answer that, so you check it in the action and push the result into <code>ModelState</code> with the property name as the key. Using <code>nameof</code> keeps the key correct even if you rename the property later.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">if</span> (_repository.<span class="fn">EmailExists</span>(request.ContactEmail))
+{
+    ModelState.<span class="fn">AddModelError</span>(
+        <span class="kw">nameof</span>(request.ContactEmail),
+        <span class="str">"This email is already registered."</span>);
+}
+
+<span class="kw">if</span> (!ModelState.IsValid)
+{
+    <span class="kw">return</span> <span class="fn">ValidationProblem</span>(ModelState);
+}</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Watch out</span>
+        <p>The key you pass to <code>AddModelError</code> must match how the client sees the field, or the error won't attach to the right input. For nested models the key is dotted, e.g. <code>"Contact.Email"</code>. Get the key wrong and the error still shows — just as a general, unattached message.</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>Automatic HTTP 400 Responses 🚫</h2></div>
+      <p>For Web APIs, checking <code>ModelState.IsValid</code> by hand in every action gets tedious. The <code>[ApiController]</code> attribute removes that chore. Applied to a controller, it registers a filter that runs after model binding but before your action; if <code>ModelState</code> is invalid, it <strong>short-circuits</strong> the request and returns an automatic <code>400 Bad Request</code> — your action never runs.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/[controller]"</span>)]
+<span class="kw">public class</span> <span class="ty">BooksController</span> : <span class="ty">ControllerBase</span>
+{
+    [<span class="ty">HttpPost</span>]
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Create</span>(<span class="ty">CreateBookRequest</span> request)
+    {
+        <span class="cmt">// No ModelState check needed. If validation failed,</span>
+        <span class="cmt">// [ApiController] already returned a 400 for us.</span>
+        _repository.<span class="fn">Add</span>(request);
+        <span class="kw">return</span> <span class="fn">CreatedAtAction</span>(<span class="kw">nameof</span>(Get), <span class="kw">new</span> { id = request.Id }, request);
+    }
+}</code></pre>
+      </div>
+
+      <h3>What the client receives 📦</h3>
+      <p>The body isn't a raw string. The framework builds a <strong><code>ValidationProblemDetails</code></strong> object — a standardized error shape defined by RFC 9457 (formerly RFC 7807) — and serializes it with the content type <code>application/problem+json</code>. Errors are grouped under an <code>errors</code> dictionary keyed by field name:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">JSON — 400 response body</span><button class="copy-btn">Copy</button></div>
+        <pre><code>{
+  <span class="str">"type"</span>: <span class="str">"https://tools.ietf.org/html/rfc7231#section-6.5.1"</span>,
+  <span class="str">"title"</span>: <span class="str">"One or more validation errors occurred."</span>,
+  <span class="str">"status"</span>: <span class="num">400</span>,
+  <span class="str">"traceId"</span>: <span class="str">"00-e98…f00-87ee…46-00"</span>,
+  <span class="str">"errors"</span>: {
+    <span class="str">"Isbn"</span>:  [ <span class="str">"ISBN must be exactly 13 characters."</span> ],
+    <span class="str">"Title"</span>: [ <span class="str">"The Title field is required."</span> ]
+  }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Where it happens</span>
+        <p>The filter runs during <code>OnActionExecuting</code> — after binding, before your action. That timing is why you can trust the data inside your action body: anything invalid was already turned away at the door.</p>
+      </div>
+
+      <p>The complexity of it all, at a glance:</p>
+      <div>
+        <span class="complexity-badge"><span class="lbl">status</span><span class="val">400 Bad Request</span></span>
+        <span class="complexity-badge"><span class="lbl">content-type</span><span class="val">application/problem+json</span></span>
+        <span class="complexity-badge"><span class="lbl">body shape</span><span class="val">ValidationProblemDetails</span></span>
+        <span class="complexity-badge"><span class="lbl">manual check?</span><span class="val">not required</span></span>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>Returning Proper Validation Errors 📨</h2></div>
+      <p>"Proper" errors are consistent, machine-readable, and keyed to the field that failed — so a front-end can highlight the exact input. You have three levels of control, from fully automatic to fully custom.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🤖</span><h4>Automatic</h4><p>Let <code>[ApiController]</code> emit the <code>400</code> + <code>ValidationProblemDetails</code>. Zero code. Best default.</p></div>
+        <div class="card"><span class="glyph">✍️</span><h4>Manual, consistent</h4><p>Call <code>ValidationProblem(ModelState)</code> so your custom errors match the automatic shape exactly.</p></div>
+        <div class="card"><span class="glyph">🛠️</span><h4>Global override</h4><p>Replace <code>InvalidModelStateResponseFactory</code> to reshape or re-status every validation response app-wide.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Don't reach for BadRequest by reflex</span>
+        <p>Returning <code>BadRequest(ModelState)</code> works, but its shape can drift from the automatic response. Prefer <code>ValidationProblem(ModelState)</code> — it returns the same <code>ValidationProblemDetails</code> the framework produces automatically, so manual and automatic errors look identical to the client.</p>
+      </div>
+
+      <h3>400 vs. 422 — which status? ⚖️</h3>
+      <p>Both signal "your input was rejected." The distinction some teams draw: <code>400 Bad Request</code> for malformed requests (couldn't even be parsed) and <code>422 Unprocessable Entity</code> for well-formed requests that break business rules. ASP.NET Core defaults to <code>400</code> for both; if your team prefers <code>422</code> for rule violations, you override the response factory. Consistency across your API matters more than which number you pick.</p>
+
+      <h3>Customizing the automatic response globally 🛠️</h3>
+      <p>Every automatic <code>400</code> flows through <code>InvalidModelStateResponseFactory</code>. Swap it out to add logging, reshape the body, or change the status code to <code>422</code> for the whole app:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">AddControllers</span>()
+    .<span class="fn">ConfigureApiBehaviorOptions</span>(options =&gt;
+    {
+        options.InvalidModelStateResponseFactory = context =&gt;
+        {
+            <span class="kw">var</span> problem = <span class="kw">new</span> <span class="ty">ValidationProblemDetails</span>(context.ModelState)
+            {
+                Status = <span class="ty">StatusCodes</span>.Status422UnprocessableEntity,
+                Title  = <span class="str">"Validation failed"</span>
+            };
+            <span class="kw">return</span> <span class="kw">new</span> <span class="ty">UnprocessableEntityObjectResult</span>(problem);
+        };
+    });</code></pre>
+      </div>
+
+      <h3>Turning the automatic behavior off entirely 🔌</h3>
+      <p>If you'd rather handle everything by hand (perhaps to log first, or return a bespoke shape per action), disable the filter with <code>SuppressModelStateInvalidFilter</code>. Then it's back to you to check <code>ModelState.IsValid</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">Configure</span>&lt;<span class="ty">ApiBehaviorOptions</span>&gt;(options =&gt;
+{
+    options.SuppressModelStateInvalidFilter = <span class="kw">true</span>;
+});</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Tip</span>
+        <p>Reach for the global factory (not per-action code) when you want one consistent error contract across the whole API. Front-end teams love a single predictable error shape far more than clever per-endpoint variations.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>Custom Validation Attributes 🧩</h2></div>
+      <p>When no built-in attribute fits — "this date can't be in the future," "this code must start with a department prefix" — you write your own. Create a class that inherits <code>ValidationAttribute</code> and override <code>IsValid</code>. Return <code>ValidationResult.Success</code> when the value passes, or a <code>ValidationResult</code> carrying an error message when it fails.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">using</span> System.ComponentModel.DataAnnotations;
+
+<span class="kw">public class</span> <span class="ty">NotInFutureAttribute</span> : <span class="ty">ValidationAttribute</span>
+{
+    <span class="kw">protected override</span> <span class="ty">ValidationResult</span>? <span class="fn">IsValid</span>(
+        <span class="kw">object</span>? value, <span class="ty">ValidationContext</span> context)
+    {
+        <span class="cmt">// A missing value isn't THIS rule's job — let [Required] handle it.</span>
+        <span class="kw">if</span> (value <span class="kw">is</span> <span class="ty">DateTime</span> date &amp;&amp; date &gt; <span class="ty">DateTime</span>.Now)
+        {
+            <span class="kw">return new</span> <span class="ty">ValidationResult</span>(
+                <span class="str">$"{context.DisplayName} cannot be in the future."</span>);
+        }
+
+        <span class="kw">return</span> <span class="ty">ValidationResult</span>.Success;
+    }
+}</code></pre>
+      </div>
+
+      <p>Now it drops onto any date property like a built-in attribute:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">NotInFuture</span>]
+<span class="kw">public</span> <span class="ty">DateTime</span> PublishedOn { <span class="kw">get</span>; <span class="kw">set</span>; }</code></pre>
+      </div>
+
+      <h3>Reaching the whole object via ValidationContext 🔎</h3>
+      <p>The <code>ValidationContext</code> parameter is powerful: <code>context.ObjectInstance</code> gives you the entire model, so one property's rule can consider another property. It also exposes <code>context.DisplayName</code> (for friendly messages) and even service resolution for dependency-injected checks.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">protected override</span> <span class="ty">ValidationResult</span>? <span class="fn">IsValid</span>(
+    <span class="kw">object</span>? value, <span class="ty">ValidationContext</span> context)
+{
+    <span class="kw">var</span> book = (<span class="ty">CreateBookRequest</span>)context.ObjectInstance;
+    <span class="kw">var</span> year = ((<span class="ty">DateTime</span>)value!).Year;
+
+    <span class="kw">if</span> (book.Genre == <span class="ty">Genre</span>.Classic &amp;&amp; year &gt; <span class="num">1960</span>)
+    {
+        <span class="kw">return new</span> <span class="ty">ValidationResult</span>(
+            <span class="str">"Classic titles must be published no later than 1960."</span>);
+    }
+    <span class="kw">return</span> <span class="ty">ValidationResult</span>.Success;
+}</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Attribute tied to one type</span>
+        <p>Casting <code>context.ObjectInstance</code> to a specific model (<code>CreateBookRequest</code> above) locks the attribute to that type. If you reuse it on a different model, the cast throws. For genuinely reusable cross-field logic, prefer <code>IValidatableObject</code> (next section) or keep the custom attribute focused on a single property's value.</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>Cross-Field Validation: IValidatableObject 🔗</h2></div>
+      <p>Attributes validate one property at a time. When a rule spans several properties — "end date must be after start date," "if paying by card, a card number is required" — implement <code>IValidatableObject</code> on the model itself. Its single <code>Validate</code> method sees the whole object and can <code>yield return</code> as many errors as it finds, each tied to the field(s) it concerns.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">using</span> System.ComponentModel.DataAnnotations;
+
+<span class="kw">public class</span> <span class="ty">DateRange</span> : <span class="ty">IValidatableObject</span>
+{
+    <span class="kw">public</span> <span class="ty">DateTime</span> Start { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public</span> <span class="ty">DateTime</span> End   { <span class="kw">get</span>; <span class="kw">set</span>; }
+
+    <span class="kw">public</span> <span class="ty">IEnumerable</span>&lt;<span class="ty">ValidationResult</span>&gt; <span class="fn">Validate</span>(
+        <span class="ty">ValidationContext</span> validationContext)
+    {
+        <span class="kw">if</span> (End &lt; Start)
+        {
+            <span class="cmt">// Second arg names the member(s) the error attaches to.</span>
+            <span class="kw">yield return new</span> <span class="ty">ValidationResult</span>(
+                <span class="str">"End date must be after the start date."</span>,
+                <span class="kw">new</span>[] { <span class="kw">nameof</span>(End) });
+        }
+    }
+}</code></pre>
+      </div>
+
+      <h3>Attribute vs. IValidatableObject — which one? 🤷</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Use…</th><th>When</th><th>Reusable across models?</th></tr></thead>
+          <tbody>
+            <tr><td><code>ValidationAttribute</code></td><td>the rule is about one property and you'll reuse it in many places (e.g. <code>[NotInFuture]</code>)</td><td>✅ Yes — that's the point</td></tr>
+            <tr><td><code>IValidatableObject</code></td><td>the rule compares several properties of <em>this</em> model</td><td>❌ No — it lives on one class</td></tr>
+            <tr><td>Check in the action / service</td><td>the rule needs a database, external API, or DI service</td><td>➖ It's just code</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Ordering note</span>
+        <p><code>IValidatableObject.Validate</code> runs <em>after</em> the property-level attributes. In practice a badly-formed field is usually caught by <code>[Required]</code>/<code>[Range]</code> first, and your cross-field method runs once the individual pieces are at least present — so guard against nulls just in case.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>Configuration &amp; Gotchas ⚙️</h2></div>
+
+      <h3>Non-nullable reference types quietly imply [Required] 🕳️</h3>
+      <p>This trips up newcomers constantly. With nullable reference types enabled (<code>&lt;Nullable&gt;enable&lt;/Nullable&gt;</code>, the modern default), the validation system treats a <em>non-nullable</em> <code>string Name</code> as if it were marked <code>[Required(AllowEmptyStrings = true)]</code>. So a missing <code>Name</code> fails validation even without an explicit attribute. If a value is genuinely optional, make the type nullable:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">Person</span>
+{
+    <span class="kw">public string</span>  Name { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;  <span class="cmt">// implicitly required</span>
+    <span class="kw">public string</span>? Nickname { <span class="kw">get</span>; <span class="kw">set</span>; }        <span class="cmt">// truly optional</span>
+}</code></pre>
+      </div>
+
+      <h3>Re-running validation manually 🔁</h3>
+      <p>Validation is automatic, but occasionally you compute a value inside an action and want to validate again. Clear the old state, then call <code>TryValidateModel</code>:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code>book.PublishedOn = <span class="ty">DateTime</span>.Now.Date;   <span class="cmt">// recomputed value</span>
+
+ModelState.<span class="fn">ClearValidationState</span>(<span class="kw">nameof</span>(book));
+<span class="kw">if</span> (!<span class="fn">TryValidateModel</span>(book, <span class="kw">nameof</span>(book)))
+{
+    <span class="kw">return</span> <span class="fn">ValidationProblem</span>(ModelState);
+}</code></pre>
+      </div>
+
+      <h3>Safety limits &amp; short-circuiting 🛑</h3>
+      <div>
+        <span class="complexity-badge"><span class="lbl">max errors</span><span class="val">200 (default)</span></span>
+        <span class="complexity-badge"><span class="lbl">option</span><span class="val">MaxModelValidationErrors</span></span>
+        <span class="complexity-badge"><span class="lbl">max depth</span><span class="val">32 (default)</span></span>
+        <span class="complexity-badge"><span class="lbl">option</span><span class="val">MaxValidationDepth</span></span>
+      </div>
+      <p>Validation stops once it hits the maximum error count (200 by default) so a hostile payload can't generate endless errors. <code>MaxValidationDepth</code> (default 32) protects against stack overflow on deeply nested or recursive models. And validation is <strong>automatically short-circuited</strong> — skipped entirely — for object graphs with nothing to validate, such as collections of primitives (<code>byte[]</code>, <code>string[]</code>, <code>Dictionary&lt;string,string&gt;</code>).</p>
+
+      <h3>.NET 10 packaging change 📦</h3>
+      <p>As of .NET 10, the unified validation APIs moved into the <code>Microsoft.Extensions.Validation</code> NuGet package so they can be used <em>outside</em> ASP.NET Core HTTP scenarios too. The behavior is unchanged, but you now add an explicit package reference and register the services:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">XML — .csproj</span><button class="copy-btn">Copy</button></div>
+        <pre><code>&lt;<span class="ty">PackageReference</span> <span class="fn">Include</span>=<span class="str">"Microsoft.Extensions.Validation"</span> <span class="fn">Version</span>=<span class="str">"10.0.0"</span> /&gt;</code></pre>
+      </div>
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — Program.cs</span><button class="copy-btn">Copy</button></div>
+        <pre><code>builder.Services.<span class="fn">AddValidation</span>();</code></pre>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🧯 Analogy — the sprinkler cap</span>
+        <p>The error and depth limits are like the maximum flow on a building's sprinkler system: you never expect to hit them in normal use, but they exist so one runaway situation can't flood the whole floor. They protect the server, not the honest user.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🛡️ What it is</h4><p>The step that checks incoming data against your rules before the action runs.</p></div>
+        <div class="recap-card"><h4>🔗 Binding ≠ validation</h4><p>Binding fixes types; validation enforces business rules — both fill ModelState.</p></div>
+        <div class="recap-card"><h4>🏷️ Data annotations</h4><p>Declarative attributes like [Required] and [Range] that travel with the model.</p></div>
+        <div class="recap-card"><h4>📋 ModelState</h4><p>A dictionary of per-field errors; IsValid is the boolean you act on.</p></div>
+        <div class="recap-card"><h4>➕ AddModelError</h4><p>Injects errors the attributes can't express, keyed by field name.</p></div>
+        <div class="recap-card"><h4>🚫 [ApiController]</h4><p>Returns an automatic 400 on invalid state — no manual check needed.</p></div>
+        <div class="recap-card"><h4>📦 ProblemDetails</h4><p>The standardized error body (RFC 9457) with an errors dictionary.</p></div>
+        <div class="recap-card"><h4>✍️ ValidationProblem</h4><p>Emit manual errors in the same shape as the automatic response.</p></div>
+        <div class="recap-card"><h4>🧩 Custom attribute</h4><p>Inherit ValidationAttribute, override IsValid, return a ValidationResult.</p></div>
+        <div class="recap-card"><h4>🔗 IValidatableObject</h4><p>Class-level Validate() for rules that compare several properties.</p></div>
+        <div class="recap-card"><h4>🕳️ Non-nullable = required</h4><p>Non-nullable reference types are implicitly treated as [Required].</p></div>
+        <div class="recap-card"><h4>⚙️ Server always wins</h4><p>Client validation is a courtesy; the server is the real gate.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What / where</th><th>Key member or fact</th></tr></thead>
+          <tbody>
+            <tr><td>Data annotation</td><td><code>System.ComponentModel.DataAnnotations</code></td><td><code>[Required]</code>, <code>[Range]</code>, <code>[StringLength]</code>, <code>[EmailAddress]</code>…</td></tr>
+            <tr><td>ModelState</td><td>property on <code>ControllerBase</code></td><td><code>IsValid</code>, <code>AddModelError(key, msg)</code></td></tr>
+            <tr><td>Automatic 400</td><td><code>[ApiController]</code> filter</td><td>runs in <code>OnActionExecuting</code>, short-circuits</td></tr>
+            <tr><td>Error body</td><td><code>ValidationProblemDetails</code></td><td><code>application/problem+json</code>, RFC 9457</td></tr>
+            <tr><td>Manual error (consistent)</td><td>action method</td><td><code>ValidationProblem(ModelState)</code></td></tr>
+            <tr><td>Reshape globally</td><td><code>ApiBehaviorOptions</code></td><td><code>InvalidModelStateResponseFactory</code></td></tr>
+            <tr><td>Turn off auto-400</td><td><code>ApiBehaviorOptions</code></td><td><code>SuppressModelStateInvalidFilter = true</code></td></tr>
+            <tr><td>Custom attribute</td><td>inherit <code>ValidationAttribute</code></td><td>override <code>IsValid</code> → <code>ValidationResult</code></td></tr>
+            <tr><td>Cross-field</td><td><code>IValidatableObject</code> on the model</td><td><code>IEnumerable&lt;ValidationResult&gt; Validate(...)</code></td></tr>
+            <tr><td>Re-run validation</td><td>inside an action</td><td><code>ClearValidationState</code> + <code>TryValidateModel</code></td></tr>
+            <tr><td>Limits</td><td><code>MvcOptions</code> / <code>ApiBehaviorOptions</code></td><td>200 errors, depth 32 (defaults)</td></tr>
+            <tr><td>.NET 10 packaging</td><td><code>Microsoft.Extensions.Validation</code></td><td><code>AddValidation()</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is model validation in ASP.NET Core?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>It's the step where the framework checks that incoming request data obeys your rules — before your controller code runs. It answers questions like "is this field filled in?" and "is this number in range?" so your action only deals with data you can trust.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What is a data annotation? Give a few examples.</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A data annotation is a small attribute you place above a model property to declare a rule. Common ones are <code>[Required]</code> (must be present), <code>[StringLength]</code> (length limits), <code>[Range]</code> (numeric bounds), and <code>[EmailAddress]</code> (must look like an email). They live in the <code>System.ComponentModel.DataAnnotations</code> namespace.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What does the [Required] attribute do?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>It marks a property as mandatory: validation fails if the value is null (and, for strings, empty). It's the most common rule and often the first line of defense before more specific checks.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What is ModelState, and what does ModelState.IsValid tell you?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p><code>ModelState</code> is a dictionary that collects any errors found while binding and validating the request, keyed by field name. <code>ModelState.IsValid</code> is a single boolean that's <code>true</code> only when every field is error-free — it's the flag your action checks to decide whether to proceed.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What's the difference between model binding and model validation?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Binding copies raw request values into your C# object and catches <em>conversion</em> errors (letters where a number was expected). Validation runs next and catches <em>business-rule</em> errors (a value out of an allowed range). Both happen before your action and both record their findings in <code>ModelState</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">How do you set a custom error message on a validation attribute?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Pass an <code>ErrorMessage</code> argument, e.g. <code>[Required(ErrorMessage = "Please enter a title.")]</code>. You can even include placeholders — <code>{0}</code> is the field name — because the message is formatted with <code>String.Format</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">Which HTTP status code signals a validation failure, and why?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p><code>400 Bad Request</code> by default — it tells the client the request was rejected because the data didn't meet requirements. Some teams use <code>422 Unprocessable Entity</code> for well-formed-but-rule-breaking data, but <code>400</code> is the framework default.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">Why validate on the server if the browser already validates?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Browser validation is only a convenience — it can be bypassed with tools like Postman or by disabling JavaScript. The server is the only place you fully control, so it's the real security boundary. Client validation improves the experience; server validation protects the data.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">What does the [ApiController] attribute do for validation?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Among other conveniences, it wires up automatic model validation: if <code>ModelState</code> is invalid, the framework short-circuits the request and returns a <code>400</code> with a <code>ValidationProblemDetails</code> body before your action runs. That means you don't have to write <code>if (!ModelState.IsValid)</code> in every Web API action.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">How do you add a validation error that no built-in attribute can express?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Do the check in your action or service and call <code>ModelState.AddModelError(key, message)</code>, using the property name (ideally via <code>nameof</code>) as the key. This is how you enforce rules that need the database or external services — like "this email is already taken."</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What's the difference between [StringLength] and [MaxLength]?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Both cap a string's length for validation. The key difference: <code>[MaxLength]</code> also informs the database schema (via EF Core) to size the column, while <code>[StringLength]</code> is validation-only and additionally supports a <code>MinimumLength</code>. On entities prefer <code>[MaxLength]</code> to keep the column and rule aligned; on API DTOs either works.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">What is ValidationProblemDetails and what does it contain?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>It's the standardized error body (based on RFC 9457 / formerly 7807) the framework returns for validation failures, sent as <code>application/problem+json</code>. It includes <code>type</code>, <code>title</code>, <code>status</code>, a <code>traceId</code>, and an <code>errors</code> dictionary that maps each field name to its list of error messages — perfect for a front-end to highlight specific inputs.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">How do you write a custom validation attribute?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Create a class inheriting <code>ValidationAttribute</code> and override <code>IsValid(object? value, ValidationContext context)</code>. Return <code>ValidationResult.Success</code> when the value passes, or <code>new ValidationResult("message")</code> when it fails. Then apply your attribute to a property like any built-in one.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">When would you use IValidatableObject instead of a custom attribute?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Use <code>IValidatableObject</code> for rules that compare several properties of the same model — like "end date must be after start date." Its <code>Validate</code> method sees the whole object and can yield multiple errors. A custom attribute is better for a single-property rule you want to reuse across many models.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">How do you make manual error responses match the automatic ones?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Return <code>ValidationProblem(ModelState)</code> rather than <code>BadRequest(ModelState)</code>. <code>ValidationProblem</code> produces the same <code>ValidationProblemDetails</code> shape the framework emits automatically, so clients see one consistent error contract whether the error was automatic or hand-added.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">How do you disable the automatic 400 response?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Set <code>SuppressModelStateInvalidFilter = true</code> on <code>ApiBehaviorOptions</code> in <code>Program.cs</code>. You'd do this when you want full manual control — for example to log before responding or to return a bespoke shape. Once disabled, it's back to checking <code>ModelState.IsValid</code> yourself.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">How do non-nullable reference types affect [Required] behavior?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>With nullable reference types enabled, the validation system treats a non-nullable property (e.g. <code>string Name</code>) as if it carried <code>[Required(AllowEmptyStrings = true)]</code>, so a missing value fails even without an explicit attribute. To make a value optional you must use a nullable type (<code>string?</code>). You can turn this implicit behavior off with <code>SuppressImplicitRequiredAttributeForNonNullableReferenceTypes</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">How do you customize the automatic 400 response globally?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Replace <code>ApiBehaviorOptions.InvalidModelStateResponseFactory</code> via <code>ConfigureApiBehaviorOptions</code>. The delegate receives the action context and returns any <code>IActionResult</code>, so you can log, reshape the body, or change the status code (e.g. to <code>422</code>). Doing it here gives the whole API one consistent error contract instead of per-action variations.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">400 vs. 422 for validation — which should you return?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>A common convention: <code>400</code> for requests that couldn't be parsed at all (malformed syntax), and <code>422 Unprocessable Entity</code> for well-formed requests that break business rules. ASP.NET Core defaults to <code>400</code> for both. Either is defensible; what matters most is picking one and applying it consistently across the API so clients aren't guessing.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How does validation short-circuit, and what is MaxValidationDepth?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Validation is automatically skipped for object graphs with nothing to validate — like collections of primitives (<code>byte[]</code>, <code>string[]</code>, <code>Dictionary&lt;string,string&gt;</code>) — which saves work. <code>MaxValidationDepth</code> (default 32) caps how deep the validator recurses through a nested object graph, preventing a stack overflow on deep or self-referencing models. There's also a max error count (200) that stops runaway error accumulation.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">When would you choose FluentValidation over data annotations?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>FluentValidation is a popular library that expresses rules in code (a fluent builder) rather than attributes. It shines when rules are complex, conditional, or need dependency-injected services and unit testing in isolation — keeping validation logic out of the model. Data annotations stay ideal for simple, declarative rules with minimal ceremony and built-in client-side integration. Many teams mix both.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">What is overposting (mass assignment) and how do you guard against it?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Overposting is when a client sends extra fields hoping to set properties they shouldn't — like <code>IsAdmin = true</code>. The defense is to bind to a purpose-built DTO or view model that exposes only the properties clients may set, rather than binding directly to your database entity. Validation and DTOs work together here: the DTO limits what can be assigned, and validation enforces the values that are allowed.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">What changed about validation packaging in .NET 10?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>The unified validation APIs moved into the <code>Microsoft.Extensions.Validation</code> NuGet package so they can be used outside ASP.NET Core HTTP scenarios. The functionality is the same, but you now add an explicit package reference and call <code>builder.Services.AddValidation()</code> to register the services.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Learn it in the order the request travels: first <strong>binding vs. validation</strong> (Q5) so you know where errors come from, then <strong>data annotations + ModelState</strong> (Q2–Q4) to declare and read rules, then <strong>automatic 400s + ProblemDetails</strong> (Q9, Q12) for the response, and finally the <strong>custom rules and config</strong> (Q13–Q23). If you can explain the pipeline diagram from section 02 out loud, you can answer most of these on the spot.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      /* center the active link within the sidebar's scroll area */
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      /* pick the section with the largest visible ratio */
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Delegates, Events &amp; Func/Action/Predicate (C#)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0; --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea; --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3; --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink); font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;}
+#progress{position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .08s linear;}
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+:not(pre) > code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--accent);
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;}
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;
+  background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;background:transparent;
+  border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;color:var(--code-ink);
+  background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent);font-weight:700;}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:24px 22px;margin:24px 0;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+/* pub/sub fan-out */
+.fanout{display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin:8px 0;}
+.fan-pub{background:var(--accent-soft);border:1.5px solid var(--accent);color:var(--accent);border-radius:12px;
+  padding:14px 18px;font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;text-align:center;}
+.fan-subs{display:flex;flex-direction:column;gap:10px;}
+.fan-sub{background:var(--blue-soft);border:1.5px solid var(--blue);color:var(--blue);border-radius:10px;
+  padding:9px 14px;font-family:"JetBrains Mono",monospace;font-size:12.5px;}
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+.mindmap{display:flex;flex-direction:column;align-items:center;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;font-size:1.1rem;
+  padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);transition:transform .28s ease;
+    box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">Delegates, Events &amp; Func/Action/Predicate</div>
+    <nav>
+      <div class="nav-group">
+        <h4>Delegates</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> Overview</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> The Idea</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Why Delegates?</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Multicast</a>
+      </div>
+      <div class="nav-group">
+        <h4>Built-in &amp; Lambdas</h4>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Func / Action / Predicate</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> Lambdas</a>
+      </div>
+      <div class="nav-group">
+        <h4>Events</h4>
+        <a class="nav-link" href="#s07"><span class="n">07</span> The Idea</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> Standard Pattern</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Events vs Delegates</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Worked Example</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Quick Recap</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// C# &nbsp;·&nbsp; treating methods as data</p>
+      <h1>Delegates, Events &amp; Func/Action/Predicate 📡</h1>
+      <p class="lede">
+        Normally you <em>call</em> a method. But what if you want to <em>store</em> a method in a variable, pass it to
+        another method, or let many methods react to one thing happening? That's what <b>delegates</b> are for — type-safe
+        references to methods. <b>Func</b>, <b>Action</b>, and <b>Predicate</b> are ready-made delegates you'll use daily
+        (they're exactly what LINQ's lambdas plug into), and <b>events</b> build on delegates to power the
+        publisher/subscriber pattern behind every button click. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🎯 <b>Delegates</b></span>
+        <span class="chip">📞 <b>Callbacks</b></span>
+        <span class="chip">🧰 <b>Func / Action / Predicate</b></span>
+        <span class="chip">λ <b>Lambdas</b></span>
+        <span class="chip">📡 <b>Events</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- 01 -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>Overview</h2></div>
+      <p class="sec-sub">All four topics share one idea: methods can be treated as values — stored, passed around, and invoked later.</p>
+
+      <p>In most early programming you write a method and call it directly. These features unlock something more powerful:
+        <strong>methods as data</strong>. A <strong>delegate</strong> is a variable that holds a method. <strong>Func /
+        Action / Predicate</strong> are pre-built delegate types so you rarely declare your own. <strong>Lambdas</strong>
+        are a compact way to write the method inline. And <strong>events</strong> wrap a delegate so objects can broadcast
+        "something happened" to any number of listeners.</p>
+
+      <div class="mindmap">
+        <div class="mm-core">📡 Methods as data</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-accent">
+            <h5>🎯 Delegates</h5>
+            <ul><li>Type-safe method reference</li><li>Pass behavior around</li><li>Multicast (many methods)</li></ul>
+          </div>
+          <div class="mm-branch b-blue">
+            <h5>🧰 Built-in delegates</h5>
+            <ul><li><code>Func</code> — returns a value</li><li><code>Action</code> — returns void</li><li><code>Predicate</code> — returns bool</li></ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>λ Lambdas</h5>
+            <ul><li>Inline anonymous methods</li><li><code>x =&gt; x * 2</code></li><li>Plug into delegates</li></ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>📡 Events</h5>
+            <ul><li>Publisher / subscriber</li><li>Built on delegates</li><li>Safe subscribe / unsubscribe</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 You've already used these</span>
+        <p>Every LINQ lambda from the previous topic — <code>Where(n =&gt; n &gt; 5)</code> — is a method-as-data passed
+        into an operator that expects a <code>Func</code> or <code>Predicate</code>. Delegates are the machinery that makes
+        passing behavior around possible. This page explains what's underneath.</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>Delegates — The Idea</h2></div>
+      <p class="sec-sub">A delegate is a type-safe reference to a method — a "function pointer," but the compiler guarantees the signatures match.</p>
+
+      <p>A <strong>delegate</strong> is a type that holds a reference to a method with a specific <strong>signature</strong>
+        (parameters + return type). You declare the delegate type, assign any matching method to a variable of that type,
+        then invoke it as if it were the method itself. Because the compiler checks the signature, it's
+        <strong>type-safe</strong> — unlike raw function pointers in C/C++.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// 1) declare a delegate TYPE: "a method taking a string, returning void"</span>
+<span class="kw">delegate void</span> <span class="ty">Greeter</span>(<span class="kw">string</span> name);
+
+<span class="cmt">// 2) a method with the MATCHING signature</span>
+<span class="kw">void</span> <span class="fn">SayHello</span>(<span class="kw">string</span> name) =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"Hello, {name}"</span>);
+
+<span class="cmt">// 3) assign the method to a delegate variable (note: no parentheses)</span>
+<span class="ty">Greeter</span> greet = <span class="fn">SayHello</span>;
+
+<span class="cmt">// 4) invoke it -- this actually calls SayHello</span>
+greet(<span class="str">"Sam"</span>);            <span class="cmt">// Hello, Sam</span>
+greet.<span class="fn">Invoke</span>(<span class="str">"Mara"</span>);    <span class="cmt">// same thing, explicit form</span></code></pre>
+      </div>
+
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell highlight-blue"><div class="val">greet</div><div class="idx">delegate variable</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight"><div class="val">SayHello</div><div class="idx">the method it points to</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-green"><div class="val">"Hello, Sam"</div><div class="idx">runs when invoked</div></div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Signatures must match exactly</span>
+        <p>You can only assign a method to a delegate if its parameter types and return type match the delegate. Assigning a
+        method with a different signature is a compile error. This is the "type-safe" guarantee — the reason delegates are
+        safer than C++ function pointers.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">📺 Analogy</span>
+        <p>A delegate is like a TV remote's "favorite" button. The button (delegate variable) is wired to a channel (a
+        method). Press it and you jump to that channel. You can re-wire the button to a different channel later — as long as
+        it's a valid channel (matching signature).</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Why Delegates?</h2></div>
+      <p class="sec-sub">The point: pass <em>behavior</em> as an argument, so one method can do different things without being rewritten.</p>
+
+      <p>The killer use of a delegate is the <strong>callback</strong> — handing a method to another method so it can call
+        you back. This decouples the <em>what</em> from the <em>how</em>: a sorting routine takes a "compare" callback; a
+        processing loop takes an "on each item" callback. You change behavior by passing a different method, not by editing
+        the routine.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">delegate int</span> <span class="ty">Transform</span>(<span class="kw">int</span> x);
+
+<span class="cmt">// this method takes BEHAVIOR (a delegate) as a parameter</span>
+<span class="kw">int</span>[] <span class="fn">ApplyToAll</span>(<span class="kw">int</span>[] items, <span class="ty">Transform</span> op)
+{
+    <span class="kw">var</span> result = <span class="kw">new</span> <span class="kw">int</span>[items.Length];
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; items.Length; i++)
+        result[i] = op(items[i]);    <span class="cmt">// call back into the passed-in method</span>
+    <span class="kw">return</span> result;
+}
+
+<span class="kw">int</span>[] nums = { <span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span> };
+<span class="kw">int</span>[] doubled = <span class="fn">ApplyToAll</span>(nums, x =&gt; x * <span class="num">2</span>);   <span class="cmt">// 2, 4, 6</span>
+<span class="kw">int</span>[] squared = <span class="fn">ApplyToAll</span>(nums, x =&gt; x * x);   <span class="cmt">// 1, 4, 9 -- same method, new behavior</span></code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📞</span><h4>Callbacks</h4><p>"Call me back when you're done / for each item." The basis of async APIs, event handlers, and LINQ.</p></div>
+        <div class="card"><span class="glyph">🔌</span><h4>Decoupling</h4><p>A method doesn't hard-code what it does with each item — the caller supplies that, so the method stays reusable.</p></div>
+        <div class="card"><span class="glyph">🧩</span><h4>Strategy pattern</h4><p>Swap algorithms at runtime by passing a different delegate — sorting order, validation rule, formatting.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 This is "functional" C#</span>
+        <p>Passing methods as arguments is the heart of functional programming. LINQ is built entirely on it — every
+        operator takes a delegate describing the rule. Once delegates click, LINQ stops feeling like magic.</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Multicast Delegates</h2></div>
+      <p class="sec-sub">A single delegate can point to <em>several</em> methods at once. Invoking it calls them all, in order.</p>
+
+      <p>Delegates are <strong>multicast</strong>: use <code>+=</code> to add methods and <code>-=</code> to remove them.
+        Invoking the delegate calls every attached method in the order they were added. This is the foundation events are
+        built on.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="ty">Action</span> notify = () =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Email sent"</span>);
+notify += () =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"SMS sent"</span>);   <span class="cmt">// add a second method</span>
+notify += () =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Log written"</span>);
+
+notify();   <span class="cmt">// calls all three, in order:</span>
+            <span class="cmt">// Email sent / SMS sent / Log written</span>
+
+notify -= () =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Log written"</span>);  <span class="cmt">// (would need same ref to actually remove)</span></code></pre>
+      </div>
+
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell highlight"><div class="val">notify()</div><div class="idx">one invoke</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">Email</div><div class="idx">1st</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">SMS</div><div class="idx">2nd</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">Log</div><div class="idx">3rd</div></div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Return values: only the last one survives</span>
+        <p>If a multicast delegate has a non-void return type, invoking it runs all the methods but you only get the
+        <strong>return value of the last</strong> one — the rest are lost. That's why multicast delegates (and events) are
+        almost always <code>void</code>. If you need every result, invoke each method in
+        <code>GetInvocationList()</code> yourself.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ One exception stops the chain</span>
+        <p>If one method in the chain throws, the remaining methods are <em>not</em> called. For independent subscribers
+        where one failure shouldn't block the others, iterate <code>GetInvocationList()</code> and wrap each call in its own
+        try/catch.</p>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Func, Action, Predicate</h2></div>
+      <p class="sec-sub">Three built-in generic delegates that cover almost every callback you'll ever need — so you rarely declare your own.</p>
+
+      <p>Declaring a custom <code>delegate</code> type for every signature gets tedious. .NET ships generic delegates that
+        cover the common cases. Reach for these by default:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Delegate</th><th>Parameters</th><th>Returns</th><th>Use for</th></tr></thead>
+          <tbody>
+            <tr><td><code>Func&lt;…, TResult&gt;</code></td><td>0–16 inputs</td><td>A value (the <em>last</em> type arg)</td><td>Compute &amp; return something</td></tr>
+            <tr><td><code>Action&lt;…&gt;</code></td><td>0–16 inputs</td><td><code>void</code></td><td>Do something, return nothing</td></tr>
+            <tr><td><code>Predicate&lt;T&gt;</code></td><td>Exactly 1 input</td><td><code>bool</code></td><td>Test a condition (filtering)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Func: takes inputs, RETURNS a value. Last type arg = return type.</span>
+<span class="ty">Func</span>&lt;<span class="kw">int</span>, <span class="kw">int</span>, <span class="kw">int</span>&gt; add = (a, b) =&gt; a + b;     <span class="cmt">// (int, int) -> int</span>
+<span class="kw">int</span> sum = add(<span class="num">3</span>, <span class="num">4</span>);                          <span class="cmt">// 7</span>
+
+<span class="cmt">// Action: takes inputs, returns NOTHING (void).</span>
+<span class="ty">Action</span>&lt;<span class="kw">string</span>&gt; log = msg =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(msg);
+log(<span class="str">"started"</span>);                              <span class="cmt">// started</span>
+
+<span class="cmt">// Predicate: takes ONE input, returns bool. Same as Func&lt;T, bool&gt;.</span>
+<span class="ty">Predicate</span>&lt;<span class="kw">int</span>&gt; isEven = n =&gt; n % <span class="num">2</span> == <span class="num">0</span>;
+<span class="kw">bool</span> b = isEven(<span class="num">4</span>);                          <span class="cmt">// true</span>
+
+<span class="cmt">// used directly by framework methods:</span>
+<span class="kw">var</span> list = <span class="kw">new</span> <span class="ty">List</span>&lt;<span class="kw">int</span>&gt; { <span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span> };
+<span class="kw">var</span> evens = list.<span class="fn">FindAll</span>(isEven);            <span class="cmt">// FindAll takes a Predicate&lt;T&gt;</span>
+list.<span class="fn">ForEach</span>(log);                            <span class="cmt">// hmm -- type mismatch? see note</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Predicate&lt;T&gt; is just Func&lt;T, bool&gt;</span>
+        <p>They're interchangeable in meaning. <code>Predicate&lt;T&gt;</code> predates the <code>Func</code> family and
+        survives mainly in older APIs like <code>List&lt;T&gt;.FindAll</code> and <code>RemoveAll</code>. New LINQ-style
+        APIs use <code>Func&lt;T, bool&gt;</code>. Knowing they're equivalent avoids confusion when one API wants one and
+        another wants the other.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Func/Action can't do ref/out/params</span>
+        <p>Because their type parameters are fixed, <code>Func</code> and <code>Action</code> can't express
+        <code>ref</code>, <code>out</code>, or <code>params</code> parameters. For those (e.g. a <code>TryParse</code>-style
+        <code>bool M(string s, out int n)</code>) you must declare a custom <code>delegate</code> type — one of the few
+        remaining reasons to.</p>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Lambdas &amp; Anonymous Methods</h2></div>
+      <p class="sec-sub">The compact, inline way to write the method a delegate points to — no separate named method needed.</p>
+
+      <p>You don't need a named method to fill a delegate. A <strong>lambda expression</strong> writes the method inline:
+        parameters on the left of <code>=&gt;</code>, body on the right. This is what you pass to LINQ, <code>Func</code>,
+        <code>Action</code>, and event handlers all the time.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// all three assign the SAME behavior to a delegate:</span>
+
+<span class="cmt">// 1) named method</span>
+<span class="kw">int</span> <span class="fn">Square</span>(<span class="kw">int</span> x) =&gt; x * x;
+<span class="ty">Func</span>&lt;<span class="kw">int</span>, <span class="kw">int</span>&gt; a = <span class="fn">Square</span>;
+
+<span class="cmt">// 2) anonymous method (older syntax, still valid)</span>
+<span class="ty">Func</span>&lt;<span class="kw">int</span>, <span class="kw">int</span>&gt; b = <span class="kw">delegate</span> (<span class="kw">int</span> x) { <span class="kw">return</span> x * x; };
+
+<span class="cmt">// 3) lambda (modern, concise)</span>
+<span class="ty">Func</span>&lt;<span class="kw">int</span>, <span class="kw">int</span>&gt; c = x =&gt; x * x;             <span class="cmt">// expression body</span>
+<span class="ty">Func</span>&lt;<span class="kw">int</span>, <span class="kw">int</span>&gt; d = x =&gt; { <span class="kw">return</span> x * x; };   <span class="cmt">// statement body</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Lambdas can capture variables (closures)</span>
+        <p>A lambda can use variables from the surrounding scope — this is called a <strong>closure</strong>. The lambda
+        "captures" the variable (not just its value at that moment), which is powerful but can surprise you in loops with
+        deferred execution (a pitfall we saw in the LINQ topic).</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">int</span> factor = <span class="num">10</span>;
+<span class="ty">Func</span>&lt;<span class="kw">int</span>, <span class="kw">int</span>&gt; scale = x =&gt; x * factor;   <span class="cmt">// captures 'factor'</span>
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(scale(<span class="num">5</span>));               <span class="cmt">// 50</span>
+factor = <span class="num">100</span>;
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(scale(<span class="num">5</span>));               <span class="cmt">// 500 -- it captured the variable, not the value</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Lambda vs named method</span>
+        <p>Use a <strong>lambda</strong> for short, inline, one-off logic. Extract a <strong>named method</strong> when the
+        logic is long, reused, or deserves a descriptive name. Readability wins — if a lambda grows past a couple of lines,
+        give it a name.</p>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Events — The Idea</h2></div>
+      <p class="sec-sub">A controlled wrapper around a delegate: objects can broadcast "something happened," and any number of listeners can react.</p>
+
+      <p>An <strong>event</strong> implements the <strong>publisher/subscriber</strong> pattern. A <em>publisher</em> declares
+        an event; <em>subscribers</em> attach handler methods with <code>+=</code>. When the publisher
+        <strong>raises</strong> the event, every subscribed handler runs — and the publisher doesn't need to know who's
+        listening. It's a multicast delegate with guardrails.</p>
+
+      <div class="diagram-box">
+        <div class="fanout">
+          <div class="fan-pub">📢 Publisher<br>raises event</div>
+          <div class="arrow">→</div>
+          <div class="fan-subs">
+            <div class="fan-sub">🔔 Subscriber A — send email</div>
+            <div class="fan-sub">🔔 Subscriber B — update UI</div>
+            <div class="fan-sub">🔔 Subscriber C — write log</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why an event instead of a plain delegate?</span>
+        <p>An <code>event</code> restricts what outsiders can do. With a public delegate field, anyone could
+        <strong>overwrite</strong> it (<code>x = ...</code> wiping out other subscribers) or <strong>invoke</strong> it
+        themselves. An <code>event</code> only exposes <code>+=</code> and <code>-=</code> to the outside — subscribers can
+        join or leave, but only the declaring class can raise it or clear it. It's encapsulation for the delegate.</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">Button</span>
+{
+    <span class="cmt">// declare an event based on a delegate type</span>
+    <span class="kw">public event</span> <span class="ty">Action</span> Clicked;
+
+    <span class="kw">public void</span> <span class="fn">Press</span>()
+    {
+        <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"(click)"</span>);
+        Clicked?.<span class="fn">Invoke</span>();   <span class="cmt">// raise it -- ?. guards against no subscribers</span>
+    }
+}
+
+<span class="kw">var</span> btn = <span class="kw">new</span> <span class="ty">Button</span>();
+btn.Clicked += () =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Subscriber 1 reacted"</span>);  <span class="cmt">// subscribe</span>
+btn.Clicked += () =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Subscriber 2 reacted"</span>);
+btn.<span class="fn">Press</span>();   <span class="cmt">// (click) / Subscriber 1 reacted / Subscriber 2 reacted</span></code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Always null-check when raising</span>
+        <p>If no one has subscribed, the event delegate is <code>null</code> and invoking it throws. The idiom
+        <code>Clicked?.Invoke()</code> (null-conditional) safely does nothing when there are no subscribers. Always raise
+        events this way.</p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>The Standard Event Pattern</h2></div>
+      <p class="sec-sub">.NET has a convention for events so they're consistent everywhere: <code>EventHandler</code>, an <code>EventArgs</code>, and an <code>On…</code> method.</p>
+
+      <p>While you <em>can</em> base an event on any delegate, .NET libraries follow a standard pattern so handlers look the
+        same everywhere. The convention uses the built-in <code>EventHandler&lt;TEventArgs&gt;</code> delegate, whose
+        signature is <code>(object sender, TEventArgs e)</code> — "who raised it" plus "details about it."</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// 1) carry event data in a class derived from EventArgs</span>
+<span class="kw">class</span> <span class="ty">PriceChangedEventArgs</span> : <span class="ty">EventArgs</span>
+{
+    <span class="kw">public decimal</span> NewPrice { <span class="kw">get</span>; <span class="kw">init</span>; }
+}
+
+<span class="kw">class</span> <span class="ty">Stock</span>
+{
+    <span class="kw">private decimal</span> _price;
+
+    <span class="cmt">// 2) declare the event using EventHandler&lt;TEventArgs&gt;</span>
+    <span class="kw">public event</span> <span class="ty">EventHandler</span>&lt;<span class="ty">PriceChangedEventArgs</span>&gt; PriceChanged;
+
+    <span class="cmt">// 3) a protected virtual "On..." method raises it (overridable by subclasses)</span>
+    <span class="kw">protected virtual void</span> <span class="fn">OnPriceChanged</span>(<span class="ty">PriceChangedEventArgs</span> e)
+        =&gt; PriceChanged?.<span class="fn">Invoke</span>(<span class="kw">this</span>, e);   <span class="cmt">// 'this' = the sender</span>
+
+    <span class="kw">public decimal</span> Price
+    {
+        <span class="kw">get</span> =&gt; _price;
+        <span class="kw">set</span>
+        {
+            <span class="kw">if</span> (_price == value) <span class="kw">return</span>;
+            _price = value;
+            <span class="fn">OnPriceChanged</span>(<span class="kw">new</span> <span class="ty">PriceChangedEventArgs</span> { NewPrice = value });
+        }
+    }
+}
+
+<span class="cmt">// subscriber: handler matches (object sender, TEventArgs e)</span>
+<span class="kw">var</span> stock = <span class="kw">new</span> <span class="ty">Stock</span>();
+stock.PriceChanged += (sender, e) =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"New price: {e.NewPrice}"</span>);
+stock.Price = <span class="num">99.5m</span>;   <span class="cmt">// New price: 99.5</span></code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📨</span><h4>sender</h4><p>The object that raised the event (<code>this</code>). Lets one handler serve many publishers and know which fired.</p></div>
+        <div class="card"><span class="glyph">📦</span><h4>EventArgs</h4><p>Carries the event's data. Use <code>EventArgs.Empty</code> when there's no data; derive a class when there is.</p></div>
+        <div class="card"><span class="glyph">🔧</span><h4>On… method</h4><p>A <code>protected virtual</code> method that raises the event, so derived classes can extend or intercept it.</p></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Use EventHandler / EventHandler&lt;T&gt;</span>
+        <p>Prefer the built-in <code>EventHandler</code> (no data) or <code>EventHandler&lt;TEventArgs&gt;</code> (with data)
+        over custom delegate types for events. It makes your events instantly familiar to any C# developer and tooling.</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Events vs Delegates</h2></div>
+      <p class="sec-sub">An event is a delegate with access restrictions. Here's exactly what changes — and the leak to watch for.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Aspect</th><th>Plain delegate field</th><th>Event</th></tr></thead>
+          <tbody>
+            <tr><td>Subscribe / unsubscribe (<code>+=</code>/<code>-=</code>)</td><td>Anyone</td><td>Anyone</td></tr>
+            <tr><td>Overwrite with <code>=</code></td><td>Anyone (dangerous!)</td><td>Only the declaring class</td></tr>
+            <tr><td>Invoke / raise</td><td>Anyone</td><td>Only the declaring class</td></tr>
+            <tr><td>Intent</td><td>A stored callback</td><td>A broadcast notification</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 One-line summary</span>
+        <p>An <strong>event</strong> is a delegate that the outside world can only <em>subscribe to and unsubscribe from</em>
+        — it can't be cleared, reassigned, or fired by anyone except the class that owns it. It's the encapsulated,
+        broadcast-safe form of a delegate.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The classic memory leak: forgetting to unsubscribe</span>
+        <p>When an object subscribes to a long-lived publisher's event, the publisher holds a reference to the subscriber
+        (through the delegate). If the subscriber is never <strong>unsubscribed</strong> (<code>-=</code>), the garbage
+        collector can't reclaim it — even after you think you're done with it. Always unsubscribe when a subscriber's life is
+        shorter than the publisher's (e.g. in <code>Dispose</code>).</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// subscribe -- but keep the SAME reference so you can unsubscribe</span>
+<span class="ty">EventHandler</span> handler = (s, e) =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"reacting"</span>);
+publisher.SomethingHappened += handler;
+
+<span class="cmt">// later, when done -- prevents the leak</span>
+publisher.SomethingHappened -= handler;</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Unsubscribe needs the same reference</span>
+        <p>To remove a handler with <code>-=</code>, you must pass the <em>same</em> delegate instance you added. A fresh
+        lambda (even with identical code) is a different object and won't remove the original. Store the handler in a
+        variable if you'll need to detach it.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Worked Example</h2></div>
+      <p class="sec-sub">A small notification system tying delegates, built-in delegates, lambdas, and events together.</p>
+
+      <p>An <code>Order</code> publisher raises a <code>Shipped</code> event. Multiple independent subscribers react — and one
+        of them is supplied as a <code>Func</code>/<code>Action</code> callback, showing how the pieces interlock.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">OrderShippedEventArgs</span> : <span class="ty">EventArgs</span>
+{
+    <span class="kw">public string</span> OrderId { <span class="kw">get</span>; <span class="kw">init</span>; }
+}
+
+<span class="kw">class</span> <span class="ty">Order</span>
+{
+    <span class="kw">public string</span> Id { <span class="kw">get</span>; <span class="kw">init</span>; }
+    <span class="kw">public event</span> <span class="ty">EventHandler</span>&lt;<span class="ty">OrderShippedEventArgs</span>&gt; Shipped;
+
+    <span class="kw">public void</span> <span class="fn">Ship</span>()
+    {
+        <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"Order {Id} shipped"</span>);
+        Shipped?.<span class="fn">Invoke</span>(<span class="kw">this</span>, <span class="kw">new</span> <span class="ty">OrderShippedEventArgs</span> { OrderId = Id });
+    }
+}
+
+<span class="cmt">// a method that takes BEHAVIOR (Action) -- a callback</span>
+<span class="kw">void</span> <span class="fn">NotifyVia</span>(<span class="ty">Order</span> order, <span class="ty">Action</span>&lt;<span class="kw">string</span>&gt; channel)
+    =&gt; order.Shipped += (s, e) =&gt; channel($<span class="str">"Order {e.OrderId}"</span>);
+
+<span class="kw">var</span> order = <span class="kw">new</span> <span class="ty">Order</span> { Id = <span class="str">"A100"</span> };
+
+<span class="cmt">// subscribers -- lambdas as event handlers</span>
+order.Shipped += (s, e) =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"  📧 emailing about {e.OrderId}"</span>);
+<span class="fn">NotifyVia</span>(order, msg =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"  📱 SMS: {msg}"</span>));   <span class="cmt">// Action callback</span>
+
+order.<span class="fn">Ship</span>();
+<span class="cmt">// Order A100 shipped</span>
+<span class="cmt">//   📧 emailing about A100</span>
+<span class="cmt">//   📱 SMS: Order A100</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Every concept in one place</span>
+        <p>The <strong>event</strong> (<code>Shipped</code>) broadcasts to many subscribers; each handler is a
+        <strong>lambda</strong>; <code>NotifyVia</code> takes an <strong>Action</strong> (a built-in delegate) as a
+        <strong>callback</strong> and subscribes it; raising the event runs all handlers via the underlying
+        <strong>multicast</strong> mechanism. That's the whole topic working together.</p>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea. If you can explain each card aloud, you've got it.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🎯 Delegate</h4><p>A type-safe reference to a method with a matching signature — methods stored and passed as data.</p></div>
+        <div class="recap-card"><h4>📞 Callback</h4><p>Passing a delegate into a method so it can "call you back" — the basis of decoupled, reusable code.</p></div>
+        <div class="recap-card"><h4>➕ Multicast</h4><p>One delegate can point to many methods (<code>+=</code>/<code>-=</code>), invoked in order; only the last return value is kept.</p></div>
+        <div class="recap-card"><h4>🧮 Func</h4><p>Built-in delegate that takes 0–16 inputs and <em>returns a value</em> (the last type argument).</p></div>
+        <div class="recap-card"><h4>🔇 Action</h4><p>Built-in delegate that takes 0–16 inputs and returns <em>void</em>.</p></div>
+        <div class="recap-card"><h4>✔️ Predicate&lt;T&gt;</h4><p>Built-in delegate taking one <code>T</code> and returning <code>bool</code> — same as <code>Func&lt;T,bool&gt;</code>.</p></div>
+        <div class="recap-card"><h4>λ Lambda</h4><p>Inline anonymous method (<code>x =&gt; x*2</code>) that fills a delegate; can capture surrounding variables (closure).</p></div>
+        <div class="recap-card"><h4>📡 Event</h4><p>A delegate the outside can only subscribe/unsubscribe to — the safe publisher/subscriber broadcast.</p></div>
+        <div class="recap-card"><h4>📨 Event pattern</h4><p><code>EventHandler&lt;T&gt;</code> with <code>(object sender, EventArgs e)</code> and a <code>protected virtual On…</code> raiser.</p></div>
+        <div class="recap-card"><h4>🧹 Unsubscribe</h4><p>Detach handlers (<code>-=</code>) when done, or a long-lived publisher leaks the subscriber.</p></div>
+      </div>
+
+      <h3>Which built-in delegate? 📊</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>If your method…</th><th>Use</th></tr></thead>
+          <tbody>
+            <tr><td>Returns a value</td><td><code>Func&lt;…, TResult&gt;</code></td></tr>
+            <tr><td>Returns nothing (void)</td><td><code>Action&lt;…&gt;</code></td></tr>
+            <tr><td>Tests one thing, returns bool</td><td><code>Predicate&lt;T&gt;</code> (or <code>Func&lt;T,bool&gt;</code>)</td></tr>
+            <tr><td>Needs <code>ref</code>/<code>out</code>/<code>params</code></td><td>A custom <code>delegate</code> type</td></tr>
+            <tr><td>Broadcasts a notification to many listeners</td><td>An <code>event</code> (EventHandler&lt;T&gt;)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a clear answer. Tagged by level — Junior (0–2 yrs),
+        Mid (2–5 yrs), Senior (5–7 yrs). Written for someone with no prior coding background.</p>
+
+      <h3>🌱 Junior — fundamentals (0–2 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q1</span> What is a delegate? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A delegate is a type-safe reference to a method — like a variable that holds a method instead of data. You can store a method in
+        it, pass it to other methods, and invoke it later. "Type-safe" means the compiler checks that the method's signature (its parameters and return
+        type) matches the delegate, so it's safer than a raw function pointer.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span> What's the difference between Func, Action, and Predicate? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>All three are built-in delegates. <strong><code>Func</code></strong> takes inputs and <em>returns a value</em> (the last type argument
+        is the return type). <strong><code>Action</code></strong> takes inputs and returns <em>nothing</em> (void). <strong><code>Predicate&lt;T&gt;</code></strong>
+        takes one input and returns a <em>bool</em> — used for testing a condition. So: returns a value → Func; returns void → Action; tests true/false → Predicate.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span> What is a lambda expression? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A lambda is a short, inline anonymous method written with the <code>=&gt;</code> arrow: parameters on the left, body on the right, e.g.
+        <code>x =&gt; x * 2</code>. It's a concise way to provide the method a delegate needs without declaring a separate named method. LINQ queries use
+        lambdas constantly.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span> What is an event? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>An event lets one object (the publisher) notify other objects (subscribers) when something happens. Subscribers attach handler methods
+        with <code>+=</code>; when the publisher raises the event, all subscribed handlers run. A button's "click" is the classic example — the button publishes
+        the click, and your code subscribes to react.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span> How do you subscribe to and unsubscribe from an event? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Use <code>+=</code> to subscribe (add a handler) and <code>-=</code> to unsubscribe (remove it): <code>button.Clicked += MyHandler;</code>
+        then later <code>button.Clicked -= MyHandler;</code>. The handler is a method (or lambda) whose signature matches the event's delegate.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span> What is a multicast delegate? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A delegate that points to more than one method at once. You add methods with <code>+=</code>; invoking the delegate then calls all of them
+        in the order they were added. Events rely on this — that's how one event can notify many subscribers.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span> Why is a delegate called "type-safe"? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Because the compiler enforces that any method you assign to it has the exact matching signature — same parameter types and return type. If
+        they don't match, you get a compile error. This prevents the kind of crashes that raw function pointers (as in C++) can cause when signatures don't line up.</p></div></details>
+
+      <h3>🟠 Mid-level — going deeper (2–5 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q8</span> What's the difference between a delegate and an event? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>An event is a delegate with access restrictions. With a plain public delegate field, any code could overwrite it with <code>=</code> (wiping other
+        subscribers) or invoke it directly. An <code>event</code> only exposes <code>+=</code> and <code>-=</code> to outsiders — they can subscribe or unsubscribe, but
+        only the declaring class can raise it or reassign it. So an event is the encapsulated, broadcast-safe form of a multicast delegate.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q9</span> What happens to the return value of a multicast delegate? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>All the methods run, but you only receive the return value of the <strong>last</strong> one — the others are discarded. That's why multicast
+        delegates and events are almost always declared with a <code>void</code> return. If you genuinely need every method's result, call each one yourself via
+        <code>GetInvocationList()</code> and collect the returns.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> Is Predicate&lt;T&gt; the same as Func&lt;T, bool&gt;? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Semantically yes — both take a <code>T</code> and return a <code>bool</code>. They aren't the <em>same type</em> (you can't assign one to a variable
+        of the other directly), but they're interchangeable in meaning. <code>Predicate&lt;T&gt;</code> is older and appears in APIs like <code>List&lt;T&gt;.FindAll</code>
+        and <code>RemoveAll</code>; modern LINQ-style APIs use <code>Func&lt;T, bool&gt;</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> Why must you null-check (or use ?.) before raising an event? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>If no one has subscribed, the event's backing delegate is <code>null</code>, and invoking <code>null</code> throws a <code>NullReferenceException</code>.
+        The idiom <code>MyEvent?.Invoke(this, e)</code> uses the null-conditional operator to safely do nothing when there are no subscribers. It's also thread-safer than an
+        explicit <code>if (MyEvent != null)</code> check because it reads the delegate once.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> Describe the standard .NET event pattern. <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Use the built-in <code>EventHandler&lt;TEventArgs&gt;</code> delegate, whose signature is <code>(object sender, TEventArgs e)</code> — sender is the
+        publisher, e carries the data. Define a class deriving from <code>EventArgs</code> to hold that data, declare the event as <code>public event EventHandler&lt;…&gt;</code>,
+        and raise it from a <code>protected virtual OnXxx(…)</code> method so subclasses can extend it. This consistency makes events recognizable across all .NET code.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> When would you still declare a custom delegate type instead of using Func/Action? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>When the signature needs features <code>Func</code>/<code>Action</code> can't express: <code>ref</code>, <code>out</code>, or <code>params</code> parameters
+        (e.g. a <code>TryParse</code>-style <code>bool M(string s, out int n)</code>). A named custom delegate can also improve readability by giving an intent-revealing name to a
+        recurring signature. Otherwise, prefer the built-ins.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> What is a closure, and why can it surprise you? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A closure is a lambda that captures a variable from its surrounding scope — it captures the <em>variable</em>, not a snapshot of its value. So if the
+        variable changes later, the lambda sees the new value when it runs. Combined with deferred execution (e.g. building lambdas in a loop and running them afterward), this can
+        cause every lambda to use the variable's final value. The fix is to copy the variable into a fresh local inside the loop.</p></div></details>
+
+      <h3>🔴 Senior — synthesis &amp; judgment (5–7 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> How can events cause memory leaks, and how do you prevent them? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>When a subscriber registers a handler on a publisher's event, the publisher's delegate holds a reference to the subscriber. If the publisher outlives the
+        subscriber and the subscriber never unsubscribes, the GC can't collect the subscriber — a leak that grows over time (common in UI and long-lived services). Prevent it by
+        unsubscribing (<code>-=</code>) when done, typically in <code>Dispose</code>; using the same handler reference you subscribed with; or using weak-event patterns
+        (<code>WeakEventManager</code>) for cross-lifetime subscriptions. Lambdas make this trickier since you must retain the exact delegate instance to detach it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> One subscriber throws when an event is raised. What happens to the others, and how do you make subscribers independent? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>By default, invoking a multicast delegate calls handlers sequentially, and an exception in one <strong>stops the chain</strong> — later subscribers never run, and the
+        exception propagates to the publisher. To isolate subscribers, iterate <code>myEvent.GetInvocationList()</code>, cast each entry to the delegate type, and invoke it inside its own
+        try/catch, optionally aggregating failures into an <code>AggregateException</code>. That way one misbehaving handler can't block the rest.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> Why are events usually thread-unsafe to raise naively, and what's the safe idiom? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>An explicit <code>if (MyEvent != null) MyEvent(...)</code> has a race: another thread could unsubscribe the last handler between the check and the call, making the
+        delegate <code>null</code> and throwing. The safe idiom is the null-conditional invoke <code>MyEvent?.Invoke(this, e)</code>, which the compiler implements by reading the delegate
+        into a local once and invoking that snapshot — so a concurrent unsubscribe can't null it out mid-call. (Subscribers may still receive an event slightly after unsubscribing, which is inherent.)</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> How do delegates relate to expression trees and LINQ providers? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A lambda can be compiled into a <strong>delegate</strong> (executable code) or captured as an <strong>expression tree</strong> (data describing the code), depending on the
+        target type. LINQ to Objects (<code>IEnumerable</code>) takes <code>Func</code> delegates and runs them in memory; LINQ providers like EF (<code>IQueryable</code>) take
+        <code>Expression&lt;Func&lt;…&gt;&gt;</code> and translate the tree into SQL. So the same lambda syntax becomes either a runnable delegate or analyzable data — the bridge between
+        this topic and the deferred-execution topic.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> Compare the event/delegate approach with interface-based callbacks (e.g. an observer interface). <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Both implement observer-style notification. <strong>Events/delegates</strong> are lightweight, allow ad-hoc lambda subscribers, support multiple handlers per event, and
+        decouple publisher from subscriber types — ideal for "fire and forget" notifications. <strong>Interface callbacks</strong> (subscriber implements <code>IObserver</code>) are better when a
+        subscriber must implement several related notifications as a cohesive contract, when you want to enforce that implementers handle everything, or when you need richer interaction than a single
+        method. Events scale to many small subscribers; interfaces suit structured, multi-method contracts.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> What does it mean that delegates support covariance and contravariance? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Delegate assignment allows related types: <strong>covariance</strong> lets a method that returns a <em>more derived</em> type be assigned to a delegate that returns a base type
+        (return types vary "outward"); <strong>contravariance</strong> lets a method with <em>less derived</em> (base) parameter types be assigned to a delegate with more derived parameters (parameters vary
+        "inward"). For example, a delegate <code>Func&lt;object&gt;</code> can accept a method returning <code>string</code> (covariant return), and a handler taking <code>object sender</code> can subscribe to an
+        event expecting a more derived sender (contravariant parameter). This makes delegate assignment more flexible while staying type-safe.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> Underneath, what type is a delegate, and what's the difference between Delegate and MulticastDelegate? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Every delegate type you declare implicitly derives from <code>System.MulticastDelegate</code>, which derives from <code>System.Delegate</code>. A delegate instance stores a target object
+        (for instance methods) and a method pointer; a multicast delegate additionally maintains an invocation list of these. <code>+=</code>/<code>-=</code> create new combined delegate instances (delegates are
+        immutable) via <code>Delegate.Combine</code>/<code>Remove</code>. You can't explicitly derive from these classes in C#; the compiler does it for you when you declare a <code>delegate</code> type.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Lock down <strong>Junior</strong> — what a delegate is, the Func/Action/Predicate split, lambdas, and basic events. <strong>Mid</strong> is the interview core: delegate vs event, the
+        multicast return-value rule, the standard event pattern, null-safe raising, and closures. <strong>Senior</strong> goes deep: event memory leaks, exception isolation, thread-safe raising,
+        the delegate-vs-expression-tree link, and the underlying <code>MulticastDelegate</code> machinery. Answer each aloud without peeking; stumbles point back to the section.</p>
+      </div>
+
+      <p class="foot">All technical details verified against Microsoft Learn (delegates, events, <code>Func</code>/<code>Action</code>/<code>Predicate</code> delegate references, the standard event pattern) and
+        supporting references. This single <code>08-delegates-events-func-action-predicate.html</code> file is fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+function updateProgress(){const h=document.documentElement;const max=h.scrollHeight-h.clientHeight;
+  progress.style.width=(max>0?(h.scrollTop/max)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});
+window.addEventListener('resize',updateProgress);updateProgress();
+
+const sidebar=document.getElementById('sidebar');const backdrop=document.getElementById('backdrop');
+function closeSidebar(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(link.getAttribute('href'));
+    if(target){const y=target.getBoundingClientRect().top+window.pageYOffset-24;window.scrollTo({top:y,behavior:'smooth'});}
+    if(window.innerWidth<=920) closeSidebar();
+  });
+});
+
+const sections=[...document.querySelectorAll('.section')];
+const navLinks=[...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on=l.getAttribute('href')==='#'+id;
+    l.classList.toggle('active',on);
+    if(on){const lr=l.getBoundingClientRect(),sr=sidebar.getBoundingClientRect();
+      if(lr.top<sr.top+60||lr.bottom>sr.bottom-60){sidebar.scrollTop+=(lr.top-sr.top)-sidebar.clientHeight/2+lr.height/2;}}
+  });
+}
+const spy=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting) setActive(en.target.id);});},
+  {rootMargin:'-20% 0px -70% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+const reveal=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');reveal.unobserve(en.target);}});},{threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.closest('.code').querySelector('pre code').innerText;
+    const done=()=>{btn.textContent='Copied!';btn.classList.add('done');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done');},2000);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code,done));
+    } else {fallback(code,done);}
+  });
+});
+function fallback(text,cb){const ta=document.createElement('textarea');ta.value=text;
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
+
+document.getElementById('fab').addEventListener('click',()=>{
+  const open=sidebar.classList.toggle('open');backdrop.classList.toggle('show',open);});
+backdrop.addEventListener('click',closeSidebar);
+</script>
+</body>
+</html>

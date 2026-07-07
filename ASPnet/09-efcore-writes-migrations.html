@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 9 — EF Core Writes &amp; Migrations: SaveChanges, Relationships &amp; Seeding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">✍️ Day 9 · Writes &amp; Migrations</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Writing Data</div>
+    <a href="#s01"><span class="n">01</span>The Write Side of EF</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>Adding Data</a>
+    <a href="#s04"><span class="n">04</span>Updating Data</a>
+    <a href="#s05"><span class="n">05</span>Deleting Data</a>
+    <a href="#s06"><span class="n">06</span>SaveChangesAsync Inside</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Schema &amp; Data</div>
+    <a href="#s07"><span class="n">07</span>Relationships in Practice</a>
+    <a href="#s08"><span class="n">08</span>Migrations Deep Dive</a>
+    <a href="#s09"><span class="n">09</span>Seeding Data</a>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 09 · ASP.NET Core Fundamentals</div>
+  <h1>✍️ Writes &amp; Migrations: Changing Data, Changing Schema</h1>
+  <p class="lede">Day 8 was all about reading. Today you change things — rows <em>and</em> tables. You'll master the add/update/delete patterns, look inside <code>SaveChangesAsync</code>, wire up relationships properly, evolve your schema with migrations, and seed sample data the modern way.</p>
+  <div class="agenda">
+    <span class="chip">➕ Add / Update / Delete</span>
+    <span class="chip">💾 SaveChangesAsync</span>
+    <span class="chip">🔗 Relationships</span>
+    <span class="chip">🧬 Migrations</span>
+    <span class="chip">🌱 Seeding</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>🧺 The Write Side of EF: Unit of Work</h2>
+
+  <p>Everything about writing data in EF Core follows one rhythm, built on the change tracker you met on Days 7–8:</p>
+
+  <ol>
+    <li><strong>Stage</strong> your changes — add new entities, modify loaded ones, mark others for removal. Nothing touches the database yet.</li>
+    <li><strong>Commit</strong> them all at once with <code>SaveChangesAsync()</code> — EF computes the SQL and runs it inside a single transaction.</li>
+  </ol>
+
+  <div class="callout analogy">
+    <span class="tag">🛒 Analogy</span>
+    <p>Working with a DbContext is <strong>shopping with a cart</strong>. You walk the aisles putting items in (Add), swapping one brand for another (update), and putting things back on the shelf (Remove). The store's inventory doesn't change while you browse — only at the <strong>checkout</strong> (<code>SaveChangesAsync</code>) does everything happen, together, as one receipt. Abandon the cart (let the context dispose without saving) and it's as if nothing happened.</p>
+  </div>
+
+  <p>This is the <strong>unit of work</strong> pattern: a business operation ("place this order") maps to one context scope and one save, so related changes succeed or fail <em>together</em>. Recall the entity states from Day 7 — writes are just you moving entities between these states, and <code>SaveChanges</code> translating states into SQL:</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-green"><div class="val">Added</div><div class="idx">Add() → INSERT</div></div>
+      <div class="arr-cell"><div class="val">Unchanged</div><div class="idx">loaded, untouched</div></div>
+      <div class="arr-cell highlight"><div class="val">Modified</div><div class="idx">property set → UPDATE</div></div>
+      <div class="arr-cell neg"><div class="val">Deleted</div><div class="idx">Remove() → DELETE</div></div>
+      <div class="arr-cell"><div class="val">Detached</div><div class="idx">unknown to tracker</div></div>
+    </div>
+    <div class="arr-caption">Your write API is really a state machine · SaveChangesAsync turns states into SQL</div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>You never write INSERT/UPDATE/DELETE. You <strong>declare the desired end state</strong> of your objects, and EF derives the SQL. The skill of today is knowing which calls put entities into which states — and what <code>SaveChangesAsync</code> does with them.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <div class="mindmap">
+    <div class="mm-core">Writes &amp; Migrations<small>change rows · change schema</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-green">
+        <h4>➕ Add</h4>
+        <ul>
+          <li><code>Add / AddRange</code></li>
+          <li>Whole graphs in one go</li>
+          <li>IDs populated after save</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-accent">
+        <h4>✏️ Update</h4>
+        <ul>
+          <li>Tracked: just set properties</li>
+          <li>Disconnected: fetch-then-apply</li>
+          <li>Bulk: <code>ExecuteUpdate</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch b-rose">
+        <h4>🗑️ Delete</h4>
+        <ul>
+          <li><code>Remove</code> + save</li>
+          <li>Bulk: <code>ExecuteDelete</code></li>
+          <li>Soft delete option</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-blue">
+        <h4>🔗 Relationships</h4>
+        <ul>
+          <li>1-to-many, many-to-many</li>
+          <li>Navigations vs FK values</li>
+          <li>Cascade decisions</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>🧬 Migrations + 🌱 Seeding</h4>
+        <ul>
+          <li>Up / Down / snapshot</li>
+          <li><code>database update</code></li>
+          <li><code>HasData</code> vs <code>UseSeeding</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p>Notice the two halves: sections 03–07 change <strong>rows</strong> (data), sections 08–09 change <strong>schema and baseline data</strong> (structure). Both flow through code you commit — nothing is clicked together by hand in the database.</p>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>➕ Adding Data</h2>
+
+  <p>Adding is the friendliest write: construct objects, hand them to the context, save.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Add, AddRange, and graphs</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// Single entity:</span>
+<span class="kw">var</span> product = <span class="kw">new</span> <span class="ty">Product</span> { Name = <span class="str">"Mechanical Keyboard"</span>, Price = <span class="num">4999.00m</span> };
+db.Products.<span class="fn">Add</span>(product);
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();
+logger.<span class="fn">LogInformation</span>(<span class="str">"Created product {ProductId}"</span>, product.Id);  <span class="cmt">// ID is populated!</span>
+
+<span class="cmt">// Several at once:</span>
+db.Products.<span class="fn">AddRange</span>(
+    <span class="kw">new</span> <span class="ty">Product</span> { Name = <span class="str">"USB-C Hub"</span>,  Price = <span class="num">1899.00m</span> },
+    <span class="kw">new</span> <span class="ty">Product</span> { Name = <span class="str">"Desk Mat"</span>,   Price = <span class="num">799.00m</span>  });
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();
+
+<span class="cmt">// A whole GRAPH — parent + children in one save.</span>
+<span class="cmt">// EF walks the navigations: everything reachable from an Added</span>
+<span class="cmt">// entity that isn't tracked yet is marked Added too.</span>
+<span class="kw">var</span> order = <span class="kw">new</span> <span class="ty">Order</span>
+{
+    CustomerId = customerId,
+    PlacedAt   = <span class="ty">DateTime</span>.UtcNow,
+    Items =
+    {
+        <span class="kw">new</span> <span class="ty">OrderItem</span> { ProductId = <span class="num">1</span>, Quantity = <span class="num">2</span>, UnitPrice = <span class="num">4999.00m</span> },
+        <span class="kw">new</span> <span class="ty">OrderItem</span> { ProductId = <span class="num">3</span>, Quantity = <span class="num">1</span>, UnitPrice = <span class="num">799.00m</span>  }
+    }
+};
+db.Orders.<span class="fn">Add</span>(order);
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();   <span class="cmt">// 3 INSERTs, correct order, one transaction —</span>
+                                <span class="cmt">// items get their new OrderId FK automatically</span>
+</code></pre>
+  </div>
+
+  <p>Three details worth noticing:</p>
+  <ul>
+    <li>🎁 <strong>Generated keys come back for free.</strong> After the save, <code>order.Id</code> and each item's <code>Id</code> hold the database-generated values — no re-query needed.</li>
+    <li>🕸️ <strong>Graph adds are ordered correctly.</strong> EF inserts the parent first, takes its new key, and uses it as the FK for the children — you never juggle IDs manually.</li>
+    <li>🏷️ <strong>Add marks reachable entities too.</strong> That's usually helpful, but beware attaching an existing entity into a new graph — if EF thinks it's new (no key set), you'll get a duplicate. Set FK values (like <code>ProductId</code> above) instead of attaching loaded entities you don't mean to insert.</li>
+  </ul>
+
+  <div class="callout tip">
+    <span class="tag">✅ Tip</span>
+    <p><code>Add</code> vs <code>AddAsync</code>: adding is an in-memory operation, so plain <code>Add</code> is correct and normal. <code>AddAsync</code> exists only for a special value-generation scenario (e.g., <code>HiLo</code> sequences that may hit the database to reserve keys). Don't sprinkle <code>AddAsync</code> out of async habit — the async that matters is <code>SaveChangesAsync</code>.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>✏️ Updating Data</h2>
+
+  <h3>The connected update — the everyday pattern 🔵</h3>
+  <p>When the same context loads and saves, updating is almost invisible: load tracked, set properties, save. The tracker's snapshots make the UPDATE surgical — only changed columns are written:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Load → modify → save</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">var</span> product = <span class="kw">await</span> db.Products.<span class="fn">FindAsync</span>(id);   <span class="cmt">// tracked (checks tracker first)</span>
+<span class="kw">if</span> (product <span class="kw">is null</span>) <span class="kw">return</span> <span class="ty">Results</span>.<span class="fn">NotFound</span>();
+
+product.Price = <span class="num">4499.00m</span>;                          <span class="cmt">// state → Modified</span>
+product.Name  = <span class="str">"Mechanical Keyboard (2026)"</span>;
+
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();
+<span class="cmt">-- UPDATE [Products] SET [Name] = @p0, [Price] = @p1 WHERE [Id] = @p2  (only 2 columns!)</span>
+</code></pre>
+  </div>
+
+  <h3>The disconnected update — the web reality 🌐</h3>
+  <p>In an API, the entity that comes back in a PUT request was loaded by a <em>previous</em> request with a context that's long gone. Nothing is tracking it. You have two options:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Disconnected update, two styles</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// ✅ Style 1 (recommended): fetch-then-apply.</span>
+<span class="cmt">// One extra SELECT, but: precise UPDATE, validation against current state,</span>
+<span class="cmt">// and the client can't overwrite columns you didn't expose in the DTO.</span>
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="kw">bool</span>&gt; <span class="fn">UpdatePriceAsync</span>(<span class="kw">int</span> id, <span class="ty">UpdateProductDto</span> dto, <span class="ty">CancellationToken</span> ct)
+{
+    <span class="kw">var</span> product = <span class="kw">await</span> db.Products.<span class="fn">FindAsync</span>([id], ct);
+    <span class="kw">if</span> (product <span class="kw">is null</span>) <span class="kw">return false</span>;
+
+    product.Name  = dto.Name;
+    product.Price = dto.Price;
+    <span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>(ct);
+    <span class="kw">return true</span>;
+}
+
+<span class="cmt">// ⚠️ Style 2: Update() attaches the object and marks EVERY column Modified.</span>
+<span class="cmt">// No extra SELECT — but it overwrites all columns with whatever the</span>
+<span class="cmt">// client sent, and throws if the row doesn't exist.</span>
+db.Products.<span class="fn">Update</span>(productFromClient);
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>(ct);
+</code></pre>
+  </div>
+
+  <h3>The bulk update — set-based writes ⚡</h3>
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · ExecuteUpdateAsync (EF Core 7+)</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// One UPDATE statement in the database — no loading, no tracking:</span>
+<span class="kw">var</span> discounted = <span class="kw">await</span> db.Products
+    .<span class="fn">Where</span>(p =&gt; p.Category == <span class="str">"Accessories"</span>)
+    .<span class="fn">ExecuteUpdateAsync</span>(s =&gt; s
+        .<span class="fn">SetProperty</span>(p =&gt; p.Price, p =&gt; p.Price * <span class="num">0.9m</span>), ct);
+
+<span class="cmt">// Runs IMMEDIATELY — independent of SaveChanges and the change tracker.</span>
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Concurrency: The Last Write Wins By Default</span>
+    <p>If two users load the same product and both save, the second save silently overwrites the first. When that matters (inventory, balances), add a concurrency token — a <code>rowversion</code> column via <code>[Timestamp]</code> or <code>IsRowVersion()</code>. EF then adds <code>WHERE ... AND RowVersion = @original</code> to updates; if another write got there first, zero rows match and EF throws <code>DbUpdateConcurrencyException</code>, which you handle (reload/merge/inform the user) instead of losing data invisibly.</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>🗑️ Deleting Data</h2>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Three deletion patterns</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// 1) Classic: load, remove, save</span>
+<span class="kw">var</span> product = <span class="kw">await</span> db.Products.<span class="fn">FindAsync</span>([id], ct);
+<span class="kw">if</span> (product <span class="kw">is null</span>) <span class="kw">return false</span>;
+db.Products.<span class="fn">Remove</span>(product);          <span class="cmt">// state → Deleted</span>
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>(ct);
+
+<span class="cmt">// 2) Bulk / by predicate: one DELETE statement, nothing loaded (EF Core 7+)</span>
+<span class="kw">var</span> removed = <span class="kw">await</span> db.Orders
+    .<span class="fn">Where</span>(o =&gt; o.Status == <span class="ty">OrderStatus</span>.Cancelled
+             &amp;&amp; o.PlacedAt &lt; <span class="ty">DateTime</span>.UtcNow.<span class="fn">AddYears</span>(-<span class="num">1</span>))
+    .<span class="fn">ExecuteDeleteAsync</span>(ct);
+
+<span class="cmt">// 3) Soft delete: don't delete at all — flag it, filter it out globally</span>
+product.IsDeleted = <span class="kw">true</span>;
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>(ct);
+<span class="cmt">// + in OnModelCreating, hide flagged rows from every query:</span>
+<span class="cmt">// modelBuilder.Entity&lt;Product&gt;().HasQueryFilter(p =&gt; !p.IsDeleted);</span>
+</code></pre>
+  </div>
+
+  <h3>What happens to the children? 👶</h3>
+  <p>Deleting a parent raises the Day 7 question again: the relationship's <strong>delete behavior</strong> decides. <code>Cascade</code> removes dependents with the parent (right for true composition like order → items); <code>Restrict</code> blocks the delete while dependents exist (right for valuable history like customer → orders); <code>SetNull</code> orphans them gracefully when the FK is nullable. You chose this in your Fluent configuration — deletes are where that choice becomes real.</p>
+
+  <div class="callout analogy">
+    <span class="tag">📁 Analogy</span>
+    <p>Hard delete is a <strong>paper shredder</strong> — fast, final, and occasionally regretted. Soft delete is the <strong>archive drawer</strong>: the file leaves every desk and search, but audits, undo, and "what did this look like last year?" remain possible. Most business data earns the drawer, not the shredder.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ ExecuteDelete Bypasses EF's Niceties</span>
+    <p><code>ExecuteDeleteAsync</code> runs immediately, outside SaveChanges' transaction and the change tracker — already-loaded entities go stale, and EF-level cascade logic is skipped (the database's own FK rules govern). Superb for purging and archiving jobs; wrong for deletes tangled in per-entity business logic.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>💾 SaveChangesAsync Under the Hood</h2>
+
+  <p>You've called it a dozen times — now watch what actually happens inside that one line:</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="emoji">🔎</span>
+      <div><b>1. DetectChanges</b><span class="desc">The tracker compares every tracked entity against its snapshot, flipping quietly-edited entities from Unchanged to Modified and fixing up relationship changes.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🧮</span>
+      <div><b>2. Compute the command list</b><span class="desc">Each Added/Modified/Deleted entity becomes an INSERT/UPDATE/DELETE — updates listing only the changed columns.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🔀</span>
+      <div><b>3. Order by dependencies</b><span class="desc">Parents insert before children need their keys; children delete before parents. EF sorts and batches the commands.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="emoji">🔒</span>
+      <div><b>4. Execute inside one transaction</b><span class="desc">All commands run atomically. Any failure rolls back everything and surfaces as DbUpdateException (or DbUpdateConcurrencyException) — no half-saved orders, ever.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🎁</span>
+      <div><b>5. Propagate values &amp; reset states</b><span class="desc">Database-generated IDs and rowversions flow back onto your objects; saved entities become Unchanged, ready for the next unit of work.</span></div>
+    </div>
+  </div>
+
+  <p>
+    <span class="complexity-badge"><span class="lbl">Transaction</span><span class="valb">automatic, per save</span></span>
+    <span class="complexity-badge"><span class="lbl">Batching</span><span class="valb">multiple commands per round trip</span></span>
+    <span class="complexity-badge"><span class="lbl">Return value</span><span class="valb">rows affected</span></span>
+  </p>
+
+  <h3>When one save isn't enough: explicit transactions 🔗</h3>
+  <p>One <code>SaveChangesAsync</code> = one transaction, automatically. But if a business operation needs <em>two saves</em> (e.g., you must use a generated ID in a second step) to succeed or fail together, open the transaction yourself:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Explicit transaction across saves</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">await using var</span> tx = <span class="kw">await</span> db.Database.<span class="fn">BeginTransactionAsync</span>(ct);
+<span class="kw">try</span>
+{
+    db.Orders.<span class="fn">Add</span>(order);
+    <span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>(ct);            <span class="cmt">// need order.Id below</span>
+
+    db.AuditEntries.<span class="fn">Add</span>(<span class="kw">new</span> <span class="ty">AuditEntry</span>(<span class="str">"OrderPlaced"</span>, order.Id));
+    <span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>(ct);
+
+    <span class="kw">await</span> tx.<span class="fn">CommitAsync</span>(ct);                  <span class="cmt">// both saves stand or fall together</span>
+}
+<span class="kw">catch</span>
+{
+    <span class="kw">await</span> tx.<span class="fn">RollbackAsync</span>(ct);
+    <span class="kw">throw</span>;
+}
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Habit</span>
+    <p>Call <code>SaveChangesAsync</code> <strong>once per business operation</strong>, at the end — not after every little change. Fewer saves = fewer transactions, natural atomicity, and code that reads like the business action it implements. (Using a retrying execution strategy from Day 7's <code>EnableRetryOnFailure</code>? Explicit transactions then need to be wrapped in <code>strategy.ExecuteAsync(...)</code> so the whole unit can retry.)</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>🔗 Relationships in Practice</h2>
+
+  <p>The three cardinalities, in our shop's terms:</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">1️⃣→🔢</span><b>One-to-many</b><p>Customer → Orders. FK (<code>CustomerId</code>) lives on the many side. The bread and butter — you built this on Day 7.</p></div>
+    <div class="card"><span class="glyph">🔢↔🔢</span><b>Many-to-many</b><p>Product ↔ Tag. Needs a join table; EF creates a hidden one automatically when both sides have collection navigations.</p></div>
+    <div class="card"><span class="glyph">1️⃣↔1️⃣</span><b>One-to-one</b><p>Customer → CustomerProfile. FK on the dependent side, usually with a unique index. Good for splitting rarely-used columns.</p></div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Many-to-many, the easy way</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">Product</span>
+{
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="str">""</span>;
+    <span class="kw">public</span> <span class="ty">List</span>&lt;<span class="ty">Tag</span>&gt; Tags { <span class="kw">get</span>; <span class="kw">set</span>; } = [];      <span class="cmt">// collection on BOTH sides</span>
+}
+
+<span class="kw">public class</span> <span class="ty">Tag</span>
+{
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="str">""</span>;
+    <span class="kw">public</span> <span class="ty">List</span>&lt;<span class="ty">Product</span>&gt; Products { <span class="kw">get</span>; <span class="kw">set</span>; } = [];
+}
+<span class="cmt">// EF conjures a "ProductTag" join table in the migration — you never see a class.</span>
+<span class="cmt">// Linking is just collection work:</span>
+product.Tags.<span class="fn">Add</span>(saleTag);
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>();     <span class="cmt">// INSERT into the join table</span>
+</code></pre>
+  </div>
+
+  <h3>Two ways to relate — navigation or FK 🎭</h3>
+  <p>Every relationship gives you two equivalent handles. Use whichever fits what you already have in hand:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Same result, two styles</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// Style A — set the FK value. No extra query; perfect when you have the ID:</span>
+<span class="kw">var</span> order = <span class="kw">new</span> <span class="ty">Order</span> { CustomerId = <span class="num">42</span>, PlacedAt = <span class="ty">DateTime</span>.UtcNow };
+
+<span class="cmt">// Style B — use the navigation. Natural when you already loaded the entity:</span>
+<span class="kw">var</span> customer = <span class="kw">await</span> db.Customers.<span class="fn">FindAsync</span>([<span class="num">42</span>], ct);
+customer!.Orders.<span class="fn">Add</span>(<span class="kw">new</span> <span class="ty">Order</span> { PlacedAt = <span class="ty">DateTime</span>.UtcNow });
+
+<span class="kw">await</span> db.<span class="fn">SaveChangesAsync</span>(ct);   <span class="cmt">// EF keeps FK ↔ navigation in sync ("fixup")</span>
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Fixup</span>
+    <p>EF continuously reconciles both views: set <code>order.CustomerId = 42</code> and (if customer 42 is tracked) <code>order.Customer</code> and <code>customer.Orders</code> update too, and vice versa. That's why you never manually maintain both sides — pick one, EF fixes up the rest among tracked entities.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ The Duplicate-Parent Trap</span>
+    <p>Building a new order for an <em>existing</em> customer? Set <code>CustomerId</code> — don't do <code>new Order {{ Customer = new Customer {{ Name = "Priya" }} }}</code>. A navigation pointing at an un-tracked, key-less object tells EF "this parent is new too," and you'll insert a duplicate customer. IDs for existing things, navigations for new graphs.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>🧬 Migrations Deep Dive</h2>
+
+  <p>Day 7 introduced the loop (change model → add migration → review → update). Today, open the hood. Running <code>dotnet ef migrations add AddProductTags</code> generates <strong>three files</strong> working together:</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-green"><div class="val">⬆️ Up()</div><div class="idx">apply the change</div></div>
+      <div class="arr-cell neg"><div class="val">⬇️ Down()</div><div class="idx">undo the change</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">📸 ModelSnapshot</div><div class="idx">current model, for the next diff</div></div>
+    </div>
+    <div class="arr-caption">Anatomy of a migration · timestamped file (Up/Down) + designer file + updated snapshot</div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Inside a generated migration</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public partial class</span> <span class="ty">AddProductTags</span> : <span class="ty">Migration</span>
+{
+    <span class="kw">protected override void</span> <span class="fn">Up</span>(<span class="ty">MigrationBuilder</span> migrationBuilder)
+    {
+        migrationBuilder.<span class="fn">CreateTable</span>(
+            name: <span class="str">"Tags"</span>,
+            columns: table =&gt; <span class="kw">new</span>
+            {
+                Id   = table.Column&lt;<span class="kw">int</span>&gt;(nullable: <span class="kw">false</span>)
+                    .<span class="fn">Annotation</span>(<span class="str">"SqlServer:Identity"</span>, <span class="str">"1, 1"</span>),
+                Name = table.Column&lt;<span class="kw">string</span>&gt;(maxLength: <span class="num">50</span>, nullable: <span class="kw">false</span>)
+            },
+            constraints: table =&gt; table.<span class="fn">PrimaryKey</span>(<span class="str">"PK_Tags"</span>, x =&gt; x.Id));
+        <span class="cmt">// ... join table, FKs, indexes ...</span>
+    }
+
+    <span class="kw">protected override void</span> <span class="fn">Down</span>(<span class="ty">MigrationBuilder</span> migrationBuilder)
+    {
+        migrationBuilder.<span class="fn">DropTable</span>(name: <span class="str">"Tags"</span>);   <span class="cmt">// the exact reverse</span>
+    }
+}
+</code></pre>
+  </div>
+
+  <h3>How EF knows what's pending 🧾</h3>
+  <p>The database carries a small bookkeeping table, <code>__EFMigrationsHistory</code>, listing every applied migration by ID. <code>dotnet ef database update</code> compares your project's migrations against that table and runs only the missing ones, in order, recording each. That's why the same command is safe to run repeatedly, on any environment.</p>
+
+  <h3>The commands, one level deeper 🛠️</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Command</th><th>What it does</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><code>dotnet ef migrations add Name</code></td><td>Diffs model vs snapshot → new migration files.</td><td>Doesn't touch the database. Review the Up()!</td></tr>
+      <tr><td><code>dotnet ef database update</code></td><td>Applies all pending migrations.</td><td>Runs UseSeeding/UseAsyncSeeding afterwards too (EF 9+).</td></tr>
+      <tr><td><code>dotnet ef database update PreviousName</code></td><td>Reverts: runs Down() of newer migrations back to the target.</td><td>Data created since may be lost — Down drops things.</td></tr>
+      <tr><td><code>dotnet ef migrations remove</code></td><td>Deletes the last migration + restores the snapshot.</td><td>Only if not yet applied; otherwise revert first.</td></tr>
+      <tr><td><code>dotnet ef migrations script --idempotent</code></td><td>Generates SQL that applies only what's missing.</td><td>The production-friendly deployment artifact.</td></tr>
+      <tr><td><code>dotnet ef migrations has-pending-model-changes</code></td><td>Checks if the model drifted from the last migration.</td><td>Great as a CI guard so nobody forgets a migration.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Renames Read as Drop + Add</span>
+    <p>Rename a property and the diff may scaffold <code>DropColumn</code> + <code>AddColumn</code> — schema correct, <strong>data gone</strong>. This is exactly why the review step exists: replace the pair with <code>migrationBuilder.RenameColumn(...)</code> by hand. Migrations are generated code, and generated code is <em>editable</em> code.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Applying Migrations at Startup — Dev Convenience Only</span>
+    <p><code>await db.Database.MigrateAsync()</code> in Program.cs is lovely for local dev: F5 and the schema is current. In production with multiple instances it's a race-condition machine. There, apply migrations as an explicit deployment step — the idempotent script or a migration bundle, run once by the pipeline (Day 7, Q18!).</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>🌱 Seeding Data</h2>
+
+  <p>A fresh database is uselessly empty — no statuses to pick, no categories, no sample rows to develop against. <strong>Seeding</strong> fills in that baseline. EF gives you two mechanisms with very different personalities:</p>
+
+  <h3>1 — <code>HasData</code>: model-managed data 📌</h3>
+  <p>Declared in <code>OnModelCreating</code>, baked into <strong>migrations</strong> as INSERT/UPDATE/DELETE data operations. The docs now call this "model managed data" rather than general seeding — a deliberate renaming, because it fits only a narrow shape of data:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · HasData for fixed lookup rows</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">protected override void</span> <span class="fn">OnModelCreating</span>(<span class="ty">ModelBuilder</span> modelBuilder)
+{
+    modelBuilder.<span class="fn">Entity</span>&lt;<span class="ty">OrderStatusLookup</span>&gt;().<span class="fn">HasData</span>(
+        <span class="kw">new</span> { Id = <span class="num">1</span>, Name = <span class="str">"Pending"</span>   },   <span class="cmt">// ⚠️ PK must be specified explicitly —</span>
+        <span class="kw">new</span> { Id = <span class="num">2</span>, Name = <span class="str">"Shipped"</span>   },   <span class="cmt">// it's how migrations diff the data</span>
+        <span class="kw">new</span> { Id = <span class="num">3</span>, Name = <span class="str">"Delivered"</span> });
+}
+<span class="cmt">// Next `migrations add` emits InsertData(...) calls into the migration.</span>
+</code></pre>
+  </div>
+
+  <p>Right for: small, <strong>static, deterministic</strong> lookup data (statuses, country codes) that should exist in every environment and only ever change via a migration. Wrong for: anything needing generated keys, hashing, <code>DateTime.Now</code>, external calls, or large volumes — those bloat snapshots and fight the diffing model.</p>
+
+  <h3>2 — <code>UseSeeding</code> / <code>UseAsyncSeeding</code>: runtime seeding (EF 9+) 🚿</h3>
+  <p>Plain C# callbacks configured with your context options. They run whenever the database is initialized — after <code>MigrateAsync()</code>, <code>EnsureCreated</code>, or <code>dotnet ef database update</code> — with full access to the context, so they can check what exists, hash, randomize, and call services:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Program.cs — modern runtime seeding</span><button class="copy-btn">Copy</button></div>
+<pre><code>builder.Services.<span class="fn">AddDbContext</span>&lt;<span class="ty">ShopContext</span>&gt;(options =&gt; options
+    .<span class="fn">UseSqlServer</span>(connectionString)
+    .<span class="fn">UseAsyncSeeding</span>(<span class="kw">async</span> (context, _, ct) =&gt;
+    {
+        <span class="cmt">// IDEMPOTENT: check before insert — this runs on every init</span>
+        <span class="kw">if</span> (<span class="kw">await</span> context.<span class="fn">Set</span>&lt;<span class="ty">Customer</span>&gt;().<span class="fn">AnyAsync</span>(ct)) <span class="kw">return</span>;
+
+        <span class="kw">var</span> priya = <span class="kw">new</span> <span class="ty">Customer</span> { Name = <span class="str">"Priya Sharma"</span>, Email = <span class="str">"priya@example.com"</span> };
+        priya.Orders.<span class="fn">Add</span>(<span class="kw">new</span> <span class="ty">Order</span> { PlacedAt = <span class="ty">DateTime</span>.UtcNow, Total = <span class="num">1499.50m</span> });
+
+        context.<span class="fn">Set</span>&lt;<span class="ty">Customer</span>&gt;().<span class="fn">AddRange</span>(priya,
+            <span class="kw">new</span> <span class="ty">Customer</span> { Name = <span class="str">"Arjun Rao"</span>, Email = <span class="str">"arjun@example.com"</span> });
+        <span class="kw">await</span> context.<span class="fn">SaveChangesAsync</span>(ct);
+    })
+    .<span class="fn">UseSeeding</span>((context, _) =&gt;
+    {
+        <span class="cmt">// Implement the sync twin too — EF tooling (database update)</span>
+        <span class="cmt">// uses THIS one; skip it and CLI-triggered seeding silently no-ops.</span>
+        <span class="kw">if</span> (context.<span class="fn">Set</span>&lt;<span class="ty">Customer</span>&gt;().<span class="fn">Any</span>()) <span class="kw">return</span>;
+        context.<span class="fn">Set</span>&lt;<span class="ty">Customer</span>&gt;().<span class="fn">Add</span>(<span class="kw">new</span> <span class="ty">Customer</span> { Name = <span class="str">"Priya Sharma"</span>, Email = <span class="str">"priya@example.com"</span> });
+        context.<span class="fn">SaveChanges</span>();
+    }));
+
+<span class="cmt">// In dev, trigger initialization at startup:</span>
+<span class="kw">using</span> (<span class="kw">var</span> scope = app.Services.<span class="fn">CreateScope</span>())
+{
+    <span class="kw">var</span> db = scope.ServiceProvider.<span class="fn">GetRequiredService</span>&lt;<span class="ty">ShopContext</span>&gt;();
+    <span class="kw">await</span> db.Database.<span class="fn">MigrateAsync</span>();    <span class="cmt">// applies migrations, then runs seeding</span>
+}
+</code></pre>
+  </div>
+
+  <h3>Which seeding, when? 🧭</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Data</th><th>Mechanism</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Fixed lookups: statuses, roles-as-constants, country codes</td><td>📌 <code>HasData</code></td><td>Static, deterministic, belongs in every environment — versioned with the schema.</td></tr>
+      <tr><td>Dev/test sample data: demo customers, fake orders</td><td>🚿 <code>UseSeeding</code>, gated by environment</td><td>Dynamic, environment-specific, must not live in migration files.</td></tr>
+      <tr><td>Data needing services: hashed admin user, API-fetched values</td><td>🚿 <code>UseAsyncSeeding</code> (or a custom startup seeder with DI)</td><td>Needs runtime logic HasData can't express.</td></tr>
+      <tr><td>Large datasets, imports</td><td>🛠️ Custom job/script</td><td>Both mechanisms are for baselines, not bulk loads.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Golden Rule of Seeding</span>
+    <p>Runtime seeding executes on <strong>every</strong> initialization, so it must be <strong>idempotent</strong>: check, then insert. The safe skeleton is always <code>if (already there) return;</code> — forget it and every restart plants another Priya.</p>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: Migrate &amp; Seed</h2>
+
+  <p>Today's <strong>Do</strong>: create a migration and apply it, then seed sample data. A path that exercises everything above:</p>
+
+  <ol>
+    <li>🔗 Extend the model: add a <code>Tag</code> entity with a many-to-many to <code>Product</code>, and an <code>IsDeleted</code> flag on <code>Product</code> with a global query filter (<code>HasQueryFilter</code>).</li>
+    <li>🧬 <code>dotnet ef migrations add AddTagsAndSoftDelete</code> — then <strong>open the migration file</strong>. Find the hidden join table, the FKs, and the new column. Can you read the Down()?</li>
+    <li>🚀 Apply it: <code>dotnet ef database update</code>. Check <code>__EFMigrationsHistory</code> in the database — your migration ID is now recorded.</li>
+    <li>📌 Add <code>HasData</code> for 3 fixed <code>Tag</code> rows (with explicit IDs) → that requires another migration: add it, read the <code>InsertData</code> calls, apply it.</li>
+    <li>🌱 Add <code>UseAsyncSeeding</code> + <code>UseSeeding</code> for dev sample data: 2 customers, each with an order containing 2 items (a graph add!). Make it idempotent, and gate it to Development.</li>
+    <li>▶️ Wire <code>MigrateAsync()</code> at startup (dev only), run the app twice — verify the second run seeds nothing extra.</li>
+    <li>✏️ Practice the write patterns: update a product's price (fetch-then-apply), soft-delete a product and confirm queries hide it, and bulk-archive old orders with <code>ExecuteUpdateAsync</code>.</li>
+    <li>↩️ Finale: roll back — <code>dotnet ef database update AddTagsAndSoftDelete</code> reverts the HasData migration; inspect what Down() did, then re-apply.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>Three questions to answer from your own project: (1) Which file decides what the <em>next</em> migration will contain, and why must it be committed? (2) Why did your seed data appear only once despite running twice? (3) In your order-graph insert, how did the items get their <code>OrderId</code> before you ever knew it?</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>🧺 Unit of work</b>Stage changes on the context, commit once with <code>SaveChangesAsync</code> — one business operation, one save, one transaction.</div>
+    <div class="recap-card"><b>➕ Add</b><code>Add/AddRange</code> mark entities (and reachable new graphs) Added; generated IDs flow back onto your objects after save.</div>
+    <div class="recap-card"><b>✏️ Update</b>Tracked: set properties, save. Disconnected: fetch-then-apply beats blanket <code>Update()</code>. Bulk: <code>ExecuteUpdateAsync</code>.</div>
+    <div class="recap-card"><b>🗑️ Delete</b><code>Remove</code>+save for entities, <code>ExecuteDeleteAsync</code> for sets, soft delete + query filter for valuable history.</div>
+    <div class="recap-card"><b>💾 SaveChangesAsync</b>DetectChanges → build commands → order by dependencies → one transaction → propagate IDs and reset states.</div>
+    <div class="recap-card"><b>🔗 Relationships</b>FK value or navigation — EF fixup syncs both; IDs for existing parents, navigations for new graphs; cascade choices bite on delete.</div>
+    <div class="recap-card"><b>🧬 Migrations</b>Up/Down + snapshot; <code>__EFMigrationsHistory</code> tracks what's applied; review every generated file — renames scaffold as drop+add.</div>
+    <div class="recap-card"><b>🌱 Seeding</b><code>HasData</code> for static lookups in migrations; <code>UseSeeding/UseAsyncSeeding</code> (EF 9+) for idempotent runtime data — implement both twins.</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Operation</th><th>Call</th><th>SQL produced</th><th>Remember</th></tr></thead>
+    <tbody>
+      <tr><td>➕ Insert one/graph</td><td><code>Add</code> + save</td><td>Ordered INSERTs, one transaction</td><td>New keys populated on your objects</td></tr>
+      <tr><td>✏️ Connected update</td><td>set properties + save</td><td>UPDATE of changed columns only</td><td>Requires tracked load (no AsNoTracking)</td></tr>
+      <tr><td>🌐 Disconnected update</td><td>fetch-then-apply DTO</td><td>SELECT + precise UPDATE</td><td><code>Update()</code> writes every column — use sparingly</td></tr>
+      <tr><td>⚡ Bulk update</td><td><code>ExecuteUpdateAsync</code></td><td>One set-based UPDATE</td><td>Immediate; bypasses tracker &amp; SaveChanges</td></tr>
+      <tr><td>🗑️ Delete</td><td><code>Remove</code> + save / <code>ExecuteDeleteAsync</code></td><td>DELETE (children per delete behavior)</td><td>Soft delete for auditable data</td></tr>
+      <tr><td>🔒 Concurrency</td><td><code>[Timestamp]</code> rowversion</td><td>UPDATE … WHERE RowVersion = @orig</td><td>Handle <code>DbUpdateConcurrencyException</code></td></tr>
+      <tr><td>🧬 Evolve schema</td><td><code>migrations add</code> → review → <code>database update</code></td><td>Generated DDL, history-tracked</td><td>Prod: idempotent script via pipeline</td></tr>
+      <tr><td>🌱 Seed</td><td><code>HasData</code> / <code>UseAsyncSeeding</code></td><td>InsertData in migrations / runtime INSERTs</td><td>Runtime seeding must be idempotent</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">Walk through how you insert a new row with EF Core.</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Create the object, hand it to the context, save: <code>db.Products.Add(new Product {...}); await db.SaveChangesAsync();</code>. <code>Add</code> only marks the entity as Added in the change tracker — nothing touches the database until <code>SaveChangesAsync</code>, which generates the INSERT, runs it in a transaction, and copies the database-generated ID back onto your object, so <code>product.Id</code> is usable immediately after the save.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">How does EF Core know which columns to UPDATE when you save?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>When a query loads an entity (tracked), the change tracker stores a snapshot of its original values. At save time, <code>DetectChanges</code> compares current values against that snapshot; properties that differ are marked modified, and the generated UPDATE lists <em>only those columns</em>. That's why the everyday update is just "load, set properties, save" — no explicit marking needed.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What does SaveChangesAsync guarantee about multiple pending changes?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Atomicity: all pending inserts, updates, and deletes in that save run inside <strong>one database transaction</strong>. Either every change is persisted or — if any statement fails — everything rolls back and an exception (<code>DbUpdateException</code>) is thrown. You never end up with an order saved but its items missing. It also orders statements to respect foreign keys and returns the number of rows affected.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">How do you delete an entity, and what happens to its related children?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Load it (or have it tracked), call <code>db.Products.Remove(entity)</code>, then save — EF issues a DELETE. What happens to children depends on the relationship's configured <em>delete behavior</em>: <code>Cascade</code> deletes them too (fits order → items), <code>Restrict</code> blocks the delete while children exist (fits customer → orders), and <code>SetNull</code> clears their foreign key if it's nullable. That behavior was chosen in your model configuration — deleting is where the choice takes effect.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What is a migration's Up and Down method?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>Up()</code> contains the operations that apply the schema change — create table, add column, create index. <code>Down()</code> contains the exact reverse, so the migration can be undone: <code>dotnet ef database update SomeEarlierMigration</code> runs the Down methods of everything newer, walking the schema back. Together they make schema changes replayable forward and backward, like version control for your database structure.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">How does the database know which migrations have already been applied?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>EF maintains a bookkeeping table in the database itself, <code>__EFMigrationsHistory</code>, with one row per applied migration. When you run <code>dotnet ef database update</code> (or <code>MigrateAsync()</code>), EF compares your project's migration list against that table and executes only the missing ones, in timestamp order, recording each as it goes. That's why the command is safe to repeat and works identically on a teammate's fresh database.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What is data seeding and why do apps need it?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Seeding is automatically populating a database with baseline data when it's created or migrated — lookup values (order statuses, roles), a default admin account, or sample data for development. Without it, a fresh database is an empty shell the app can't function against, and every developer would hand-insert rows differently. Seeding makes "clone the repo, run the app" produce a working system with consistent data everywhere.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">In a one-to-many relationship, what are the two ways to connect a child to its parent?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Either set the foreign key value directly — <code>order.CustomerId = 42</code>, ideal when you already have the ID — or use the navigation: add the order to <code>customer.Orders</code> (or set <code>order.Customer = customer</code>) when you've loaded the parent. Both produce the same row; EF's "fixup" keeps the FK and navigations synchronized among tracked entities, so you never maintain both sides manually.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">Compare fetch-then-apply with DbSet.Update() for a disconnected update. Which do you prefer?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><strong>Fetch-then-apply</strong>: load the current entity, copy allowed fields from the incoming DTO, save. Costs one SELECT, but gives a precise UPDATE of changed columns, natural 404 handling, validation against current state, and — importantly — the client can only affect fields your code explicitly copies. <strong><code>Update()</code></strong>: attaches the incoming object and marks <em>every</em> property modified — no SELECT, but it overwrites all columns with client-supplied values (an over-posting risk), can't tell "missing" from "cleared," and throws if the row is gone. I default to fetch-then-apply for APIs; <code>Update()</code> suits trusted, full-object sync scenarios.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">What happens step by step inside SaveChangesAsync?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>(1) <code>DetectChanges</code> compares tracked entities against snapshots, promoting silently-edited ones to Modified and fixing up relationships. (2) Each Added/Modified/Deleted entity becomes an INSERT/UPDATE (changed columns only)/DELETE. (3) Commands are sorted to honor dependencies — parents before children for inserts, the reverse for deletes — and batched. (4) Everything executes in a single transaction; failures roll back and throw. (5) Database-generated values (identities, rowversions) are read back onto the objects and saved entities reset to Unchanged. Return value: total rows affected.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">When do you need an explicit transaction if SaveChanges already provides one?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>When one business operation requires <em>multiple</em> <code>SaveChangesAsync</code> calls — say you must persist an order first to obtain its generated ID and then write an audit row referencing it — each save would otherwise be its own transaction, and a failure between them leaves partial state. <code>BeginTransactionAsync</code> lets both saves commit or roll back together. Also needed when coordinating EF work with raw ADO/Dapper commands on the same connection. Caveat: with a retrying execution strategy enabled, wrap the transactional unit in <code>strategy.ExecuteAsync</code> so the whole thing can retry.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">Explain optimistic concurrency in EF Core and how you'd implement it.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Optimistic concurrency assumes conflicts are rare and detects them instead of locking: each row carries a version (SQL Server <code>rowversion</code>, mapped with <code>[Timestamp]</code> or <code>IsRowVersion()</code>). Updates become <code>UPDATE … WHERE Id = @id AND RowVersion = @originalVersion</code>. If another writer changed the row since you read it, zero rows match and EF throws <code>DbUpdateConcurrencyException</code>. You then choose a policy: tell the user and show fresh data, retry with reload, or merge field-by-field. Without a token, the default is silent last-write-wins — fine for some data, dangerous for money and stock.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">HasData vs UseSeeding/UseAsyncSeeding — when is each appropriate?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><code>HasData</code> ("model-managed data") is baked into migrations: it requires explicit primary keys, must be static and deterministic (no <code>DateTime.Now</code>, hashing, or services), and suits small fixed lookups — statuses, codes — that belong in every environment and change only via migration. <code>UseSeeding</code>/<code>UseAsyncSeeding</code> (EF 9+) are runtime callbacks executed after <code>Migrate</code>/<code>EnsureCreated</code>/<code>database update</code>: plain C# with full context access, so they handle dynamic data, environment-specific samples, hashed users, and existence checks. Rules of thumb: static-and-structural → HasData; everything else → runtime seeding, written idempotently, with <em>both</em> the sync and async callbacks implemented (tooling uses the sync one).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">Why must runtime seeding be idempotent, and how do you make it so?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Because the seeding callbacks run on <em>every</em> database initialization — every startup that calls <code>MigrateAsync</code>, every <code>database update</code>, even with no pending migrations. Non-idempotent seeding therefore duplicates its data on each run. The pattern: check before insert — <code>if (await context.Set&lt;Customer&gt;().AnyAsync()) return;</code> for wholesale seeding, or per-row existence checks (by a natural key like email) for finer-grained top-ups. Deterministic keys or unique constraints act as a second line of defense.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">You renamed a property and the migration drops and re-adds the column. Why, and what do you do?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>The migration generator only sees two model snapshots — before and after. A property that disappeared plus a property that appeared is indistinguishable from "delete one column, add another," so it scaffolds <code>DropColumn</code> + <code>AddColumn</code>, which would destroy the data in that column. The fix is the review step: edit the generated migration and replace the pair with a single <code>migrationBuilder.RenameColumn(name, table, newName)</code> (same for RenameTable). This is the canonical example of why migrations must be read before being applied — they're editable generated code, not gospel.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">How does EF Core handle a many-to-many relationship without a join entity class?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>If both entities expose collection navigations to each other (Product has <code>List&lt;Tag&gt;</code>, Tag has <code>List&lt;Product&gt;</code>), EF conventions create an implicit join table (e.g., <code>ProductTag</code> with both FKs as a composite key) — no C# class needed. Linking is collection work: <code>product.Tags.Add(tag); SaveChangesAsync();</code> inserts a join row; removing from the collection deletes it. When the relationship itself carries data (quantity, date added), you promote it to an explicit join entity with its own class and two one-to-manys — or use <code>UsingEntity</code> to configure payload on the join table.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Design a zero-downtime strategy for a destructive schema change (e.g., splitting a column).</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Never do it in one migration — use the expand/contract pattern across releases. <strong>Expand</strong>: migration adds the new columns alongside the old; deploy code that writes to both but still reads the old (or reads new with fallback). <strong>Migrate data</strong>: a backfill — batched SQL in a migration or a background job — populates the new columns for existing rows. <strong>Switch</strong>: deploy code reading the new columns exclusively; verify. <strong>Contract</strong>: a final migration drops the old column once nothing references it. Each step is individually reversible, old and new app versions coexist during rollout, and a rollback at any stage loses nothing. Wrap it with backups, an idempotent script per stage applied by the pipeline, and metrics watching the dual-write window.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">SaveChanges throws DbUpdateException in production. What's your triage process?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>First read the <em>inner</em> exception — that's the actual SqlException with the story: unique constraint violation (duplicate key — race on a natural key? missing upsert logic?), FK violation (inserting a child whose parent was deleted, or delete blocked by Restrict), null constraint (model/DB drift or an unmapped required column), string truncation (data longer than the column). The exception's <code>Entries</code> collection tells you which entities were involved. Then classify: <strong>data race</strong> → add the missing uniqueness handling or concurrency token; <strong>drift</strong> → compare model to schema, check pending migrations; <strong>bad input</strong> → validation gap upstream. Log the failure with the entity keys (Day 6 structured logging), never swallow it, and reproduce with the same data locally before patching.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">When do ExecuteUpdate/ExecuteDelete become dangerous, and what guardrails do you apply?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Dangers: they run <em>immediately</em>, outside the SaveChanges unit of work — mixing them with staged changes breaks the "all together" expectation unless you open an explicit transaction spanning both; they bypass the change tracker, so already-loaded entities silently go stale; they skip EF-level cascades and any C# business rules that normally run on save (domain events, auditing interceptors, soft-delete conventions). Guardrails: reserve them for genuinely set-shaped maintenance (archiving, purging, counters); require a <code>Where</code> — never call them on an unfiltered set; wrap in an explicit transaction when combined with tracked work; re-query rather than trust tracked instances afterwards; and route audited entities through the tracked path so interceptors still fire.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How do you keep migrations sane across a team with parallel feature branches?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The failure mode: two branches each add a migration from the same snapshot; after merging, the snapshot only reflects one and the model diverges. Process fixes: keep migrations small and merged quickly; on merge conflicts in the snapshot, the later branch removes its migration (<code>migrations remove</code>) and re-adds it on top of the merged model — regenerating is cheap, hand-merging snapshots is not. Add a CI guard: <code>dotnet ef migrations has-pending-model-changes</code> fails the build when someone changed the model without a migration. Convention: one migration per PR where possible, descriptive names, and the rule that a migration file, once merged to main, is immutable — corrections are new migrations, never edits to applied ones.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">Where do you put the seeding of an admin user whose password must be hashed with ASP.NET Identity?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Not in <code>HasData</code> — hashing isn't deterministic and needs services, both disqualifiers for model-managed data. Two good options: <code>UseAsyncSeeding</code> registered where the service provider is available (the AddDbContext overload receiving <code>IServiceProvider</code> lets you resolve <code>UserManager</code>/<code>RoleManager</code>), with an idempotent "does the admin exist" check; or a dedicated startup seeder — a small service invoked from Program.cs (or an <code>IHostedService</code>) inside a scope, which is the most flexible for multi-step initialization and easiest to test. Either way: credentials come from configuration/secrets, never hard-coded; the operation is idempotent; and in clustered production you ensure single execution (the EF 9 seeding callbacks are protected by the migration lock, which is one of their quiet advantages).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">Argue for and against applying migrations automatically at application startup.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p><strong>For</strong>: zero-friction dev experience (F5 and the schema is current), guaranteed schema/code alignment per deployment, simplest possible pipeline for single-instance apps and internal tools. <strong>Against</strong>: in multi-instance production, several nodes race to migrate simultaneously (EF's migration locking mitigates but startup still blocks); the app's runtime identity now needs DDL permissions — a security smell; a broken migration takes the whole app down at boot rather than failing a controlled deploy step; and there's no human review gate before irreversible DDL runs. My line: <code>MigrateAsync</code> at startup for Development (and maybe single-instance staging); for production, migrations are a first-class deployment step — idempotent script or bundle, executed once by the pipeline with elevated credentials, before the new app version rolls out.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">A teammate models "order archived" by physically deleting rows into an archive table via cascade tricks. Propose something better.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Recommend soft delete / status modeling for the live system: an <code>ArchivedAt</code> (nullable timestamp beats a boolean — it's a flag <em>and</em> an audit fact) with a global query filter so normal queries never see archived orders, and an explicit <code>IgnoreQueryFilters()</code> path for admin/reporting screens. Archival to cheaper storage, if genuinely needed for volume, becomes a separate scheduled job using set-based operations (<code>ExecuteUpdate</code>/bulk copy) — deliberate, monitored, reversible — rather than a side effect of cascade rules, which are invisible in code review and merciless in accidents. Benefits: undo is trivial, referential integrity stays intact (order items, payments still join), auditors are happy, and "deleted by cascade surprise" stops being an incident category.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">How would you test data-layer code that performs writes — unit, integration, or both?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Both, with clear roles. <strong>Unit tests</strong> cover business logic around the data layer — keep them free of EF where possible by testing domain behavior, not the ORM. For the data layer itself, <strong>integration tests against a real database engine</strong> are the truth: SQL Server in a container (Testcontainers) or LocalDB, schema created by running your actual migrations (which tests the migrations too!), each test isolated via a transaction rollback or a fresh database per class. The in-memory provider is tempting but lies — no relational behavior, no constraints, no translation validation; SQLite in-memory is closer but still diverges from SQL Server on types and features. Assert on real effects: row counts, constraint violations, concurrency exceptions, cascade outcomes. Fast feedback tier: unit tests on logic; nightly/PR tier: the containerized integration suite.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Nail Q1–Q8 first — the add/update/delete mechanics and the migrations bookkeeping are what interviewers use to check you've actually shipped EF code. Then drill Q10 and Q12 together: "what does SaveChanges do" plus "how do you stop lost updates" is the classic one-two punch. The senior set makes most sense after the hands-on — once you've read a real Up() method and rolled a migration back, expand/contract (Q17) and team workflow (Q20) become war stories rather than trivia.</p>
+  </div>
+</section>
+
+<footer>Day 9 of the .NET series · EF Core Writes &amp; Migrations: SaveChanges, Relationships &amp; Seeding · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 1 — Web API &amp; REST Basics: Resources, HTTP Verbs, Status Codes &amp; Swagger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">🌐 Day 1 · Web API &amp; REST</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Concepts</div>
+    <a href="#s01"><span class="n">01</span>What Is a Web API?</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>REST Principles</a>
+    <a href="#s04"><span class="n">04</span>Resources &amp; URLs</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">The HTTP Language</div>
+    <a href="#s05"><span class="n">05</span>HTTP Verbs</a>
+    <a href="#s06"><span class="n">06</span>Status Codes</a>
+    <a href="#s07"><span class="n">07</span>Request &amp; Response</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Hands-On</div>
+    <a href="#s08"><span class="n">08</span>Scaffolding the Project</a>
+    <a href="#s09"><span class="n">09</span>Swagger &amp; OpenAPI</a>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 01 · ASP.NET Core Web API</div>
+  <h1>🌐 Web API &amp; REST: The Language of the Web</h1>
+  <p class="lede">Before you write a line of ASP.NET Core, you need to know what you're building and the rules it plays by. Today: what a Web API actually <em>is</em>, the REST principles that shape it, how the web names things (resources &amp; URLs), and the vocabulary every request speaks — HTTP verbs and status codes. Then you'll scaffold a real project and watch it answer its first request.</p>
+  <div class="agenda">
+    <span class="chip">🌐 What's a Web API</span>
+    <span class="chip">🧭 REST</span>
+    <span class="chip">📦 Resources</span>
+    <span class="chip">🔤 HTTP Verbs</span>
+    <span class="chip">🚦 Status Codes</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>🌐 What Is a Web API?</h2>
+
+  <p>An <strong>API</strong> — Application Programming Interface — is a contract that lets one piece of software talk to another. A <strong>Web API</strong> is an API you reach over the internet using HTTP, the same protocol your browser uses. Instead of returning a web <em>page</em> for a human to look at, it returns <strong>data</strong> (usually JSON) for another <em>program</em> to use.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🍽️ Analogy</span>
+    <p>A Web API is a <strong>restaurant kitchen with a waiter</strong>. You (a phone app, a website, another server) don't march into the kitchen and cook — you give the waiter an order from a menu, the waiter takes it to the kitchen, and brings back exactly what you asked for. The <strong>menu</strong> is the API's list of what you can request; the <strong>waiter</strong> is HTTP carrying your order back and forth; the <strong>kitchen</strong> is the server doing the real work. You never see the kitchen; you just trust the contract on the menu.</p>
+  </div>
+
+  <p>The same Web API can feed many different clients at once — a mobile app, a website, a smart watch, another company's server — because they all speak the same neutral language: HTTP requests in, data responses out.</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-blue"><div class="val">📱 Mobile app</div><div class="idx">client</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">💻 Website</div><div class="idx">client</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">🖥️ Another server</div><div class="idx">client</div></div>
+    </div>
+    <div class="arr-row" style="margin-top:6px;">
+      <div class="arr-cell"><div class="val">⬇ HTTP ⬆</div><div class="idx">requests &amp; responses</div></div>
+    </div>
+    <div class="arr-row" style="margin-top:6px;">
+      <div class="arr-cell highlight"><div class="val">🌐 Your Web API</div><div class="idx">one server, many clients</div></div>
+      <div class="arr-cell highlight-green"><div class="val">🗄️ Database</div><div class="idx">the real data</div></div>
+    </div>
+    <div class="arr-caption">One API, many clients · every client speaks HTTP · the API is the single front door to your data</div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Key Idea</span>
+    <p>A Web API separates the <strong>front end</strong> (what users see — apps, websites) from the <strong>back end</strong> (data and business logic). That separation is why the same API can power an iPhone app and a website simultaneously, and why teams can rebuild the app without touching the server. You're building the back end that everything else talks to.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <div class="mindmap">
+    <div class="mm-core">Web API &amp; REST<small>data over HTTP</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-blue">
+        <h4>🌐 Web API</h4>
+        <ul>
+          <li>Data (JSON), not pages</li>
+          <li>Over HTTP</li>
+          <li>Many clients, one server</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-accent">
+        <h4>🧭 REST</h4>
+        <ul>
+          <li>An architectural style</li>
+          <li>Resources + verbs</li>
+          <li>Stateless, uniform</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>📦 Resources</h4>
+        <ul>
+          <li>Nouns: <code>/products</code></li>
+          <li>Identified by URL</li>
+          <li>Collections &amp; items</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-rose">
+        <h4>🔤 Verbs</h4>
+        <ul>
+          <li>GET / POST</li>
+          <li>PUT / PATCH / DELETE</li>
+          <li>The action to take</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>🚦 Status Codes</h4>
+        <ul>
+          <li>2xx success</li>
+          <li>4xx your fault</li>
+          <li>5xx server's fault</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p>The mental model to carry all fortnight: a client names a <strong>resource</strong> with a URL, states an <strong>action</strong> with an HTTP verb, and gets back <strong>data</strong> plus a <strong>status code</strong> saying how it went. REST is just the set of conventions that make this predictable across every API in the world.</p>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>🧭 REST Principles</h2>
+
+  <p><strong>REST</strong> (Representational State Transfer) isn't a technology or a library — it's an <strong>architectural style</strong>, a set of conventions for designing web APIs so they're predictable, scalable, and easy to consume. An API that follows them is called <strong>RESTful</strong>. You don't install REST; you <em>design</em> for it.</p>
+
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">📦</span><b>Resource-based</b><p>Everything is a "resource" (a customer, an order) identified by a URL. You act <em>on resources</em>, not on function calls.</p></div>
+    <div class="card"><span class="glyph">🔤</span><b>Uniform interface</b><p>The same small set of HTTP verbs (GET, POST, …) works across every resource, so once you know one endpoint you can guess the others.</p></div>
+    <div class="card"><span class="glyph">🎫</span><b>Stateless</b><p>Each request carries everything the server needs. The server remembers nothing between requests — no "session" of what you did last.</p></div>
+    <div class="card"><span class="glyph">🖥️</span><b>Client–server</b><p>The client (UI) and server (data) are separate and independent — either can change without breaking the other, as long as the contract holds.</p></div>
+    <div class="card"><span class="glyph">🗂️</span><b>Cacheable</b><p>Responses can say whether they're safe to cache, so clients and proxies can reuse them instead of re-asking — faster and lighter.</p></div>
+    <div class="card"><span class="glyph">🎭</span><b>Representations</b><p>A resource (the order) is separate from how it's sent (usually JSON). The same order could be JSON, XML, etc. — JSON is the norm today.</p></div>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">📮 Analogy</span>
+    <p><strong>Stateless</strong> is the confusing one, so: think of each request as a <strong>complete letter, not a phone call</strong>. On a phone call, both sides remember the conversation so far ("as I was saying…"). A letter must contain everything needed to be understood on its own — who you are, what you want — because the reader has no memory of previous letters. REST requests are letters: self-contained. That's what lets any server in a farm handle any request, which is how APIs scale.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Why REST Won</span>
+    <p>Because it's <strong>predictable</strong>. Once you learn that <code>GET /products</code> lists products and <code>GET /products/5</code> gets one, you can guess how <em>any</em> RESTful API's customers, orders, or invoices work without reading much documentation. That consistency across the entire industry is REST's superpower — and it's why interviewers care that you understand the conventions, not just the syntax.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ "RESTful" Is a Spectrum</span>
+    <p>Few real APIs follow every REST principle perfectly, and that's fine. In practice "RESTful" means "uses resources, HTTP verbs, and status codes sensibly." Don't get dogmatic — aim for clear, consistent, conventional. The goal is an API another developer can predict, not a purity badge.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>📦 Resources &amp; URLs</h2>
+
+  <p>In REST, a <strong>resource</strong> is any "thing" your API exposes — a product, a customer, an order. Each resource is named by a <strong>URL</strong> (the address). The golden rule: URLs are <strong>nouns</strong>, not verbs. The verb comes from the HTTP method (next section), so the URL just names the thing.</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>URL</th><th>Refers to</th><th>Kind</th></tr></thead>
+    <tbody>
+      <tr><td><code>/products</code></td><td>The whole collection of products</td><td>Collection</td></tr>
+      <tr><td><code>/products/42</code></td><td>The single product with id 42</td><td>Item</td></tr>
+      <tr><td><code>/customers/7/orders</code></td><td>All orders belonging to customer 7</td><td>Sub-collection</td></tr>
+      <tr><td><code>/customers/7/orders/3</code></td><td>Order 3 of customer 7</td><td>Nested item</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ URLs Are Nouns, Not Verbs</span>
+    <p>A classic beginner mistake is putting actions in the URL: <code>/getProducts</code>, <code>/createProduct</code>, <code>/deleteProduct/42</code>. Don't. The URL names the <em>resource</em> (<code>/products</code>, <code>/products/42</code>); the HTTP <em>verb</em> says what to do with it (GET to read, POST to create, DELETE to remove). <code>DELETE /products/42</code> — not <code>GET /deleteProduct/42</code>. Nouns in the path, verbs in the method.</p>
+  </div>
+
+  <h3>Query strings: filtering, not identity 🔎</h3>
+  <p>The path identifies <em>which</em> resource; the <strong>query string</strong> (after the <code>?</code>) refines <em>how</em> you want the collection — filtering, sorting, paging. It doesn't name a different thing, it tunes the request:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">URLs · path vs query string</span><button class="copy-btn">Copy</button></div>
+<pre><code>GET /products                      <span class="cmt"># all products</span>
+GET /products?category=keyboards   <span class="cmt"># filter the collection</span>
+GET /products?sort=price&amp;page=2     <span class="cmt"># sort + paginate</span>
+GET /products/42                   <span class="cmt"># one specific product (path, not query)</span>
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Naming Conventions</span>
+    <p>Use <strong>plural nouns</strong> for collections (<code>/products</code>, not <code>/product</code>), lowercase with hyphens for multi-word paths (<code>/order-items</code>), and keep nesting shallow (one or two levels — <code>/customers/7/orders</code> is fine, five levels deep is a smell). Consistency matters more than any single rule: pick a convention and hold to it across the whole API.</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>🔤 HTTP Verbs</h2>
+
+  <p>The HTTP <strong>verb</strong> (or method) states the <em>action</em> to perform on the resource named by the URL. There's a small, standard set, and each has an agreed meaning. Master these five and you can read almost any API:</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Verb</th><th>Means</th><th>Example</th><th>Body?</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET</code></td><td>Read — fetch a resource, change nothing</td><td><code>GET /products/42</code></td><td>No</td></tr>
+      <tr><td><code>POST</code></td><td>Create — add a new resource to a collection</td><td><code>POST /products</code></td><td>Yes (the new item)</td></tr>
+      <tr><td><code>PUT</code></td><td>Replace — update a resource wholesale</td><td><code>PUT /products/42</code></td><td>Yes (full item)</td></tr>
+      <tr><td><code>PATCH</code></td><td>Modify — update part of a resource</td><td><code>PATCH /products/42</code></td><td>Yes (changed fields)</td></tr>
+      <tr><td><code>DELETE</code></td><td>Remove — delete a resource</td><td><code>DELETE /products/42</code></td><td>No</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Two properties worth knowing: safe &amp; idempotent 🧮</h3>
+  <div class="cards-grid">
+    <div class="card"><span class="glyph">🕊️</span><b>Safe</b><p>The verb doesn't change anything on the server. <code>GET</code> is safe — reading a product a hundred times changes nothing. POST/PUT/DELETE are not safe.</p></div>
+    <div class="card"><span class="glyph">🔁</span><b>Idempotent</b><p>Doing it many times has the same effect as doing it once. <code>GET</code>, <code>PUT</code>, and <code>DELETE</code> are idempotent; <code>POST</code> is not (two POSTs create two things).</p></div>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">🛗 Analogy</span>
+    <p><strong>Idempotent</strong> is the elevator-button rule. Pressing "call the elevator" once or five times summons the same one elevator — that's idempotent (DELETE, PUT). But putting a coin in a vending machine five times dispenses five snacks — that's <em>not</em> idempotent (POST). It matters because if a network glitch makes a client retry, an idempotent request is safe to repeat; a POST retried blindly might create a duplicate order.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Verb + Noun = Intent</span>
+    <p>The whole grammar of a REST request is <strong>verb + resource</strong>. <code>GET /orders</code> = "read the orders." <code>POST /orders</code> = "create an order." <code>DELETE /orders/3</code> = "remove order 3." The URL never needs a verb because the HTTP method already <em>is</em> the verb. This is the single most important habit to build on Day 1.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>🚦 Status Codes</h2>
+
+  <p>Every HTTP response comes with a three-digit <strong>status code</strong> that tells the client, at a glance, how the request went. They're grouped by the first digit — learn the families first, then the common members.</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-green"><div class="val">2xx</div><div class="idx">✅ Success</div></div>
+      <div class="arr-cell highlight-blue"><div class="val">3xx</div><div class="idx">↪️ Redirect</div></div>
+      <div class="arr-cell highlight"><div class="val">4xx</div><div class="idx">🙋 Your fault</div></div>
+      <div class="arr-cell neg"><div class="val">5xx</div><div class="idx">💥 Server's fault</div></div>
+    </div>
+    <div class="arr-caption">The five families · the first digit tells you the category before you read the number</div>
+  </div>
+
+  <div class="callout analogy">
+    <span class="tag">🚦 Analogy</span>
+    <p>Status codes are the <strong>facial expression</strong> the server gives back with every answer. 2xx is a smile ("here you go"). 4xx is a raised eyebrow ("<em>you</em> asked wrong — that doesn't exist, or you're not allowed"). 5xx is a wince ("<em>I</em> messed up — something broke on my end"). You can read the room from the first digit before you even hear the words.</p>
+  </div>
+
+  <h3>The ones you'll use constantly</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Code</th><th>Name</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td><code>200</code></td><td>OK</td><td>Success — here's your data (typical GET response).</td></tr>
+      <tr><td><code>201</code></td><td>Created</td><td>Success — a new resource was created (typical POST response).</td></tr>
+      <tr><td><code>204</code></td><td>No Content</td><td>Success — done, nothing to return (typical DELETE response).</td></tr>
+      <tr><td><code>400</code></td><td>Bad Request</td><td>The request was malformed or failed validation — the client's fault.</td></tr>
+      <tr><td><code>401</code></td><td>Unauthorized</td><td>You're not authenticated — the API doesn't know who you are.</td></tr>
+      <tr><td><code>403</code></td><td>Forbidden</td><td>It knows who you are, but you're not allowed to do this.</td></tr>
+      <tr><td><code>404</code></td><td>Not Found</td><td>The resource doesn't exist.</td></tr>
+      <tr><td><code>409</code></td><td>Conflict</td><td>Clashes with current state (e.g. duplicate, or a concurrency conflict).</td></tr>
+      <tr><td><code>500</code></td><td>Internal Server Error</td><td>Something threw on the server — the classic "it broke."</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ 401 vs 403 — a Favorite Interview Trap</span>
+    <p>They sound alike but mean different things. <strong>401 Unauthorized</strong> = "I don't know who you are" — you haven't logged in / your token is missing or invalid. <strong>403 Forbidden</strong> = "I know exactly who you are, and you're not allowed to do this." The names are historically confusing (401 is really about <em>authentication</em>, 403 about <em>authorization</em>), so the memory hook is: 401 = <em>who are you?</em>, 403 = <em>you can't.</em></p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Return the Right Code — It's an API's Manners</span>
+    <p>Returning <code>200 OK</code> with an error message buried in the body is a broken API — clients rely on the <em>code</em> to branch. A missing item is <code>404</code>, not a <code>200</code> with "not found" text. Bad input is <code>400</code>. A created order is <code>201</code>, not <code>200</code>. Using accurate status codes is how your API communicates clearly — and it's exactly what these study notes will keep coming back to.</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>📨 Anatomy of a Request &amp; Response</h2>
+
+  <p>Put it all together and watch one round trip. A client wants product 42; here's the full conversation, piece by piece:</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="emoji">📤</span>
+      <div><b>1. The client sends a request</b><span class="desc">A verb + URL (<code>GET /products/42</code>), plus headers (e.g. <code>Accept: application/json</code> — "send me JSON"). GET has no body.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">🌐</span>
+      <div><b>2. It travels over HTTP to the server</b><span class="desc">Across the internet to your Web API, which is listening on a host and port.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="emoji">⚙️</span>
+      <div><b>3. The API handles it</b><span class="desc">It matches the verb + URL to the right code, does the work (often reading a database), and builds a response.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">📥</span>
+      <div><b>4. The server sends a response</b><span class="desc">A status code (<code>200 OK</code>), headers (<code>Content-Type: application/json</code>), and a body — the product as JSON.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">✅</span>
+      <div><b>5. The client reads the result</b><span class="desc">It checks the status code first (did it work?), then parses the JSON body into an object to use.</span></div>
+    </div>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">HTTP · a request and its response</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># ── REQUEST ──</span>
+GET /products/42 HTTP/1.1
+Host: api.myshop.com
+Accept: application/json
+
+<span class="cmt"># ── RESPONSE ──</span>
+HTTP/1.1 <span class="num">200</span> OK
+Content-Type: application/json
+
+{
+  <span class="str">"id"</span>: <span class="num">42</span>,
+  <span class="str">"name"</span>: <span class="str">"Mechanical Keyboard"</span>,
+  <span class="str">"price"</span>: <span class="num">4999.00</span>
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Four Parts Each Way</span>
+    <p>A <strong>request</strong> is: verb + URL + headers + (optional) body. A <strong>response</strong> is: status code + headers + (optional) body. That's the entire shape of every HTTP exchange on the web — an app, your browser, an API call all use exactly this structure. Once you see it, the whole thing stops being mysterious.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>🏗️ Scaffolding the Project</h2>
+
+  <p>Enough theory — let's make one. The .NET SDK ships a Web API template that gives you a working, runnable API in one command. You'll need the <strong>.NET SDK</strong> installed (check with <code>dotnet --version</code>).</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal · create &amp; run</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt"># Create a new Web API project called MyShop.Api:</span>
+dotnet new webapi -n MyShop.Api
+
+<span class="cmt"># Move into it and run:</span>
+cd MyShop.Api
+dotnet run
+</code></pre>
+  </div>
+
+  <p>When it starts, the console prints the URL it's listening on, e.g. <code>http://localhost:5xxx</code>. The template gives you a tiny demo endpoint — a <code>/weatherforecast</code> route that returns five days of made-up weather as JSON. Hit it in a browser or with <code>curl</code>:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Terminal · call the demo endpoint</span><button class="copy-btn">Copy</button></div>
+<pre><code>curl http://localhost:5xxx/weatherforecast
+
+<span class="cmt"># → a JSON array of forecasts:</span>
+<span class="cmt"># [{"date":"2026-07-08","temperatureC":22,"summary":"Mild"}, ...]</span>
+</code></pre>
+  </div>
+
+  <p>That JSON coming back is your proof: you have a running Web API answering HTTP requests. Look at what the template created:</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>File</th><th>What it is</th></tr></thead>
+    <tbody>
+      <tr><td><code>Program.cs</code></td><td>The entry point — sets up and starts the app, and (in the minimal template) defines the weather endpoint.</td></tr>
+      <tr><td><code>MyShop.Api.csproj</code></td><td>The project file — target framework and package references.</td></tr>
+      <tr><td><code>appsettings.json</code></td><td>Configuration — settings like logging levels (you'll use this a lot later).</td></tr>
+      <tr><td><code>Properties/launchSettings.json</code></td><td>Local run settings — which URLs and ports, which browser to open.</td></tr>
+      <tr><td><code>MyShop.Api.http</code></td><td>A file of sample requests you can run right from your editor to test endpoints.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Two Template Flavors</span>
+    <p>The default <code>dotnet new webapi</code> uses <strong>minimal APIs</strong> — endpoints defined as compact lambdas in <code>Program.cs</code>. Add <code>--use-controllers</code> for the classic <strong>controller</strong> style (separate controller classes). Both are valid and current; minimal APIs are the lean default, controllers suit larger apps. Either way, the weather demo runs the same. Don't worry about which yet — just get it running.</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>📖 Swagger &amp; OpenAPI</h2>
+
+  <p>Calling endpoints with <code>curl</code> works, but there's a friendlier way to <em>explore</em> an API: a web page that lists every endpoint and lets you try them in the browser. That's what <strong>Swagger UI</strong> does — and it's built on <strong>OpenAPI</strong>, a standard, machine-readable description of your API (which endpoints exist, what they take, what they return).</p>
+
+  <div class="callout analogy">
+    <span class="tag">📋 Analogy</span>
+    <p><strong>OpenAPI</strong> is the printed <em>menu</em> of your API — a precise, structured list of everything on offer. <strong>Swagger UI</strong> is a nicely designed, interactive version of that menu you can read and order from directly. The kitchen (your API) generates the menu automatically from the code, so it's never out of date.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Important Change: Swagger Isn't in the Template Anymore</span>
+    <p>Older tutorials show Swagger UI appearing automatically. <strong>Since .NET 9, the Web API template no longer includes Swagger (Swashbuckle).</strong> Instead it ships Microsoft's built-in <code>Microsoft.AspNetCore.OpenApi</code>, which <em>generates the OpenAPI description</em> (served as JSON at <code>/openapi/v1.json</code>) but gives you <strong>no UI page</strong> out of the box. If a tutorial says "just go to <code>/swagger</code>" and it 404s, this is why. You add a UI yourself.</p>
+  </div>
+
+  <h3>Step 1 — See the raw OpenAPI document 📄</h3>
+  <p>The template already generates it. Run the app and open, in your browser:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">Browser · the OpenAPI JSON</span><button class="copy-btn">Copy</button></div>
+<pre><code>http://localhost:5xxx/openapi/v1.json
+
+<span class="cmt"># → raw JSON describing every endpoint. Great for tools, ugly for humans.</span>
+</code></pre>
+  </div>
+
+  <h3>Step 2 — Add a UI to read it 🖼️</h3>
+  <p>Pick a viewer and point it at that JSON. Two common choices — <strong>Scalar</strong> (the modern default many teams now use) or the classic <strong>Swagger UI</strong>:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · Program.cs — add an interactive UI</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// The template already has this — it generates the OpenAPI document:</span>
+builder.Services.<span class="fn">AddOpenApi</span>();
+
+<span class="kw">var</span> app = builder.<span class="fn">Build</span>();
+
+<span class="kw">if</span> (app.Environment.<span class="fn">IsDevelopment</span>())
+{
+    app.<span class="fn">MapOpenApi</span>();               <span class="cmt">// serves /openapi/v1.json (already there)</span>
+
+    <span class="cmt">// Option A — Scalar (dotnet add package Scalar.AspNetCore):</span>
+    app.<span class="fn">MapScalarApiReference</span>();     <span class="cmt">// browse at /scalar</span>
+
+    <span class="cmt">// Option B — classic Swagger UI</span>
+    <span class="cmt">// (dotnet add package Swashbuckle.AspNetCore.SwaggerUi):</span>
+    <span class="cmt">// app.UseSwaggerUI(o =&gt; o.SwaggerEndpoint("/openapi/v1.json", "v1")); // at /swagger</span>
+}
+</code></pre>
+  </div>
+
+  <p>Now run again and open <code>/scalar</code> (or <code>/swagger</code>). You'll see the <code>/weatherforecast</code> endpoint listed with a "try it out" button — click it, send a real request, and watch the JSON and <code>200</code> status come back, right in the browser. That's you "reading the API via Swagger."</p>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Keep the Docs to Development</span>
+    <p>Notice the UI is registered inside <code>if (app.Environment.IsDevelopment())</code>. That's deliberate: an OpenAPI document is a complete map of your API's surface, so you generally don't expose it publicly in production. Explore freely on your machine; lock it down when you ship.</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 OpenAPI Is the Contract, the UI Is Just a Reader</span>
+    <p>The valuable artifact is the <strong>OpenAPI document</strong> — that JSON is a precise, standard description other tools can consume to generate client code, tests, mock servers, and docs. Swagger UI and Scalar are just <em>human</em> readers of it. Separating "the contract" (OpenAPI, built into .NET) from "the viewer" (a UI you choose) is exactly why the template changed in .NET 9.</p>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: Scaffold, Run, Explore</h2>
+
+  <p>Today's <strong>Do</strong>: scaffold a Web API, run the default weather endpoint, and read it via a Swagger-style UI. The path:</p>
+
+  <ol>
+    <li>🧰 Confirm the SDK: <code>dotnet --version</code>. If it's missing, install the .NET SDK first.</li>
+    <li>🏗️ Scaffold: <code>dotnet new webapi -n MyShop.Api</code>, then <code>cd MyShop.Api</code>.</li>
+    <li>▶️ Run it: <code>dotnet run</code>. Note the <code>http://localhost:5xxx</code> URL it prints.</li>
+    <li>🌦️ Hit the demo endpoint: open <code>http://localhost:5xxx/weatherforecast</code> in a browser (or <code>curl</code> it). Confirm you get a JSON array back — that's a live Web API responding.</li>
+    <li>📄 View the contract: open <code>http://localhost:5xxx/openapi/v1.json</code> and see the machine-readable description the template generates.</li>
+    <li>🖼️ Add a UI: <code>dotnet add package Scalar.AspNetCore</code>, add <code>app.MapScalarApiReference();</code> inside the Development block in <code>Program.cs</code>, re-run, and open <code>/scalar</code>.</li>
+    <li>🔎 Explore: in the UI, find <code>GET /weatherforecast</code>, click "try it out" / send, and watch the request go out and the <code>200</code> + JSON come back — in the browser.</li>
+    <li>🕵️ Observe like an engineer: what <strong>verb</strong> is the weather endpoint? What <strong>status code</strong> comes back on success? What's in the response <strong>body</strong> and its <code>Content-Type</code> header? Name each part of the request/response from section 07.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>Answer from your running app: (1) Is <code>/weatherforecast</code> a GET, and is GET safe/idempotent? (2) What status code did a successful call return, and which family is it? (3) If you requested a URL that doesn't exist, what code came back — and whose "fault" does that family mean? (4) In your own words, what is the OpenAPI JSON <em>for</em>, and how is it different from the Scalar/Swagger page?</p>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 What You Just Proved</span>
+    <p>You created a server that speaks HTTP, answers a request at a URL with a verb, returns JSON and a status code, and describes itself via OpenAPI — every core concept from today, running on your machine. That's the foundation the entire rest of this series builds on: from here, every day just adds capability to this same shape.</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>🌐 Web API</b>A program you talk to over HTTP that returns data (JSON), not web pages — one back end serving many clients (apps, sites, servers).</div>
+    <div class="recap-card"><b>🧭 REST</b>An architectural style, not a technology: resources + a uniform set of verbs, stateless requests, client–server separation. "RESTful" = predictable.</div>
+    <div class="recap-card"><b>📦 Resources</b>Things named by URLs, always nouns: <code>/products</code> (collection), <code>/products/42</code> (item). Query strings filter/sort/page.</div>
+    <div class="recap-card"><b>🔤 Verbs</b>GET read, POST create, PUT replace, PATCH modify, DELETE remove. Verb + noun = intent. GET is safe; GET/PUT/DELETE idempotent.</div>
+    <div class="recap-card"><b>🚦 Status codes</b>2xx success, 3xx redirect, 4xx client's fault, 5xx server's fault. 200/201/204, 400/401/403/404/409, 500 are the staples.</div>
+    <div class="recap-card"><b>📨 Request/response</b>Request = verb + URL + headers + body; response = status + headers + body. That's every HTTP exchange.</div>
+    <div class="recap-card"><b>🏗️ Scaffold</b><code>dotnet new webapi</code> gives a runnable API with a <code>/weatherforecast</code> demo; <code>dotnet run</code> and call it.</div>
+    <div class="recap-card"><b>📖 OpenAPI / Swagger</b>.NET generates an OpenAPI document (<code>/openapi/v1.json</code>); since .NET 9 there's no built-in UI — add Scalar or Swagger UI to browse it.</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Concept</th><th>In one line</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td>Web API</td><td>Data over HTTP for programs</td><td>Returns JSON, not HTML pages</td></tr>
+      <tr><td>Resource</td><td>A "thing," named by a URL noun</td><td><code>/products/42</code></td></tr>
+      <tr><td>GET</td><td>Read; safe &amp; idempotent</td><td><code>GET /products</code> → 200</td></tr>
+      <tr><td>POST</td><td>Create; not idempotent</td><td><code>POST /products</code> → 201</td></tr>
+      <tr><td>PUT / PATCH</td><td>Replace / modify; idempotent(PUT)</td><td><code>PUT /products/42</code> → 200/204</td></tr>
+      <tr><td>DELETE</td><td>Remove; idempotent</td><td><code>DELETE /products/42</code> → 204</td></tr>
+      <tr><td>2xx / 4xx / 5xx</td><td>Success / client error / server error</td><td>200, 404, 500</td></tr>
+      <tr><td>OpenAPI</td><td>Machine-readable API description</td><td><code>/openapi/v1.json</code></td></tr>
+      <tr><td>Swagger UI / Scalar</td><td>Human-friendly reader of OpenAPI</td><td><code>/swagger</code> · <code>/scalar</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is a Web API?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>It's an application interface you access over the internet using HTTP, which returns data (usually JSON) rather than web pages. It lets different programs — a mobile app, a website, another server — talk to your back end using a shared, neutral language. The Web API is the single "front door" to your data and business logic, so many kinds of clients can use the same service without knowing anything about its internals.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">What does REST stand for, and is it a technology?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>REST stands for Representational State Transfer. It's not a technology, library, or protocol you install — it's an architectural <em>style</em>: a set of conventions for designing web APIs so they're predictable and consistent. An API that follows those conventions (resources named by URLs, standard HTTP verbs, meaningful status codes, stateless requests) is called "RESTful." You design for REST; you don't import it.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What is a "resource" in REST, and how should you name its URL?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A resource is any "thing" your API exposes — a product, a customer, an order — identified by a URL. URLs should be <strong>nouns</strong>, not verbs: <code>/products</code> for the collection, <code>/products/42</code> for one item. The action comes from the HTTP verb, not the URL, so you never write <code>/getProducts</code> or <code>/deleteProduct</code>. Use plural nouns for collections and keep nesting shallow, like <code>/customers/7/orders</code>.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">Name the main HTTP verbs and what each does.</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>GET</code> reads a resource (changes nothing). <code>POST</code> creates a new resource in a collection. <code>PUT</code> replaces a resource wholesale. <code>PATCH</code> updates part of a resource. <code>DELETE</code> removes a resource. The verb states the action, and the URL names the thing it acts on — so <code>DELETE /products/42</code> means "remove product 42."</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What do the status code families 2xx, 4xx, and 5xx mean?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>The first digit gives the category. <strong>2xx</strong> = success (the request worked, e.g. 200 OK, 201 Created). <strong>4xx</strong> = client error — <em>your</em> fault, the request was wrong (e.g. 400 bad request, 404 not found). <strong>5xx</strong> = server error — the <em>server's</em> fault, something broke on its end (e.g. 500 internal server error). There's also 3xx for redirects. Reading just the first digit tells you who's responsible before you look up the exact number.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">What status code would you return for a successful GET, a successful create, and a resource that doesn't exist?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>A successful GET returns <strong>200 OK</strong> with the data in the body. A successful create (POST) returns <strong>201 Created</strong> (ideally with the new resource, and often a location header pointing to it). A request for something that doesn't exist returns <strong>404 Not Found</strong>. Using the right code matters because clients branch on it — returning 200 with a "not found" message in the body is a broken API.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">How do you create and run a new ASP.NET Core Web API?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>With the .NET SDK installed, run <code>dotnet new webapi -n MyShop.Api</code> to scaffold the project from the template, then <code>cd MyShop.Api</code> and <code>dotnet run</code>. It prints a localhost URL it's listening on. The template includes a demo <code>/weatherforecast</code> endpoint you can call in a browser or with curl to confirm it's working — you'll get back a JSON array of forecasts.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What is Swagger / OpenAPI used for?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>OpenAPI is a standard, machine-readable description of an API — what endpoints exist, what they accept, and what they return. Swagger UI (and alternatives like Scalar) is an interactive web page, generated from that description, that lets you browse the endpoints and try them out in the browser without writing any client code. It's great for exploring, testing, and documenting an API, and the OpenAPI document can also feed tools that generate client code or tests.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">What does it mean that REST is "stateless," and why does it matter?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Stateless means each request carries everything the server needs to handle it — the server keeps no memory of previous requests from that client (no server-side "session" of what you were doing). Every request is like a self-contained letter, not a phone call that assumes shared context. Why it matters: it makes the API scalable and resilient. Because no request depends on server memory, any server in a farm (behind a load balancer) can handle any request, and servers can be added, removed, or restarted freely. It also simplifies reasoning — a request's behavior depends only on the request itself. State that must persist (like who you are) travels <em>with</em> each request, typically as a token in a header.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">Explain "safe" and "idempotent" HTTP methods. Classify GET, POST, PUT, DELETE.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><strong>Safe</strong> means the method doesn't modify server state — it's read-only. <strong>Idempotent</strong> means making the same request multiple times has the same effect as making it once. Classification: <code>GET</code> is both safe and idempotent (reading repeatedly changes nothing). <code>PUT</code> and <code>DELETE</code> are idempotent but not safe (replacing a resource with the same data, or deleting an already-deleted resource, ends in the same state — but they do change things). <code>POST</code> is neither safe nor idempotent (two POSTs typically create two resources). This matters for retries: if a network failure makes a client retry, idempotent requests are safe to repeat, whereas a blindly retried POST can create duplicates — which is why create endpoints sometimes use idempotency keys.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What's the difference between 401 and 403?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><strong>401 Unauthorized</strong> is about <em>authentication</em>: the server doesn't know who you are — you haven't logged in, or your credentials/token are missing or invalid. The fix is to authenticate. <strong>403 Forbidden</strong> is about <em>authorization</em>: the server knows exactly who you are, but you don't have permission to do this — and authenticating again won't help. Memory hook: 401 = "who are you?", 403 = "you can't." The names are historically confusing (401 says "unauthorized" but really means unauthenticated), which is exactly why interviewers ask it.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">When would you use PUT versus PATCH?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><code>PUT</code> replaces the entire resource — you send the full representation, and the server overwrites it wholesale (fields you omit are typically cleared/reset). <code>PATCH</code> applies a partial update — you send only the fields that change, and the rest stay as they were. Use PUT when the client has and intends to send the complete object; use PATCH when you want to update just a field or two (like changing only a product's price) without resending everything. PUT is idempotent by design; PATCH usually is too but can be defined not to be. In practice many APIs lean on PATCH for updates because sending the whole object for every small change is wasteful and risks clobbering fields.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">Why did .NET 9 remove Swagger/Swashbuckle from the Web API template, and what replaced it?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Swashbuckle was a third-party (community-maintained) package that Microsoft had shipped as a first-class default since .NET 5 — a dependency they didn't own or control, and it had fallen behind on maintenance and new runtime releases. Starting in .NET 9 the team removed it from the template and shipped their own <code>Microsoft.AspNetCore.OpenApi</code> package, which natively generates the OpenAPI document (served at <code>/openapi/v1.json</code>) as a supported platform feature. The key consequence: the template now generates the OpenAPI <em>document</em> but includes <strong>no UI</strong> — you add your own viewer (Scalar, Swagger UI, or ReDoc) and point it at the generated JSON. Swashbuckle isn't deprecated and can still be added manually; it was just removed as the default.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">What's the difference between the path and the query string, and when do you use each?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>The <strong>path</strong> identifies <em>which</em> resource — it's part of the resource's identity: <code>/products/42</code> is a specific product, <code>/customers/7/orders</code> is a specific customer's orders. The <strong>query string</strong> (after <code>?</code>) refines <em>how</em> you want a collection returned — filtering, sorting, paging, searching: <code>/products?category=keyboards&amp;sort=price&amp;page=2</code>. Rule of thumb: if it changes <em>what thing</em> you're addressing, it goes in the path; if it changes <em>how you want the results shaped or subset</em>, it goes in the query string. Individual resource identity in the path; collection modifiers in the query.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">What are the parts of an HTTP request and an HTTP response?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>A <strong>request</strong> has: a method/verb (GET, POST…), a URL/path, headers (metadata like <code>Accept</code>, <code>Content-Type</code>, <code>Authorization</code>), and an optional body (the data sent, e.g. on POST/PUT). A <strong>response</strong> has: a status code (200, 404…), headers (like <code>Content-Type</code>), and an optional body (the returned data, e.g. JSON). Headers carry metadata about the message; the body carries the actual payload. Every HTTP exchange on the web fits this shape, which is why understanding it once unlocks reading any API traffic.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">Why is returning the correct status code important? Give an example of getting it wrong.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Because clients — and infrastructure like caches, proxies, and monitoring — branch on the status code, not on the body text. The code is the machine-readable verdict. Getting it wrong breaks consumers: a common anti-pattern is returning <code>200 OK</code> for everything and putting <code>{"error": "not found"}</code> in the body. Now every client must parse the body to discover failure, error monitoring shows zero errors while things are actually broken, and caches may store the "error" as a valid response. The correct behavior is a missing resource → <code>404</code>, invalid input → <code>400</code>, no permission → <code>403</code>, a created resource → <code>201</code>, a server exception → <code>500</code>. Accurate codes are how an API communicates unambiguously across the whole ecosystem.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">How would you design the URLs and verbs for a shop's orders and their line items?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Model resources as noun collections and items, use verbs for actions, and nest only where there's a genuine ownership relationship. Orders: <code>GET /orders</code> (list, with query params for filtering/paging), <code>POST /orders</code> (create → 201), <code>GET /orders/{id}</code> (read → 200 or 404), <code>PUT/PATCH /orders/{id}</code> (update), <code>DELETE /orders/{id}</code> (remove → 204). Line items belong to an order, so nest them: <code>GET /orders/{id}/items</code>, <code>POST /orders/{id}/items</code>, <code>DELETE /orders/{id}/items/{itemId}</code>. Keep nesting to one level even when relationships go deeper — for an item's product you'd link to <code>/products/{productId}</code> rather than nesting three levels. For actions that don't map cleanly to CRUD (e.g. "cancel an order"), the pragmatic REST approach is either a state change via PATCH (<code>PATCH /orders/{id}</code> with <code>{"status":"cancelled"}</code>) or a sub-resource (<code>POST /orders/{id}/cancellation</code>) — avoid <code>POST /orders/{id}/cancel</code> verbs if you're being strict, though many production APIs accept them for clarity. Consistency and predictability across the API matter more than purity.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">REST vs GraphQL vs gRPC — when would you choose each?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p><strong>REST</strong> (HTTP + JSON, resource-oriented) is the default for public and general-purpose APIs: universally understood, cacheable via HTTP, tooling everywhere, easy to debug. Its weakness is over-/under-fetching — fixed endpoints may return too much or require multiple round trips. <strong>GraphQL</strong> lets clients request exactly the fields they need in one query, great for rich front ends with varied data needs and for avoiding many round trips; costs are added server complexity, harder HTTP caching, and query-cost/security concerns. <strong>gRPC</strong> (HTTP/2 + Protobuf, contract-first, binary) excels for high-performance internal service-to-service communication and streaming: fast, strongly typed, small payloads; but it's less browser-friendly and less human-readable, so it's less ideal for public APIs. Rule of thumb: public/general API → REST; flexible client-driven data graphs → GraphQL; low-latency internal microservice calls → gRPC. They also coexist — a system might expose REST publicly and use gRPC internally.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">What is HATEOAS and the Richardson Maturity Model? Do you need full REST maturity?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The <strong>Richardson Maturity Model</strong> grades how "RESTful" an API is in levels: Level 0 (one URL, one verb — RPC over HTTP), Level 1 (multiple resources, still one verb), Level 2 (resources + proper HTTP verbs + status codes — where most good APIs live), and Level 3 (HATEOAS). <strong>HATEOAS</strong> (Hypermedia As The Engine Of Application State) means responses include links to related actions/resources, so a client can navigate the API by following links rather than hard-coding URLs — like how a web page links you onward. In theory it makes clients resilient to URL changes and self-discovering. In practice, full Level 3/HATEOAS is rare: it adds significant complexity, most clients hard-code URLs anyway, and the payoff seldom justifies the cost. Most production APIs deliberately target Level 2 — correct resources, verbs, and status codes — which delivers the predictability REST is prized for. Knowing the model matters more than achieving Level 3; it's a vocabulary for discussing trade-offs, not a checklist to complete.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">How should an API evolve without breaking existing clients (versioning)?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The core principle: once clients depend on your contract, breaking changes need a new version while the old keeps working. First, distinguish non-breaking changes (adding an optional field, a new endpoint) — which don't need a version bump if clients are tolerant readers — from breaking ones (removing/renaming fields, changing types, changing semantics), which do. Versioning strategies: <strong>URL path</strong> (<code>/v1/products</code>, <code>/v2/products</code>) — most visible and simplest for clients, common in practice; <strong>query string</strong> (<code>/products?api-version=2</code>); <strong>header</strong> (a custom or <code>Accept</code> header with a version) — cleaner URLs, "purer" REST, but less discoverable. ASP.NET Core has the <code>Asp.Versioning</code> libraries supporting all of these. Beyond the mechanism: publish a deprecation policy, support old versions for a defined window, communicate changes, and prefer additive evolution so you version as rarely as possible. Design DTOs deliberately (don't expose entities directly) so internal changes don't force external breaks. The senior insight is that versioning is as much about process and communication — deprecation timelines, client migration — as about the URL scheme.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">Is exposing an OpenAPI document in production a good idea? What are the considerations?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>It's a deliberate trade-off, which is why the .NET template gates the docs behind a Development-only check by default. An OpenAPI document is a complete map of your API's surface — every endpoint, parameter, and shape — so publicly exposing it hands potential attackers a reconnaissance blueprint and can reveal internal or not-yet-public endpoints. Reasons you might still expose it: it's a genuine public API where discoverability is the point (partners, third-party developers), or you want interactive docs for consumers. Mitigations when you do: serve it only for intended audiences (behind auth, on an internal network, or via a developer portal), expose only the intended public endpoints (not internal admin routes), strip sensitive detail, and consider a read-only doc renderer (like ReDoc) rather than a "try it out" UI in production. For internal or private APIs, the safe default is: generate the document (it's useful for your own tooling and CI) but don't serve the UI publicly. The judgment is matching exposure to audience and threat model, not a blanket yes/no.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">A client complains your API is "slow" because it makes many calls to render one screen. How do you think about it?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>This is the classic REST over-fetching / chatty-API problem: a screen needing a customer, their orders, and each order's items might make N+1 round trips, and network latency dominates. I'd approach it in layers. First, <strong>measure</strong> — confirm it's round-trip count/latency, not slow individual queries (which is a different fix, e.g. database indexing or the N+1 query problem on the server). Options to reduce chattiness: design <strong>purpose-built endpoints</strong> or resource expansion (<code>?include=orders,items</code> or a dedicated <code>/dashboard</code> aggregate) so one call returns what a screen needs; support field selection and paging so responses aren't bloated; add <strong>caching</strong> (HTTP caching headers, or a cache layer) for data that tolerates staleness; and enable HTTP/2 so multiple requests multiplex efficiently. If the client's data needs are highly variable, this is exactly the case where <strong>GraphQL</strong> or a <strong>Backend-for-Frontend</strong> (an aggregation layer tailored to that client) earns its complexity. The tension to name explicitly: pure REST favors granular, reusable resources, but real UIs want aggregated, screen-shaped responses — good API design balances the two rather than dogmatically insisting on one resource per call. The right answer depends on measured cost, how many clients share the API, and how variable their needs are.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">How do you handle errors consistently across a Web API so clients can rely on them?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Two pillars: correct status codes and a consistent error body. Use the <strong>status code</strong> as the primary, machine-readable signal — 400 for validation, 401/403 for auth, 404 for missing, 409 for conflicts, 422 for semantic validation if you distinguish it, 500 for unexpected server faults — never 200-with-an-error-in-the-body. For the <strong>body</strong>, standardize on a single error shape so every client parses errors the same way; in ASP.NET Core the built-in choice is <strong>ProblemDetails</strong> (RFC 9457), a standard JSON structure with type, title, status, detail, and room for validation specifics, and the framework already emits <code>ValidationProblemDetails</code> for model-validation failures. Centralize it: a global exception handler (middleware or <code>IExceptionHandler</code>) converts unhandled exceptions into a clean ProblemDetails 500 — logging full detail internally but never leaking stack traces, SQL, or internal messages to clients. Include a correlation/trace id in every error so a client can quote it to support and you can find the matching logs. Consider stable, documented error codes so clients branch on codes rather than fragile message strings. The goal: whether a request fails validation, hits a business rule, or trips an unexpected error, the client always gets the right status and the same predictable structure — and the API never divulges internals.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">Why does the client–server separation and a stable contract matter architecturally?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Because it's what lets the two halves of a system evolve independently, which is the whole economic argument for building an API in the first place. When the client (apps, web front ends, third-party integrations) and server (data, business logic) communicate only through a well-defined HTTP contract, each side can change freely as long as the contract holds: you can rebuild the mobile app, add a new web front end, or swap the server's database and internal architecture without coordinating a lockstep release across everything. It enables independent teams, independent deployment cadences, and reuse of one back end by many clients — the same API serving iOS, Android, web, and partner servers. It also localizes change: a UI redesign doesn't touch the server; a server refactor doesn't touch clients. The flip side and the senior responsibility is that <strong>the contract itself becomes a durable commitment</strong> — once clients you don't control depend on it, you can't casually change it, which is why DTO design, versioning strategy, and backward compatibility (the earlier questions) matter so much. The contract is both the enabler of independence and the constraint you must steward carefully; treating the API as a product with a stable, well-documented interface is what makes the architecture pay off over years.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Get Q1–Q8 rock-solid first — "what is a Web API," REST as a style not a tech, resources-are-nouns, the verbs, and the status-code families are the guaranteed openers for any back-end interview, and they're the vocabulary the rest of the series assumes. Then own Q9–Q11 together: stateless, safe/idempotent, and 401-vs-403 are the mid-level trio interviewers use to separate "used an API" from "understands HTTP." Save the senior set (Q18 REST/GraphQL/gRPC, Q20 versioning, Q22 chatty APIs) for after you've built a few endpoints — those are design-judgment questions that land far better once the basics are muscle memory. On Day 1, the win is simply this: verb + resource → data + status code. Everything else grows from that sentence.</p>
+  </div>
+</section>
+
+<footer>Day 1 of the .NET series · Web API &amp; REST Basics: Resources, HTTP Verbs, Status Codes &amp; Swagger · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

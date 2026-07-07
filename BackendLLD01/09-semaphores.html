@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semaphores — Session 09</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* store slots */
+.store-slots{display:flex;gap:.4rem;margin:.8rem 0}
+.slot{width:44px;height:44px;border:2px solid var(--line);border-radius:4px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:.72rem}
+.slot.filled{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.slot.empty{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+/* semaphore counter */
+.sem-display{display:inline-flex;align-items:center;gap:.5rem;font-family:'JetBrains Mono',monospace;font-size:.82rem;background:var(--bg);border:1.5px solid var(--line);border-radius:6px;padding:.3rem .7rem}
+.sem-val{font-weight:700;font-size:1rem}
+.sem-val.prods{color:var(--green)}.sem-val.conss{color:var(--blue)}
+/* flow trace */
+.pc-flow{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1.5rem 0;font-family:'JetBrains Mono',monospace;font-size:.75rem}
+.pc-col{border-radius:8px;padding:1rem;border:1px solid}
+.pc-col.prod{background:var(--green-soft);border-color:var(--green)}
+.pc-col.cons{background:var(--blue-soft);border-color:var(--blue)}
+.pc-col-title{font-weight:700;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.6rem}
+.pc-col.prod .pc-col-title{color:var(--green)}.pc-col.cons .pc-col-title{color:var(--blue)}
+.pc-step{padding:.25rem 0;border-bottom:1px solid rgba(0,0,0,.08);font-size:.72rem;line-height:1.5}
+.pc-step:last-child{border-bottom:none}
+.pc-step.key-step{font-weight:600}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 09</div>
+  <div class="nav-group"><span class="nav-group-label">Getting Started</span><a class="nav-link" href="#hero">Overview</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">Semaphore</span>
+    <a class="nav-link" href="#s01">01 What is a Semaphore?</a>
+    <a class="nav-link" href="#s02">02 acquire() and release()</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Producer–Consumer</span>
+    <a class="nav-link" href="#s03">03 The Problem</a>
+    <a class="nav-link" href="#s04">04 Why MUTEX Alone Is Not Enough</a>
+    <a class="nav-link" href="#s05">05 Solving with Two Semaphores</a>
+    <a class="nav-link" href="#s06">06 Full Java Implementation</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Summary</span>
+    <a class="nav-link" href="#s07">07 MUTEX vs Semaphore</a>
+    <a class="nav-link" href="#recap">Quick Recap</a>
+  </div>
+</nav>
+<main>
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 09 · 26th Nov</p>
+  <h1>Semaphores</h1>
+  <p class="hero-lede">Upgrading from a binary lock to a counting semaphore — and using two semaphores together to solve the classic Producer–Consumer coordination problem.</p>
+  <div class="agenda-chips">
+    <span class="chip">Semaphore</span><span class="chip">acquire()</span><span class="chip">release()</span><span class="chip">Producer–Consumer</span><span class="chip">Bounded Buffer</span>
+  </div>
+</section>
+
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>What is a Semaphore?</h2></div>
+  <p>A <strong>semaphore</strong> is a generalization of a MUTEX. Where a MUTEX has a count of exactly 1 (either locked or unlocked), a semaphore has an internal counter that can be initialized to any non-negative integer. It allows up to <em>N</em> threads to access a resource simultaneously.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>A <strong>Semaphore</strong> is a MUTEX with a count greater than 1. It maintains an internal counter. <code>acquire()</code> decrements the counter (blocks if it would go below 0). <code>release()</code> increments the counter (waking a blocked thread if any are waiting).</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Feature</th><th>MUTEX</th><th>Semaphore</th></tr></thead>
+    <tbody>
+      <tr><td>Internal count</td><td>Binary: 0 or 1</td><td>Integer ≥ 0 (initialized to N)</td></tr>
+      <tr><td>Concurrent access</td><td>Exactly 1 thread</td><td>Up to N threads</td></tr>
+      <tr><td>Also used for</td><td>Mutual exclusion</td><td>Mutual exclusion AND signaling/coordination</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2><code>acquire()</code> and <code>release()</code></h2></div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Pseudocode — Semaphore Internals</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// acquire() — sometimes called wait() or P()</span>
+<span class="kw">void</span> <span class="fn">acquire</span>() {
+    <span class="kw">if</span> (count > <span class="num">0</span>) {
+        count--;          <span class="cmt">// resource available — take it</span>
+    } <span class="kw">else</span> {
+        <span class="fn">block</span>();          <span class="cmt">// count == 0 — block the calling thread</span>
+    }
+}
+
+<span class="cmt">// release() — sometimes called signal() or V()</span>
+<span class="kw">void</span> <span class="fn">release</span>() {
+    count++;              <span class="cmt">// return resource</span>
+    <span class="kw">if</span> (waitingThread) {
+        <span class="fn">wakeUp</span>(waitingThread);  <span class="cmt">// notify a blocked thread</span>
+    }
+}</pre>
+  </div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">import</span> java.util.concurrent.Semaphore;
+
+<span class="cmt">// Semaphore initialized to 3 — allows up to 3 concurrent threads</span>
+<span class="ty">Semaphore</span> sem = <span class="kw">new</span> <span class="ty">Semaphore</span>(<span class="num">3</span>);
+
+sem.<span class="fn">acquire</span>();   <span class="cmt">// count: 3 → 2. Blocks if count == 0</span>
+    <span class="cmt">/* ... protected work ... */</span>
+sem.<span class="fn">release</span>();   <span class="cmt">// count: 2 → 3. Wakes a blocked thread if any</span></pre>
+  </div>
+</section>
+
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>The Producer–Consumer Problem</h2></div>
+  <p>The Producer–Consumer problem (also called the Bounded Buffer problem) is a classic concurrency scenario: multiple producer threads add items to a shared store, and multiple consumer threads remove items from it. The store has a fixed capacity.</p>
+
+  <div class="diagram-box">
+    <div style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:.78rem;">
+      <div style="color:var(--green); margin-bottom:.4rem;">∞ Producers → add items to store</div>
+      <div class="store-slots" style="justify-content:center;">
+        <div class="slot filled">👕</div>
+        <div class="slot filled">👕</div>
+        <div class="slot empty">—</div>
+        <div class="slot empty">—</div>
+        <div class="slot empty">—</div>
+        <div class="slot empty">—</div>
+      </div>
+      <div style="color:var(--ink-soft); font-size:.68rem; margin:.2rem 0;">Store (maxSize = 6 slots)</div>
+      <div style="color:var(--blue); margin-top:.4rem;">∞ Consumers → remove items from store</div>
+    </div>
+    <div style="margin-top:1rem; font-size:.82rem;">
+      <p><strong># of producers</strong> can produce = # of <em>empty</em> slots in the store (don't overfill)</p>
+      <p><strong># of consumers</strong> can consume = # of <em>filled</em> slots in the store (don't consume from empty store)</p>
+    </div>
+  </div>
+
+  <p>Two constraints must always hold: producers must not add to a full store, and consumers must not remove from an empty store. Both checks and modifications must be atomic — otherwise a race condition can breach these constraints.</p>
+</section>
+
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Why MUTEX Alone Is Not Enough</h2></div>
+  <p>A MUTEX (single <code>synchronized</code> block) prevents multiple threads from entering the critical section simultaneously — but it doesn't handle the <em>coordination</em> problem: a producer blocked because the store is full, or a consumer blocked because the store is empty.</p>
+  <p>With a plain MUTEX, a producer that finds the store full must either busy-wait (polling in a loop — bad) or use <code>wait()/notifyAll()</code> (complex, error-prone). Semaphores encode both the limit and the blocking/waking logic in a single clean abstraction.</p>
+
+  <div class="callout warn">
+    <span class="callout-tag">The Problem with Only MUTEX</span>
+    <p>A producer checking <code>if (store.size() &lt; maxSize)</code> and then calling <code>store.add()</code> has a TOCTOU (time-of-check to time-of-use) window. Another producer may add between the check and the add — overfilling the store — unless both operations are protected together. A semaphore atomically tracks remaining capacity.</p>
+  </div>
+</section>
+
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>Solving with Two Semaphores</h2></div>
+  <p>The elegant solution uses <strong>two semaphores</strong> — one counting empty slots (for producers) and one counting filled slots (for consumers):</p>
+
+  <div class="diagram-box">
+    <div style="display:flex; gap:1.5rem; flex-wrap:wrap; align-items:center; font-family:'JetBrains Mono',monospace; font-size:.78rem; margin-bottom:1rem;">
+      <div>
+        <div style="color:var(--green); font-size:.65rem; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.3rem;">prods semaphore (empty slots)</div>
+        <div class="sem-display"><span class="sem-val prods">6</span> <span style="color:var(--ink-soft);">→ 5 → 4 → 3 → 2 → 1 → 0</span></div>
+      </div>
+      <div>
+        <div style="color:var(--blue); font-size:.65rem; text-transform:uppercase; letter-spacing:.08em; margin-bottom:.3rem;">conss semaphore (filled slots)</div>
+        <div class="sem-display"><span class="sem-val conss">0</span> <span style="color:var(--ink-soft);">→ 1 → 2 → 3 → ...</span></div>
+      </div>
+    </div>
+    <p style="font-size:.8rem; color:var(--ink-soft);">Initially: 6 empty slots (prods=6, conss=0). Each item produced decrements prods and increments conss. Each item consumed decrements conss and increments prods.</p>
+  </div>
+
+  <div class="pc-flow">
+    <div class="pc-col prod">
+      <div class="pc-col-title">Producer Thread</div>
+      <div class="pc-step key-step">prods.acquire()</div>
+      <div class="pc-step" style="color:var(--ink-soft); font-size:.65rem;">← blocks if store is full (prods==0)</div>
+      <div class="pc-step">store.add(item)</div>
+      <div class="pc-step key-step">conss.release()</div>
+      <div class="pc-step" style="color:var(--ink-soft); font-size:.65rem;">← notifies consumers: 1 item available</div>
+    </div>
+    <div class="pc-col cons">
+      <div class="pc-col-title">Consumer Thread</div>
+      <div class="pc-step key-step">conss.acquire()</div>
+      <div class="pc-step" style="color:var(--ink-soft); font-size:.65rem;">← blocks if store is empty (conss==0)</div>
+      <div class="pc-step">store.remove()</div>
+      <div class="pc-step key-step">prods.release()</div>
+      <div class="pc-step" style="color:var(--ink-soft); font-size:.65rem;">← notifies producers: 1 slot free</div>
+    </div>
+  </div>
+</section>
+
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>Full Java Implementation</h2></div>
+
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="kw">import</span> java.util.concurrent.*;
+<span class="kw">import</span> java.util.*;
+
+<span class="kw">class</span> <span class="ty">ProducerConsumer</span> {
+    <span class="kw">static final int</span>      MAX_SIZE = <span class="num">6</span>;
+    <span class="kw">static</span> <span class="ty">List</span>&lt;<span class="ty">String</span>&gt;  store    = <span class="kw">new</span> <span class="ty">LinkedList</span>&lt;&gt;();
+
+    <span class="cmt">// prods = available empty slots (starts at MAX_SIZE)</span>
+    <span class="kw">static</span> <span class="ty">Semaphore</span> prods = <span class="kw">new</span> <span class="ty">Semaphore</span>(MAX_SIZE);
+    <span class="cmt">// conss = available filled slots (starts at 0)</span>
+    <span class="kw">static</span> <span class="ty">Semaphore</span> conss = <span class="kw">new</span> <span class="ty">Semaphore</span>(<span class="num">0</span>);
+
+    <span class="kw">static class</span> <span class="ty">Producer</span> <span class="kw">implements</span> <span class="ty">Runnable</span> {
+        <span class="kw">private final</span> <span class="ty">String</span> item;
+        <span class="ty">Producer</span>(<span class="ty">String</span> item) { <span class="kw">this</span>.item = item; }
+
+        <span class="kw">@Override</span>
+        <span class="kw">public void</span> <span class="fn">run</span>() {
+            <span class="kw">try</span> {
+                prods.<span class="fn">acquire</span>();        <span class="cmt">// wait for an empty slot (prods--)</span>
+                <span class="kw">synchronized</span> (store) {
+                    store.<span class="fn">add</span>(item);     <span class="cmt">// critical section</span>
+                }
+                conss.<span class="fn">release</span>();        <span class="cmt">// signal: one more item available (conss++)</span>
+            } <span class="kw">catch</span> (<span class="ty">InterruptedException</span> e) { <span class="ty">Thread</span>.<span class="fn">currentThread</span>().<span class="fn">interrupt</span>(); }
+        }
+    }
+
+    <span class="kw">static class</span> <span class="ty">Consumer</span> <span class="kw">implements</span> <span class="ty">Runnable</span> {
+        <span class="kw">@Override</span>
+        <span class="kw">public void</span> <span class="fn">run</span>() {
+            <span class="kw">try</span> {
+                conss.<span class="fn">acquire</span>();        <span class="cmt">// wait for a filled slot (conss--)</span>
+                <span class="kw">synchronized</span> (store) {
+                    store.<span class="fn">remove</span>(<span class="num">0</span>);   <span class="cmt">// critical section</span>
+                }
+                prods.<span class="fn">release</span>();        <span class="cmt">// signal: one slot is free again (prods++)</span>
+            } <span class="kw">catch</span> (<span class="ty">InterruptedException</span> e) { <span class="ty">Thread</span>.<span class="fn">currentThread</span>().<span class="fn">interrupt</span>(); }
+        }
+    }
+}</pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Why Both a Semaphore AND synchronized?</span>
+    <p>The semaphores handle coordination (blocking producers when full, blocking consumers when empty). The <code>synchronized</code> block on <code>store</code> prevents two producers (or two consumers) from modifying the list at the exact same time — which would cause a <code>ConcurrentModificationException</code> or data corruption even with the semaphore in place.</p>
+  </div>
+</section>
+
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>MUTEX vs Semaphore — Full Comparison</h2></div>
+  <table>
+    <thead><tr><th>Feature</th><th>MUTEX / synchronized</th><th>Semaphore</th></tr></thead>
+    <tbody>
+      <tr><td>Count</td><td>Binary (0 or 1)</td><td>Integer ≥ 0</td></tr>
+      <tr><td>Concurrent access</td><td>Exactly 1 thread</td><td>Up to N threads</td></tr>
+      <tr><td>Ownership</td><td>Only the acquiring thread can release</td><td>Any thread can call release()</td></tr>
+      <tr><td>Use case</td><td>Mutual exclusion of critical sections</td><td>Resource counting + signaling between threads</td></tr>
+      <tr><td>Java class</td><td><code>synchronized</code> or <code>ReentrantLock</code></td><td><code>java.util.concurrent.Semaphore</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Semaphore</div><p>MUTEX with count &gt; 1. acquire() decrements (blocks at 0). release() increments (wakes a blocked thread).</p></div>
+    <div class="recap-card"><div class="recap-card-title">Producer–Consumer</div><p>Producers add to a bounded store; consumers remove. Neither can violate store capacity or consume from an empty store.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Two-Semaphore Pattern</div><p><code>prods</code> = empty slots (starts at maxSize). <code>conss</code> = filled slots (starts at 0). Producer acquires prods, releases conss. Consumer does the opposite.</p></div>
+    <div class="recap-card"><div class="recap-card-title">acquire()</div><p>Wait for a permit. If count &gt; 0: decrement and proceed. If count == 0: block the calling thread.</p></div>
+    <div class="recap-card"><div class="recap-card-title">release()</div><p>Return a permit. Increment count. If threads are waiting, wake one up.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Semaphore + synchronized</div><p>Semaphore coordinates capacity; synchronized protects the actual list modification from concurrent corruption.</p></div>
+  </div>
+</section>
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

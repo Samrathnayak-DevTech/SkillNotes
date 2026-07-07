@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Testing &amp; the Equality Contract (C#)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0; --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea; --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3; --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink); font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;}
+#progress{position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .08s linear;}
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+.sec-badge.e{background:var(--blue);}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+:not(pre) > code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--accent);
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;}
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;
+  background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;background:transparent;
+  border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;color:var(--code-ink);
+  background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;} .err{color:#f07178;}
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent);font-weight:700;}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:24px 22px;margin:24px 0;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.good .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+/* AAA / spectrum */
+.aaa{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0;}
+.aaa-col{border:1.5px solid var(--line);border-radius:12px;padding:14px 16px;background:#fff;text-align:center;}
+.aaa-col .lt{font-family:"JetBrains Mono",monospace;font-size:22px;font-weight:700;}
+.aaa-col h5{font-family:"Fraunces",serif;font-size:1.05rem;margin:4px 0 6px;}
+.aaa-col p{font-size:.84rem;color:var(--ink-soft);margin:0;}
+.aaa-col.a1{border-top:4px solid var(--blue);} .aaa-col.a1 .lt{color:var(--blue);}
+.aaa-col.a2{border-top:4px solid var(--accent);} .aaa-col.a2 .lt{color:var(--accent);}
+.aaa-col.a3{border-top:4px solid var(--green);} .aaa-col.a3 .lt{color:var(--green);}
+.spectrum{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0;align-items:stretch;}
+.sp-item{flex:1;min-width:130px;border:1.5px solid var(--line);border-radius:10px;padding:11px 13px;background:#fff;}
+.sp-item b{font-family:"Fraunces",serif;font-size:1rem;display:block;margin-bottom:3px;color:var(--accent);}
+.sp-item span{font-size:.82rem;color:var(--ink-soft);}
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:13px 18px;text-align:center;font-size:.96rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1rem;}
+.flow-step small{color:var(--ink-soft);font-size:.82rem;}
+.flow-connector{width:2px;height:20px;background:linear-gradient(var(--accent),var(--rose));}
+.mindmap{display:flex;flex-direction:column;align-items:center;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;font-size:1.1rem;
+  padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);transition:transform .28s ease;
+    box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+  .aaa{grid-template-columns:1fr;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">Testing &amp; the Equality Contract</div>
+    <nav>
+      <div class="nav-group">
+        <h4>Testing</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> Overview</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> Why Test &amp; FIRST</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> AAA &amp; Frameworks</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Test Doubles</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Best Practices &amp; TDD</a>
+      </div>
+      <div class="nav-group">
+        <h4>Equality ★</h4>
+        <a class="nav-link" href="#s06"><span class="n">06</span> The Contract</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> == vs Equals</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> Implementing It</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Pitfalls</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Testing the Contract</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Quick Recap</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// C# &nbsp;·&nbsp; proving code works, and defining when two things are "equal"</p>
+      <h1>Testing &amp; the Equality Contract ✅</h1>
+      <p class="lede">
+        Two practical pillars of professional C#. <b>Unit testing</b> proves your code does what you claim — using a
+        framework (xUnit/NUnit/MSTest), the <b>Arrange-Act-Assert</b> pattern, and <b>test doubles</b> to isolate the unit.
+        The <b>equality contract</b> is the set of rules your <code>Equals</code> and <code>GetHashCode</code> must obey so
+        that dictionaries, sets, LINQ, and your own test assertions behave correctly. They meet in the middle: assertions
+        rely on equality, and the contract is something you should test. Builds on the DI, collections, and records topics.
+        No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🧪 <b>xUnit / AAA</b></span>
+        <span class="chip">🎭 <b>Test doubles</b></span>
+        <span class="chip">⚡ <b>FIRST</b></span>
+        <span class="chip">🟰 <b>Equals / GetHashCode</b></span>
+        <span class="chip">📜 <b>The contract</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- 01 -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>Overview</h2></div>
+      <p class="sec-sub">Testing proves behavior; the equality contract defines correct equality. Each reinforces the other.</p>
+
+      <p><strong>Unit testing</strong> is writing small, automated checks that a piece of code behaves as expected, so you
+        can change code confidently. The <strong>equality contract</strong> is the agreement every type makes when it
+        defines equality — break it and hash-based collections silently misbehave. The link: test <em>assertions</em> use
+        equality under the hood, and a well-written test suite is exactly how you <em>verify</em> the contract holds.</p>
+
+      <div class="mindmap">
+        <div class="mm-core">✅ Correct &amp; trustworthy code</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>🧪 Test anatomy</h5>
+            <ul><li>Arrange-Act-Assert</li><li>Frameworks &amp; assertions</li><li><code>[Fact]</code>/<code>[Theory]</code></li></ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>🎭 Isolation</h5>
+            <ul><li>Test doubles</li><li>Mocking + DI</li><li>FIRST principles</li></ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>📜 The contract</h5>
+            <ul><li>Reflexive/symmetric/transitive</li><li>Equal → equal hash</li><li>Immutable hash fields</li></ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🟰 Implementing</h5>
+            <ul><li><code>Equals</code> + <code>GetHashCode</code></li><li><code>IEquatable&lt;T&gt;</code>, <code>==</code></li><li>records do it free</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why they belong together</span>
+        <p><code>Assert.Equal(expected, actual)</code> calls <code>Equals</code> — so if your type's equality is wrong, your
+        tests can pass or fail for the wrong reasons. And the equality contract has clear, checkable rules, making it a
+        textbook example of <em>what</em> to unit-test. Knowing both is core to writing dependable C#.</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>Why Test &amp; FIRST</h2></div>
+      <p class="sec-sub">Tests are a safety net that lets you change code without fear — if they're fast, isolated, and trustworthy.</p>
+
+      <p>A <strong>unit test</strong> checks one small unit of behavior in <strong>isolation</strong>. Together, a test suite
+        documents intent, catches regressions, and enables fearless refactoring. An <strong>integration test</strong>, by
+        contrast, exercises several components together (and may touch a database or network). Good unit tests follow the
+        <strong>FIRST</strong> principles:</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">⚡</span><h4>Fast</h4><p>Run in milliseconds so you run them constantly. Slow tests get skipped — and skipped tests don't help.</p></div>
+        <div class="card"><span class="glyph">🧩</span><h4>Independent</h4><p>No test depends on another or on shared state/order. Each can run alone, in any sequence.</p></div>
+        <div class="card"><span class="glyph">🔁</span><h4>Repeatable</h4><p>Same result every time, anywhere — no reliance on clock, network, or random data.</p></div>
+        <div class="card"><span class="glyph">✔️</span><h4>Self-validating</h4><p>The test decides pass/fail via assertions — no manual inspection of output.</p></div>
+        <div class="card"><span class="glyph">⏱️</span><h4>Timely</h4><p>Written alongside (or before) the code, while the design is fresh — not bolted on much later.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Unit vs integration — keep them apart</span>
+        <p>If a test touches a real database, file system, or network, it's an <strong>integration test</strong>, not a unit
+        test — it'll be slower and more brittle. Keep unit tests free of infrastructure (use test doubles, section 04), and
+        keep integration tests in a separate project so your fast feedback loop stays fast.</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>AAA &amp; Frameworks</h2></div>
+      <p class="sec-sub">Every good test has three parts, and .NET has three main frameworks to write them in.</p>
+
+      <div class="aaa">
+        <div class="aaa-col a1"><div class="lt">A</div><h5>Arrange</h5><p>Set up the objects, inputs, and test doubles the test needs.</p></div>
+        <div class="aaa-col a2"><div class="lt">A</div><h5>Act</h5><p>Invoke the one method under test — a single action per test.</p></div>
+        <div class="aaa-col a3"><div class="lt">A</div><h5>Assert</h5><p>Verify the outcome matches what you expected.</p></div>
+      </div>
+
+      <p>The big three frameworks are <strong>xUnit</strong> (modern, the de-facto choice for .NET Core),
+        <strong>NUnit</strong> (mature, rich feature set), and <strong>MSTest</strong> (built into Visual Studio). They
+        differ mostly in attribute names. In xUnit, <code>[Fact]</code> is a test that's always true;
+        <code>[Theory]</code> + <code>[InlineData]</code> runs the same test with different inputs.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C# · xUnit</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">CalculatorTests</span>
+{
+    <span class="cmt">// [Fact] -- a single, parameterless test. Name: Method_Scenario_Expected</span>
+    [<span class="ty">Fact</span>]
+    <span class="kw">public void</span> <span class="fn">Add_TwoPositives_ReturnsSum</span>()
+    {
+        <span class="cmt">// Arrange</span>
+        <span class="kw">var</span> calc = <span class="kw">new</span> <span class="ty">Calculator</span>();
+        <span class="cmt">// Act</span>
+        <span class="kw">int</span> result = calc.<span class="fn">Add</span>(<span class="num">2</span>, <span class="num">3</span>);
+        <span class="cmt">// Assert</span>
+        <span class="ty">Assert</span>.<span class="fn">Equal</span>(<span class="num">5</span>, result);
+    }
+
+    <span class="cmt">// [Theory] -- same test body, many inputs (data-driven)</span>
+    [<span class="ty">Theory</span>]
+    [<span class="ty">InlineData</span>(<span class="num">2</span>, <span class="num">3</span>, <span class="num">5</span>)]
+    [<span class="ty">InlineData</span>(-<span class="num">1</span>, <span class="num">1</span>, <span class="num">0</span>)]
+    [<span class="ty">InlineData</span>(<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>)]
+    <span class="kw">public void</span> <span class="fn">Add_VariousInputs_ReturnsSum</span>(<span class="kw">int</span> a, <span class="kw">int</span> b, <span class="kw">int</span> expected)
+    {
+        <span class="ty">Assert</span>.<span class="fn">Equal</span>(expected, <span class="kw">new</span> <span class="ty">Calculator</span>().<span class="fn">Add</span>(a, b));
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Naming &amp; one act per test</span>
+        <p>The convention <strong><code>MethodName_Scenario_ExpectedBehavior</code></strong> makes a failing test
+        self-describing in the test runner. Keep <strong>one "Act"</strong> (and ideally one concern) per test, so a failure
+        points to exactly one thing. Common assertions: <code>Assert.Equal</code>, <code>True</code>/<code>False</code>,
+        <code>Null</code>/<code>NotNull</code>, <code>Throws&lt;T&gt;</code>, <code>Contains</code>,
+        <code>IsType&lt;T&gt;</code>.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ xUnit setup vs NUnit/MSTest</span>
+        <p>xUnit deliberately dropped <code>[SetUp]</code>/<code>[TearDown]</code> attributes: use the test class's
+        <strong>constructor</strong> for setup and implement <strong><code>IDisposable</code></strong> for teardown (tying
+        back to the <code>IDisposable</code> topic). xUnit also creates a <em>new instance of the test class per test</em>,
+        which enforces independence by default.</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Test Doubles</h2></div>
+      <p class="sec-sub">To test a unit in isolation, you replace its real dependencies with stand-ins. "Test double" is the umbrella term.</p>
+
+      <p>A class under test usually depends on others (a repository, a clock, an email sender). To test it in isolation, you
+        swap those for <strong>test doubles</strong> — controllable stand-ins. The terms have precise meanings (from Meszaros
+        and Fowler):</p>
+
+      <div class="spectrum">
+        <div class="sp-item"><b>Dummy</b><span>Passed but never used — just fills a parameter.</span></div>
+        <div class="sp-item"><b>Stub</b><span>Returns canned answers to calls (provides data).</span></div>
+        <div class="sp-item"><b>Mock</b><span>A stub you also <em>assert against</em> — verifies it was called as expected.</span></div>
+        <div class="sp-item"><b>Fake</b><span>A working lightweight implementation (e.g. in-memory DB).</span></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C# · Moq</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// STUB: set up a return value so the unit can run (provides data)</span>
+<span class="kw">var</span> clock = <span class="kw">new</span> <span class="ty">Mock</span>&lt;<span class="ty">IClock</span>&gt;();
+clock.<span class="fn">Setup</span>(c =&gt; c.<span class="fn">Now</span>()).<span class="fn">Returns</span>(<span class="kw">new</span> <span class="ty">DateTime</span>(<span class="num">2024</span>, <span class="num">1</span>, <span class="num">1</span>));
+
+<span class="kw">var</span> repo = <span class="kw">new</span> <span class="ty">Mock</span>&lt;<span class="ty">IOrderRepository</span>&gt;();
+<span class="kw">var</span> sut = <span class="kw">new</span> <span class="ty">OrderService</span>(repo.Object, clock.Object);   <span class="cmt">// inject the doubles (DI!)</span>
+
+<span class="cmt">// Act</span>
+sut.<span class="fn">Place</span>(<span class="kw">new</span> <span class="ty">Cart</span>());
+
+<span class="cmt">// MOCK: assert an interaction happened -- repo.Save was called once</span>
+repo.<span class="fn">Verify</span>(r =&gt; r.<span class="fn">Save</span>(<span class="ty">It</span>.<span class="ty">IsAny</span>&lt;<span class="ty">Order</span>&gt;()), <span class="ty">Times</span>.Once);</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Mock vs stub — the key distinction</span>
+        <p>A <strong>stub</strong> just feeds the unit data so it can run; you don't check the stub itself. A
+        <strong>mock</strong> additionally <em>verifies an interaction</em> — you <code>Assert</code>/<code>Verify</code>
+        that a method was (or wasn't) called, with what arguments, how many times. Rule of thumb: stub <em>queries</em>
+        (state you read), mock <em>commands</em> (actions with side effects you want to confirm happened).</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ This is why DI matters</span>
+        <p>Test doubles are only injectable because the class takes its dependencies through its constructor (the dependency
+        injection topic). A class that <code>new</code>s up its own collaborators can't be isolated for testing. So
+        <strong>DI is what makes code testable</strong> — and libraries like Moq, NSubstitute, and FakeItEasy generate the
+        doubles for you from an interface.</p>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Best Practices &amp; TDD</h2></div>
+      <p class="sec-sub">Habits that keep a test suite valuable, plus the test-first discipline.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🎯</span><h4>One concern per test</h4><p>Each test verifies a single behavior, so a failure points to exactly one cause. Avoid multiple unrelated asserts.</p></div>
+        <div class="card"><span class="glyph">🚫</span><h4>No logic in tests</h4><p>Avoid <code>if</code>/loops in tests — they can hide bugs in the test itself. Prefer straight-line arrange/act/assert.</p></div>
+        <div class="card"><span class="glyph">📛</span><h4>Descriptive names</h4><p>The name should state method, scenario, and expectation, so the runner reads like a spec.</p></div>
+        <div class="card"><span class="glyph">🧱</span><h4>Test behavior, not internals</h4><p>Assert observable outcomes, not private implementation details, so tests survive refactoring.</p></div>
+        <div class="card"><span class="glyph">🤖</span><h4>Run in CI</h4><p>Automate tests in the build pipeline so every change is validated. Track coverage to find gaps.</p></div>
+        <div class="card"><span class="glyph">🔴</span><h4>TDD (optional)</h4><p>Red-green-refactor: write a failing test, make it pass minimally, then clean up — design emerges test-first.</p></div>
+      </div>
+
+      <div class="diagram-box">
+        <div class="flow">
+          <div class="flow-step" style="background:var(--rose-soft);border-color:var(--rose);"><b>🔴 Red</b><small>write a test for behavior that doesn't exist yet — it fails</small></div>
+          <div class="flow-connector"></div>
+          <div class="flow-step" style="background:var(--green-soft);border-color:var(--green);"><b>🟢 Green</b><small>write the simplest code that makes the test pass</small></div>
+          <div class="flow-connector"></div>
+          <div class="flow-step highlight"><b>🔵 Refactor</b><small>clean up the code with the test as a safety net</small></div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Coverage is a guide, not a goal</span>
+        <p>Code coverage shows which lines tests exercise — useful for spotting <em>untested</em> areas. But 100% coverage
+        doesn't mean correct: you can execute a line without asserting anything meaningful about it. Aim for tests that
+        capture <em>behavior and edge cases</em>, and treat coverage as a hint about gaps, not a target to game.</p>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge e">06</span><h2>The Equality Contract ★</h2></div>
+      <p class="sec-sub">If you override <code>Equals</code>, you're making a promise. These rules are the promise — and .NET's collections depend on them.</p>
+
+      <p>When you define what "equal" means for a type, your <code>Equals</code> must satisfy five rules (it must behave like
+        a mathematical equivalence relation), and <code>GetHashCode</code> must stay consistent with it:</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Rule</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>Reflexive</td><td><code>x.Equals(x)</code> is always <code>true</code></td></tr>
+            <tr><td>Symmetric</td><td><code>x.Equals(y)</code> equals <code>y.Equals(x)</code></td></tr>
+            <tr><td>Transitive</td><td>if <code>x.Equals(y)</code> and <code>y.Equals(z)</code>, then <code>x.Equals(z)</code></td></tr>
+            <tr><td>Consistent</td><td>repeated calls give the same result if the objects aren't modified</td></tr>
+            <tr><td>Null</td><td><code>x.Equals(null)</code> is <code>false</code> (for non-null <code>x</code>)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell good"><div class="val">x = x</div><div class="idx">reflexive 🔁</div></div>
+          <div class="arrow" style="margin:0 14px">·</div>
+          <div class="arr-cell good"><div class="val">x = y<br>⇄ y = x</div><div class="idx">symmetric ↔️</div></div>
+          <div class="arrow" style="margin:0 14px">·</div>
+          <div class="arr-cell good"><div class="val">x=y, y=z<br>⇒ x=z</div><div class="idx">transitive 🔗</div></div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The hash-code invariant (the one everyone forgets)</span>
+        <p><strong>If two objects are equal, they must return the same <code>GetHashCode</code>.</strong> The reverse isn't
+        required — unequal objects <em>may</em> share a hash code (a "collision," which <code>Equals</code> then resolves).
+        Break this rule and <code>Dictionary</code>/<code>HashSet</code> may fail to find a key that's actually there,
+        because they look in the wrong bucket. This is why you must <strong>always override both methods together</strong> —
+        overriding just <code>Equals</code> even produces compiler warning <code>CS0659</code>.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Who relies on this?</span>
+        <p><code>Dictionary&lt;K,V&gt;</code> and <code>HashSet&lt;T&gt;</code> use the hash code to pick a bucket, then
+        <code>Equals</code> to confirm a match. LINQ's <code>Distinct</code>, <code>Contains</code>, <code>Union</code>,
+        <code>GroupBy</code>, and <code>Intersect</code> rely on the same contract. Get it wrong and these silently return
+        wrong results — no exception, just bad data.</p>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge e">07</span><h2>== vs Equals</h2></div>
+      <p class="sec-sub">Three ways to compare — and they don't all mean the same thing.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Comparison</th><th>Default behavior</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>==</code></td><td>Reference equality for classes; value for built-ins</td><td>Static, resolved at compile time; can be overloaded</td></tr>
+            <tr><td><code>Equals</code></td><td>Reference equality (Object); value for structs</td><td>Virtual, resolved at runtime; meant to be overridden</td></tr>
+            <tr><td><code>ReferenceEquals</code></td><td>Always reference identity</td><td>Can't be overridden — true only if same object</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> a = <span class="kw">new</span> <span class="ty">StringBuilder</span>(<span class="str">"hi"</span>).<span class="fn">ToString</span>();
+<span class="kw">var</span> b = <span class="kw">new</span> <span class="ty">StringBuilder</span>(<span class="str">"hi"</span>).<span class="fn">ToString</span>();
+
+a == b;                       <span class="cmt">// True  -- string overrides == for value equality</span>
+a.<span class="fn">Equals</span>(b);                  <span class="cmt">// True  -- value equality</span>
+<span class="ty">Object</span>.<span class="fn">ReferenceEquals</span>(a, b);  <span class="cmt">// False -- different objects in memory</span>
+
+<span class="cmt">// for your own class WITHOUT overrides, == is reference equality:</span>
+<span class="kw">var</span> p1 = <span class="kw">new</span> <span class="ty">Point</span>(<span class="num">1</span>, <span class="num">2</span>);
+<span class="kw">var</span> p2 = <span class="kw">new</span> <span class="ty">Point</span>(<span class="num">1</span>, <span class="num">2</span>);
+p1 == p2;        <span class="cmt">// False (unless you overload == and override Equals)</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Keep == and Equals consistent</span>
+        <p>If you override <code>Equals</code> to give value semantics, you should usually <strong>also overload <code>==</code>
+        and <code>!=</code></strong> so both behave the same — otherwise <code>a.Equals(b)</code> and <code>a == b</code> can
+        disagree, which confuses everyone. <code>string</code> does this (that's why <code>"hi" == "hi"</code> is true), and
+        <strong>records do it automatically</strong> (the records topic).</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ == is static, Equals is virtual</span>
+        <p>A subtle trap: <code>==</code> is resolved at <em>compile time</em> based on the variable's declared type, while
+        <code>Equals</code> is <em>virtual</em> and dispatched at runtime on the actual object. So through a base-type
+        reference, <code>==</code> may not call your overload while <code>Equals</code> still calls your override. Keeping
+        them consistent avoids surprises.</p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge e">08</span><h2>Implementing It</h2></div>
+      <p class="sec-sub">The standard recipe: override <code>Equals</code> and <code>GetHashCode</code>, implement <code>IEquatable&lt;T&gt;</code>, and overload <code>==</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public sealed class</span> <span class="ty">Money</span> : <span class="ty">IEquatable</span>&lt;<span class="ty">Money</span>&gt;
+{
+    <span class="kw">public</span> <span class="kw">decimal</span> Amount { <span class="kw">get</span>; }
+    <span class="kw">public</span> <span class="kw">string</span> Currency { <span class="kw">get</span>; }   <span class="cmt">// immutable -> safe for hashing</span>
+
+    <span class="kw">public</span> <span class="fn">Money</span>(<span class="kw">decimal</span> amount, <span class="kw">string</span> currency)
+        =&gt; (Amount, Currency) = (amount, currency);
+
+    <span class="cmt">// strongly-typed Equals (IEquatable&lt;T&gt;) -- no boxing, used by collections</span>
+    <span class="kw">public bool</span> <span class="fn">Equals</span>(<span class="ty">Money</span>? other) =&gt;
+        other <span class="kw">is not null</span> &amp;&amp; Amount == other.Amount &amp;&amp; Currency == other.Currency;
+
+    <span class="cmt">// object.Equals delegates to the typed one</span>
+    <span class="kw">public override bool</span> <span class="fn">Equals</span>(<span class="kw">object</span>? obj) =&gt; <span class="fn">Equals</span>(obj <span class="kw">as</span> <span class="ty">Money</span>);
+
+    <span class="cmt">// hash code from the SAME fields used in Equals; HashCode.Combine is the modern way</span>
+    <span class="kw">public override int</span> <span class="fn">GetHashCode</span>() =&gt; <span class="ty">HashCode</span>.<span class="fn">Combine</span>(Amount, Currency);
+
+    <span class="cmt">// overload == / != to match Equals</span>
+    <span class="kw">public static bool</span> <span class="kw">operator</span> ==(<span class="ty">Money</span>? a, <span class="ty">Money</span>? b) =&gt; <span class="ty">Equals</span>(a, b);
+    <span class="kw">public static bool</span> <span class="kw">operator</span> !=(<span class="ty">Money</span>? a, <span class="ty">Money</span>? b) =&gt; !<span class="ty">Equals</span>(a, b);
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The checklist</span>
+        <p>(1) Implement <code>IEquatable&lt;T&gt;.Equals(T)</code> — typed, no boxing for value types. (2) Override
+        <code>object.Equals(object)</code> to delegate to it. (3) Override <code>GetHashCode</code> from the <em>same
+        fields</em>, ideally via <code>HashCode.Combine(...)</code>. (4) Overload <code>==</code>/<code>!=</code>. The
+        analyzers <code>CA1066</code>/<code>CA1067</code> nudge you to keep <code>IEquatable</code> and the overrides in
+        sync.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Or just use a record</span>
+        <p>For pure data, a <strong>record</strong> (from the modern-C# topic) generates this entire recipe — value
+        <code>Equals</code>, a contract-correct <code>GetHashCode</code>, and <code>==</code>/<code>!=</code> — from a single
+        line. Hand-write the recipe only when you need custom equality semantics (e.g. equality by an ID field, ignoring
+        other properties) that a record's "compare every member" default doesn't give you.</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge e">09</span><h2>Pitfalls</h2></div>
+      <p class="sec-sub">The ways equality goes subtly, silently wrong.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C# · the mutable-key bug</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">BadKey</span> { <span class="kw">public string</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public override int</span> <span class="fn">GetHashCode</span>() =&gt; Id.<span class="fn">GetHashCode</span>(); <span class="cmt">/* ...Equals on Id... */</span> }
+
+<span class="kw">var</span> set = <span class="kw">new</span> <span class="ty">HashSet</span>&lt;<span class="ty">BadKey</span>&gt;();
+<span class="kw">var</span> k = <span class="kw">new</span> <span class="ty">BadKey</span> { Id = <span class="str">"A"</span> };
+set.<span class="fn">Add</span>(k);
+k.Id = <span class="str">"B"</span>;            <span class="cmt">// 💥 hash code changed AFTER insertion</span>
+set.<span class="fn">Contains</span>(k);      <span class="cmt">// False! -- it's in the wrong bucket now, effectively lost</span></code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🔓</span><h4>Mutable hash fields</h4><p>If a field used in <code>GetHashCode</code> changes after the object is in a set/dictionary, the key is "lost." Hash on <strong>immutable</strong> fields only.</p></div>
+        <div class="card"><span class="glyph">↔️</span><h4>Inheritance breaks symmetry</h4><p>If a base and derived type can compare equal one way but not the other, symmetry breaks. Use <code>GetType()</code> checks or seal equality.</p></div>
+        <div class="card"><span class="glyph">🐌</span><h4>Struct default equality</h4><p><code>ValueType.Equals</code>/<code>GetHashCode</code> work via <strong>reflection</strong> — correct but slow. Override them on any struct used as a key or in hot paths.</p></div>
+        <div class="card"><span class="glyph">⚖️</span><h4>== / Equals disagree</h4><p>Overriding one but not the other lets <code>a == b</code> and <code>a.Equals(b)</code> differ — a confusing inconsistency.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The inheritance + symmetry trap</span>
+        <p>Suppose <code>Base</code> compares by one field and <code>Derived</code> adds another. <code>base.Equals(derived)</code>
+        might say "true" (matching field) while <code>derived.Equals(base)</code> says "false" (missing field) — breaking
+        <strong>symmetry</strong>. Two common fixes: compare exact runtime types with <code>GetType() != obj.GetType()</code>
+        (so base and derived are never equal), or only implement equality on <strong>sealed</strong> classes.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Testing the Contract</h2></div>
+      <p class="sec-sub">The two topics meet: the equality contract is precisely the kind of well-defined behavior unit tests exist to verify.</p>
+
+      <p>Because the contract is a set of concrete rules, it's an ideal target for tests. A small suite locks in that your
+        type's equality behaves correctly — and keeps behaving correctly as the code evolves.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C# · xUnit</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">MoneyEqualityTests</span>
+{
+    [<span class="ty">Fact</span>]
+    <span class="kw">public void</span> <span class="fn">Equals_SameValues_AreEqual</span>()         <span class="cmt">// value equality</span>
+    {
+        <span class="kw">var</span> a = <span class="kw">new</span> <span class="ty">Money</span>(<span class="num">10</span>, <span class="str">"USD"</span>);
+        <span class="kw">var</span> b = <span class="kw">new</span> <span class="ty">Money</span>(<span class="num">10</span>, <span class="str">"USD"</span>);
+        <span class="ty">Assert</span>.<span class="fn">Equal</span>(a, b);          <span class="cmt">// uses Equals</span>
+        <span class="ty">Assert</span>.<span class="fn">True</span>(a == b);          <span class="cmt">// == matches Equals</span>
+    }
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public void</span> <span class="fn">Equal_Objects_ShareHashCode</span>()       <span class="cmt">// THE invariant</span>
+    {
+        <span class="kw">var</span> a = <span class="kw">new</span> <span class="ty">Money</span>(<span class="num">10</span>, <span class="str">"USD"</span>);
+        <span class="kw">var</span> b = <span class="kw">new</span> <span class="ty">Money</span>(<span class="num">10</span>, <span class="str">"USD"</span>);
+        <span class="ty">Assert</span>.<span class="fn">Equal</span>(a.<span class="fn">GetHashCode</span>(), b.<span class="fn">GetHashCode</span>());
+    }
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public void</span> <span class="fn">Equals_IsSymmetric</span>()                  <span class="cmt">// symmetry</span>
+    {
+        <span class="kw">var</span> a = <span class="kw">new</span> <span class="ty">Money</span>(<span class="num">10</span>, <span class="str">"USD"</span>);
+        <span class="kw">var</span> b = <span class="kw">new</span> <span class="ty">Money</span>(<span class="num">10</span>, <span class="str">"USD"</span>);
+        <span class="ty">Assert</span>.<span class="fn">Equal</span>(a.<span class="fn">Equals</span>(b), b.<span class="fn">Equals</span>(a));
+    }
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public void</span> <span class="fn">Equals_Null_IsFalse</span>() =&gt;            <span class="cmt">// null rule</span>
+        <span class="ty">Assert</span>.<span class="fn">False</span>(<span class="kw">new</span> <span class="ty">Money</span>(<span class="num">10</span>, <span class="str">"USD"</span>).<span class="fn">Equals</span>(<span class="kw">null</span>));
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public void</span> <span class="fn">WorksAsDictionaryKey</span>()                <span class="cmt">// the real-world payoff</span>
+    {
+        <span class="kw">var</span> dict = <span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="ty">Money</span>, <span class="kw">string</span>&gt; { [<span class="kw">new</span>(<span class="num">10</span>, <span class="str">"USD"</span>)] = <span class="str">"ten"</span> };
+        <span class="ty">Assert</span>.<span class="fn">True</span>(dict.<span class="fn">ContainsKey</span>(<span class="kw">new</span> <span class="ty">Money</span>(<span class="num">10</span>, <span class="str">"USD"</span>)));   <span class="cmt">// found via hash + Equals</span>
+    }
+}</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The full-circle payoff</span>
+        <p>That last test is the point of the whole page: a correct equality contract means a value works as a
+        <strong>dictionary key</strong> — and a unit test proves it. The <code>Assert.Equal(a, b)</code> calls rely on
+        <code>Equals</code>; the dictionary relies on the hash invariant; and the tests document and guard the contract.
+        Testing and equality, working together.</p>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea. If you can explain each card aloud, you've got it.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🧪 Unit test</h4><p>An automated, isolated check of one behavior; integration tests exercise components together.</p></div>
+        <div class="recap-card"><h4>⚡ FIRST</h4><p>Fast, Independent, Repeatable, Self-validating, Timely — the marks of good unit tests.</p></div>
+        <div class="recap-card"><h4>🅰️ AAA</h4><p>Arrange (set up), Act (one call under test), Assert (verify) — the structure of every test.</p></div>
+        <div class="recap-card"><h4>🎭 Test doubles</h4><p>Dummy, stub (data), mock (verify interaction), fake (working stand-in) — to isolate the unit.</p></div>
+        <div class="recap-card"><h4>🔌 DI enables testing</h4><p>Constructor-injected dependencies let you swap in doubles; <code>new</code>-ing collaborators blocks it.</p></div>
+        <div class="recap-card"><h4>📜 Equality rules</h4><p>Reflexive, symmetric, transitive, consistent, and <code>x.Equals(null)</code> is false.</p></div>
+        <div class="recap-card"><h4>🔑 Hash invariant</h4><p>Equal objects must have equal hash codes; collisions (unequal, same hash) are allowed.</p></div>
+        <div class="recap-card"><h4>🤝 Override both</h4><p>Override <code>Equals</code> and <code>GetHashCode</code> together, hashing only immutable fields.</p></div>
+        <div class="recap-card"><h4>🟰 == vs Equals</h4><p><code>==</code> is static (reference by default); <code>Equals</code> is virtual; keep them consistent.</p></div>
+        <div class="recap-card"><h4>📦 records</h4><p>Generate a correct equality contract automatically; hand-write only for custom semantics.</p></div>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a clear answer. Tagged by level — Junior (0–2 yrs),
+        Mid (2–5 yrs), Senior (5–7 yrs). Written for someone with no prior coding background.</p>
+
+      <h3>🌱 Junior — fundamentals (0–2 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q1</span> What is a unit test, and how does it differ from an integration test? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A unit test checks one small piece of behavior in isolation, with no external dependencies, so it runs fast and pinpoints failures. An integration test exercises
+        several components working together — and may touch a real database, file system, or network — so it's slower and broader. You keep unit tests fast and numerous, and use a smaller set of integration tests for the seams between components.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span> What is the AAA pattern? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Arrange-Act-Assert: the three parts of a well-structured test. <strong>Arrange</strong> sets up the objects, inputs, and any test doubles. <strong>Act</strong> calls the one method under test. <strong>Assert</strong> verifies the result matches what you expected. It keeps tests readable and makes the single thing being tested obvious.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span> What's the difference between [Fact] and [Theory] in xUnit? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>[Fact]</code> marks a test with no parameters that should always hold. <code>[Theory]</code> marks a data-driven test that runs the same body with multiple inputs, supplied by <code>[InlineData(...)]</code> (or other data sources). Use a Theory instead of copy-pasting near-identical Facts that differ only by input values.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span> What does it mean for two objects to be "equal"? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>It depends on the type. By default, reference types use <em>reference equality</em> — two variables are equal only if they point to the same object. <em>Value equality</em> means two objects are equal if their contents match, even if they're different objects in memory. <code>string</code> and records use value equality; a plain class uses reference equality unless you override <code>Equals</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span> Why must you override GetHashCode when you override Equals? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Because hash-based collections (<code>Dictionary</code>, <code>HashSet</code>) use the hash code to decide where to store and look for an object. The rule is: equal objects must have equal hash codes. If you change what "equal" means via <code>Equals</code> but leave the default <code>GetHashCode</code>, two equal objects can get different hash codes, so the collection looks in the wrong place and fails to find them. The compiler even warns you (CS0659).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span> What is a mock? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A mock is a stand-in for a real dependency that you use in tests to both supply controlled behavior <em>and</em> verify how it was used — for example, confirming that a method was called once with certain arguments. Libraries like Moq create mocks from an interface, so you can test a class in isolation without its real collaborators (like a database).</p></div></details>
+
+      <h3>🟠 Mid-level — going deeper (2–5 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q7</span> What's the difference between a stub and a mock? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>A <strong>stub</strong> provides canned data so the code under test can run — you don't check the stub itself. A <strong>mock</strong> goes further: you <em>assert against it</em>, verifying that an expected interaction happened (a method was called, with given arguments, a certain number of times). Rule of thumb: stub the <em>queries</em> (state you read), mock the <em>commands</em> (side-effecting actions you want to confirm occurred). Both are "test doubles," along with dummies and fakes.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span> State the equality contract. <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Five rules for <code>Equals</code>: <strong>reflexive</strong> (<code>x.Equals(x)</code> true), <strong>symmetric</strong> (<code>x.Equals(y)</code> == <code>y.Equals(x)</code>), <strong>transitive</strong> (if <code>x=y</code> and <code>y=z</code> then <code>x=z</code>), <strong>consistent</strong> (same result on repeated calls if unchanged), and <code>x.Equals(null)</code> is false. Plus the <code>GetHashCode</code> invariant: equal objects must return equal hash codes (the converse isn't required — collisions are allowed).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q9</span> Why should hash codes be based on immutable fields? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Because hash-based collections compute an object's hash code when it's inserted and use it to choose a bucket. If a field that feeds <code>GetHashCode</code> changes <em>after</em> insertion, the object's hash code changes, but it's still sitting in the old bucket — so <code>Contains</code>/lookup computes the new hash, looks in the new bucket, and doesn't find it. The key is effectively lost. Hashing only on immutable data avoids this.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> What is IEquatable&lt;T&gt; and why implement it? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>IEquatable&lt;T&gt;</code> provides a strongly-typed <code>Equals(T)</code> method. For value types it avoids <strong>boxing</strong> (the untyped <code>Equals(object)</code> would box the struct), and it lets collections call the typed comparison directly, which is faster. When you implement it you should also override <code>object.Equals</code> and <code>GetHashCode</code> to stay consistent (analyzers CA1066/CA1067 enforce this), typically by having <code>object.Equals</code> delegate to the typed version.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> What's the difference between == and Equals? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>==</code> is a <em>static</em> operator resolved at compile time from the declared types; by default for reference types it's reference equality (unless overloaded). <code>Equals</code> is a <em>virtual</em> method dispatched at runtime on the actual object, meant to be overridden for value semantics. <code>string</code> overloads <code>==</code> so it matches its value <code>Equals</code>. Best practice: if you override <code>Equals</code>, also overload <code>==</code>/<code>!=</code> so they agree.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> Why does DI make code more testable? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Because dependencies arrive through the constructor as interfaces, a test can inject <em>test doubles</em> (stubs/mocks) instead of the real database, clock, or service — isolating the class so you test only its logic. A class that creates its own collaborators with <code>new</code> can't be isolated, so you'd be forced into slow, brittle integration tests. So the dependency-injection pattern is what unlocks fast, focused unit testing.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What happens if two equal objects return different hash codes? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>You violate the core invariant, and hash-based collections break <em>silently</em>. A <code>Dictionary</code> or <code>HashSet</code> stores the object in the bucket for its hash code; if an equal object hashes differently, a lookup checks a different bucket and reports "not found" even though an equal key is present. LINQ's <code>Distinct</code>, <code>GroupBy</code>, <code>Union</code>, etc. misbehave too. No exception is thrown — you just get wrong results, which is why this bug is so dangerous.</p></div></details>
+
+      <h3>🔴 Senior — synthesis &amp; judgment (5–7 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> How does inheritance threaten the symmetry of Equals, and how do you handle it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>If a base type compares by some fields and a derived type adds more, you can get asymmetry: <code>base.Equals(derived)</code> may return true (the shared fields match) while <code>derived.Equals(base)</code> returns false (the base lacks the extra field), violating symmetry — which corrupts collections relying on the contract. Two robust fixes: (1) compare exact runtime types with <code>GetType() != obj.GetType()</code> so a base and derived instance are never considered equal; or (2) only define value equality on <strong>sealed</strong> classes, removing the inheritance dimension entirely. Microsoft recommends implementing <code>IEquatable</code> on sealed types for exactly this reason.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> Why are value types' default Equals and GetHashCode problematic, and when does it matter? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>A struct inherits <code>ValueType.Equals</code>/<code>GetHashCode</code>, which compare fields via <strong>reflection</strong> — correct but significantly slower than a hand-written comparison, and historically the default <code>GetHashCode</code> could derive from only the first field (poor distribution → collisions). For a struct used as a <code>Dictionary</code>/<code>HashSet</code> key or in a tight loop, that reflection cost and weak hashing hurt. The fix is to override both with a typed implementation (and implement <code>IEquatable&lt;T&gt;</code> to avoid boxing). For a struct that's never compared or hashed in hot paths, the default is acceptable.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> What kinds of equality might you choose for a domain type, and what are the trade-offs? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Two common models: <strong>value equality</strong> (equal if all relevant fields match — good for value objects like <code>Money</code> or <code>Coordinate</code>) and <strong>identity equality</strong> (equal if a stable identifier matches — good for entities, e.g. two <code>Customer</code> objects are "the same customer" if their <code>Id</code> matches even if other fields differ). The trade-off: value equality is intuitive for immutable data but wrong for entities whose attributes change over time; identity equality models persistence/ORM semantics but means objects with different data can be equal. Choose based on whether the type represents a <em>value</em> or an <em>entity with identity</em>, and document the choice — records default to whole-object value equality, which suits values but not entities.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> How do you decide what to test, and what to avoid testing? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Test <strong>behavior and contracts</strong>: business logic, branching, edge cases, error paths, and invariants (like the equality contract) — the things that, if broken, cause real bugs. Avoid testing <strong>implementation details</strong> (private methods, exact internal calls) since those make tests brittle and block refactoring; instead assert observable outcomes. Don't test the framework or third-party libraries themselves. Favor a few high-value tests over chasing 100% coverage — coverage shows untested lines but not whether your assertions are meaningful. Mock external <em>commands</em> with side effects; prefer real objects for simple <em>queries</em> to avoid over-mocking that just restates the implementation.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> What is over-mocking, and why is it a problem? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Over-mocking is replacing too many collaborators with mocks and asserting on their every interaction, so the test ends up encoding the <em>implementation</em> rather than the <em>behavior</em>. Such tests break whenever you refactor internals even if behavior is unchanged (false failures), give a false sense of safety (you tested that methods were called, not that the result is correct), and become hard to read. Prefer testing through the public surface with real objects where cheap, mock only true external boundaries (I/O, network, time), and assert on outcomes and essential interactions rather than on every call.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> How do records change the equality story, and when would you still hand-roll equality? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Records (C# 9) auto-generate a contract-correct equality: value-based <code>Equals</code>/<code>GetHashCode</code> over all members, plus <code>==</code>/<code>!=</code> — eliminating the boilerplate and the classic "forgot to override GetHashCode" bug. That's ideal for immutable value/DTO types. You'd still hand-roll when you need <strong>custom semantics</strong> the record default can't express: equality by a subset of fields (e.g. identity by <code>Id</code> only), case-insensitive or normalized comparison, ignoring computed/transient members, or a domain-specific notion of "equal." You can also override a record's equality members selectively. And records are shallow — for members that are mutable reference types, you may need custom logic.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> Tie it together: how do testing and the equality contract reinforce each other? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>They're mutually dependent. Test assertions like <code>Assert.Equal</code> call <code>Equals</code> under the hood, so a broken equality implementation makes tests pass or fail for the wrong reasons — your equality must be correct for your tests to be trustworthy. Conversely, the equality contract is a set of precise, checkable rules (reflexivity, symmetry, transitivity, the hash invariant, dictionary-key behavior), making it a perfect subject for unit tests that document and guard those rules as code evolves. In practice you write a small equality test suite per value type, and you rely on correct equality everywhere you assert. Good engineering treats both as part of the same discipline: define correct behavior, then prove it automatically.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Lock down <strong>Junior</strong> — unit vs integration, AAA, <code>[Fact]</code>/<code>[Theory]</code>, value vs reference equality, why override <code>GetHashCode</code> with <code>Equals</code>, and what a mock is. <strong>Mid</strong> is the interview core: stub vs mock, the full equality contract, immutable hash fields, <code>IEquatable&lt;T&gt;</code>, <code>==</code> vs <code>Equals</code>, DI-enables-testing, and the silent-failure consequence of breaking the hash invariant.
+        <strong>Senior</strong> goes deep: inheritance/symmetry, struct reflection equality, value vs identity equality, what (not) to test, over-mocking, records' impact, and how the two topics interlock. Answer each aloud without peeking; stumbles point back to the section.</p>
+      </div>
+
+      <p class="foot">All technical details verified against Microsoft Learn (Best practices for writing unit tests, Unit testing C# with xUnit, How to define value equality for a type, CA1066/CA1067 code-analysis rules) and supporting references. This single <code>15-testing-equality-contract.html</code> file is fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+function updateProgress(){const h=document.documentElement;const max=h.scrollHeight-h.clientHeight;
+  progress.style.width=(max>0?(h.scrollTop/max)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});
+window.addEventListener('resize',updateProgress);updateProgress();
+
+const sidebar=document.getElementById('sidebar');const backdrop=document.getElementById('backdrop');
+function closeSidebar(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(link.getAttribute('href'));
+    if(target){const y=target.getBoundingClientRect().top+window.pageYOffset-24;window.scrollTo({top:y,behavior:'smooth'});}
+    if(window.innerWidth<=920) closeSidebar();
+  });
+});
+
+const sections=[...document.querySelectorAll('.section')];
+const navLinks=[...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on=l.getAttribute('href')==='#'+id;
+    l.classList.toggle('active',on);
+    if(on){const lr=l.getBoundingClientRect(),sr=sidebar.getBoundingClientRect();
+      if(lr.top<sr.top+60||lr.bottom>sr.bottom-60){sidebar.scrollTop+=(lr.top-sr.top)-sidebar.clientHeight/2+lr.height/2;}}
+  });
+}
+const spy=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting) setActive(en.target.id);});},
+  {rootMargin:'-20% 0px -70% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+const reveal=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');reveal.unobserve(en.target);}});},{threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.closest('.code').querySelector('pre code').innerText;
+    const done=()=>{btn.textContent='Copied!';btn.classList.add('done');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done');},2000);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code,done));
+    } else {fallback(code,done);}
+  });
+});
+function fallback(text,cb){const ta=document.createElement('textarea');ta.value=text;
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
+
+document.getElementById('fab').addEventListener('click',()=>{
+  const open=sidebar.classList.toggle('open');backdrop.classList.toggle('show',open);});
+backdrop.addEventListener('click',closeSidebar);
+</script>
+</body>
+</html>

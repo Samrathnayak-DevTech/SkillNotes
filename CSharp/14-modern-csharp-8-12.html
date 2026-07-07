@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Modern C# 8–12</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0; --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea; --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3; --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink); font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;}
+#progress{position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .08s linear;}
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+.sec-badge.v{background:var(--blue);}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);margin:0;line-height:1.12;letter-spacing:-.01em;}
+.ver-tag{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-soft);background:var(--bg-soft);
+  border:1px solid var(--line);border-radius:999px;padding:3px 12px;margin-left:auto;align-self:center;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+:not(pre) > code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--accent);
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;}
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;
+  background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;background:transparent;
+  border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;color:var(--code-ink);
+  background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;} .err{color:#f07178;}
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent);font-weight:700;}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:24px 22px;margin:24px 0;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.good .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+/* timeline */
+.vtimeline{display:flex;flex-direction:column;gap:0;margin:24px 0;}
+.vt-row{display:flex;gap:14px;align-items:stretch;}
+.vt-marker{display:flex;flex-direction:column;align-items:center;flex:0 0 auto;}
+.vt-dot{width:16px;height:16px;border-radius:50%;background:var(--accent);border:3px solid var(--accent-soft);}
+.vt-line{flex:1;width:2px;background:var(--line);min-height:14px;}
+.vt-body{padding:0 0 20px;}
+.vt-body h5{font-family:"JetBrains Mono",monospace;font-size:13px;margin:0 0 3px;color:var(--accent);}
+.vt-body small{color:var(--ink-soft);font-size:.86rem;}
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:18px 0;}
+.feat{background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:.86rem;}
+.feat b{font-family:"Fraunces",serif;font-weight:600;display:block;font-size:.95rem;margin-bottom:1px;}
+.feat span{color:var(--ink-soft);font-size:.8rem;}
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-connector{width:2px;height:22px;background:linear-gradient(var(--accent),var(--rose));}
+.mindmap{display:flex;flex-direction:column;align-items:center;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;font-size:1.1rem;
+  padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);transition:transform .28s ease;
+    box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">Modern C# 8–12</div>
+    <nav>
+      <div class="nav-group">
+        <h4>Map</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> Overview</a>
+      </div>
+      <div class="nav-group">
+        <h4>By Version</h4>
+        <a class="nav-link" href="#s02"><span class="n">02</span> C# 8 · .NET Core 3</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> C# 9 · .NET 5</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> C# 10 · .NET 6</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> C# 11 · .NET 7</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> C# 12 · .NET 8</a>
+      </div>
+      <div class="nav-group">
+        <h4>Deep Dives</h4>
+        <a class="nav-link" href="#s07"><span class="n">07</span> Records &amp; Immutability</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> Pattern Matching</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> Nullable Reference Types</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> Less Ceremony</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Quick Recap</a>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// C# &nbsp;·&nbsp; five years of language evolution</p>
+      <h1>Modern C# 8–12 ✨</h1>
+      <p class="lede">
+        Between C# 8 (2019) and C# 12 (2023), the language gained a wave of features that reshaped how everyday C# is
+        written: <b>records</b> for immutable data, far richer <b>pattern matching</b>, <b>nullable reference types</b> for
+        null safety, and a steady drive to cut <b>ceremony</b> — top-level statements, file-scoped namespaces, primary
+        constructors, collection expressions. This page maps what landed in <b>each version</b>, then dives into the
+        features interviewers ask about most. It draws on the type-system, pattern, and DI topics from earlier. No prior
+        coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">📦 <b>Records</b></span>
+        <span class="chip">🧩 <b>Pattern matching</b></span>
+        <span class="chip">🛡️ <b>Nullable refs</b></span>
+        <span class="chip">✂️ <b>Less ceremony</b></span>
+        <span class="chip">🆕 <b>C# 8 → 12</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- 01 -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>Overview</h2></div>
+      <p class="sec-sub">Five releases, each tied to a .NET version, pushing a few consistent themes: safety, immutability, expressiveness, and less boilerplate.</p>
+
+      <p>C# ships a new version with each annual .NET release. Knowing <em>which feature came in which version</em> is a
+        common interview check, but the bigger picture is the <strong>themes</strong> these releases share. Here's the map:</p>
+
+      <div class="vtimeline">
+        <div class="vt-row"><div class="vt-marker"><div class="vt-dot"></div><div class="vt-line"></div></div>
+          <div class="vt-body"><h5>C# 8 — .NET Core 3.0 (2019)</h5><small>Nullable reference types, switch expressions, async streams, ranges &amp; indices, default interface members, using declarations</small></div></div>
+        <div class="vt-row"><div class="vt-marker"><div class="vt-dot"></div><div class="vt-line"></div></div>
+          <div class="vt-body"><h5>C# 9 — .NET 5 (2020)</h5><small>Records, init-only setters, top-level statements, target-typed new, relational &amp; logical patterns, covariant returns</small></div></div>
+        <div class="vt-row"><div class="vt-marker"><div class="vt-dot"></div><div class="vt-line"></div></div>
+          <div class="vt-body"><h5>C# 10 — .NET 6 (2021)</h5><small>Record structs, global usings, file-scoped namespaces, extended property patterns, lambda improvements</small></div></div>
+        <div class="vt-row"><div class="vt-marker"><div class="vt-dot"></div><div class="vt-line"></div></div>
+          <div class="vt-body"><h5>C# 11 — .NET 7 (2022)</h5><small>Raw string literals, required members, generic math (static abstract members), list patterns, UTF-8 literals, file-local types</small></div></div>
+        <div class="vt-row"><div class="vt-marker"><div class="vt-dot" style="background:var(--rose);border-color:var(--rose-soft);"></div></div>
+          <div class="vt-body"><h5>C# 12 — .NET 8 (2023)</h5><small>Primary constructors (all types), collection expressions, alias any type, default lambda parameters, ref readonly params</small></div></div>
+      </div>
+
+      <div class="mindmap">
+        <div class="mm-core">✨ The themes</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>🛡️ Safety</h5>
+            <ul><li>Nullable reference types</li><li>Required members</li><li>Exhaustive switches</li></ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>📦 Immutability</h5>
+            <ul><li>Records</li><li><code>init</code> setters</li><li><code>with</code> expressions</li></ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🧩 Expressiveness</h5>
+            <ul><li>Pattern matching</li><li>Switch expressions</li><li>Raw strings</li></ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>✂️ Less ceremony</h5>
+            <ul><li>Top-level statements</li><li>Primary constructors</li><li>Collection expressions</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 C# version ↔ .NET version</span>
+        <p>By default, your <em>target framework</em> picks the C# version: .NET 8 → C# 12, .NET 7 → C# 11, .NET 6 → C# 10,
+        .NET 5 → C# 9, .NET Core 3.x → C# 8. You can override <code>&lt;LangVersion&gt;</code>, but some features need newer
+        runtime/library support (e.g. async streams and ranges needed .NET Core 3.0 types). When unsure "what version is
+        feature X," anchor on this table.</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge v">02</span><h2>C# 8</h2><span class="ver-tag">.NET Core 3.0 · 2019</span></div>
+      <p class="sec-sub">The first version targeting .NET Core. Big themes: null safety and pattern/expression conveniences.</p>
+
+      <div class="feat-grid">
+        <div class="feat"><b>Nullable reference types</b><span>opt-in null safety (§09)</span></div>
+        <div class="feat"><b>Switch expressions</b><span>concise switch that returns a value</span></div>
+        <div class="feat"><b>Pattern matching+</b><span>property, tuple, positional patterns</span></div>
+        <div class="feat"><b>using declarations</b><span><code>using var x = …;</code></span></div>
+        <div class="feat"><b>Async streams</b><span><code>IAsyncEnumerable</code>, <code>await foreach</code></span></div>
+        <div class="feat"><b>Ranges &amp; indices</b><span><code>^1</code>, <code>1..4</code></span></div>
+        <div class="feat"><b>??= operator</b><span>null-coalescing assignment</span></div>
+        <div class="feat"><b>Default interface members</b><span>interfaces can ship method bodies</span></div>
+        <div class="feat"><b>Static local functions</b><span>can't capture enclosing state</span></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C# 8</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// switch expression -- returns a value, no break, arm per case</span>
+<span class="kw">string</span> label = day <span class="kw">switch</span>
+{
+    <span class="num">0</span> <span class="kw">or</span> <span class="num">6</span> =&gt; <span class="str">"weekend"</span>,   <span class="cmt">// (or-pattern arrived in C# 9; see note)</span>
+    _      =&gt; <span class="str">"weekday"</span>
+};
+
+<span class="cmt">// ranges &amp; indices: ^1 = last, 1..4 = items 1,2,3</span>
+<span class="kw">int</span>[] a = { <span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>, <span class="num">40</span>, <span class="num">50</span> };
+<span class="kw">int</span> last  = a[^<span class="num">1</span>];      <span class="cmt">// 50</span>
+<span class="kw">int</span>[] mid = a[<span class="num">1</span>..<span class="num">4</span>];    <span class="cmt">// 20, 30, 40</span>
+
+<span class="cmt">// using declaration: disposed at end of scope, no extra braces</span>
+<span class="kw">using var</span> reader = <span class="kw">new</span> <span class="ty">StreamReader</span>(path);
+
+<span class="cmt">// async streams: await over an asynchronous sequence</span>
+<span class="kw">await foreach</span> (<span class="kw">var</span> item <span class="kw">in</span> <span class="fn">GetPagesAsync</span>()) <span class="fn">Use</span>(item);
+
+x ??= <span class="fn">ComputeDefault</span>();   <span class="cmt">// assign only if x is null</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The headliners</span>
+        <p><strong>Nullable reference types</strong> (the flagship safety feature — section 09), <strong>switch
+        expressions</strong> and richer <strong>pattern matching</strong> (section 08), and <strong>async streams</strong>
+        (which the async topic referenced as <code>IAsyncEnumerable</code>) are the C# 8 features most worth knowing cold.</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge v">03</span><h2>C# 9</h2><span class="ver-tag">.NET 5 · 2020</span></div>
+      <p class="sec-sub">The records release. Immutable data types, simpler program structure, and smarter patterns.</p>
+
+      <div class="feat-grid">
+        <div class="feat"><b>Records</b><span>immutable value-equality types (§07)</span></div>
+        <div class="feat"><b>init setters</b><span>set only during construction</span></div>
+        <div class="feat"><b>Top-level statements</b><span>no <code>Main</code> boilerplate</span></div>
+        <div class="feat"><b>Target-typed new</b><span><code>List&lt;int&gt; x = new();</code></span></div>
+        <div class="feat"><b>Relational patterns</b><span><code>&gt; 0</code>, <code>&lt;= 10</code> in patterns</span></div>
+        <div class="feat"><b>Logical patterns</b><span><code>and</code>, <code>or</code>, <code>not</code></span></div>
+        <div class="feat"><b>Covariant returns</b><span>override with a more-derived type</span></div>
+        <div class="feat"><b>Native ints</b><span><code>nint</code>, <code>nuint</code></span></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C# 9</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// record: immutable, value-based equality, built-in (§07)</span>
+<span class="kw">public record</span> <span class="ty">Person</span>(<span class="kw">string</span> Name, <span class="kw">int</span> Age);
+
+<span class="cmt">// init-only property: set at creation, immutable after</span>
+<span class="kw">public class</span> <span class="ty">Config</span> { <span class="kw">public string</span> Path { <span class="kw">get</span>; <span class="kw">init</span>; } }
+<span class="kw">var</span> c = <span class="kw">new</span> <span class="ty">Config</span> { Path = <span class="str">"/tmp"</span> };   <span class="cmt">// c.Path = ... later -> error</span>
+
+<span class="cmt">// target-typed new: type inferred from the left</span>
+<span class="ty">Dictionary</span>&lt;<span class="kw">string</span>, <span class="kw">int</span>&gt; counts = <span class="kw">new</span>();
+
+<span class="cmt">// relational + logical patterns</span>
+<span class="kw">string</span> size = n <span class="kw">switch</span>
+{
+    &lt; <span class="num">0</span>          =&gt; <span class="str">"negative"</span>,
+    <span class="num">0</span>            =&gt; <span class="str">"zero"</span>,
+    &gt; <span class="num">0</span> <span class="kw">and</span> &lt; <span class="num">10</span> =&gt; <span class="str">"small"</span>,
+    _            =&gt; <span class="str">"big"</span>
+};</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The headliners</span>
+        <p><strong>Records</strong> are the marquee feature (section 07). <strong>Top-level statements</strong> let a program
+        be just its statements — no <code>class Program</code> / <code>static void Main</code> wrapper. <strong>Relational and
+        logical patterns</strong> (<code>and</code>/<code>or</code>/<code>not</code>) made switch expressions far more
+        powerful (section 08).</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge v">04</span><h2>C# 10</h2><span class="ver-tag">.NET 6 · 2021</span></div>
+      <p class="sec-sub">A "polish" release: less namespace/using boilerplate, record structs, and pattern refinements.</p>
+
+      <div class="feat-grid">
+        <div class="feat"><b>Record structs</b><span><code>record struct</code> value types</span></div>
+        <div class="feat"><b>Global usings</b><span><code>global using</code> once per project</span></div>
+        <div class="feat"><b>File-scoped namespaces</b><span><code>namespace X;</code> — no braces</span></div>
+        <div class="feat"><b>Extended property patterns</b><span><code>{ Addr.City: "X" }</code></span></div>
+        <div class="feat"><b>Lambda improvements</b><span>natural types, return types, attributes</span></div>
+        <div class="feat"><b>Const interpolated strings</b><span>if all parts are const</span></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C# 10</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// file-scoped namespace -- one less level of indentation</span>
+<span class="kw">namespace</span> MyApp.Services;   <span class="cmt">// applies to the whole file</span>
+
+<span class="cmt">// global using -- declared once, available across the whole project</span>
+<span class="kw">global using</span> System.Text.Json;
+
+<span class="cmt">// record struct -- a value type with record semantics</span>
+<span class="kw">public readonly record struct</span> <span class="ty">Point</span>(<span class="kw">int</span> X, <span class="kw">int</span> Y);
+
+<span class="cmt">// extended property pattern: dotted access inside a pattern</span>
+<span class="kw">if</span> (order <span class="kw">is</span> { Customer.Address.City: <span class="str">"Chennai"</span> })
+    <span class="fn">ApplyLocalRate</span>();</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The headliners</span>
+        <p><strong>File-scoped namespaces</strong> (<code>namespace X;</code>) and <strong>global usings</strong> remove
+        boilerplate from nearly every file — combined with .NET 6's implicit global usings, many files need no
+        <code>using</code> lines at all. <strong>Record structs</strong> bring record convenience to value types
+        (connecting to the value-vs-reference topic).</p>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge v">05</span><h2>C# 11</h2><span class="ver-tag">.NET 7 · 2022</span></div>
+      <p class="sec-sub">Strings, required initialization, generic math, and list patterns.</p>
+
+      <div class="feat-grid">
+        <div class="feat"><b>Raw string literals</b><span><code>"""..."""</code> — no escaping</span></div>
+        <div class="feat"><b>required members</b><span>compiler-enforced initialization</span></div>
+        <div class="feat"><b>Generic math</b><span>static abstract interface members</span></div>
+        <div class="feat"><b>List patterns</b><span><code>[1, 2, .., 9]</code></span></div>
+        <div class="feat"><b>UTF-8 literals</b><span><code>"abc"u8</code></span></div>
+        <div class="feat"><b>File-local types</b><span><code>file class</code> — source generators</span></div>
+        <div class="feat"><b>Auto-default structs</b><span>fields auto-init to default</span></div>
+        <div class="feat"><b>Newlines in interpolation</b><span>multi-line <code>{ … }</code> holes</span></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C# 11</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// raw string literal: no escaping, multi-line; great for JSON/regex</span>
+<span class="kw">string</span> json = <span class="str">"""
+{ "name": "Sam", "path": "C:\Users\Sam" }
+"""</span>;
+
+<span class="cmt">// required members: compiler forces them to be set at creation</span>
+<span class="kw">public class</span> <span class="ty">User</span>
+{
+    <span class="kw">public required string</span> Name { <span class="kw">get</span>; <span class="kw">init</span>; }
+    <span class="kw">public required string</span> Email { <span class="kw">get</span>; <span class="kw">init</span>; }
+}
+<span class="kw">var</span> u = <span class="kw">new</span> <span class="ty">User</span> { Name = <span class="str">"Sam"</span>, Email = <span class="str">"s@x.io"</span> };   <span class="cmt">// must set both</span>
+
+<span class="cmt">// list pattern: match a sequence by shape</span>
+<span class="kw">int</span>[] data = { <span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span> };
+<span class="kw">if</span> (data <span class="kw">is</span> [<span class="num">1</span>, .., <span class="num">4</span>]) <span class="fn">Handle</span>();   <span class="cmt">// starts with 1, ends with 4</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 The headliners</span>
+        <p><strong>Raw string literals</strong> (<code>"""</code>) make embedded JSON, regex, and SQL readable without escape
+        soup. <strong><code>required</code> members</strong> enforce initialization at compile time (a safety partner to
+        <code>init</code>). <strong>List patterns</strong> extend pattern matching to sequences (section 08), and
+        <strong>generic math</strong> (static abstract interface members) connects to the interfaces topic.</p>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge v">06</span><h2>C# 12</h2><span class="ver-tag">.NET 8 · 2023</span></div>
+      <p class="sec-sub">Primary constructors for everything, a unified collection syntax, and quality-of-life touches.</p>
+
+      <div class="feat-grid">
+        <div class="feat"><b>Primary constructors</b><span>any class/struct, not just records</span></div>
+        <div class="feat"><b>Collection expressions</b><span><code>[1, 2, 3]</code> + spread <code>..</code></span></div>
+        <div class="feat"><b>Alias any type</b><span><code>using P = (int, int);</code></span></div>
+        <div class="feat"><b>Default lambda params</b><span><code>(x, y = 10) =&gt; …</code></span></div>
+        <div class="feat"><b>ref readonly params</b><span>clearer by-ref intent</span></div>
+        <div class="feat"><b>Inline arrays</b><span>fixed-size struct buffers</span></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C# 12</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// primary constructor on a regular class -- great for DI (§ DI topic)</span>
+<span class="kw">public class</span> <span class="ty">OrderService</span>(<span class="ty">IOrderRepository</span> repo, <span class="ty">IClock</span> clock)
+{
+    <span class="kw">public</span> <span class="ty">Order</span> <span class="fn">Place</span>() =&gt; repo.<span class="fn">Save</span>(<span class="kw">new</span> <span class="ty">Order</span>(clock.<span class="fn">Now</span>()));
+    <span class="cmt">// 'repo' and 'clock' are captured -- no boilerplate fields/assignments</span>
+}
+
+<span class="cmt">// collection expressions: one syntax for arrays, lists, spans...</span>
+<span class="kw">int</span>[] a = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>];
+<span class="ty">List</span>&lt;<span class="kw">string</span>&gt; b = [<span class="str">"x"</span>, <span class="str">"y"</span>];
+<span class="kw">int</span>[] merged = [.. a, <span class="num">4</span>, <span class="num">5</span>];   <span class="cmt">// spread: 1, 2, 3, 4, 5</span>
+
+<span class="cmt">// alias any type -- give a tuple a friendly name</span>
+<span class="kw">using</span> Coord = (<span class="kw">int</span> X, <span class="kw">int</span> Y);
+Coord origin = (<span class="num">0</span>, <span class="num">0</span>);</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Primary constructors: class vs record differ</span>
+        <p>In a <strong>record</strong>, primary-constructor parameters become public init properties automatically. In a
+        regular <strong>class/struct</strong> (C# 12), they do <em>not</em> become properties — they're captured as private
+        state for use in the body. That's deliberate: records model data (expose it); classes model behavior (hide it). A
+        common interview gotcha.</p>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>Records &amp; Immutability</h2></div>
+      <p class="sec-sub">The C# 9 headline: a concise way to declare immutable types with value-based equality built in.</p>
+
+      <p>A <strong>record</strong> is a reference type (or value type with <code>record struct</code>) whose compiler
+        generates value-based <strong>equality</strong>, a readable <code>ToString</code>, and support for non-destructive
+        copying with <strong><code>with</code></strong>. It's purpose-built for immutable data — DTOs, domain values, events.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public record</span> <span class="ty">Person</span>(<span class="kw">string</span> Name, <span class="kw">int</span> Age);   <span class="cmt">// positional record</span>
+
+<span class="kw">var</span> a = <span class="kw">new</span> <span class="ty">Person</span>(<span class="str">"Sam"</span>, <span class="num">30</span>);
+<span class="kw">var</span> b = <span class="kw">new</span> <span class="ty">Person</span>(<span class="str">"Sam"</span>, <span class="num">30</span>);
+
+<span class="cmt">// VALUE equality: equal because their contents match (not references)</span>
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(a == b);        <span class="cmt">// True  (a class would print False)</span>
+
+<span class="cmt">// non-destructive copy: new record, one property changed</span>
+<span class="kw">var</span> older = a <span class="kw">with</span> { Age = <span class="num">31</span> };   <span class="cmt">// Person { Name = Sam, Age = 31 }, 'a' unchanged</span>
+
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(a);   <span class="cmt">// Person { Name = Sam, Age = 30 } -- nice ToString, free</span></code></pre>
+      </div>
+
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val">class</div><div class="idx">a == b ?</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell neg"><div class="val">False</div><div class="idx">reference equality</div></div>
+          <div class="arrow" style="margin-left:24px">vs</div>
+          <div class="arr-cell"><div class="val">record</div><div class="idx">a == b ?</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell good"><div class="val">True</div><div class="idx">value equality</div></div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 What the compiler generates for a record</span>
+        <p>Value-based <code>Equals</code>/<code>GetHashCode</code> (compare all members), <code>==</code>/<code>!=</code>,
+        a <code>ToString</code> that prints the members, a <code>Deconstruct</code> for positional records, and a protected
+        copy constructor used by <code>with</code>. You write one line; you get all of that. Records are still
+        <em>reference</em> types by default — <code>record struct</code> (C# 10) makes a value-type version.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ When to use a record vs a class</span>
+        <p>Use a <strong>record</strong> for immutable data where two instances with the same contents should be considered
+        equal — DTOs, value objects, messages, configuration snapshots. Use a <strong>class</strong> for entities with
+        identity and mutable behavior (a service, a stateful object). Records pair naturally with <code>init</code> and
+        C# 11 <code>required</code> members for safe, immutable construction.</p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>Pattern Matching</h2></div>
+      <p class="sec-sub">Across C# 8–11, pattern matching grew from a curiosity into one of the language's most expressive tools.</p>
+
+      <p>Pattern matching lets you test a value's <em>shape</em> and extract data in one step. Each version added new pattern
+        kinds; together they make <code>switch</code> expressions read like a concise decision table.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Pattern</th><th>Example</th><th>Since</th></tr></thead>
+          <tbody>
+            <tr><td>Type / declaration</td><td><code>obj is string s</code></td><td>C# 7</td></tr>
+            <tr><td>Property</td><td><code>{ Age: 30 }</code></td><td>C# 8</td></tr>
+            <tr><td>Positional / tuple</td><td><code>(0, 0)</code></td><td>C# 8</td></tr>
+            <tr><td>Relational</td><td><code>&gt; 0</code>, <code>&lt;= 10</code></td><td>C# 9</td></tr>
+            <tr><td>Logical</td><td><code>and</code>, <code>or</code>, <code>not</code></td><td>C# 9</td></tr>
+            <tr><td>Extended property</td><td><code>{ Addr.City: "X" }</code></td><td>C# 10</td></tr>
+            <tr><td>List</td><td><code>[1, .., 9]</code></td><td>C# 11</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// a switch expression combining several pattern kinds</span>
+<span class="kw">decimal</span> <span class="fn">Fee</span>(<span class="ty">Order</span> o) =&gt; o <span class="kw">switch</span>
+{
+    <span class="cmt">// property + relational + logical patterns</span>
+    { Total: &lt;= <span class="num">0</span> }                  =&gt; <span class="kw">throw new</span> <span class="ty">ArgumentException</span>(),
+    { Express: <span class="kw">true</span>, Total: &gt; <span class="num">100</span> }  =&gt; <span class="num">0</span>,          <span class="cmt">// free express over 100</span>
+    { Total: &gt; <span class="num">100</span> }                 =&gt; <span class="num">5</span>,
+    { Customer.IsVip: <span class="kw">true</span> }          =&gt; <span class="num">2</span>,          <span class="cmt">// extended property pattern</span>
+    _                              =&gt; <span class="num">10</span>
+};
+
+<span class="cmt">// list pattern: match by sequence shape, bind the middle</span>
+<span class="kw">string</span> <span class="fn">Describe</span>(<span class="kw">int</span>[] xs) =&gt; xs <span class="kw">switch</span>
+{
+    []           =&gt; <span class="str">"empty"</span>,
+    [<span class="kw">var</span> only]    =&gt; $<span class="str">"one: {only}"</span>,
+    [<span class="kw">var</span> first, .. <span class="kw">var</span> rest] =&gt; $<span class="str">"first {first}, then {rest.Length} more"</span>
+};</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Switch expressions vs switch statements</span>
+        <p>A <strong>switch expression</strong> (C# 8) <em>returns a value</em>, uses <code>=&gt;</code> arms, needs no
+        <code>break</code>, and the compiler can warn if it isn't <strong>exhaustive</strong>. Use it when every branch
+        produces a result. Keep the older <strong>switch statement</strong> for branches that perform side effects rather
+        than yield a single value.</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>Nullable Reference Types</h2></div>
+      <p class="sec-sub">C# 8's flagship safety feature: make the compiler track which references can be null, turning runtime crashes into compile-time warnings.</p>
+
+      <p>Historically, any reference could be <code>null</code>, so <code>NullReferenceException</code> was the most common
+        crash. <strong>Nullable reference types (NRT)</strong> flip the default: with the feature enabled, a plain
+        <code>string</code> is assumed <strong>non-null</strong>, and you must write <code>string?</code> to allow null. The
+        compiler then warns wherever you might dereference a null.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C# 8</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// enable per-file (or project-wide in the .csproj: &lt;Nullable&gt;enable&lt;/Nullable&gt;)</span>
+<span class="cmt">#nullable enable</span>
+
+<span class="kw">string</span>  name  = <span class="kw">null</span>;   <span class="cmt">// ⚠️ warning: can't assign null to non-nullable</span>
+<span class="kw">string</span>? maybe = <span class="kw">null</span>;   <span class="cmt">// ✅ fine: explicitly nullable</span>
+
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(maybe.Length);   <span class="cmt">// ⚠️ warning: 'maybe' may be null here</span>
+
+<span class="kw">if</span> (maybe <span class="kw">is not null</span>)
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>(maybe.Length);   <span class="cmt">// ✅ ok: null-checked, compiler knows it's safe</span>
+
+<span class="kw">int</span> len = maybe!.Length;   <span class="cmt">// ! = null-forgiving: "trust me, not null" (use sparingly)</span></code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">?</span><h4>Nullable annotation</h4><p><code>string?</code> says "this may be null." Plain <code>string</code> says "this won't be" — and the compiler holds you to it.</p></div>
+        <div class="card"><span class="glyph">!</span><h4>Null-forgiving</h4><p><code>x!</code> tells the compiler to suppress its null warning. An escape hatch — overusing it defeats the purpose.</p></div>
+        <div class="card"><span class="glyph">🔎</span><h4>Flow analysis</h4><p>After an <code>if (x is not null)</code> check, the compiler tracks that <code>x</code> is safe in that branch.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ It's compile-time only — warnings, not guarantees</span>
+        <p>NRT is a <em>static analysis</em> feature: it produces <strong>warnings</strong>, not runtime enforcement. A
+        non-nullable reference can still be null at runtime (e.g. data from a non-annotated library, deserialization, or
+        reflection). NRT dramatically reduces null bugs by flagging risky code, but it doesn't physically prevent null — so
+        validate data crossing trust boundaries.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Adopt it project-wide</span>
+        <p>Turn it on with <code>&lt;Nullable&gt;enable&lt;/Nullable&gt;</code> in the project file (it's the default in new
+        .NET templates). Treat the warnings as a guide to where null was being ignored, annotate intent with <code>?</code>,
+        and reserve <code>!</code> for the rare cases you genuinely know better than the compiler.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>Less Ceremony</h2></div>
+      <p class="sec-sub">A theme running through all five versions: say the same thing with less boilerplate.</p>
+
+      <p>A striking amount of modern-C# work went into <strong>removing ceremony</strong> — the ritual code that adds noise
+        without meaning. Stacked up, these features make a typical file dramatically shorter.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">then → now</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// ── THEN (classic C#) ──────────────────────────────</span>
+<span class="kw">using</span> System;
+<span class="kw">namespace</span> MyApp
+{
+    <span class="kw">class</span> <span class="ty">Program</span>
+    {
+        <span class="kw">static void</span> <span class="fn">Main</span>(<span class="kw">string</span>[] args)
+        {
+            <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Hello"</span>);
+        }
+    }
+}
+
+<span class="cmt">// ── NOW (top-level statements + implicit usings) ───</span>
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Hello"</span>);   <span class="cmt">// that's the whole program</span></code></pre>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Feature</th><th>Cuts out</th><th>Since</th></tr></thead>
+          <tbody>
+            <tr><td>Top-level statements</td><td>The <code>class</code>/<code>Main</code> wrapper</td><td>C# 9</td></tr>
+            <tr><td>Target-typed <code>new()</code></td><td>Repeating the type name</td><td>C# 9</td></tr>
+            <tr><td>File-scoped namespace</td><td>A level of braces &amp; indentation</td><td>C# 10</td></tr>
+            <tr><td>Global usings</td><td>Repeated <code>using</code> lines everywhere</td><td>C# 10</td></tr>
+            <tr><td>Primary constructors</td><td>Boilerplate fields &amp; assignments</td><td>C# 12 (records: 9)</td></tr>
+            <tr><td>Collection expressions</td><td>Verbose collection initializers</td><td>C# 12</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Less ceremony ≠ less clarity</span>
+        <p>The goal isn't terseness for its own sake — it's removing noise so the <em>meaning</em> stands out. A primary
+        constructor puts a class's dependencies right next to its name; a collection expression shows the data without the
+        machinery. Used well, these features make intent more visible, not less.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ It connects to everything else</span>
+        <p>These tie back to earlier topics: primary constructors streamline the <strong>dependency injection</strong>
+        pattern; records build on <strong>value vs reference</strong> semantics; <code>required</code>/<code>init</code> pair
+        with safe construction; and collection expressions complement <strong>collections &amp; LINQ</strong>. Modern C# is
+        less a pile of tricks than a coherent push toward safe, expressive, low-noise code.</p>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea. If you can place each feature in its version, you've got it.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🆕 C# 8</h4><p>Nullable reference types, switch expressions, async streams, ranges/indices, default interface members.</p></div>
+        <div class="recap-card"><h4>🆕 C# 9</h4><p>Records, init setters, top-level statements, target-typed new, relational &amp; logical patterns.</p></div>
+        <div class="recap-card"><h4>🆕 C# 10</h4><p>Record structs, global usings, file-scoped namespaces, extended property patterns.</p></div>
+        <div class="recap-card"><h4>🆕 C# 11</h4><p>Raw string literals, required members, generic math, list patterns, UTF-8 literals.</p></div>
+        <div class="recap-card"><h4>🆕 C# 12</h4><p>Primary constructors (all types), collection expressions, alias any type, default lambda params.</p></div>
+        <div class="recap-card"><h4>📦 Records</h4><p>Immutable types with value equality, <code>with</code> copies, and a free <code>ToString</code> (C# 9).</p></div>
+        <div class="recap-card"><h4>🧩 Pattern matching</h4><p>Grew from type patterns to property, relational, logical, and list patterns (C# 8–11).</p></div>
+        <div class="recap-card"><h4>🛡️ Nullable refs</h4><p>Compile-time null tracking; <code>string?</code> = maybe null, <code>!</code> = trust me (C# 8).</p></div>
+        <div class="recap-card"><h4>🏗️ Primary ctors</h4><p>Params in the type header; records expose them as properties, classes capture them as fields.</p></div>
+        <div class="recap-card"><h4>✂️ Less ceremony</h4><p>Top-level statements, file-scoped namespaces, global usings, collection expressions.</p></div>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a clear answer. Tagged by level — Junior (0–2 yrs),
+        Mid (2–5 yrs), Senior (5–7 yrs). Written for someone with no prior coding background.</p>
+
+      <h3>🌱 Junior — fundamentals (0–2 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q1</span> What is a record, and how does it differ from a class? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A record (C# 9) is a type designed for immutable data. The key difference is <strong>value-based equality</strong>: two records with the same property
+        values are considered equal (<code>==</code> returns true), whereas two class instances are equal only if they're the <em>same</em> object. Records also give you a readable
+        <code>ToString</code> and the <code>with</code> expression for copies — all generated by the compiler.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span> What are nullable reference types? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A C# 8 feature where the compiler tracks whether a reference is allowed to be null. With it enabled, a plain <code>string</code> means "won't be null" and
+        <code>string?</code> means "might be null." The compiler then warns you wherever you might use a null value, helping prevent <code>NullReferenceException</code> at compile time
+        instead of crashing at runtime.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span> What is a switch expression? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A C# 8 form of <code>switch</code> that <em>returns a value</em>. Instead of <code>case</code>/<code>break</code>, each arm uses <code>pattern =&gt; result</code>,
+        and the whole expression evaluates to the matching arm's result. It's more concise than a switch statement and the compiler can warn if you haven't covered all cases.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span> What are top-level statements? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A C# 9 feature that lets a program's entry point be just the statements themselves, without wrapping them in a <code>class Program</code> with a
+        <code>static void Main</code>. So a whole program can be one line like <code>Console.WriteLine("Hello");</code>. The compiler generates the boilerplate behind the scenes. Great
+        for small programs and reducing noise.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span> What does the init keyword do? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>An <code>init</code>-only setter (C# 9) lets a property be set during object creation (in the constructor or an object initializer) but not changed afterward. It's how
+        you make properties immutable while still allowing the nice <code>new Thing { Prop = value }</code> initializer syntax. It pairs with records and (in C# 11) <code>required</code> members.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span> What are collection expressions? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A C# 12 syntax for creating collections with square brackets: <code>int[] a = [1, 2, 3];</code> works for arrays, lists, spans, and more. The spread element
+        <code>..</code> inlines another collection: <code>[.. a, 4, 5]</code>. It unifies what used to require different initializer syntaxes per collection type.</p></div></details>
+
+      <h3>🟠 Mid-level — going deeper (2–5 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q7</span> Which C# version introduced records, and what does the compiler generate? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Records arrived in <strong>C# 9</strong> (record structs in C# 10). For a record the compiler generates value-based <code>Equals</code> and <code>GetHashCode</code> (comparing all
+        members), <code>==</code>/<code>!=</code> operators, a <code>ToString</code> that prints the members, a <code>Deconstruct</code> method for positional records, and a copy constructor used by the
+        <code>with</code> expression. You declare one line and get all that for free.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span> How do primary constructors differ between records and classes? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>In a <strong>record</strong> (C# 9), primary-constructor parameters automatically become public init-only properties — records model data, so the values are exposed. In a regular
+        <strong>class or struct</strong> (C# 12), the parameters do <em>not</em> become properties; they're captured as private state for use in the body (initializing fields, methods, base calls). The difference reflects
+        intent: records expose data, classes encapsulate it. It's a frequent gotcha.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q9</span> What does the with expression do? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It creates a <strong>copy</strong> of a record with some properties changed, leaving the original untouched — "non-destructive mutation." For example <code>var b = a with { Age = 31 };</code>
+        produces a new record identical to <code>a</code> except <code>Age</code>. It relies on the compiler-generated copy constructor and is the idiomatic way to "modify" an immutable record.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> What's the difference between string? and the null-forgiving operator !? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>string?</code> is an <em>annotation</em> declaring that a reference is allowed to be null, so the compiler will warn if you dereference it without checking. The null-forgiving operator
+        <code>!</code> (as in <code>x!</code>) is a <em>suppression</em>: it tells the compiler "I know this isn't null here, stop warning." Use <code>?</code> to express intent honestly; use <code>!</code> sparingly, only when you
+        genuinely know more than the compiler, since it silences a real safety check.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> When would you use a raw string literal? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Raw string literals (C# 11), delimited by at least three double-quotes (<code>"""</code>), let you write multi-line strings containing quotes, backslashes, and braces with no escaping. They're
+        ideal for embedded JSON, regular expressions, SQL, file paths, or any text where escape sequences would be noisy and error-prone. Leading whitespace up to the closing quotes is stripped, so you can indent the literal naturally.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> What do required members add over init? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>init</code> (C# 9) makes a property settable only at creation; <code>required</code> (C# 11) goes further and makes the compiler <em>enforce</em> that the property is set during initialization — omitting
+        it is a compile error. Together (<code>public required string Name { get; init; }</code>) they give you immutable properties that callers can't forget to provide, replacing constructor boilerplate or runtime null checks.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> How has pattern matching evolved across C# 8–11? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>C# 8 added property, tuple, and positional patterns plus switch expressions. C# 9 added relational patterns (<code>&gt; 0</code>) and logical patterns (<code>and</code>/<code>or</code>/<code>not</code>). C# 10 added
+        extended property patterns (dotted access like <code>{ Addr.City: "X" }</code>). C# 11 added list patterns (<code>[1, .., 9]</code>) for matching sequences. Together they turn <code>switch</code> into a powerful, readable decision tool that tests shape and extracts data at once.</p></div></details>
+
+      <h3>🔴 Senior — synthesis &amp; judgment (5–7 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> Is the nullable reference types feature a runtime guarantee? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>No — it's <strong>compile-time static analysis</strong> that emits warnings; it doesn't change runtime behavior or physically prevent null. A reference annotated non-nullable can still hold null at runtime — e.g. values from
+        a library compiled without the annotations, deserialization, reflection, default-initialized arrays, or simply ignoring the warnings. The annotations are also erased to attributes, not enforced by the CLR. So NRT massively reduces null bugs by surfacing risky code, but you still validate
+        external/untrusted data and shouldn't assume a non-null annotation is a hard guarantee.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> Records are immutable — but how "deep" is that immutability? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Records give <em>shallow</em> immutability by default: with positional/init properties the record's own references can't be reassigned, but if a property points to a <em>mutable</em> object (say a <code>List&lt;T&gt;</code> or a mutable class),
+        the contents of that object can still change. Value equality is likewise member-wise and, for reference-typed members, depends on those members' own equality. For true deep immutability, use immutable collections (e.g. <code>ImmutableArray</code>) and immutable member types, and be aware that <code>with</code> copies are shallow too.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> Why don't class primary-constructor parameters become properties like record ones do? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>It's a deliberate design choice reflecting the types' purposes. Records model immutable <em>data</em>, so exposing the constructor parameters as public init properties is exactly what you want. Regular classes and structs model <em>behavior</em> and often
+        have internal state they shouldn't expose, so C# 12 captures primary-constructor parameters as private state for use in the body (fields, base calls, method logic) without auto-exposing them. If you want a class to expose one, you declare the property explicitly and initialize it from the parameter. This keeps encapsulation the default for classes while keeping records terse.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> What problem do static abstract interface members (generic math) solve? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Before C# 11, you couldn't write one generic algorithm over "any number type," because operators like <code>+</code> and constants like <code>Zero</code> are <em>static</em> and interfaces couldn't require static members. <strong>Static abstract (and virtual) interface members</strong> let interfaces declare static
+        requirements — operators, <code>Parse</code>, identity values — so interfaces like <code>INumber&lt;T&gt;</code> can constrain a generic type to "supports these static operations." Now you can write <code>T Sum&lt;T&gt;(IEnumerable&lt;T&gt; xs) where T : INumber&lt;T&gt;</code> once and have it work for <code>int</code>, <code>double</code>, <code>decimal</code>, etc. This underpins the generic-math library.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> How do you decide between a record, a record struct, and a class for a new type? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Ask about identity, mutability, and size. Use a <strong>record (class)</strong> for immutable reference data where value equality is desired and instances may be largish or shared — DTOs, domain events, value objects. Use a <strong>record struct</strong> for small, immutable value-semantic data where you also want to avoid heap allocation
+        (watch the usual struct caveats: copy cost if large, defensive copies). Use a plain <strong>class</strong> for entities with identity and mutable behavior (services, stateful aggregates) where reference equality is the right model. The earlier value-vs-reference trade-offs (boxing, copying, equality semantics) all still apply — records just generate the equality/ToString boilerplate for you.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> Collection expressions look like array initializers — what's actually different and why does it matter? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The old <code>{ … }</code> initializer worked only in limited spots (mainly arrays and collection-initializer types) and had no spread. Collection expressions (<code>[ … ]</code>, C# 12) are <strong>target-typed</strong> and unified: the same syntax builds arrays, <code>List&lt;T&gt;</code>, <code>Span&lt;T&gt;</code>/<code>ReadOnlySpan&lt;T&gt;</code>, and any type with a
+        <code>[CollectionBuilder]</code>, and the compiler picks an <em>optimized</em> construction per target (e.g. stack-allocating a span). The spread element <code>..e</code> inlines other sequences. Caveat: there's no natural type, so you can't use <code>var x = [1,2,3];</code> — you must give a target type. It matters because it both reduces verbosity and lets the compiler emit more efficient code than a hand-written initializer.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> Taken together, what's the through-line of C# 8–12, and how does language version relate to runtime? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The through-line is <strong>safety, immutability, expressiveness, and reduced ceremony</strong>: NRT and required members make illegal states harder to represent; records and <code>init</code> make immutability ergonomic; pattern matching and switch expressions make decisions declarative; top-level statements, file-scoped namespaces, primary constructors, and collection expressions strip boilerplate. On versioning: the C# compiler version is generally tied to the target framework (.NET 8 → C# 12, etc.), and crucially <em>some features require runtime/library support</em> — default interface members needed CLR changes in .NET Core 3.0; async streams and ranges needed new .NET Core 3.0 types; generic math needs the .NET 7 numeric interfaces. So "can I use feature X" depends on both the <code>LangVersion</code> and the target runtime, not the compiler alone.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Lock down <strong>Junior</strong> — what records, NRT, switch expressions, top-level statements, <code>init</code>, and collection expressions are. <strong>Mid</strong> is the interview core: which version introduced what, what records generate, primary-ctor record-vs-class behavior, <code>with</code>, <code>?</code> vs <code>!</code>, raw strings, <code>required</code>, and the pattern-matching timeline.
+        <strong>Senior</strong> goes deep: NRT as compile-time-only, shallow record immutability, the class/record primary-ctor rationale, generic math, choosing record/record-struct/class, collection-expression semantics, and the language-vs-runtime relationship. Answer each aloud without peeking; stumbles point back to the section.</p>
+      </div>
+
+      <p class="foot">All version attributions verified against Microsoft Learn (The history of C#, What's new in C# 8 through 12). Mapping: C# 8 → .NET Core 3.0; C# 9 → .NET 5; C# 10 → .NET 6; C# 11 → .NET 7; C# 12 → .NET 8. Note that some features also require matching runtime/library support, not just the language version. This single
+        <code>14-modern-csharp-8-12.html</code> file is fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+function updateProgress(){const h=document.documentElement;const max=h.scrollHeight-h.clientHeight;
+  progress.style.width=(max>0?(h.scrollTop/max)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});
+window.addEventListener('resize',updateProgress);updateProgress();
+
+const sidebar=document.getElementById('sidebar');const backdrop=document.getElementById('backdrop');
+function closeSidebar(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(link.getAttribute('href'));
+    if(target){const y=target.getBoundingClientRect().top+window.pageYOffset-24;window.scrollTo({top:y,behavior:'smooth'});}
+    if(window.innerWidth<=920) closeSidebar();
+  });
+});
+
+const sections=[...document.querySelectorAll('.section')];
+const navLinks=[...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on=l.getAttribute('href')==='#'+id;
+    l.classList.toggle('active',on);
+    if(on){const lr=l.getBoundingClientRect(),sr=sidebar.getBoundingClientRect();
+      if(lr.top<sr.top+60||lr.bottom>sr.bottom-60){sidebar.scrollTop+=(lr.top-sr.top)-sidebar.clientHeight/2+lr.height/2;}}
+  });
+}
+const spy=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting) setActive(en.target.id);});},
+  {rootMargin:'-20% 0px -70% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+const reveal=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');reveal.unobserve(en.target);}});},{threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.closest('.code').querySelector('pre code').innerText;
+    const done=()=>{btn.textContent='Copied!';btn.classList.add('done');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done');},2000);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code,done));
+    } else {fallback(code,done);}
+  });
+});
+function fallback(text,cb){const ta=document.createElement('textarea');ta.value=text;
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
+
+document.getElementById('fab').addEventListener('click',()=>{
+  const open=sidebar.classList.toggle('open');backdrop.classList.toggle('show',open);});
+backdrop.addEventListener('click',closeSidebar);
+</script>
+</body>
+</html>

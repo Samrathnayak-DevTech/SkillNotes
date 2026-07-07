@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Streams &amp; Lambdas — Session 12</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+.code-wrap{margin:1.5rem 0;border-radius:8px;overflow:hidden}
+.code-header{background:#1e1d26;padding:.5rem 1rem;display:flex;align-items:center;justify-content:space-between}
+.code-lang{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;text-transform:uppercase;letter-spacing:.1em}
+.copy-btn{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:#888;background:none;border:1px solid #444;border-radius:4px;padding:.15rem .5rem;cursor:pointer;transition:all .2s}
+.copy-btn:hover{color:#ccc;border-color:#666}.copy-btn.copied{color:var(--green);border-color:var(--green)}
+pre{background:var(--code-bg);color:var(--code-ink);font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:1.6;padding:1.2rem 1.4rem;overflow-x:auto;tab-size:2}
+.kw{color:#c792ea}.str{color:#c3e88d}.cmt{color:#697098;font-style:italic}.ty{color:#82aaff}.fn{color:#ffcb6b}.num{color:#f78c6c}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* stream pipeline visual */
+.pipeline{display:flex;align-items:center;gap:.3rem;flex-wrap:wrap;margin:1rem 0;font-family:'JetBrains Mono',monospace;font-size:.72rem}
+.pipe-node{padding:.4rem .8rem;border-radius:4px;border:1px solid;white-space:nowrap}
+.pipe-node.source{background:var(--blue-soft);border-color:var(--blue);color:var(--blue)}
+.pipe-node.inter{background:var(--purple-soft);border-color:var(--purple);color:var(--purple)}
+.pipe-node.term{background:var(--green-soft);border-color:var(--green);color:var(--green)}
+.pipe-arrow{color:var(--ink-soft);font-size:1rem}
+/* fi cards */
+.fi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.8rem;margin:1.5rem 0}
+.fi-card{border:1px solid var(--line);border-radius:6px;padding:.8rem;background:var(--bg)}
+.fi-name{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;color:var(--blue);margin-bottom:.2rem}
+.fi-method{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--ink-soft)}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 12</div>
+  <div class="nav-group"><span class="nav-group-label">Getting Started</span><a class="nav-link" href="#hero">Overview</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">Functional Interfaces</span>
+    <a class="nav-link" href="#s01">01 SAM &amp; Functional Interfaces</a>
+    <a class="nav-link" href="#s02">02 Built-in Functional Interfaces</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Lambdas</span>
+    <a class="nav-link" href="#s03">03 Lambda Expressions</a>
+    <a class="nav-link" href="#s04">04 Lambda Syntax Evolution</a>
+    <a class="nav-link" href="#s05">05 Method References</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Stream API</span>
+    <a class="nav-link" href="#s06">06 What is a Stream?</a>
+    <a class="nav-link" href="#s07">07 Intermediate Operations</a>
+    <a class="nav-link" href="#s08">08 Terminal Operations</a>
+    <a class="nav-link" href="#s09">09 Stream Examples</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 12 · 5th Dec</p>
+  <h1>Streams &amp; Lambdas</h1>
+  <p class="hero-lede">Functional interfaces, concise lambda expressions, and the Stream API — Java's declarative pipeline for transforming and aggregating collections.</p>
+  <div class="agenda-chips">
+    <span class="chip">Functional Interface</span><span class="chip">SAM</span><span class="chip">Lambda</span><span class="chip">Method Reference</span><span class="chip">Stream</span><span class="chip">filter</span><span class="chip">map</span><span class="chip">collect</span>
+  </div>
+</section>
+
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>SAM &amp; Functional Interfaces</h2></div>
+  <p>A <strong>Functional Interface</strong> is an interface with exactly <strong>one abstract method</strong> (SAM — Single Abstract Method). It can have any number of default or static methods. The <code>@FunctionalInterface</code> annotation enforces this at compile time.</p>
+  <div class="callout key">
+    <span class="callout-tag">Why it matters</span>
+    <p>Functional interfaces are the target types for lambda expressions. Wherever Java expects a functional interface, you can supply a lambda instead of an anonymous class. This dramatically reduces boilerplate.</p>
+  </div>
+  <p>Many interfaces you already know are functional interfaces:</p>
+  <div class="fi-grid">
+    <div class="fi-card"><div class="fi-name">Runnable</div><div class="fi-method">run() : void</div></div>
+    <div class="fi-card"><div class="fi-name">Callable&lt;T&gt;</div><div class="fi-method">call() : T</div></div>
+    <div class="fi-card"><div class="fi-name">Comparable&lt;T&gt;</div><div class="fi-method">compareTo(T) : int</div></div>
+    <div class="fi-card"><div class="fi-name">Comparator&lt;T&gt;</div><div class="fi-method">compare(T,T) : int</div></div>
+  </div>
+</section>
+
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>Built-in Functional Interfaces (java.util.function)</h2></div>
+  <table>
+    <thead><tr><th>Interface</th><th>Method</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>Function&lt;T,R&gt;</code></td><td><code>R apply(T t)</code></td><td>Takes T, produces R. Classic transformation.</td></tr>
+      <tr><td><code>Predicate&lt;T&gt;</code></td><td><code>boolean test(T t)</code></td><td>Takes T, returns boolean. Used for filtering.</td></tr>
+      <tr><td><code>Consumer&lt;T&gt;</code></td><td><code>void accept(T t)</code></td><td>Takes T, returns nothing. Used for side effects.</td></tr>
+      <tr><td><code>Supplier&lt;T&gt;</code></td><td><code>T get()</code></td><td>Takes nothing, produces T. Factory / lazy init.</td></tr>
+      <tr><td><code>BiFunction&lt;T,U,R&gt;</code></td><td><code>R apply(T t, U u)</code></td><td>Two inputs, one output.</td></tr>
+      <tr><td><code>UnaryOperator&lt;T&gt;</code></td><td><code>T apply(T t)</code></td><td>Function where input and output are same type.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>Lambda Expressions</h2></div>
+  <p>A lambda is a concise way to provide an implementation of a functional interface — without writing a full anonymous class. Think of it as an inline function.</p>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Old vs Lambda</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// OLD: anonymous class</span>
+<span class="ty">Runnable</span> r1 = <span class="kw">new</span> <span class="ty">Runnable</span>() {
+    <span class="kw">@Override</span>
+    <span class="kw">public void</span> <span class="fn">run</span>() { <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Hello"</span>); }
+};
+
+<span class="cmt">// NEW: lambda</span>
+<span class="ty">Runnable</span> r2 = () -&gt; <span class="ty">System</span>.out.<span class="fn">println</span>(<span class="str">"Hello"</span>);
+
+<span class="cmt">// Comparator — old vs lambda</span>
+<span class="ty">Comparator</span>&lt;<span class="ty">Integer</span>&gt; old = <span class="kw">new</span> <span class="ty">Comparator</span>&lt;<span class="ty">Integer</span>&gt;() {
+    <span class="kw">public int</span> <span class="fn">compare</span>(<span class="ty">Integer</span> a, <span class="ty">Integer</span> b) { <span class="kw">return</span> a - b; }
+};
+
+<span class="ty">Comparator</span>&lt;<span class="ty">Integer</span>&gt; lam = (a, b) -&gt; a - b;  <span class="cmt">// same thing</span></pre>
+  </div>
+</section>
+
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Lambda Syntax</h2></div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java — Lambda Syntax Forms</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// () -> expr         — no params, single expression</span>
+<span class="ty">Supplier</span>&lt;<span class="ty">String</span>&gt; s = () -&gt; <span class="str">"Hello"</span>;
+
+<span class="cmt">// x -> expr          — one param, no parentheses needed</span>
+<span class="ty">Predicate</span>&lt;<span class="ty">Integer</span>&gt; isEven = x -&gt; x % <span class="num">2</span> == <span class="num">0</span>;
+
+<span class="cmt">// (x, y) -> expr     — multiple params</span>
+<span class="ty">Comparator</span>&lt;<span class="ty">Integer</span>&gt; cmp = (x, y) -&gt; x - y;
+
+<span class="cmt">// (x) -> { stmts; return val; }  — block body</span>
+<span class="ty">Function</span>&lt;<span class="ty">Integer</span>, <span class="ty">Integer</span>&gt; square = x -&gt; {
+    <span class="kw">int</span> result = x * x;
+    <span class="kw">return</span> result;
+};</pre>
+  </div>
+</section>
+
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>Method References</h2></div>
+  <p>A method reference is an even more concise lambda — it points to an existing method by name using the <code>::</code> operator.</p>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="cmt">// Static method:      ClassName::methodName</span>
+<span class="ty">Function</span>&lt;<span class="ty">String</span>, <span class="ty">Integer</span>&gt; parse = <span class="ty">Integer</span>::<span class="fn">parseInt</span>;
+
+<span class="cmt">// Instance method:    instance::methodName</span>
+<span class="ty">String</span> s = <span class="str">"hello"</span>;
+<span class="ty">Supplier</span>&lt;<span class="ty">String</span>&gt; upper = s::<span class="fn">toUpperCase</span>;
+
+<span class="cmt">// Instance method (unbound): ClassName::methodName</span>
+<span class="ty">Function</span>&lt;<span class="ty">String</span>, <span class="ty">String</span>&gt; trim = <span class="ty">String</span>::<span class="fn">trim</span>;
+
+<span class="cmt">// Constructor:        ClassName::new</span>
+<span class="ty">Supplier</span>&lt;<span class="ty">ArrayList</span>&gt; maker = <span class="ty">ArrayList</span>::<span class="kw">new</span>;
+
+<span class="cmt">// Common usage — printing each list element:</span>
+list.<span class="fn">forEach</span>(<span class="ty">System</span>.out::<span class="fn">println</span>);  <span class="cmt">// instead of e -> System.out.println(e)</span></pre>
+  </div>
+</section>
+
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>What is a Stream?</h2></div>
+  <p>A <strong>Stream</strong> is a sequence of elements that can be processed through a pipeline of operations. It doesn't store data — it's a view over a data source (a collection, array, or generator). A stream pipeline has three parts:</p>
+
+  <div class="pipeline">
+    <div class="pipe-node source">Data Source<br>(List / Array)</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-node inter">Intermediate Op 1<br>(filter, map…)</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-node inter">Intermediate Op 2<br>(sorted, distinct…)</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-node term">Terminal Op<br>(collect, forEach…)</div>
+  </div>
+
+  <div class="callout key">
+    <span class="callout-tag">Lazy Evaluation</span>
+    <p>Intermediate operations are <strong>lazy</strong> — they don't execute until a terminal operation is called. This means the pipeline can be optimized: e.g., if you <code>filter</code> then <code>findFirst()</code>, Java stops processing as soon as it finds the first match.</p>
+  </div>
+</section>
+
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>Intermediate Operations</h2></div>
+  <p>Intermediate operations return another Stream — they are lazy and can be chained.</p>
+  <table>
+    <thead><tr><th>Operation</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>filter(Predicate)</code></td><td>Keep only elements that match the predicate</td></tr>
+      <tr><td><code>map(Function)</code></td><td>Transform each element to a new value/type</td></tr>
+      <tr><td><code>flatMap(Function)</code></td><td>Map then flatten nested streams into one</td></tr>
+      <tr><td><code>sorted()</code></td><td>Sort in natural order</td></tr>
+      <tr><td><code>sorted(Comparator)</code></td><td>Sort by custom comparator</td></tr>
+      <tr><td><code>distinct()</code></td><td>Remove duplicate elements</td></tr>
+      <tr><td><code>limit(n)</code></td><td>Truncate stream to first n elements</td></tr>
+      <tr><td><code>skip(n)</code></td><td>Skip the first n elements</td></tr>
+      <tr><td><code>peek(Consumer)</code></td><td>Inspect elements without transforming (debugging)</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s08" class="section">
+  <div class="section-header"><span class="section-num">08</span><h2>Terminal Operations</h2></div>
+  <p>Terminal operations trigger execution of the pipeline and produce a result or side effect.</p>
+  <table>
+    <thead><tr><th>Operation</th><th>Returns</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td><code>collect(Collectors.toList())</code></td><td>List</td><td>Gather results into a collection</td></tr>
+      <tr><td><code>forEach(Consumer)</code></td><td>void</td><td>Execute action for each element</td></tr>
+      <tr><td><code>count()</code></td><td>long</td><td>Count elements</td></tr>
+      <tr><td><code>findFirst()</code></td><td>Optional&lt;T&gt;</td><td>Return first element (or empty Optional)</td></tr>
+      <tr><td><code>anyMatch(Predicate)</code></td><td>boolean</td><td>True if any element matches</td></tr>
+      <tr><td><code>allMatch(Predicate)</code></td><td>boolean</td><td>True if all elements match</td></tr>
+      <tr><td><code>reduce(identity, BinaryOp)</code></td><td>T</td><td>Fold elements into a single value</td></tr>
+      <tr><td><code>min(Comparator)</code></td><td>Optional&lt;T&gt;</td><td>Minimum element</td></tr>
+      <tr><td><code>max(Comparator)</code></td><td>Optional&lt;T&gt;</td><td>Maximum element</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="s09" class="section">
+  <div class="section-header"><span class="section-num">09</span><h2>Stream Pipeline Examples</h2></div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-lang">Java</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+    <pre><span class="ty">List</span>&lt;<span class="ty">Integer</span>&gt; nums = <span class="ty">List</span>.<span class="fn">of</span>(<span class="num">1</span>,<span class="num">2</span>,<span class="num">3</span>,<span class="num">4</span>,<span class="num">5</span>,<span class="num">6</span>,<span class="num">7</span>,<span class="num">8</span>,<span class="num">9</span>,<span class="num">10</span>);
+
+<span class="cmt">// Sum of even numbers squared</span>
+<span class="kw">int</span> result = nums.<span class="fn">stream</span>()
+    .<span class="fn">filter</span>(n -&gt; n % <span class="num">2</span> == <span class="num">0</span>)         <span class="cmt">// [2,4,6,8,10]</span>
+    .<span class="fn">map</span>(n -&gt; n * n)                   <span class="cmt">// [4,16,36,64,100]</span>
+    .<span class="fn">reduce</span>(<span class="num">0</span>, <span class="ty">Integer</span>::<span class="fn">sum</span>);          <span class="cmt">// 220</span>
+
+<span class="cmt">// Names of students who passed (marks >= 40), sorted</span>
+<span class="ty">List</span>&lt;<span class="ty">Student</span>&gt; students = <span class="cmt">/* ... */</span>;
+<span class="ty">List</span>&lt;<span class="ty">String</span>&gt; passed = students.<span class="fn">stream</span>()
+    .<span class="fn">filter</span>(s -&gt; s.<span class="fn">getMarks</span>() &gt;= <span class="num">40</span>)
+    .<span class="fn">sorted</span>(<span class="ty">Comparator</span>.<span class="fn">comparing</span>(<span class="ty">Student</span>::<span class="fn">getName</span>))
+    .<span class="fn">map</span>(<span class="ty">Student</span>::<span class="fn">getName</span>)
+    .<span class="fn">collect</span>(<span class="ty">Collectors</span>.<span class="fn">toList</span>());
+
+<span class="cmt">// Sorting a list with lambda Comparator</span>
+<span class="ty">List</span>&lt;<span class="ty">String</span>&gt; words = <span class="ty">List</span>.<span class="fn">of</span>(<span class="str">"banana"</span>, <span class="str">"apple"</span>, <span class="str">"cherry"</span>);
+words.<span class="fn">stream</span>()
+     .<span class="fn">sorted</span>((a, b) -&gt; a.<span class="fn">length</span>() - b.<span class="fn">length</span>())  <span class="cmt">// sort by length</span>
+     .<span class="fn">forEach</span>(<span class="ty">System</span>.out::<span class="fn">println</span>);</pre>
+  </div>
+</section>
+
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">Functional Interface</div><p>Interface with exactly one abstract method (SAM). Target type for lambdas. Annotate with @FunctionalInterface.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Lambda</div><p>Concise inline implementation of a functional interface. <code>(params) -&gt; body</code>. Replaces anonymous classes.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Method Reference</div><p><code>ClassName::method</code> or <code>instance::method</code>. Even more concise than a lambda when you're just calling an existing method.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Stream</div><p>Declarative pipeline over a data source. Does not store data. Lazy: intermediate ops execute only when terminal op is called.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Intermediate Ops</div><p>filter, map, flatMap, sorted, distinct, limit, skip. Return a new Stream. Chained. Lazy.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Terminal Ops</div><p>collect, forEach, count, reduce, findFirst, anyMatch. Trigger execution. Return a concrete result or void.</p></div>
+  </div>
+</section>
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

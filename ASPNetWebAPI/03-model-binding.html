@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 3 — Model Binding: Route, Query, Body, Headers &amp; Form</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:          #fbf9f4;
+  --bg-soft:     #f3efe6;
+  --ink:         #2d2a26;
+  --ink-soft:    #5a554d;
+  --line:        #e4ddd0;
+  --accent:      #b5651d;
+  --accent-soft: #f0e2d0;
+  --blue:        #3a6ea5;
+  --blue-soft:   #dde9f3;
+  --rose:        #b0496b;
+  --rose-soft:   #f6e2ea;
+  --green:       #5a7d5a;
+  --green-soft:  #e2ede0;
+  --purple:      #7a5c9e;
+  --purple-soft: #ece4f3;
+  --code-bg:     #2b2a33;
+  --code-ink:    #e8e6e3;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  color: var(--ink);
+  background:
+    radial-gradient(1100px 600px at 85% -5%, rgba(122,92,158,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(181,101,29,0.07), transparent 55%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+/* ── Progress bar ─────────────────────────── */
+#progress {
+  position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--rose));
+  z-index: 1000; transition: width 0.1s linear;
+}
+
+/* ── Layout ───────────────────────────────── */
+.layout { display: flex; max-width: 1340px; margin: 0 auto; }
+
+/* ── Sidebar ──────────────────────────────── */
+#sidebar {
+  width: 268px; flex-shrink: 0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  padding: 28px 18px 40px;
+  border-right: 1px solid var(--line);
+  background: rgba(251,249,244,0.85);
+  backdrop-filter: blur(4px);
+  scrollbar-width: thin;
+}
+#sidebar .side-title {
+  font-family: 'Fraunces', serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+#sidebar .side-sub {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  color: var(--accent); letter-spacing: 0.08em; text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.nav-group { margin-bottom: 18px; }
+.nav-group-label {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.64rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--ink-soft); margin-bottom: 6px; padding-left: 10px;
+}
+#sidebar a {
+  display: block; padding: 6px 10px; margin: 1px 0;
+  font-size: 0.86rem; line-height: 1.4;
+  color: var(--ink-soft); text-decoration: none;
+  border-radius: 8px; border-left: 3px solid transparent;
+  transition: background 0.15s, color 0.15s;
+}
+#sidebar a:hover { background: var(--bg-soft); color: var(--ink); }
+#sidebar a.active {
+  background: var(--accent-soft); color: var(--accent);
+  border-left-color: var(--accent); font-weight: 600;
+}
+#sidebar a .n {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--accent); margin-right: 6px;
+}
+
+/* ── Mobile FAB + overlay ─────────────────── */
+#navFab {
+  display: none; position: fixed; bottom: 22px; left: 22px; z-index: 1002;
+  width: 54px; height: 54px; border-radius: 50%;
+  border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 1.35rem;
+  box-shadow: 0 6px 18px rgba(45,42,38,0.28);
+}
+#backdrop {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(45,42,38,0.35); backdrop-filter: blur(3px);
+}
+body.nav-open #backdrop { display: block; }
+
+/* ── Main content ─────────────────────────── */
+main { flex: 1; min-width: 0; padding: 0 clamp(20px, 4vw, 56px) 90px; }
+
+.section {
+  padding-top: 54px;
+  opacity: 0; transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.section.visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .section { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── Hero ─────────────────────────────────── */
+.hero { padding: 64px 0 10px; }
+.eyebrow {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+  margin-bottom: 14px;
+}
+.hero h1 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem); line-height: 1.12;
+  margin-bottom: 18px;
+}
+.lede { color: var(--ink-soft); font-size: 1.14rem; max-width: 62ch; margin-bottom: 26px; }
+.agenda { display: flex; flex-wrap: wrap; gap: 10px; }
+.chip {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.74rem;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--bg-soft); border: 1px solid var(--line); color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+/* ── Section headers ──────────────────────── */
+h2 {
+  font-family: 'Fraunces', serif; font-weight: 600;
+  font-size: clamp(1.55rem, 2.6vw, 2.1rem); line-height: 1.25;
+  margin-bottom: 20px; display: flex; align-items: center; gap: 14px;
+}
+h2 .badge {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border: 1px solid var(--line); border-radius: 10px;
+  padding: 4px 11px; flex-shrink: 0;
+}
+h3 {
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.28rem;
+  margin: 34px 0 12px;
+}
+p { margin-bottom: 16px; max-width: 74ch; }
+ul, ol { margin: 0 0 16px 26px; max-width: 72ch; }
+li { margin-bottom: 7px; }
+strong { font-weight: 600; }
+
+/* ── Inline code ──────────────────────────── */
+:not(pre) > code {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82em;
+  color: var(--accent); background: var(--bg-soft);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: 1px 6px; white-space: nowrap;
+}
+
+/* ── Callouts ─────────────────────────────── */
+.callout {
+  border-radius: 12px; padding: 16px 20px; margin: 22px 0;
+  border-left: 4px solid; max-width: 78ch;
+}
+.callout .tag {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.callout p:last-child { margin-bottom: 0; }
+.callout.tip     { border-color: var(--green);  background: var(--green-soft); }
+.callout.tip .tag { color: var(--green); }
+.callout.key     { border-color: var(--blue);   background: var(--blue-soft); }
+.callout.key .tag { color: var(--blue); }
+.callout.analogy { border-color: var(--rose);   background: var(--rose-soft); }
+.callout.analogy .tag { color: var(--rose); }
+.callout.warn    { border-color: var(--accent); background: var(--accent-soft); }
+.callout.warn .tag { color: var(--accent); }
+
+/* ── Array cells / pipeline diagrams ─────── */
+.arr-wrap {
+  background: var(--bg-soft); border: 1px solid var(--line);
+  border-radius: 14px; padding: 22px 20px; margin: 22px 0;
+  overflow-x: auto;
+}
+.arr-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.arr-cell { text-align: center; }
+.arr-cell .val {
+  min-width: 44px; min-height: 44px; padding: 8px 14px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; font-weight: 500;
+}
+.arr-cell .idx {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.66rem;
+  color: var(--ink-soft); margin-top: 6px;
+}
+.arr-cell.highlight .val { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.arr-cell.highlight-blue .val { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.arr-cell.highlight-green .val { border-color: var(--green); background: var(--green-soft); color: var(--green); font-weight: 700; }
+.arr-cell.neg .val { border-color: var(--rose); background: var(--rose-soft); color: var(--rose); font-weight: 700; }
+.arr-caption {
+  text-align: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-soft); margin-top: 16px;
+}
+
+/* ── Mind map ─────────────────────────────── */
+.mindmap { margin: 26px 0; }
+.mm-core {
+  max-width: 320px; margin: 0 auto; text-align: center;
+  background: var(--ink); color: #fbf9f4;
+  border-radius: 14px; padding: 16px 22px;
+  font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.15rem;
+}
+.mm-core small {
+  display: block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--accent-soft); margin-top: 4px;
+}
+.mm-spine { width: 3px; height: 34px; margin: 0 auto; background: var(--line); }
+.mm-branches {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+.mm-branch {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  border-top: 4px solid; padding: 15px 17px;
+}
+.mm-branch h4 {
+  font-family: 'Fraunces', serif; font-size: 1rem; font-weight: 600;
+  margin-bottom: 8px;
+}
+.mm-branch ul { margin: 0 0 0 18px; }
+.mm-branch li { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 4px; }
+.mm-branch.b-accent { border-top-color: var(--accent); }
+.mm-branch.b-blue   { border-top-color: var(--blue); }
+.mm-branch.b-green  { border-top-color: var(--green); }
+.mm-branch.b-rose   { border-top-color: var(--rose); }
+.mm-branch.b-purple { border-top-color: var(--purple); }
+
+/* ── Flowchart ────────────────────────────── */
+.flow { max-width: 620px; margin: 26px auto; }
+.flow-step {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  padding: 14px 20px; display: flex; gap: 14px; align-items: flex-start;
+}
+.flow-step .emoji { font-size: 1.35rem; line-height: 1.4; }
+.flow-step b { font-family: 'Fraunces', serif; font-weight: 600; display: block; }
+.flow-step span.desc { font-size: 0.9rem; color: var(--ink-soft); display: block; }
+.flow-step.highlight { background: var(--accent-soft); border-color: var(--accent); }
+.flow-connector {
+  width: 3px; height: 26px; margin: 0 auto;
+  background: linear-gradient(var(--line), var(--accent-soft));
+  position: relative;
+}
+.flow-connector::after {
+  content: "▼"; position: absolute; bottom: -8px; left: 50%;
+  transform: translateX(-50%); font-size: 0.6rem; color: var(--accent);
+}
+
+/* ── Complexity / fact badges ─────────────── */
+.complexity-badge {
+  display: inline-flex; align-items: center; margin: 3px 6px 3px 0;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+  border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
+  vertical-align: middle;
+}
+.complexity-badge .lbl { background: var(--bg-soft); color: var(--ink-soft); padding: 4px 10px; }
+.complexity-badge .valb { background: #fff; color: var(--accent); font-weight: 700; padding: 4px 10px; }
+
+/* ── Cards grid ───────────────────────────── */
+.cards-grid {
+  display: grid; gap: 16px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+.card {
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 24px rgba(45,42,38,0.09); }
+.card .glyph { font-family: 'Fraunces', serif; font-size: 1.55rem; display: block; margin-bottom: 6px; }
+.card b { font-family: 'Fraunces', serif; font-weight: 600; font-size: 1.02rem; display: block; margin-bottom: 5px; }
+.card p { font-size: 0.9rem; color: var(--ink-soft); margin: 0; }
+
+/* ── Tables ───────────────────────────────── */
+.tbl-wrap { overflow-x: auto; margin: 22px 0; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 560px; background: #fff; }
+thead th {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+  background: var(--bg-soft); text-align: left;
+  padding: 11px 14px; border-bottom: 2px solid var(--line);
+}
+tbody td {
+  padding: 11px 14px; border-bottom: 1px solid var(--line);
+  font-size: 0.93rem; vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--accent-soft); }
+
+/* ── Code blocks ──────────────────────────── */
+.codebox {
+  border-radius: 12px; overflow: hidden; margin: 22px 0;
+  border: 1px solid #1f1e26;
+  box-shadow: 0 6px 20px rgba(43,42,51,0.18);
+}
+.codebox .code-head {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #232230; padding: 8px 14px;
+  border-bottom: 1px solid #3a3947;
+}
+.codebox .lang {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  letter-spacing: 0.12em; text-transform: uppercase; color: #9a97a8;
+}
+.copy-btn {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+  background: transparent; color: #b9b6c6;
+  border: 1px solid #4a4858; border-radius: 6px;
+  padding: 4px 12px; cursor: pointer; transition: all 0.15s;
+}
+.copy-btn:hover { color: #fff; border-color: #6a687a; }
+.copy-btn.copied { color: #c3e88d; border-color: #c3e88d; }
+pre {
+  background: var(--code-bg); color: var(--code-ink);
+  padding: 18px 20px; overflow-x: auto;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.68;
+  tab-size: 4;
+}
+pre code { font-family: inherit; }
+.kw  { color: #c792ea; }
+.str { color: #c3e88d; }
+.cmt { color: #697098; font-style: italic; }
+.ty  { color: #82aaff; }
+.fn  { color: #ffcb6b; }
+.num { color: #f78c6c; }
+
+/* ── Q&A accordions ───────────────────────── */
+.qa {
+  background: #fff; border: 1px solid var(--line); border-radius: 12px;
+  margin-bottom: 12px; overflow: hidden;
+}
+.qa summary {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; cursor: pointer; list-style: none;
+  font-weight: 500; font-size: 0.98rem;
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary:hover { background: var(--bg-soft); }
+.qa .qnum {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft);
+  border-radius: 8px; padding: 3px 9px; flex-shrink: 0;
+}
+.qa .qtext { flex: 1; }
+.lvl {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; font-weight: 700;
+  letter-spacing: 0.06em; border-radius: 999px; padding: 3px 10px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.lvl-jr  { background: var(--green-soft); color: var(--green); }
+.lvl-mid { background: var(--accent-soft); color: var(--accent); }
+.lvl-sr  { background: var(--rose-soft);  color: var(--rose); }
+.qa .answer {
+  padding: 4px 18px 18px 18px; border-top: 1px dashed var(--line);
+  font-size: 0.94rem; color: var(--ink-soft);
+}
+.qa .answer p { margin-top: 12px; }
+.qa[open] summary { border-bottom: 0; }
+
+/* ── Quick recap ──────────────────────────── */
+.recap-grid {
+  display: grid; gap: 14px; margin: 22px 0;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.recap-card {
+  background: #fff; border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px; padding: 15px 17px; font-size: 0.9rem;
+}
+.recap-card b { font-family: 'Fraunces', serif; display: block; margin-bottom: 4px; }
+
+footer {
+  margin-top: 70px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  color: var(--ink-soft); letter-spacing: 0.06em;
+}
+
+/* ── Responsive ───────────────────────────── */
+@media (max-width: 900px) {
+  #sidebar {
+    position: fixed; left: 0; top: 0; z-index: 1001;
+    transform: translateX(-100%); transition: transform 0.25s ease;
+    background: var(--bg); box-shadow: 6px 0 30px rgba(45,42,38,0.15);
+  }
+  body.nav-open #sidebar { transform: translateX(0); }
+  #navFab { display: block; }
+  main { padding: 0 20px 90px; }
+  body { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+
+<div id="progress"></div>
+<button id="navFab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+
+<!-- ══════════ SIDEBAR ══════════ -->
+<nav id="sidebar">
+  <div class="side-title">🔌 Day 3 · Model Binding</div>
+  <div class="side-sub">.NET Study Notes</div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Foundations</div>
+    <a href="#s01"><span class="n">01</span>What Is Model Binding?</a>
+    <a href="#s02"><span class="n">02</span>The Big Picture</a>
+    <a href="#s03"><span class="n">03</span>The Five Sources</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Each Source</div>
+    <a href="#s04"><span class="n">04</span>[FromRoute]</a>
+    <a href="#s05"><span class="n">05</span>[FromQuery]</a>
+    <a href="#s06"><span class="n">06</span>[FromBody]</a>
+    <a href="#s07"><span class="n">07</span>[FromHeader] &amp; [FromForm]</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Putting It Together</div>
+    <a href="#s08"><span class="n">08</span>Inference &amp; Combining</a>
+    <a href="#s09"><span class="n">09</span>All Sources at Once</a>
+    <a href="#s10"><span class="n">10</span>Hands-On Task</a>
+  </div>
+
+  <div class="nav-group">
+    <div class="nav-group-label">Wrap-Up</div>
+    <a href="#s11"><span class="n">11</span>Quick Recap</a>
+    <a href="#s12"><span class="n">12</span>Interview Questions</a>
+  </div>
+</nav>
+
+<!-- ══════════ MAIN ══════════ -->
+<main>
+
+<header class="hero">
+  <div class="eyebrow">Day 03 · ASP.NET Core Web API</div>
+  <h1>🔌 Model Binding: From Raw Request to Real Objects</h1>
+  <p class="lede">Yesterday routing decided <em>which</em> method answers a request. Today: how the pieces of that request — the URL path, the query string, the body, the headers, a form — become the typed arguments your method actually receives. That translation is <strong>model binding</strong>, and the <code>[From…]</code> attributes are how you tell it exactly where to look.</p>
+  <div class="agenda">
+    <span class="chip">🛣️ [FromRoute]</span>
+    <span class="chip">🔎 [FromQuery]</span>
+    <span class="chip">📦 [FromBody]</span>
+    <span class="chip">🏷️ [FromHeader]</span>
+    <span class="chip">📋 [FromForm]</span>
+  </div>
+</header>
+
+<!-- ════════ 01 ════════ -->
+<section class="section" id="s01">
+  <h2><span class="badge">01</span>🔌 What Is Model Binding?</h2>
+
+  <p>An HTTP request is, underneath, just <strong>text and bytes</strong> — a URL string, some header lines, maybe a JSON payload. Your C# action method, though, wants clean typed arguments: an <code>int id</code>, a <code>string category</code>, a <code>ProductDto product</code>. <strong>Model binding</strong> is the framework's automatic process of reading the raw request and filling in those parameters for you.</p>
+
+  <div class="callout analogy">
+    <span class="tag">🛂 Analogy</span>
+    <p>Model binding is the <strong>customs officer who unpacks and sorts an arriving shipment</strong>. The crate (the HTTP request) shows up stuffed with mixed items — some taped to the outside (the URL), some on the shipping label (headers), some inside the box (the body). The officer knows which slot each item belongs in and lays them out neatly on the counter — labelled, typed, ready for you to use. You never rummage through the raw crate; you just receive the sorted parameters.</p>
+  </div>
+
+  <p>Without binding, every action would start with tedious plumbing — reading <code>Request.RouteValues["id"]</code>, parsing strings to ints, deserializing JSON by hand. Binding does all of that, so your method signature simply <em>declares what it needs</em> and the values arrive:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · binding fills these parameters for you</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id:int}"</span>)]                       <span class="cmt">// GET /api/products/42</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetById</span>(<span class="kw">int</span> id)          <span class="cmt">// id arrives as 42 — already an int</span>
+{
+    <span class="cmt">// No parsing, no Request.Query rummaging — just use it.</span>
+    <span class="kw">return</span> <span class="fn">Ok</span>(id);
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Binding Runs Before Your Action</span>
+    <p>Model binding happens <em>after</em> routing picks your action (Day 2) but <em>before</em> your code runs. By the time the first line of your method executes, all its parameters are already populated. If binding fails or validation (Day 14) rejects the input, <code>[ApiController]</code> can short-circuit with a <code>400</code> before your action is even called — so your code only ever sees data that at least parsed correctly.</p>
+  </div>
+</section>
+
+<!-- ════════ 02 ════════ -->
+<section class="section" id="s02">
+  <h2><span class="badge">02</span>🗺️ The Big Picture</h2>
+
+  <div class="mindmap">
+    <div class="mm-core">Model Binding<small>request parts → parameters</small></div>
+    <div class="mm-spine"></div>
+    <div class="mm-branches">
+      <div class="mm-branch b-blue">
+        <h4>🛣️ [FromRoute]</h4>
+        <ul>
+          <li>The URL path</li>
+          <li>Resource identity</li>
+          <li><code>{id}</code> → <code>int id</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch b-green">
+        <h4>🔎 [FromQuery]</h4>
+        <ul>
+          <li>The query string</li>
+          <li>Filter / sort / page</li>
+          <li><code>?category=audio</code></li>
+        </ul>
+      </div>
+      <div class="mm-branch b-accent">
+        <h4>📦 [FromBody]</h4>
+        <ul>
+          <li>The request body (JSON)</li>
+          <li>Create / update payloads</li>
+          <li>One per action, max</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-rose">
+        <h4>🏷️ [FromHeader]</h4>
+        <ul>
+          <li>HTTP headers</li>
+          <li>Correlation id, locale</li>
+          <li>Must be explicit</li>
+        </ul>
+      </div>
+      <div class="mm-branch b-purple">
+        <h4>📋 [FromForm]</h4>
+        <ul>
+          <li>Posted form fields</li>
+          <li>File uploads</li>
+          <li>multipart/form-data</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p>Five places data can live in a request; five attributes to name each one. The art of Day 3 is matching the <em>kind</em> of data to the <em>right source</em>: identity in the path, filters in the query, payloads in the body, metadata in headers, uploads in forms. Get that mapping right and your API reads exactly as a RESTful one should (Day 1).</p>
+</section>
+
+<!-- ════════ 03 ════════ -->
+<section class="section" id="s03">
+  <h2><span class="badge">03</span>🎯 The Five Binding Sources</h2>
+
+  <p>Each <code>[From…]</code> attribute tells binding <em>exactly</em> where to pull a parameter from. Here's the whole family at a glance:</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Attribute</th><th>Reads from</th><th>Typical use</th></tr></thead>
+    <tbody>
+      <tr><td><code>[FromRoute]</code></td><td>The URL path (route data)</td><td>Resource identity: <code>/products/42</code></td></tr>
+      <tr><td><code>[FromQuery]</code></td><td>The query string (after <code>?</code>)</td><td>Filtering, sorting, paging</td></tr>
+      <tr><td><code>[FromBody]</code></td><td>The request body (JSON)</td><td>Create/update payloads</td></tr>
+      <tr><td><code>[FromHeader]</code></td><td>HTTP request headers</td><td>Correlation id, locale, custom metadata</td></tr>
+      <tr><td><code>[FromForm]</code></td><td>Posted form fields (multipart)</td><td>File uploads, HTML form posts</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>There's a sixth cousin worth naming: <code>[FromServices]</code>, which binds a parameter from the dependency-injection container rather than the request — you'll meet that when we cover services. Today we focus on the five that read the <em>request</em>.</p>
+
+  <div class="arr-wrap">
+    <div class="arr-row">
+      <div class="arr-cell highlight-blue"><div class="val">/api/products/42</div><div class="idx">🛣️ route</div></div>
+      <div class="arr-cell highlight-green"><div class="val">?category=audio</div><div class="idx">🔎 query</div></div>
+      <div class="arr-cell highlight"><div class="val">{ "name": ... }</div><div class="idx">📦 body</div></div>
+      <div class="arr-cell neg"><div class="val">X-Correlation-Id</div><div class="idx">🏷️ header</div></div>
+    </div>
+    <div class="arr-caption">One request, several compartments · each <code>[From…]</code> attribute picks a different one</div>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Match the Data to the Source</span>
+    <p>The choice isn't arbitrary — it follows Day 1's conventions. <strong>Identity</strong> → route. <strong>Optional filters/sorting/paging</strong> → query. <strong>The payload you're creating or updating</strong> → body. <strong>Cross-cutting metadata</strong> (who's calling, what language, a trace id) → header. <strong>File uploads / browser form posts</strong> → form. When each piece of data lives where it belongs, your endpoints are predictable and your OpenAPI docs (Day 1) are accurate.</p>
+  </div>
+</section>
+
+<!-- ════════ 04 ════════ -->
+<section class="section" id="s04">
+  <h2><span class="badge">04</span>🛣️ [FromRoute] — the URL Path</h2>
+
+  <p><code>[FromRoute]</code> binds a parameter from a <strong>route token</strong> in the URL path — the <code>{id}</code> pieces you defined in the route template on Day 2. It's how the resource's <em>identity</em> reaches your method.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · binding from the path</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id:int}"</span>)]                    <span class="cmt">// GET /api/products/42</span>
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetById</span>([<span class="ty">FromRoute</span>] <span class="kw">int</span> id)
+    =&gt; <span class="fn">Ok</span>($<span class="str">"route id = {id}"</span>);          <span class="cmt">// id = 42</span>
+
+<span class="cmt">// The parameter name must match the route token — {id} ↔ id.</span>
+<span class="cmt">// If names differ, use the Name property:</span>
+[<span class="ty">HttpGet</span>(<span class="str">"orders/{orderId:int}"</span>)]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetOrder</span>([<span class="ty">FromRoute</span>(Name = <span class="str">"orderId"</span>)] <span class="kw">int</span> id)
+    =&gt; <span class="fn">Ok</span>(id);
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 The Token Name Is the Link</span>
+    <p>Binding matches the route token to the parameter <strong>by name</strong>: <code>{id}</code> fills <code>id</code>. When they can't match (the token is <code>orderId</code> but you want the parameter called <code>id</code>), pass <code>[FromRoute(Name = "orderId")]</code> to bridge them. This <code>Name</code> option exists on <code>[FromQuery]</code>, <code>[FromHeader]</code>, and <code>[FromForm]</code> too — any time the request's name and your C# name differ.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Route Constraints Still Apply</span>
+    <p>The <code>{id:int}</code> constraint from Day 2 runs during routing, before binding — so by the time <code>[FromRoute] int id</code> is bound, the segment is already guaranteed to be a valid integer. Constraints filter the URL shape; binding then converts that vetted string into your typed parameter. They work as a team.</p>
+  </div>
+</section>
+
+<!-- ════════ 05 ════════ -->
+<section class="section" id="s05">
+  <h2><span class="badge">05</span>🔎 [FromQuery] — the Query String</h2>
+
+  <p><code>[FromQuery]</code> binds from the <strong>query string</strong> — the <code>?key=value&amp;key2=value2</code> part after the path. This is the home of optional, result-shaping inputs: filters, sorting, and paging. Query parameters are naturally optional and easy to give defaults.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · filtering, sorting, paging from the query</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// GET /api/products?category=audio&amp;sort=price&amp;page=2</span>
+[<span class="ty">HttpGet</span>]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Search</span>(
+    [<span class="ty">FromQuery</span>] <span class="kw">string</span>? category,
+    [<span class="ty">FromQuery</span>] <span class="kw">string</span>? sort,
+    [<span class="ty">FromQuery</span>] <span class="kw">int</span> page = <span class="num">1</span>,        <span class="cmt">// default when omitted</span>
+    [<span class="ty">FromQuery</span>] <span class="kw">int</span> pageSize = <span class="num">20</span>)
+    =&gt; <span class="fn">Ok</span>(<span class="kw">new</span> { category, sort, page, pageSize });
+</code></pre>
+  </div>
+
+  <h3>Binding many query values into one object 🧳</h3>
+  <p>When a search has lots of parameters, bundle them into a single class and bind the <em>whole thing</em> from the query — cleaner signatures and reusable filters:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · a query parameter object</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public class</span> <span class="ty">ProductQuery</span>
+{
+    <span class="kw">public string</span>? Category { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span>? Sort { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public int</span> Page { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="num">1</span>;
+    <span class="kw">public int</span> PageSize { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="num">20</span>;
+}
+
+<span class="cmt">// GET /api/products?category=audio&amp;page=2  → fills the object's properties</span>
+[<span class="ty">HttpGet</span>]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Search</span>([<span class="ty">FromQuery</span>] <span class="ty">ProductQuery</span> query)
+    =&gt; <span class="fn">Ok</span>(query);
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Query = "How", Not "Which"</span>
+    <p>This is Day 1 and Day 2's path-vs-query distinction, now in binding. The <em>route</em> says <strong>which</strong> resource (identity — <code>/products/42</code>); the <em>query</em> says <strong>how</strong> you want a collection returned (filter/sort/page — <code>?category=audio</code>). Don't push filters into the path (<code>/products/active/page/2</code> conflates identity with state); keep them in the query where they belong.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Don't Put Secrets in the Query String</span>
+    <p>Query strings show up in server access logs, browser history, and the <code>Referer</code> header sent to other sites. Never pass auth tokens, passwords, or personal data as query parameters — they leak. Sensitive values belong in a header (<code>[FromHeader]</code>) or the body (<code>[FromBody]</code>) instead. Query strings are for harmless, shareable filter values.</p>
+  </div>
+</section>
+
+<!-- ════════ 06 ════════ -->
+<section class="section" id="s06">
+  <h2><span class="badge">06</span>📦 [FromBody] — the Request Body</h2>
+
+  <p><code>[FromBody]</code> binds a parameter from the <strong>request body</strong> — the JSON payload sent with POST, PUT, and PATCH. The framework hands the body to an <em>input formatter</em> (the JSON one by default) that deserializes it into your object. This is how the <em>data you're creating or updating</em> arrives.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · binding a JSON payload</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">public record</span> <span class="ty">CreateProductRequest</span>(<span class="kw">string</span> Name, <span class="kw">string</span> Category, <span class="kw">decimal</span> Price);
+
+<span class="cmt">// POST /api/products   Body: { "name": "Headphones", "category": "audio", "price": 2999 }</span>
+[<span class="ty">HttpPost</span>]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Create</span>([<span class="ty">FromBody</span>] <span class="ty">CreateProductRequest</span> request)
+{
+    <span class="cmt">// request.Name = "Headphones", request.Price = 2999m — deserialized for you</span>
+    <span class="kw">return</span> <span class="fn">CreatedAtAction</span>(nameof(GetById), <span class="kw">new</span> { id = <span class="num">99</span> }, request);  <span class="cmt">// 201</span>
+}
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Only One [FromBody] per Action</span>
+    <p>The request body is a stream that can be read <strong>only once</strong>. Once an input formatter consumes it to bind one parameter, it's gone — so you can have at most <em>one</em> <code>[FromBody]</code> parameter per action. If you need several values from the body, wrap them in a single object (a DTO) and bind that. Trying to bind two body parameters is a bug.</p>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ [FromBody] Ignores Property-Level Source Attributes</span>
+    <p>When you bind a complex type from the body, the JSON input formatter reads <em>only</em> the body — it doesn't understand <code>[FromQuery]</code> or <code>[FromRoute]</code> placed on that type's properties. So a <code>[FromQuery]</code> on a property of a <code>[FromBody]</code> object is silently ignored; that property just gets whatever the JSON body provides. Mix sources at the <em>parameter</em> level (one param from body, another from route), not by decorating properties inside a body object.</p>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Content-Type Drives the Formatter</span>
+    <p>The framework picks the input formatter from the request's <code>Content-Type</code> header. <code>application/json</code> → the JSON formatter (the built-in default, using <code>System.Text.Json</code>). You can add XML or other formatters, but JSON is the standard for modern APIs — which is why <code>[FromBody]</code> "just works" for the JSON your clients send.</p>
+  </div>
+</section>
+
+<!-- ════════ 07 ════════ -->
+<section class="section" id="s07">
+  <h2><span class="badge">07</span>🏷️ [FromHeader] &amp; 📋 [FromForm]</h2>
+
+  <h3>🏷️ [FromHeader] — request headers</h3>
+  <p><code>[FromHeader]</code> binds a parameter from an HTTP <strong>header</strong> — the metadata lines a client sends alongside the request. Headers carry cross-cutting concerns: a correlation/trace id, the caller's preferred language, a custom API key, content negotiation hints.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · reading headers</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">HttpGet</span>]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Get</span>(
+    [<span class="ty">FromHeader</span>(Name = <span class="str">"X-Correlation-Id"</span>)] <span class="kw">string</span>? correlationId,
+    [<span class="ty">FromHeader</span>(Name = <span class="str">"Accept-Language"</span>)] <span class="kw">string</span>? language)
+{
+    <span class="cmt">// Header names often contain hyphens, which aren't valid C# identifiers —</span>
+    <span class="cmt">// so the Name property maps "X-Correlation-Id" → correlationId.</span>
+    <span class="kw">return</span> <span class="fn">Ok</span>(<span class="kw">new</span> { correlationId, language });
+}
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 Headers Almost Always Need Name =</span>
+    <p>Real header names — <code>X-Correlation-Id</code>, <code>Accept-Language</code>, <code>X-Api-Key</code> — contain hyphens, which can't be C# parameter names. So you nearly always pair <code>[FromHeader]</code> with <code>Name = "..."</code> to map the wire name to a valid identifier. This is the same <code>Name</code> mechanism from <code>[FromRoute]</code>, just used more often here.</p>
+  </div>
+
+  <h3>📋 [FromForm] — posted form data &amp; file uploads</h3>
+  <p><code>[FromForm]</code> binds from <strong>form fields</strong> submitted as <code>multipart/form-data</code> — the format used by HTML form posts and, importantly, <strong>file uploads</strong>. When you need to accept an uploaded file, this is the source, paired with <code>IFormFile</code>.</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · a file upload via form data</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// POST /api/products/{id}/image  (Content-Type: multipart/form-data)</span>
+[<span class="ty">HttpPost</span>(<span class="str">"{id:int}/image"</span>)]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">UploadImage</span>(
+    [<span class="ty">FromRoute</span>] <span class="kw">int</span> id,
+    [<span class="ty">FromForm</span>] <span class="kw">string</span> altText,
+    <span class="ty">IFormFile</span> file)                     <span class="cmt">// the uploaded file itself</span>
+{
+    <span class="cmt">// file.FileName, file.Length, file.OpenReadStream() ...</span>
+    <span class="kw">return</span> <span class="fn">Ok</span>(<span class="kw">new</span> { id, altText, size = file.Length });
+}
+</code></pre>
+  </div>
+
+  <div class="callout warn">
+    <span class="tag">⚠️ Headers &amp; Form Aren't Inferred — Be Explicit</span>
+    <p>Unlike route/query/body, the framework does <strong>not</strong> automatically infer <code>[FromHeader]</code> or <code>[FromForm]</code> (they're treated as special sources). You <em>must</em> write the attribute explicitly, or the value won't bind. Also, <code>[FromForm]</code> and <code>[FromBody]</code> are mutually exclusive on one action — both read the request body, so a request is either JSON (<code>[FromBody]</code>) or form data (<code>[FromForm]</code>), never both.</p>
+  </div>
+</section>
+
+<!-- ════════ 08 ════════ -->
+<section class="section" id="s08">
+  <h2><span class="badge">08</span>🧠 Inference &amp; Combining Sources</h2>
+
+  <p>With <code>[ApiController]</code> on your controller (Day 2), the framework <strong>infers</strong> the source for most parameters, so you often don't write the attributes at all. Knowing the inference rules lets you decide when to stay implicit and when to be explicit.</p>
+
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Parameter</th><th>Inferred source</th><th>Inferred?</th></tr></thead>
+    <tbody>
+      <tr><td>Name matches a route token</td><td><code>[FromRoute]</code></td><td>✅ Yes</td></tr>
+      <tr><td>Simple type (int, string…), not in route</td><td><code>[FromQuery]</code></td><td>✅ Yes</td></tr>
+      <tr><td>Complex type (class/record)</td><td><code>[FromBody]</code></td><td>✅ Yes</td></tr>
+      <tr><td>Header value</td><td><code>[FromHeader]</code></td><td>❌ No — be explicit</td></tr>
+      <tr><td>Form field / file</td><td><code>[FromForm]</code></td><td>❌ No — be explicit</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · inference means these attributes are optional</span><button class="copy-btn">Copy</button></div>
+<pre><code>[<span class="ty">HttpGet</span>(<span class="str">"{id:int}"</span>)]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetById</span>(<span class="kw">int</span> id) =&gt; ...;
+<span class="cmt">// id matches the {id} token → inferred [FromRoute], no attribute needed</span>
+
+[<span class="ty">HttpGet</span>]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Search</span>(<span class="kw">string</span>? category) =&gt; ...;
+<span class="cmt">// simple type, not in route → inferred [FromQuery]</span>
+
+[<span class="ty">HttpPost</span>]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Create</span>(<span class="ty">CreateProductRequest</span> request) =&gt; ...;
+<span class="cmt">// complex type → inferred [FromBody]</span>
+</code></pre>
+  </div>
+
+  <div class="callout tip">
+    <span class="tag">✅ Explicit vs Implicit — a Judgment Call</span>
+    <p>Inference removes noise from routine CRUD actions, and many teams lean on it. But writing the attributes explicitly has real benefits: it makes intent obvious to the next reader, produces clearer OpenAPI specs (which keep generated client SDKs correct), and avoids subtle surprises when a signature changes. A reasonable rule: rely on inference for simple, obvious cases; be explicit whenever the source isn't glaringly clear, when a name needs mapping, or when accurate API docs matter.</p>
+  </div>
+
+  <h3>Combining sources in one action 🎛️</h3>
+  <p>A single action commonly pulls from several places at once — and that's exactly right, as long as each piece comes from where it belongs:</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · the classic enterprise pattern</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="cmt">// PUT /api/products/42   Body: {...}   Header: X-Correlation-Id: abc123</span>
+[<span class="ty">HttpPut</span>(<span class="str">"{id:int}"</span>)]
+<span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Update</span>(
+    [<span class="ty">FromRoute</span>]  <span class="kw">int</span> id,                              <span class="cmt">// identity ← path</span>
+    [<span class="ty">FromBody</span>]   <span class="ty">UpdateProductRequest</span> request,          <span class="cmt">// payload  ← body</span>
+    [<span class="ty">FromHeader</span>(Name = <span class="str">"X-Correlation-Id"</span>)] <span class="kw">string</span>? correlationId)  <span class="cmt">// trace ← header</span>
+    =&gt; <span class="fn">NoContent</span>();                                    <span class="cmt">// 204</span>
+</code></pre>
+  </div>
+
+  <div class="callout key">
+    <span class="tag">🔑 The Clean Combination</span>
+    <p>The idiomatic pattern: <strong>route identifies the resource, body carries the payload, header carries metadata</strong> like a correlation id. Each source does its one job, so the action is unambiguous and its OpenAPI description is accurate. Combining sources is normal and encouraged — the discipline is matching each value to its <em>correct</em> source, not avoiding the mix.</p>
+  </div>
+</section>
+
+<!-- ════════ 09 ════════ -->
+<section class="section" id="s09">
+  <h2><span class="badge">09</span>🧱 All Five Sources in One Controller</h2>
+
+  <p>Here's a products controller with one endpoint for each binding source — a complete map of everything today, continuing the shop domain with an in-memory list (real data arrives with EF Core in Days 7–9):</p>
+
+  <div class="codebox">
+    <div class="code-head"><span class="lang">C# · ProductsController.cs — every source</span><button class="copy-btn">Copy</button></div>
+<pre><code><span class="kw">using</span> Microsoft.AspNetCore.Mvc;
+
+[<span class="ty">ApiController</span>]
+[<span class="ty">Route</span>(<span class="str">"api/[controller]"</span>)]
+<span class="kw">public class</span> <span class="ty">ProductsController</span> : <span class="ty">ControllerBase</span>
+{
+    <span class="cmt">// 🛣️ FROM ROUTE — identity from the path</span>
+    <span class="cmt">// GET /api/products/42</span>
+    [<span class="ty">HttpGet</span>(<span class="str">"{id:int}"</span>)]
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">GetById</span>([<span class="ty">FromRoute</span>] <span class="kw">int</span> id)
+        =&gt; <span class="fn">Ok</span>(<span class="kw">new</span> { source = <span class="str">"route"</span>, id });
+
+    <span class="cmt">// 🔎 FROM QUERY — filter/sort/page from the query string</span>
+    <span class="cmt">// GET /api/products?category=audio&amp;page=2</span>
+    [<span class="ty">HttpGet</span>]
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Search</span>(
+        [<span class="ty">FromQuery</span>] <span class="kw">string</span>? category,
+        [<span class="ty">FromQuery</span>] <span class="kw">int</span> page = <span class="num">1</span>)
+        =&gt; <span class="fn">Ok</span>(<span class="kw">new</span> { source = <span class="str">"query"</span>, category, page });
+
+    <span class="cmt">// 📦 FROM BODY — JSON payload for create</span>
+    <span class="cmt">// POST /api/products   { "name": "Headphones", "category": "audio", "price": 2999 }</span>
+    [<span class="ty">HttpPost</span>]
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">Create</span>([<span class="ty">FromBody</span>] <span class="ty">CreateProductRequest</span> request)
+        =&gt; <span class="fn">CreatedAtAction</span>(nameof(GetById), <span class="kw">new</span> { id = <span class="num">99</span> },
+                             <span class="kw">new</span> { source = <span class="str">"body"</span>, request.Name });
+
+    <span class="cmt">// 🏷️ FROM HEADER — metadata from a request header</span>
+    <span class="cmt">// GET /api/products/whoami   (Header: X-Api-Key: ...)</span>
+    [<span class="ty">HttpGet</span>(<span class="str">"whoami"</span>)]
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">WhoAmI</span>(
+        [<span class="ty">FromHeader</span>(Name = <span class="str">"X-Api-Key"</span>)] <span class="kw">string</span>? apiKey)
+        =&gt; <span class="fn">Ok</span>(<span class="kw">new</span> { source = <span class="str">"header"</span>, hasKey = apiKey <span class="kw">is not null</span> });
+
+    <span class="cmt">// 📋 FROM FORM — file upload via multipart/form-data</span>
+    <span class="cmt">// POST /api/products/42/image</span>
+    [<span class="ty">HttpPost</span>(<span class="str">"{id:int}/image"</span>)]
+    <span class="kw">public</span> <span class="ty">IActionResult</span> <span class="fn">UploadImage</span>(
+        [<span class="ty">FromRoute</span>] <span class="kw">int</span> id,
+        [<span class="ty">FromForm</span>] <span class="kw">string</span> altText,
+        <span class="ty">IFormFile</span> file)
+        =&gt; <span class="fn">Ok</span>(<span class="kw">new</span> { source = <span class="str">"form"</span>, id, altText, size = file.Length });
+}
+
+<span class="kw">public record</span> <span class="ty">CreateProductRequest</span>(<span class="kw">string</span> Name, <span class="kw">string</span> Category, <span class="kw">decimal</span> Price);
+</code></pre>
+  </div>
+
+  <p>How a request reaches the right parameters, step by step:</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <span class="emoji">🎯</span>
+      <div><b>1. Routing selects the action</b><span class="desc">Day 2: verb + URL are matched to one method, e.g. <code>POST /api/products</code> → <code>Create</code>.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step highlight">
+      <span class="emoji">🔌</span>
+      <div><b>2. Binding fills each parameter</b><span class="desc">For every parameter, its source (explicit or inferred) is read: route values, query string, body via the JSON formatter, headers, form fields.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">✅</span>
+      <div><b>3. Validation checks the result</b><span class="desc">Day 14: <code>[ApiController]</code> validates the bound model; if it fails, it returns 400 automatically before your code runs.</span></div>
+    </div>
+    <div class="flow-connector"></div>
+    <div class="flow-step">
+      <span class="emoji">⚡</span>
+      <div><b>4. Your action runs</b><span class="desc">Every parameter is populated and typed — you just use them and return a result.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ 10 ════════ -->
+<section class="section" id="s10">
+  <h2><span class="badge">10</span>🛠️ Hands-On: Bind from Every Source</h2>
+
+  <p>Today's <strong>Do</strong>: build endpoints that bind from each source. Use the <code>MyShop.Api</code> / <code>ProductsController</code> from Day 2. The path:</p>
+
+  <ol>
+    <li>🛣️ <strong>Route:</strong> confirm <code>GetById([FromRoute] int id)</code> on <code>[HttpGet("{id:int}")]</code> — call <code>/api/products/42</code> and see <code>id = 42</code>.</li>
+    <li>🔎 <strong>Query:</strong> add <code>Search([FromQuery] string? category, [FromQuery] int page = 1)</code> on <code>[HttpGet]</code>; call <code>/api/products?category=audio&amp;page=2</code> and confirm both bind (and that omitting <code>page</code> defaults to 1).</li>
+    <li>🧳 <strong>Query object:</strong> refactor those into a <code>ProductQuery</code> class bound with <code>[FromQuery] ProductQuery query</code>; confirm the same URL fills its properties.</li>
+    <li>📦 <strong>Body:</strong> add <code>Create([FromBody] CreateProductRequest request)</code> on <code>[HttpPost]</code>; POST some JSON and confirm the object deserializes. Then try sending malformed JSON and watch <code>[ApiController]</code> return a <code>400</code>.</li>
+    <li>🏷️ <strong>Header:</strong> add an action reading <code>[FromHeader(Name = "X-Api-Key")] string? apiKey</code>; send the header (Swagger/Scalar or curl <code>-H</code>) and confirm it binds — then confirm it's <em>null</em> when omitted (headers aren't required unless you make them so).</li>
+    <li>📋 <strong>Form:</strong> add an upload action with <code>[FromForm] string altText</code> and an <code>IFormFile file</code>; post multipart form data and confirm the file's name and length arrive.</li>
+    <li>🎛️ <strong>Combine:</strong> write one <code>PUT /api/products/{id}</code> that takes <code>[FromRoute] int id</code>, <code>[FromBody] UpdateProductRequest request</code>, and <code>[FromHeader(Name="X-Correlation-Id")] string? correlationId</code> — all three at once.</li>
+    <li>🧠 <strong>Test inference:</strong> remove the <code>[FromRoute]</code>/<code>[FromQuery]</code>/<code>[FromBody]</code> attributes from a few actions and confirm they still work (inferred) — then note which ones (header, form) <em>break</em> without the attribute.</li>
+    <li>📖 Open Swagger/Scalar and confirm each parameter shows in the right place (path, query, body, header) — proof your sources are annotated correctly.</li>
+  </ol>
+
+  <div class="callout tip">
+    <span class="tag">✅ Self-Check</span>
+    <p>From your endpoints: (1) Why can you have only one <code>[FromBody]</code> parameter? (2) Which two sources are <em>not</em> inferred, so require an explicit attribute? (3) Why does <code>[FromHeader]</code> almost always need <code>Name = "..."</code>? (4) In your combined PUT, which piece came from where — and does that match Day 1's "identity vs payload vs metadata" split? (5) What happened when you sent invalid JSON to the <code>[FromBody]</code> endpoint, and <em>before</em> which step did that 400 fire?</p>
+  </div>
+</section>
+
+<!-- ════════ 11 ════════ -->
+<section class="section" id="s11">
+  <h2><span class="badge">11</span>🧾 Quick Recap</h2>
+
+  <div class="recap-grid">
+    <div class="recap-card"><b>🔌 Model binding</b>The framework's automatic mapping of raw request data (path, query, body, headers, form) into your action's typed parameters — running after routing, before your code.</div>
+    <div class="recap-card"><b>🛣️ [FromRoute]</b>Binds from the URL path (route tokens). Resource identity: <code>{id}</code> → <code>int id</code>. Matches by name; use <code>Name=</code> to remap.</div>
+    <div class="recap-card"><b>🔎 [FromQuery]</b>Binds from the query string. Filter/sort/page, naturally optional with defaults. Can bind a whole query object. Never put secrets here.</div>
+    <div class="recap-card"><b>📦 [FromBody]</b>Binds the JSON body via input formatters. Create/update payloads. Max one per action (the body reads once); wrap multiple values in a DTO.</div>
+    <div class="recap-card"><b>🏷️ [FromHeader]</b>Binds an HTTP header. Correlation id, locale, API key. Almost always needs <code>Name="X-…"</code> because header names have hyphens.</div>
+    <div class="recap-card"><b>📋 [FromForm]</b>Binds multipart form fields &amp; <code>IFormFile</code> uploads. Mutually exclusive with <code>[FromBody]</code> (both read the body).</div>
+    <div class="recap-card"><b>🧠 Inference</b>With <code>[ApiController]</code>: route-token→route, simple→query, complex→body are inferred; <em>header and form are not</em> — annotate them explicitly.</div>
+    <div class="recap-card"><b>🎛️ Combining</b>The clean pattern: route = identity, body = payload, header = metadata. Mix sources at the parameter level; match each value to where it belongs.</div>
+  </div>
+
+  <h3>Summary table</h3>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Source</th><th>Reads from</th><th>Use for</th><th>Watch out</th></tr></thead>
+    <tbody>
+      <tr><td><code>[FromRoute]</code></td><td>URL path</td><td>Resource identity</td><td>Matches route token by name</td></tr>
+      <tr><td><code>[FromQuery]</code></td><td>Query string</td><td>Filter / sort / page</td><td>No secrets (logs, history)</td></tr>
+      <tr><td><code>[FromBody]</code></td><td>Request body (JSON)</td><td>Create / update payloads</td><td>Max one; wrap many values in a DTO</td></tr>
+      <tr><td><code>[FromHeader]</code></td><td>HTTP headers</td><td>Correlation id, locale, key</td><td>Not inferred; usually needs <code>Name=</code></td></tr>
+      <tr><td><code>[FromForm]</code></td><td>Form fields (multipart)</td><td>File uploads, form posts</td><td>Not inferred; excludes <code>[FromBody]</code></td></tr>
+      <tr><td><code>[FromServices]</code></td><td>DI container</td><td>Injecting a service</td><td>Not request data — a later topic</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ════════ 12 ════════ -->
+<section class="section" id="s12">
+  <h2><span class="badge">12</span>🎤 Interview Questions</h2>
+  <p>Click any question to reveal a plain-English answer. Levels: 🌱 Junior (0–2 yrs) · 🟠 Mid (2–5 yrs) · 🔴 Senior (5–7 yrs).</p>
+
+  <h3>🌱 Junior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is model binding in ASP.NET Core?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Model binding is the framework's automatic process of taking raw data from an incoming HTTP request — the URL path, query string, body, headers, or form fields — and mapping it onto your action method's parameters as strongly-typed .NET objects. Instead of manually reading <code>Request.Query</code> or parsing JSON, you just declare the parameters your method needs (an <code>int id</code>, a <code>ProductDto product</code>), and binding populates them for you before your code runs. It removes tedious, error-prone plumbing from every action.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">Name the main binding source attributes and where each reads from.</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>[FromRoute]</code> reads from the URL path (route tokens like <code>{id}</code>). <code>[FromQuery]</code> reads from the query string (after the <code>?</code>). <code>[FromBody]</code> reads from the request body (usually JSON). <code>[FromHeader]</code> reads from an HTTP request header. <code>[FromForm]</code> reads from posted form fields (multipart/form-data, including file uploads). There's also <code>[FromServices]</code>, which isn't request data — it pulls a dependency from the DI container.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">Which source would you use for a product's id in /api/products/42?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>[FromRoute]</code>, because the id is part of the URL path — it identifies <em>which</em> product. You'd have a route template like <code>[HttpGet("{id:int}")]</code> and a parameter <code>[FromRoute] int id</code>, and binding captures <code>42</code> from the path into <code>id</code>. Route is the right source for resource identity, following the REST convention that the path names the resource.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">Which source is used for a JSON payload sent with a POST?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>[FromBody]</code>. When a client sends structured data (like a new product) as JSON in the request body, <code>[FromBody]</code> tells the framework to deserialize that body into your object using an input formatter (the JSON formatter by default). It's the standard source for create and update operations — POST, PUT, and PATCH requests that carry a payload.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">Which source fits filtering and paging, like ?category=audio&amp;page=2?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>[FromQuery]</code>, because those values live in the query string and describe <em>how</em> you want a collection returned rather than identifying a specific resource. Query parameters are naturally optional and easy to give defaults (like <code>int page = 1</code>), which suits filtering, sorting, and paging. You'd write <code>[FromQuery] string? category, [FromQuery] int page = 1</code>.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">Why can you only have one [FromBody] parameter per action?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Because the request body is a stream that can be read only once. When an input formatter reads the body to bind one <code>[FromBody]</code> parameter, the stream is consumed and can't be read again for a second one. So you're limited to one <code>[FromBody]</code> parameter per action. If you need several values from the body, put them in a single object (a DTO) and bind that one object.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">Why does [FromHeader] usually include a Name property?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p>Because real HTTP header names often contain hyphens — like <code>X-Correlation-Id</code> or <code>Accept-Language</code> — and hyphens aren't valid in C# parameter names. The <code>Name</code> property maps the actual header name to a legal C# identifier: <code>[FromHeader(Name = "Accept-Language")] string language</code>. The <code>Name</code> option exists on the other attributes too, but headers need it most because of those hyphenated names.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">What is [FromForm] used for?</span><span class="lvl lvl-jr">🌱 JUNIOR</span></summary>
+    <div class="answer"><p><code>[FromForm]</code> binds data submitted as form fields in <code>multipart/form-data</code> — the format used by HTML form posts and, most commonly in APIs, file uploads. You pair it with an <code>IFormFile</code> parameter to receive the uploaded file, plus <code>[FromForm]</code> for any accompanying text fields. It's the source to reach for whenever a client is uploading a file rather than sending JSON.</p></div>
+  </details>
+
+  <h3>🟠 Mid</h3>
+
+  <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">How does binding source inference work under [ApiController], and which sources aren't inferred?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>With <code>[ApiController]</code>, the framework infers a source for most parameters so you can omit the attributes: a parameter whose name matches a route token is bound from the route; a simple type not in the route is bound from the query string; and a complex type (class/record) is bound from the body. The two sources that are <em>not</em> inferred are <code>[FromHeader]</code> and <code>[FromForm]</code> — they're treated as special and must be annotated explicitly, or the value simply won't bind. So header and form parameters always need their attribute; route, query, and body can rely on inference (though being explicit is often still clearer).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">When would you bind a complex object from the query string versus the body?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Bind a complex object from the <strong>query string</strong> (<code>[FromQuery] ProductQuery query</code>) when it's a bundle of optional, result-shaping filter/sort/page values on a GET — GETs have no body, and grouping many query parameters into one class keeps the signature clean and the filter reusable. Bind from the <strong>body</strong> (<code>[FromBody] CreateProductRequest request</code>) when it's the payload you're creating or updating on a POST/PUT/PATCH — structured data that belongs in the request body as JSON. Rule of thumb: read-only filters for a collection → query object; the resource data being submitted → body. One caveat: very large or deeply nested objects bind awkwardly from the query and produce poor OpenAPI specs, so keep query objects flat and modest.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What happens to [FromQuery] or [FromRoute] attributes placed on the properties of a [FromBody] object?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>They're ignored. When a parameter is bound with <code>[FromBody]</code>, the request body is handed to an input formatter (the JSON deserializer), which reads <em>only</em> the body and doesn't understand model-binding source attributes. So a <code>[FromQuery]</code> decorating a property inside a body object has no effect — that property just gets whatever value the JSON body supplies (or its default if absent). The takeaway: you mix sources at the <em>parameter</em> level (one parameter from body, another from route or header), not by decorating individual properties within a body-bound object.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">Can [FromForm] and [FromBody] be used together on the same action? Why or why not?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>No — they're mutually exclusive because both read the request <em>body</em>, just in different formats: <code>[FromBody]</code> expects the body to be JSON (parsed by an input formatter), while <code>[FromForm]</code> expects it to be <code>multipart/form-data</code> (form fields and files). A single request has one body with one content type, and it can be read only once, so an action is either JSON-based (<code>[FromBody]</code>) or form-based (<code>[FromForm]</code>), never both. If you need file uploads alongside structured data, put the structured fields as individual <code>[FromForm]</code> parameters in the same form, rather than mixing a JSON body with a form.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">Why shouldn't sensitive data go in the query string, and where should it go?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Because query strings are highly visible and get recorded in places you don't control: server and proxy access logs, browser history, bookmarks, and the <code>Referer</code> header that browsers send to third-party sites. Putting auth tokens, passwords, API keys, or personal data there exposes them in all those places — a real security and privacy leak. Sensitive values should travel in a <strong>header</strong> (e.g. an <code>Authorization</code> header, bound with <code>[FromHeader]</code>) or in the <strong>request body</strong> (<code>[FromBody]</code>), which aren't logged the same way. The query string is for harmless, shareable filter values only.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">Describe a clean way to combine multiple binding sources in one action.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>The idiomatic enterprise pattern is: <strong>route identifies the resource, body carries the payload, header carries metadata</strong>. For example, an update endpoint: <code>[FromRoute] int id</code> for which product, <code>[FromBody] UpdateProductRequest request</code> for the new data, and <code>[FromHeader(Name="X-Correlation-Id")] string? correlationId</code> for tracing. Each source does exactly one job, so the action is unambiguous, matches REST conventions (identity in the path, payload in the body), and generates accurate OpenAPI output. Combining sources is normal and encouraged — the discipline is matching each value to its correct source, and mixing them at the parameter level (not by decorating a body object's properties).</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">Should you rely on inference or annotate sources explicitly? Argue both sides.</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p><strong>For inference:</strong> it removes boilerplate from routine CRUD actions — a simple <code>GetById(int id)</code> or <code>Create(ProductDto dto)</code> reads cleanly without attribute noise, and the rules (route-token→route, simple→query, complex→body) are predictable once learned. <strong>For explicit annotation:</strong> it makes intent obvious to the next reader (no need to recall inference rules), produces more accurate OpenAPI specs — which matters because SDK/client generators rely on correct <code>in: path/query/body</code> metadata, and wrong inference silently emits broken clients — and it's more robust to refactoring (renaming a parameter or adding a route token won't silently change where a value comes from). A balanced position: lean on inference for simple, unambiguous actions; be explicit whenever the source isn't obvious, when a <code>Name</code> mapping is needed, for header/form (which aren't inferred anyway), and in public APIs where OpenAPI accuracy is important. Consistency within a team matters more than the exact choice.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">When exactly does model binding run in the request pipeline, and what happens if it fails?</span><span class="lvl lvl-mid">🟠 MID</span></summary>
+    <div class="answer"><p>Binding runs <em>after</em> routing has selected the action (Day 2) and <em>before</em> the action executes. The sequence: the request comes through the middleware pipeline, routing matches it to an action, then for each parameter the binding system reads the appropriate source (route values, query, body via input formatter, headers, form), converts the raw value to the parameter's type, and populates it; then model validation runs on the bound values. If binding can't convert a value (e.g. non-numeric text for an <code>int</code>) or validation fails, and the controller has <code>[ApiController]</code>, the framework automatically returns a <code>400 Bad Request</code> with a ProblemDetails body <em>before</em> your action method is called. That's why, by the time your code runs, its parameters are already populated with values that at least parsed to the right types — you don't write the parsing or the 400 yourself.</p></div>
+  </details>
+
+  <h3>🔴 Senior</h3>
+
+  <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Walk through what the model binding system does internally for one request.</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>After routing selects an action, the framework inspects each parameter and determines its binding source — from an explicit <code>[From…]</code> attribute, or by inference (route-token match → route, simple type → query, complex type → body; header/form require explicit attributes). For non-body sources, <em>value providers</em> supply the raw data: route value providers, query-string providers, header providers, form providers — a value provider abstracts "give me the value for this key from my part of the request." A <em>model binder</em> then converts that raw string (or strings) into the target type: a <code>SimpleTypeModelBinder</code> for primitives, a complex-object binder that recursively binds each property of a class from the value providers, and so on. For <code>[FromBody]</code>, it's different — an <em>input formatter</em> (chosen by the request's <code>Content-Type</code>, JSON by default via <code>System.Text.Json</code>) deserializes the whole body stream into the object. As values are bound, any conversion failures and validation results are recorded in <code>ModelState</code>. After binding, validation runs; with <code>[ApiController]</code>, an invalid <code>ModelState</code> short-circuits to a 400. Finally the populated parameters are passed to the action. The extensibility points — custom value providers (e.g. reading from cookies) and custom model binders — let you plug in sources or conversions the defaults don't cover.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">Model binding is a security surface. What risks does it introduce and how do you mitigate them?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The core risk is <strong>over-posting / mass assignment</strong>: if you bind directly to your domain entity, a client can set fields you never intended — sending <code>{"isAdmin": true}</code> or <code>{"price": 0}</code> and having binding happily populate them. Mitigation: bind to purpose-built <strong>DTOs / request models</strong> that expose only the fields a client may set, then map to the entity — never bind an EF entity straight from <code>[FromBody]</code>. Related risks: <strong>sensitive data in query strings</strong> (leaks via logs/history — use headers or body); <strong>large/hostile payloads</strong> (set request size limits, and be cautious with unbounded collections that could exhaust memory); <strong>file uploads</strong> via <code>[FromForm]</code> (validate size, content type, and file name; don't trust the client-supplied name; store outside the web root); and <strong>trusting bound values without validation</strong> (binding only guarantees the value parsed to the type, not that it's <em>valid</em> or authorized — you still validate ranges/rules per Day 14 and check authorization, e.g. that the caller may act on the route's <code>id</code>). The mindset: binding maps input into your types, but every bound value is still untrusted user input until validated and authorized. DTOs plus explicit validation plus authorization are the layered defense.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">How would you implement a custom model binder or value provider, and when is that justified?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>A <strong>custom value provider</strong> supplies raw data from a source the framework doesn't read by default — cookies, session, a custom store. You implement <code>IValueProvider</code> (a way to fetch a value by key) and <code>IValueProviderFactory</code>, and register the factory in MVC options; bound parameters can then draw from that source. A <strong>custom model binder</strong> controls how raw values are <em>converted</em> into a specific type — implement <code>IModelBinder</code>'s <code>BindModelAsync</code> to read from the binding context and set a bound result, and apply it via <code>[ModelBinder(typeof(...))]</code> or an <code>IModelBinderProvider</code>. When is it justified? When you have a recurring, non-trivial conversion the defaults can't express cleanly — e.g. parsing a comma-separated range string into a strongly-typed <code>DateRange</code>, binding a domain value object from a compact string form, or reading a value from an unusual source consistently across many actions. When it's <em>not</em> justified: for one-off parsing (just take a string and parse it in the action), for business validation (that's validation's job, not binding's), or anything that needs I/O or services on the hot path (binders should be cheap and side-effect-free). And note union types are only supported via <code>[FromBody]</code> since the other sources bind strings without JSON parsing. The bar: reusable, purely-syntactic conversion the built-ins genuinely can't handle — otherwise keep binding simple and handle it in the action or a service.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">Why does binding to DTOs rather than domain entities matter beyond security?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Security (avoiding over-posting) is the headline, but DTOs pay off in several other ways. <strong>Decoupling the API contract from the domain model</strong>: your external request/response shapes can stay stable while the internal entity evolves (rename a column, split a table) — without a DTO layer, every entity change is a breaking API change. <strong>Shaping input precisely</strong>: a <code>CreateProductRequest</code> exposes only what a client may send (name, price) and omits server-controlled fields (id, createdAt, audit columns), so the contract documents intent. <strong>Validation placement</strong>: validation attributes live on the DTO at the boundary, keeping the entity clean. <strong>Serialization control</strong>: you decide exactly what's exposed, avoiding accidentally leaking internal fields or navigation properties (and the circular-reference/over-fetch problems of serializing entities directly). <strong>Versioning</strong>: different API versions can use different DTOs while sharing one entity. <strong>Accurate OpenAPI</strong>: the generated schema reflects the real contract, not internal storage details. The cost is mapping code (mitigated by mapping libraries or simple manual maps), which is a worthwhile trade in any non-trivial API. The principle from Day 2 recurs: the web edge (controllers, DTOs, binding) should be a thin, deliberate boundary around a stable domain core, not a direct window into it.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">A GET endpoint needs 15 filter parameters. How do you design the binding?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Fifteen individual <code>[FromQuery]</code> parameters make an unwieldy signature, so bind a <strong>query parameter object</strong>: a class whose properties are the filters, bound with <code>[FromQuery] ProductSearchQuery query</code>. That keeps the signature clean, makes the filter set reusable and testable, and lets you give sensible defaults. But at 15 fields I'd apply judgment: keep the object <strong>flat</strong> (deeply nested objects bind poorly from the query and produce confusing OpenAPI/SDK output — one of the documented anti-patterns), annotate it clearly so the OpenAPI spec lists each query parameter correctly, add validation for ranges and enums, and enforce paging with sane limits so a client can't request everything at once. If the "filter" is genuinely large and structured, that's a signal it might be better modeled as a POST to a <code>/search</code> sub-resource with the criteria in the body (a pragmatic, if not-purely-REST, choice many APIs make for complex searches) — trading GET's cacheability for a cleaner payload. Also consider whether some of those 15 are really distinct endpoints or could be simplified. So: query object for cleanliness, flat and well-annotated for tooling, validated and paged for safety, and reconsider a body-based search endpoint if the criteria are truly complex. The decision balances usability, OpenAPI/SDK quality, caching, and how variable the client's needs are.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">How does model binding relate to validation, and where should each responsibility sit?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>They're distinct, sequential steps with different jobs. <strong>Binding</strong> is syntactic: it maps request data to typed parameters and records conversion failures (a non-numeric string for an <code>int</code>) in <code>ModelState</code>. <strong>Validation</strong> is semantic: it checks that the bound values satisfy rules — required fields present, numbers in range, strings within length, cross-field constraints — via data annotations (<code>[Required]</code>, <code>[Range]</code>) or a library like FluentValidation. Order: bind first, then validate; both feed <code>ModelState</code>, and with <code>[ApiController]</code> an invalid <code>ModelState</code> auto-returns a 400 before the action runs. Where responsibilities sit: binding is the framework's job (you just choose sources); simple field-level validation belongs on the DTO via attributes at the boundary; complex or business-rule validation belongs in explicit validators or the domain/service layer (Day 14), because binding and attribute validation can't express things like "this email isn't already taken" or cross-entity rules. The key senior insight is that <strong>binding success does not mean the input is valid or safe</strong> — it only means it parsed to the right type. Every bound value is still untrusted until validated (for correctness) and authorized (for permission). So the layering is: bind (framework) → validate shape/rules (DTO attributes + validators) → enforce business rules and authorization (services) — never treat "it bound" as "it's good."</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">Does model binding work the same way in minimal APIs as in controllers?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>The concepts are the same — the framework maps request parts to handler parameters, and the same <code>[FromRoute]</code>/<code>[FromQuery]</code>/<code>[FromBody]</code>/<code>[FromHeader]</code>/<code>[FromForm]</code>/<code>[FromServices]</code> attributes apply — but minimal APIs use a somewhat different, more explicit binding mechanism than the MVC model binder. In minimal APIs, parameters are bound by a set of rules: route-token-name matches bind from the route, other simple types from the query, complex types from the body (JSON), and services from DI — broadly similar inference to <code>[ApiController]</code>, but resolved at endpoint-construction time and with some differences (e.g. minimal APIs support special parameter types like <code>HttpContext</code>, <code>HttpRequest</code>, <code>CancellationToken</code>, and <code>[AsParameters]</code> to bundle parameters into a struct/record; and custom binding is done via static <code>TryParse</code>/<code>BindAsync</code> methods on the type rather than <code>IModelBinder</code>). Minimal APIs also don't run the full MVC filter/model-validation pipeline the same way — validation isn't automatic out of the box the way <code>[ApiController]</code> gives you auto-400s (though it can be added). So: same mental model and attributes, different implementation and some different conventions/extensibility. A senior should know that "model binding" as a concept spans both, but the MVC model binder (value providers, <code>IModelBinder</code>, automatic <code>ModelState</code> validation) is specific to controllers, while minimal APIs have their own lighter-weight parameter-binding system.</p></div>
+  </details>
+
+  <details class="qa"><summary><span class="qnum">Q24</span><span class="qtext">Why does choosing the right binding source matter beyond "it works"?</span><span class="lvl lvl-sr">🔴 SENIOR</span></summary>
+    <div class="answer"><p>Because the source you choose is part of your API's public contract, and getting it wrong has downstream costs even when the endpoint "works" in a quick test. <strong>OpenAPI/SDK correctness</strong>: the binding source determines whether a parameter appears in the spec as <code>in: path</code>, <code>in: query</code>, <code>in: header</code>, or <code>requestBody</code>. If sources are wrong or misinferred, the spec misrepresents the API, SDK generators emit broken clients, and integration tests can pass locally while failing in real client environments. <strong>RESTful predictability</strong>: putting identity in the path, filters in the query, payloads in the body, and metadata in headers makes the API behave the way every other well-designed API does, so consumers can predict it (Day 1's core value). <strong>Security</strong>: source choice affects exposure — secrets in the query leak via logs; sensitive data belongs in headers/body. <strong>Caching &amp; semantics</strong>: query parameters participate in URL-based caching and are shareable/bookmarkable; body content isn't — so a filter in the query behaves differently from the same filter in a body. <strong>Maintainability</strong>: conflating identity with filter state (e.g. <code>/orders/active/page/2</code> instead of <code>/orders?status=active&amp;page=2</code>) makes URLs rigid and hard to evolve. So the source isn't a mere implementation detail — it shapes the contract, the tooling, the security posture, and the evolvability of the API. Choosing deliberately is part of designing the API, not just wiring up a parameter.</p></div>
+  </details>
+
+  <div class="callout tip">
+    <span class="tag">✅ Study Order Tip</span>
+    <p>Lock in Q1–Q8 first — what binding is, the five sources and what each reads from, and the "one <code>[FromBody]</code> per action" / "headers need <code>Name=</code>" facts are guaranteed openers and the mechanics you'll use in every endpoint. Then own Q9 and Q11 together: inference rules (and that header/form aren't inferred) plus "why source attributes on body-object properties are ignored" are the mid-level questions that show you understand <em>how</em> binding actually resolves sources. Save the senior set — especially Q18 (over-posting/security) and Q20 (bind to DTOs, not entities) — for after the hands-on; once you've bound from all five sources and seen a bad payload get auto-rejected, the "every bound value is still untrusted input" mindset lands with conviction. The one-line takeaway for Day 3: <em>match each piece of data to its correct source — identity in the route, filters in the query, payload in the body, metadata in headers, uploads in the form.</em></p>
+  </div>
+</section>
+
+<footer>Day 3 of the .NET series · Model Binding: Route, Query, Body, Headers &amp; Form · Self-contained study notes</footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ── Reading progress bar ── */
+  var progress = document.getElementById("progress");
+  function updateProgress() {
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  }
+  document.addEventListener("scroll", updateProgress, { passive: true });
+  updateProgress();
+
+  /* ── Scroll reveal ── */
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduceMotion || !("IntersectionObserver" in window)) {
+    sections.forEach(function (s) { s.classList.add("visible"); });
+  } else {
+    var revealObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("visible"); revealObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08 });
+    sections.forEach(function (s) { revealObs.observe(s); });
+  }
+
+  /* ── Sidebar nav: smooth scroll with 24px offset ── */
+  var sidebar = document.getElementById("sidebar");
+  var navLinks = Array.prototype.slice.call(sidebar.querySelectorAll("a[href^='#']"));
+
+  navLinks.forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var target = document.getElementById(link.getAttribute("href").slice(1));
+      if (!target) return;
+      var top = target.getBoundingClientRect().top + window.pageYOffset - 24;
+      window.scrollTo({ top: top, behavior: reduceMotion ? "auto" : "smooth" });
+      closeNav();
+    });
+  });
+
+  /* ── Scroll-spy: highlight + keep active link centred in sidebar ── */
+  var byId = {};
+  navLinks.forEach(function (l) { byId[l.getAttribute("href").slice(1)] = l; });
+
+  function setActive(id) {
+    var link = byId[id];
+    if (!link || link.classList.contains("active")) return;
+    navLinks.forEach(function (l) { l.classList.remove("active"); });
+    link.classList.add("active");
+    // Auto-scroll sidebar so the active link sits near the centre
+    var desired = link.offsetTop - sidebar.clientHeight / 2 + link.offsetHeight / 2;
+    sidebar.scrollTo({ top: Math.max(0, desired), behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function spy() {
+    var probe = window.pageYOffset + window.innerHeight * 0.28;
+    var current = sections[0] ? sections[0].id : null;
+    for (var i = 0; i < sections.length; i++) {
+      if (sections[i].offsetTop <= probe) current = sections[i].id;
+    }
+    if (current) setActive(current);
+  }
+  document.addEventListener("scroll", spy, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
+  /* ── Mobile FAB nav ── */
+  var fab = document.getElementById("navFab");
+  var backdrop = document.getElementById("backdrop");
+  function openNav()  { document.body.classList.add("nav-open"); fab.textContent = "✕"; }
+  function closeNav() { document.body.classList.remove("nav-open"); fab.textContent = "☰"; }
+  fab.addEventListener("click", function () {
+    document.body.classList.contains("nav-open") ? closeNav() : openNav();
+  });
+  backdrop.addEventListener("click", closeNav);
+
+  /* ── Copy buttons ── */
+  function copyText(text, btn) {
+    function done() {
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("copied"); }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallback(); });
+    } else { fallback(); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* no-op */ }
+      document.body.removeChild(ta);
+    }
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".copy-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var pre = btn.closest(".codebox").querySelector("pre");
+      if (pre) copyText(pre.innerText, btn);
+    });
+  });
+})();
+</script>
+</body>
+</html>

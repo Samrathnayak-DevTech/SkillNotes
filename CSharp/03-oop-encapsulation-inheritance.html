@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OOP I — Encapsulation &amp; Inheritance (C#)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0; --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea; --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3; --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink); font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;}
+#progress{position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .08s linear;}
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+:not(pre) > code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--accent);
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;}
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;
+  background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;background:transparent;
+  border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;color:var(--code-ink);
+  background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent);font-weight:700;}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:24px 22px;margin:24px 0;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+/* inheritance tree */
+.tree{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.tree-node{background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:10px 18px;
+  font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:600;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.tree-node.base{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.tree-node.leaf{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);}
+.tree-conn{width:2px;height:22px;background:var(--accent);}
+.tree-children{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;position:relative;padding-top:22px;}
+.tree-children::before{content:"";position:absolute;top:0;left:15%;right:15%;height:2px;background:var(--accent);}
+.tree-child{display:flex;flex-direction:column;align-items:center;position:relative;}
+.tree-child::before{content:"";position:absolute;top:-22px;width:2px;height:22px;background:var(--accent);}
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:560px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+.mindmap{display:flex;flex-direction:column;align-items:center;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;font-size:1.1rem;
+  padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch .badge-now{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.06em;
+  background:var(--accent);color:#fff;border-radius:5px;padding:2px 6px;margin-left:auto;}
+.mm-branch .badge-later{font-family:"JetBrains Mono",monospace;font-size:9px;letter-spacing:.06em;
+  background:var(--line);color:var(--ink-soft);border-radius:5px;padding:2px 6px;margin-left:auto;}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);transition:transform .28s ease;
+    box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">OOP I · Encapsulation &amp; Inheritance</div>
+    <nav>
+      <div class="nav-group">
+        <h4>Foundations</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> What is OOP?</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> Classes &amp; Objects</a>
+      </div>
+      <div class="nav-group">
+        <h4>Encapsulation</h4>
+        <a class="nav-link" href="#s03"><span class="n">03</span> The Idea</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> Access Modifiers</a>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Properties</a>
+      </div>
+      <div class="nav-group">
+        <h4>Inheritance</h4>
+        <a class="nav-link" href="#s06"><span class="n">06</span> The Idea</a>
+        <a class="nav-link" href="#s07"><span class="n">07</span> base &amp; Constructors</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> virtual &amp; override</a>
+        <a class="nav-link" href="#s09"><span class="n">09</span> abstract Classes</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> sealed &amp; new</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Worked Example</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Quick Recap</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// C# &nbsp;·&nbsp; object-oriented programming, part 1</p>
+      <h1>Encapsulation &amp; Inheritance 🧬</h1>
+      <p class="lede">
+        Object-oriented programming organizes code around <b>objects</b> — bundles of data and the behavior that
+        operates on it. This page covers the first two of OOP's four pillars: <b>encapsulation</b> (keep your data
+        safe and hand out a clean, controlled interface) and <b>inheritance</b> (build new types on top of existing
+        ones without copy-pasting). Together they're the backbone of almost every C# class you'll ever read or write.
+        No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">🧱 <b>Classes &amp; Objects</b></span>
+        <span class="chip">💊 <b>Encapsulation</b></span>
+        <span class="chip">🔐 <b>Access Modifiers</b></span>
+        <span class="chip">🎛️ <b>Properties</b></span>
+        <span class="chip">🧬 <b>Inheritance</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- 01 -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>What is OOP?</h2></div>
+      <p class="sec-sub">A way of organizing programs around objects — things that bundle <em>data</em> with the
+        <em>behavior</em> that acts on it.</p>
+
+      <p>Imagine modeling a car in code. Instead of scattering loose variables (<code>speed</code>, <code>fuel</code>)
+        and loose functions (<code>accelerate</code>, <code>refuel</code>) all over the place,
+        <strong>object-oriented programming (OOP)</strong> packages them together into a single <code>Car</code>
+        <strong>object</strong>: its data and its behavior live in one place. This makes code easier to reason about,
+        reuse, and protect.</p>
+
+      <h3>The four pillars 🏛️</h3>
+      <div class="mindmap">
+        <div class="mm-core">🏛️ OOP</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-blue">
+            <h5>💊 Encapsulation <span class="badge-now">this page</span></h5>
+            <ul>
+              <li>Bundle data + behavior</li>
+              <li>Hide internal details</li>
+              <li>Expose a safe interface</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-accent">
+            <h5>🧬 Inheritance <span class="badge-now">this page</span></h5>
+            <ul>
+              <li>Build new types from old</li>
+              <li>Share &amp; extend behavior</li>
+              <li>Model "is-a" relationships</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🎭 Polymorphism <span class="badge-later">OOP II</span></h5>
+            <ul>
+              <li>One interface, many forms</li>
+              <li>Same call, different behavior</li>
+              <li>(intro'd here via override)</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h5>🪟 Abstraction <span class="badge-later">OOP II</span></h5>
+            <ul>
+              <li>Show essentials, hide noise</li>
+              <li>Model concepts, not details</li>
+              <li>(intro'd here via abstract)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Where this page sits</span>
+        <p>We focus on <strong>encapsulation</strong> and <strong>inheritance</strong>. Because inheritance naturally
+        introduces <code>virtual</code>/<code>override</code> (polymorphism) and <code>abstract</code> (abstraction),
+        you'll meet those two pillars here too — just enough to make inheritance click. The deep dive on them is OOP II.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🚗 Analogy</span>
+        <p>An object is like a vending machine. You interact with it through a few buttons (its public interface) — pick
+        a snack, insert coins. You don't reach into the wiring to dispense a drink. <strong>Encapsulation</strong> is the
+        locked panel hiding the wiring. <strong>Inheritance</strong> is the manufacturer building a "drinks machine" and
+        a "snacks machine" on the same base chassis.</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>Classes &amp; Objects</h2></div>
+      <p class="sec-sub">A class is the blueprint. An object is a real thing built from that blueprint.</p>
+
+      <p>A <strong>class</strong> describes what something <em>is</em> and <em>can do</em>: its <strong>fields</strong>
+        (data), <strong>properties</strong> (controlled data access), and <strong>methods</strong> (behavior). An
+        <strong>object</strong> (or <em>instance</em>) is a concrete value created from that class with <code>new</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// The class = the blueprint</span>
+<span class="kw">class</span> <span class="ty">Dog</span>
+{
+    <span class="kw">public string</span> Name;            <span class="cmt">// a field (data)</span>
+    <span class="kw">public void</span> <span class="fn">Bark</span>()             <span class="cmt">// a method (behavior)</span>
+    {
+        <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"{Name} says Woof!"</span>);
+    }
+}
+
+<span class="cmt">// Objects = real things built from the blueprint</span>
+<span class="ty">Dog</span> rex = <span class="kw">new</span> <span class="ty">Dog</span> { Name = <span class="str">"Rex"</span> };
+<span class="ty">Dog</span> fido = <span class="kw">new</span> <span class="ty">Dog</span> { Name = <span class="str">"Fido"</span> };
+rex.<span class="fn">Bark</span>();   <span class="cmt">// Rex says Woof!</span>
+fido.<span class="fn">Bark</span>();  <span class="cmt">// Fido says Woof!</span></code></pre>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🍪 Analogy</span>
+        <p>A class is a cookie cutter; objects are the cookies. One cutter (class) stamps out many cookies (objects),
+        each with its own decorations (field values) but the same shape (structure and behavior).</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Vocabulary you'll see</span>
+        <p><strong>Member</strong> = anything declared inside a class (field, property, method, constructor, event…).
+        <strong>Constructor</strong> = a special method that runs when you <code>new</code> an object, used to set it up.
+        <strong>Instance member</strong> = belongs to each object; <strong>static member</strong> = belongs to the class
+        as a whole.</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Encapsulation — The Idea</h2></div>
+      <p class="sec-sub">Keep the data private; let the outside world touch it only through a controlled, well-behaved interface.</p>
+
+      <p><strong>Encapsulation</strong> has two parts: <strong>bundling</strong> data and behavior together in one class,
+        and <strong>information hiding</strong> — keeping the internal data private so it can't be tampered with directly.
+        Outsiders interact only through the methods and properties you choose to expose.</p>
+
+      <h3>Why hide data? The bank account 🏦</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">BankAccount</span>
+{
+    <span class="kw">private decimal</span> _balance;     <span class="cmt">// hidden -- nobody can set it directly</span>
+
+    <span class="kw">public void</span> <span class="fn">Deposit</span>(<span class="kw">decimal</span> amount)
+    {
+        <span class="kw">if</span> (amount &lt;= <span class="num">0</span>)
+            <span class="kw">throw new</span> <span class="ty">ArgumentException</span>(<span class="str">"Amount must be positive."</span>);
+        _balance += amount;          <span class="cmt">// the ONLY way in -- and it's validated</span>
+    }
+
+    <span class="kw">public decimal</span> <span class="fn">GetBalance</span>() =&gt; _balance;  <span class="cmt">// read-only window</span>
+}</code></pre>
+      </div>
+
+      <p>Because <code>_balance</code> is <code>private</code>, no outside code can write
+        <code>account._balance = -500;</code>. Every change must go through <code>Deposit</code>, which enforces the rule
+        that deposits are positive. The class <em>protects its own invariants</em>.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 The payoff</span>
+        <p>Encapsulation lets you <strong>change the inside without breaking the outside</strong>. As long as the public
+        methods keep working the same way, you can rewrite the internals freely. It also makes bugs easier to find:
+        if the balance is wrong, you only have a few methods to inspect — not the entire codebase.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">💊 Analogy</span>
+        <p>Think of a medicine capsule (the word "encapsulation" comes from "capsule"). The active ingredients are sealed
+        inside; you swallow the whole capsule and trust it to release contents safely. You never handle the raw powder
+        directly — and that's exactly the point.</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>Access Modifiers</h2></div>
+      <p class="sec-sub">The keywords that decide <em>who</em> can see and use each member. The toolkit of encapsulation.</p>
+
+      <p>C# has <strong>six</strong> access levels for class members. They range from "everyone" to "only this class."
+        By default, class members are <code>private</code>, and top-level types are <code>internal</code>.</p>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Modifier</th><th>Who can access it</th><th>Think of it as</th></tr></thead>
+          <tbody>
+            <tr><td><code>public</code></td><td>Any code, any assembly</td><td>🌍 Open to everyone</td></tr>
+            <tr><td><code>private</code></td><td>Only the same class</td><td>🔒 Secret, this class only</td></tr>
+            <tr><td><code>protected</code></td><td>This class + derived classes (any assembly)</td><td>👨‍👩‍👧 Family (incl. descendants)</td></tr>
+            <tr><td><code>internal</code></td><td>Any code in the same assembly</td><td>🏢 Same building/project</td></tr>
+            <tr><td><code>protected internal</code></td><td>Same assembly <strong>OR</strong> derived classes anywhere</td><td>🏢 + 👨‍👩‍👧 (the broader of the two)</td></tr>
+            <tr><td><code>private protected</code></td><td>Derived classes <strong>in the same assembly only</strong></td><td>🔒👨‍👩‍👧 (the narrower of the two)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>The two combinations explained 🧩</h3>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">➕</span><h4>protected internal = OR</h4><p>The <em>more permissive</em> one: reachable if you're in the same assembly <strong>or</strong> you're a derived class anywhere. It's a <em>union</em> of <code>protected</code> and <code>internal</code>.</p></div>
+        <div class="card"><span class="glyph">✖️</span><h4>private protected = AND</h4><p>The <em>more restrictive</em> one (C# 7.2+): reachable only if you're a derived class <strong>and</strong> in the same assembly. It's the <em>intersection</em>.</p></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public class</span> <span class="ty">Base</span>
+{
+    <span class="kw">public int</span> Anyone;              <span class="cmt">// everywhere</span>
+    <span class="kw">private int</span> _onlyHere;          <span class="cmt">// this class only</span>
+    <span class="kw">protected int</span> Family;           <span class="cmt">// this + derived (any assembly)</span>
+    <span class="kw">internal int</span> SameProject;       <span class="cmt">// anywhere in this assembly</span>
+    <span class="kw">protected internal int</span> Broader;  <span class="cmt">// assembly OR derived anywhere</span>
+    <span class="kw">private protected int</span> Narrower;  <span class="cmt">// derived AND same assembly</span>
+}</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Rules that catch people out</span>
+        <p>You can't make a member <em>more</em> accessible than its containing type (a <code>public</code> method can't
+        return a <code>private</code> type). A derived class can't be more accessible than its base class. And
+        <strong>structs can't use <code>protected</code>, <code>protected internal</code>, or <code>private protected</code></strong>
+        — because structs don't support inheritance, those "for-derived-classes" levels are meaningless.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Default to private</span>
+        <p>Start every field as <code>private</code> and only widen access when there's a real need. The less you expose,
+        the smaller your "surface area" for bugs and the freer you are to refactor internals later.</p>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Properties</h2></div>
+      <p class="sec-sub">C#'s idiomatic way to do encapsulation: look like a field, behave like a method.</p>
+
+      <p>A <strong>property</strong> is a member that looks like a field from the outside (<code>p.Name = "Sam";</code>)
+        but is backed by a <strong>get</strong> accessor (runs when read) and a <strong>set</strong> accessor (runs when
+        assigned). This lets you add validation, logging, or computation without changing how callers use it.</p>
+
+      <h3>From field to property 🎛️</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">Person</span>
+{
+    <span class="cmt">// 1) Auto-property: compiler generates the hidden backing field</span>
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; }
+
+    <span class="cmt">// 2) Property with validation in the setter</span>
+    <span class="kw">private int</span> _age;
+    <span class="kw">public int</span> Age
+    {
+        <span class="kw">get</span> =&gt; _age;
+        <span class="kw">set</span>
+        {
+            <span class="kw">if</span> (value &lt; <span class="num">0</span>) <span class="kw">throw new</span> <span class="ty">ArgumentException</span>(<span class="str">"Age can't be negative."</span>);
+            _age = value;        <span class="cmt">// 'value' is the incoming assigned value</span>
+        }
+    }
+
+    <span class="cmt">// 3) Computed (read-only) property -- no stored data of its own</span>
+    <span class="kw">public bool</span> IsAdult =&gt; _age &gt;= <span class="num">18</span>;
+}</code></pre>
+      </div>
+
+      <h3>Controlling read vs write 🔏</h3>
+      <p>The <code>get</code> and <code>set</code> can have <em>different</em> access levels — a common pattern is a public
+        getter with a private setter, so the value is read-only to the outside but changeable inside the class.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public decimal</span> Balance { <span class="kw">get</span>; <span class="kw">private set</span>; }   <span class="cmt">// read outside, write inside</span>
+
+<span class="cmt">// 'init' (C# 9): can ONLY be set during construction / object initializer</span>
+<span class="kw">public string</span> Id { <span class="kw">get</span>; <span class="kw">init</span>; }
+
+<span class="cmt">// 'required' (C# 11): caller MUST set this when creating the object</span>
+<span class="kw">public required string</span> Email { <span class="kw">get</span>; <span class="kw">init</span>; }</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 get / set / init</span>
+        <p><code>get</code> reads, <code>set</code> writes any time, <code>init</code> writes <em>only</em> while the object
+        is being created (great for immutable objects). Add <code>required</code> to force callers to supply a value at
+        construction. Note: you can't pass a property as a <code>ref</code> or <code>out</code> argument — it isn't a
+        variable, it's accessor methods in disguise.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Prefer properties over public fields</span>
+        <p>Even a plain <code>{ get; set; }</code> auto-property is better than a public field: you can later add validation
+        or make the setter private <em>without</em> breaking any caller's code. Public fields lock you in; properties keep
+        the door open.</p>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>Inheritance — The Idea</h2></div>
+      <p class="sec-sub">Build a new class on top of an existing one, reusing its members and adding or changing behavior.</p>
+
+      <p><strong>Inheritance</strong> lets a <strong>derived class</strong> (child) automatically gain the members of a
+        <strong>base class</strong> (parent), then add its own. It models an <strong>"is-a"</strong> relationship: a
+        <code>Dog</code> <em>is an</em> <code>Animal</code>, so <code>Dog</code> inherits everything an <code>Animal</code>
+        has, plus dog-specific extras.</p>
+
+      <h3>An inheritance hierarchy 🌳</h3>
+      <div class="tree">
+        <div class="tree-node base">Animal</div>
+        <div class="tree-conn"></div>
+        <div class="tree-children">
+          <div class="tree-child"><div class="tree-node leaf">Dog</div></div>
+          <div class="tree-child"><div class="tree-node leaf">Cat</div></div>
+          <div class="tree-child"><div class="tree-node leaf">Bird</div></div>
+        </div>
+      </div>
+      <p style="text-align:center;font-size:.88rem;color:var(--ink-soft);margin-top:-4px;">
+        <code>Dog</code>, <code>Cat</code>, and <code>Bird</code> each inherit <code>Animal</code>'s members (like
+        <code>Name</code> and <code>Eat()</code>) and add their own.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">Animal</span>
+{
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public void</span> <span class="fn">Eat</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"{Name} is eating."</span>);
+}
+
+<span class="cmt">// 'Dog : Animal' means "Dog inherits from Animal"</span>
+<span class="kw">class</span> <span class="ty">Dog</span> : <span class="ty">Animal</span>
+{
+    <span class="kw">public void</span> <span class="fn">Fetch</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"{Name} fetches the ball."</span>);
+}
+
+<span class="kw">var</span> rex = <span class="kw">new</span> <span class="ty">Dog</span> { Name = <span class="str">"Rex"</span> };
+rex.<span class="fn">Eat</span>();    <span class="cmt">// inherited from Animal</span>
+rex.<span class="fn">Fetch</span>();  <span class="cmt">// Dog's own method</span></code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Single inheritance for classes</span>
+        <p>A C# class can inherit from <strong>only one</strong> base class (no multiple inheritance of classes — it avoids
+        the famous "diamond problem"). You can, however, implement <em>many interfaces</em>. Every class ultimately derives
+        from <code>System.Object</code>, which is why every object has <code>ToString()</code>, <code>Equals()</code>, and
+        <code>GetHashCode()</code>.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ "is-a" vs "has-a"</span>
+        <p>Use inheritance only for genuine "is-a" relationships (a <code>SavingsAccount</code> <em>is a</em>
+        <code>BankAccount</code>). If it's really "has-a" (a <code>Car</code> <em>has an</em> <code>Engine</code>), prefer
+        <strong>composition</strong> — store the other object as a field — instead of inheriting. Overusing inheritance
+        leads to rigid, fragile hierarchies.</p>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>base &amp; Constructors</h2></div>
+      <p class="sec-sub">When you build a derived object, the base part has to be set up first. <code>base</code> is how you do it.</p>
+
+      <p>Creating a <code>Dog</code> also creates the <code>Animal</code> inside it. The base class constructor runs
+        <strong>before</strong> the derived one. The <strong><code>base(...)</code></strong> keyword lets a derived
+        constructor pass arguments up to the base constructor.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">Animal</span>
+{
+    <span class="kw">public string</span> Name { <span class="kw">get</span>; }
+    <span class="kw">public</span> <span class="fn">Animal</span>(<span class="kw">string</span> name)        <span class="cmt">// base constructor</span>
+    {
+        Name = name;
+        <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Animal created"</span>);
+    }
+}
+
+<span class="kw">class</span> <span class="ty">Dog</span> : <span class="ty">Animal</span>
+{
+    <span class="kw">public string</span> Breed { <span class="kw">get</span>; }
+    <span class="cmt">// ': base(name)' forwards 'name' up to the Animal constructor</span>
+    <span class="kw">public</span> <span class="fn">Dog</span>(<span class="kw">string</span> name, <span class="kw">string</span> breed) : <span class="kw">base</span>(name)
+    {
+        Breed = breed;
+        <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Dog created"</span>);
+    }
+}
+
+<span class="kw">var</span> d = <span class="kw">new</span> <span class="ty">Dog</span>(<span class="str">"Rex"</span>, <span class="str">"Labrador"</span>);
+<span class="cmt">// Output order:  Animal created  then  Dog created</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Order of construction</span>
+        <p>Base before derived — always. The base must finish setting itself up before the derived class adds its layer.
+        If the base has only a parameterized constructor (no parameterless one), the derived class is <em>required</em> to
+        call <code>: base(...)</code> explicitly, or you'll get a compile error.</p>
+      </div>
+
+      <p>You also use <code>base</code> to call a base member from inside an override (see the next section):
+        <code>base.Speak();</code> runs the parent's version.</p>
+    </section>
+
+    <!-- 08 -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>virtual &amp; override</h2></div>
+      <p class="sec-sub">Let a derived class replace a base method — and have the runtime pick the right version automatically.</p>
+
+      <p>By default in C#, methods are <strong>not</strong> overridable. To allow a derived class to provide its own
+        version, mark the base method <strong><code>virtual</code></strong>, and the derived method
+        <strong><code>override</code></strong>. The <code>override</code> keyword is <em>required</em> — C# never overrides
+        implicitly.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">Animal</span>
+{
+    <span class="kw">public virtual void</span> <span class="fn">Speak</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Some generic sound"</span>);
+}
+
+<span class="kw">class</span> <span class="ty">Dog</span> : <span class="ty">Animal</span>
+{
+    <span class="kw">public override void</span> <span class="fn">Speak</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Woof!"</span>);
+}
+
+<span class="kw">class</span> <span class="ty">Cat</span> : <span class="ty">Animal</span>
+{
+    <span class="kw">public override void</span> <span class="fn">Speak</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Meow!"</span>);
+}
+
+<span class="cmt">// Polymorphism: same variable type, different behavior at runtime</span>
+<span class="ty">Animal</span>[] zoo = { <span class="kw">new</span> <span class="ty">Dog</span>(), <span class="kw">new</span> <span class="ty">Cat</span>(), <span class="kw">new</span> <span class="ty">Animal</span>() };
+<span class="kw">foreach</span> (<span class="ty">Animal</span> a <span class="kw">in</span> zoo)
+    a.<span class="fn">Speak</span>();   <span class="cmt">// Woof!  Meow!  Some generic sound</span></code></pre>
+      </div>
+
+      <h3>How the runtime decides 🎯</h3>
+      <div class="flow">
+        <div class="flow-step"><b><span class="st-icon">📞</span>You call <code>a.Speak()</code></b><small><code>a</code> is typed as <code>Animal</code>, but holds a <code>Dog</code></small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">🔍</span>Method is <code>virtual</code>?</b><small>Runtime looks at the object's <em>actual</em> type, not the variable's type</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight"><b><span class="st-icon">🐕</span>Runs the most-derived override</b><small>Calls <code>Dog.Speak()</code> → "Woof!"</small></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 This is polymorphism</span>
+        <p>"Polymorphism" = "many forms." One line — <code>a.Speak()</code> — produces different behavior depending on the
+        real object. The runtime always calls the <strong>most-derived override</strong> of a virtual member. This is the
+        engine behind flexible, extensible designs: add a new <code>Animal</code> subclass and existing loops just work.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Reuse the base version</span>
+        <p>Inside an override you can still call the parent's logic with <code>base.Speak();</code> — handy when you want to
+        <em>extend</em> behavior ("do what Animal does, then add a bit") rather than replace it entirely.</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>abstract Classes</h2></div>
+      <p class="sec-sub">A base class that can't be instantiated and can demand that children fill in the blanks.</p>
+
+      <p>Sometimes a base class is only meaningful as a template — there's no such thing as a generic "Shape" you'd
+        create on its own; you create a <code>Circle</code> or a <code>Square</code>. Mark such a class
+        <strong><code>abstract</code></strong>: it can't be instantiated with <code>new</code>, and it can declare
+        <strong>abstract methods</strong> (no body) that derived classes are <em>required</em> to implement.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">abstract class</span> <span class="ty">Shape</span>
+{
+    <span class="cmt">// abstract = no implementation; children MUST override it</span>
+    <span class="kw">public abstract double</span> <span class="fn">Area</span>();
+
+    <span class="cmt">// abstract classes can ALSO have normal, shared code</span>
+    <span class="kw">public void</span> <span class="fn">Describe</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"Area is {Area():F2}"</span>);
+}
+
+<span class="kw">class</span> <span class="ty">Circle</span> : <span class="ty">Shape</span>
+{
+    <span class="kw">public double</span> Radius { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public override double</span> <span class="fn">Area</span>() =&gt; <span class="ty">Math</span>.PI * Radius * Radius;
+}
+
+<span class="cmt">// var s = new Shape();   // ❌ compile error: can't instantiate abstract class</span>
+<span class="ty">Shape</span> s = <span class="kw">new</span> <span class="ty">Circle</span> { Radius = <span class="num">2</span> };
+s.<span class="fn">Describe</span>();   <span class="cmt">// Area is 12.57</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 abstract vs virtual</span>
+        <p>A <code>virtual</code> method <em>has</em> a default body and <em>may</em> be overridden. An <code>abstract</code>
+        method has <em>no</em> body and <em>must</em> be overridden by any non-abstract derived class. An abstract method is
+        implicitly virtual. An abstract class is a partial blueprint: some bricks laid, some left for children to supply.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">📋 Analogy</span>
+        <p>An abstract class is a job description with some duties filled in and others marked "candidate must define."
+        You can't hire the job description itself — you hire a real person (a concrete subclass) who completes every
+        required duty.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>sealed &amp; new</h2></div>
+      <p class="sec-sub">Two keywords for the opposite of opening up: <em>sealed</em> stops inheritance, <em>new</em> hides instead of overrides.</p>
+
+      <h3>sealed — "no further down" 🔒</h3>
+      <p><strong><code>sealed</code></strong> on a class prevents anyone from inheriting it. On an <code>override</code> method,
+        it stops <em>that</em> method from being overridden any further down the chain.</p>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">sealed class</span> <span class="ty">Logger</span> { }          <span class="cmt">// nothing can inherit from Logger</span>
+
+<span class="kw">class</span> <span class="ty">Mammal</span> : <span class="ty">Animal</span>
+{
+    <span class="cmt">// override here, but seal it so subclasses can't change it again</span>
+    <span class="kw">public sealed override void</span> <span class="fn">Speak</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"(mammal sound)"</span>);
+}</code></pre>
+      </div>
+
+      <h3>new — hiding, not overriding ⚠️</h3>
+      <p><strong><code>new</code></strong> on a member <em>hides</em> a base member with the same name instead of overriding
+        it. The big difference: which method runs depends on the <strong>variable's declared type</strong>, not the object's
+        real type. This is usually a source of bugs, not a feature.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">class</span> <span class="ty">Base</span>    { <span class="kw">public void</span> <span class="fn">Show</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Base"</span>); }
+<span class="kw">class</span> <span class="ty">Derived</span> : <span class="ty">Base</span> { <span class="kw">public new void</span> <span class="fn">Show</span>() =&gt; <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Derived"</span>); }
+
+<span class="ty">Derived</span> d = <span class="kw">new</span> <span class="ty">Derived</span>();
+<span class="ty">Base</span> b = d;        <span class="cmt">// same object, base-typed variable</span>
+
+d.<span class="fn">Show</span>();   <span class="cmt">// "Derived"  -- variable is Derived</span>
+b.<span class="fn">Show</span>();   <span class="cmt">// "Base"     -- variable is Base (hiding, not overriding!)</span></code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ override vs new — the trap</span>
+        <p>With <code>override</code>, the <em>object's</em> real type wins — <code>b.Speak()</code> would run the derived
+        version. With <code>new</code>, the <em>variable's</em> type wins, so the same object behaves differently depending
+        on how you're holding it. If you see surprising "wrong method ran" behavior, check whether someone used
+        <code>new</code> where they meant <code>override</code>.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Quick contrast</span>
+        <p><code>virtual</code>/<code>override</code> → <strong>polymorphic</strong>, real type decides (the common, correct
+        choice). <code>new</code> → <strong>hides</strong>, declared type decides (rare, deliberate). <code>sealed</code> →
+        <strong>blocks</strong> further inheritance/overriding.</p>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Worked Example</h2></div>
+      <p class="sec-sub">Encapsulation and inheritance working together — a small bank-account hierarchy.</p>
+
+      <p>This ties everything together: a <code>private</code> balance (encapsulation), a public validated interface
+        (properties + methods), a base class with shared logic, and a derived class that <code>override</code>s one
+        behavior while reusing the rest via <code>base</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">abstract class</span> <span class="ty">Account</span>
+{
+    <span class="cmt">// ENCAPSULATION: balance is hidden; read-only to the outside</span>
+    <span class="kw">public decimal</span> Balance { <span class="kw">get</span>; <span class="kw">protected set</span>; }
+    <span class="kw">public string</span> Owner { <span class="kw">get</span>; }
+
+    <span class="kw">protected</span> <span class="fn">Account</span>(<span class="kw">string</span> owner) =&gt; Owner = owner;
+
+    <span class="kw">public void</span> <span class="fn">Deposit</span>(<span class="kw">decimal</span> amount)
+    {
+        <span class="kw">if</span> (amount &lt;= <span class="num">0</span>) <span class="kw">throw new</span> <span class="ty">ArgumentException</span>(<span class="str">"Must be positive."</span>);
+        Balance += amount;
+    }
+
+    <span class="cmt">// each account type withdraws under its own rules</span>
+    <span class="kw">public abstract bool</span> <span class="fn">Withdraw</span>(<span class="kw">decimal</span> amount);
+}
+
+<span class="kw">class</span> <span class="ty">SavingsAccount</span> : <span class="ty">Account</span>
+{
+    <span class="kw">public</span> <span class="fn">SavingsAccount</span>(<span class="kw">string</span> owner) : <span class="kw">base</span>(owner) { }
+
+    <span class="cmt">// no overdraft allowed</span>
+    <span class="kw">public override bool</span> <span class="fn">Withdraw</span>(<span class="kw">decimal</span> amount)
+    {
+        <span class="kw">if</span> (amount &lt;= <span class="num">0</span> || amount &gt; Balance) <span class="kw">return false</span>;
+        Balance -= amount;
+        <span class="kw">return true</span>;
+    }
+}
+
+<span class="ty">Account</span> acc = <span class="kw">new</span> <span class="ty">SavingsAccount</span>(<span class="str">"Mara"</span>);
+acc.<span class="fn">Deposit</span>(<span class="num">100</span>);                <span class="cmt">// inherited, shared logic</span>
+<span class="kw">bool</span> ok = acc.<span class="fn">Withdraw</span>(<span class="num">40</span>);       <span class="cmt">// SavingsAccount's own rule -> true</span>
+<span class="ty">Console</span>.<span class="fn">WriteLine</span>(acc.Balance);   <span class="cmt">// 60</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ What each pillar did here</span>
+        <p><strong>Encapsulation:</strong> <code>Balance</code> can be set only inside the hierarchy (<code>protected set</code>),
+        and <code>Deposit</code> validates input. <strong>Inheritance:</strong> <code>SavingsAccount</code> reuses
+        <code>Deposit</code>, <code>Balance</code>, and <code>Owner</code> for free. <strong>Abstraction/polymorphism preview:</strong>
+        <code>Withdraw</code> is abstract, so a future <code>CheckingAccount</code> can allow overdrafts without touching
+        any existing code.</p>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea. If you can explain each card aloud, you've got encapsulation and inheritance.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>🧱 Class &amp; object</h4><p>A class is the blueprint; an object is a concrete instance built with <code>new</code>.</p></div>
+        <div class="recap-card"><h4>💊 Encapsulation</h4><p>Bundle data with behavior and hide the internals, exposing only a safe, controlled interface.</p></div>
+        <div class="recap-card"><h4>🔐 Access modifiers</h4><p>Six levels from <code>public</code> to <code>private</code> control who can see each member; default is private.</p></div>
+        <div class="recap-card"><h4>🧩 Combinations</h4><p><code>protected internal</code> = assembly OR derived (broader); <code>private protected</code> = derived AND same assembly (narrower).</p></div>
+        <div class="recap-card"><h4>🎛️ Properties</h4><p>Field-like syntax backed by get/set/init accessors — the idiomatic place to validate and protect data.</p></div>
+        <div class="recap-card"><h4>🧬 Inheritance</h4><p>A derived class gains the base class's members and adds its own; models "is-a"; classes have a single base.</p></div>
+        <div class="recap-card"><h4>🏗️ base &amp; constructors</h4><p>The base part is built first; <code>: base(...)</code> forwards arguments to the base constructor.</p></div>
+        <div class="recap-card"><h4>🎯 virtual / override</h4><p>Let a child replace a base method; the runtime calls the most-derived version — that's polymorphism.</p></div>
+        <div class="recap-card"><h4>📋 abstract</h4><p>A non-instantiable base that can force derived classes to implement specific members.</p></div>
+        <div class="recap-card"><h4>🔒 sealed / new</h4><p><code>sealed</code> blocks further inheritance; <code>new</code> hides (declared type wins) instead of overriding.</p></div>
+      </div>
+
+      <h3>Modifier summary 📊</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Keyword</th><th>Used on</th><th>Effect</th><th>Resolved by</th></tr></thead>
+          <tbody>
+            <tr><td><code>virtual</code></td><td>Base method/property</td><td>Allows overriding</td><td>—</td></tr>
+            <tr><td><code>override</code></td><td>Derived method/property</td><td>Replaces base version (polymorphic)</td><td>Object's real type</td></tr>
+            <tr><td><code>new</code></td><td>Derived member</td><td>Hides base member</td><td>Variable's declared type</td></tr>
+            <tr><td><code>abstract</code></td><td>Class / member</td><td>Can't instantiate / must be overridden</td><td>—</td></tr>
+            <tr><td><code>sealed</code></td><td>Class / override member</td><td>Blocks further inheritance/overriding</td><td>—</td></tr>
+            <tr><td><code>base</code></td><td>Inside derived class</td><td>Calls base constructor or member</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 13 -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a clear answer. Tagged by level — Junior (0–2 yrs),
+        Mid (2–5 yrs), Senior (5–7 yrs). Written for someone with no prior coding background.</p>
+
+      <h3>🌱 Junior — fundamentals (0–2 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q1</span> What is encapsulation? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Encapsulation means <strong>bundling data and the behavior that operates on it into one class</strong>,
+        and <strong>hiding the internal data</strong> so it can only be accessed through a controlled interface. For example,
+        making a balance field <code>private</code> and only allowing changes through a validated <code>Deposit</code> method.
+        It protects the object from being put into an invalid state.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span> What is inheritance? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Inheritance lets one class (the <strong>derived</strong>/child class) reuse the members of another (the
+        <strong>base</strong>/parent class) and add or change behavior. It models an "is-a" relationship — a <code>Dog</code>
+        is an <code>Animal</code> — and avoids duplicating shared code. In C# you write it as <code>class Dog : Animal</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span> What's the difference between a class and an object? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A <strong>class</strong> is the blueprint — it defines what fields and methods a type has. An
+        <strong>object</strong> is an actual instance created from that blueprint using <code>new</code>. One class can produce
+        many objects, each with its own data. Think cookie cutter (class) versus the individual cookies (objects).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span> Name the access modifiers and what <code>public</code> and <code>private</code> mean. <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>The six are <code>public</code>, <code>private</code>, <code>protected</code>, <code>internal</code>,
+        <code>protected internal</code>, and <code>private protected</code>. <code>public</code> means any code anywhere can use
+        the member; <code>private</code> means only code inside the same class can. By default, class members are <code>private</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span> What is a property, and why use one instead of a public field? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A property looks like a field from outside but runs code through <code>get</code> and <code>set</code>
+        accessors. Prefer it over a public field because you can add validation, make the setter private, or change the internals
+        later <em>without breaking callers</em>. A public field gives you no such control. Even a simple <code>{ get; set; }</code>
+        auto-property keeps your options open.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span> What does <code>virtual</code> and <code>override</code> do? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>virtual</code> on a base method says "derived classes are allowed to replace this." <code>override</code>
+        on a derived method provides that replacement. After that, calling the method runs the derived version even when you're
+        holding the object in a base-typed variable. In C# the <code>override</code> keyword is required — overriding never happens
+        by accident.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span> What is an abstract class? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>An abstract class is a base class you <strong>can't create directly</strong> with <code>new</code> — it
+        exists only to be inherited. It can include normal shared code <em>and</em> abstract methods (methods with no body) that
+        every concrete derived class must implement. <code>Shape</code> with an abstract <code>Area()</code> is the classic example.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span> Can a C# class inherit from more than one base class? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>No — C# classes support <strong>single inheritance</strong>: at most one base class. This avoids the
+        ambiguity of the "diamond problem." However, a class can <strong>implement many interfaces</strong>, which is how C# handles
+        cases where you need behavior from multiple sources.</p></div></details>
+
+      <h3>🟠 Mid-level — going deeper (2–5 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q9</span> What's the difference between <code>protected internal</code> and <code>private protected</code>? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>protected internal</code> is the broader one — accessible if you're in the <em>same assembly</em>
+        <strong>OR</strong> a derived class <em>anywhere</em> (a union). <code>private protected</code> is the narrower one (C# 7.2+)
+        — accessible only if you're a derived class <strong>AND</strong> in the same assembly (an intersection). One widens access,
+        the other tightens it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> What's the difference between <code>override</code> and <code>new</code> (method hiding)? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>override</code> is polymorphic: the method that runs depends on the object's <em>real</em> type, so a
+        base-typed variable still calls the derived version. <code>new</code> <em>hides</em> the base member: which method runs depends
+        on the <em>variable's declared type</em>. Hold the same object as <code>Base</code> and it runs the base method; as
+        <code>Derived</code> and it runs the derived one. <code>override</code> is almost always what you want; <code>new</code> is a
+        rare, deliberate choice and a common source of confusion.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> What do <code>init</code> and <code>required</code> add to properties? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>init</code> (C# 9) makes a setter usable <strong>only during object construction</strong> or in an object
+        initializer, then read-only afterward — perfect for immutable objects. <code>required</code> (C# 11) forces the caller to
+        assign that property when creating the object, so you can't forget a mandatory value. They're often combined:
+        <code>public required string Email { get; init; }</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> Why prefer composition over inheritance sometimes? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Inheritance creates a tight, permanent coupling and only fits true "is-a" relationships. <strong>Composition</strong>
+        (storing another object as a field — "has-a") is more flexible: you can swap the contained object, combine several, and avoid
+        deep fragile hierarchies where a base-class change ripples through everything. Rule of thumb: use inheritance for genuine
+        is-a; use composition for has-a and for sharing behavior without a type relationship.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> What does <code>sealed</code> do, and why might you use it? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><code>sealed</code> on a class prevents inheritance; on an <code>override</code> member it prevents further
+        overriding down the chain. Reasons to use it: to lock down a class whose behavior must not be altered (security or correctness),
+        to signal design intent, and occasionally for a minor performance gain since the runtime can resolve sealed members more directly.
+        Use it sparingly — over-sealing makes code harder to test and extend.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> In what order do constructors run in an inheritance chain? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>From the <strong>base up</strong>: the base class constructor runs first, then the derived class constructor.
+        The base part of the object must be fully initialized before the derived class layers its own setup on top. You forward
+        arguments to the base with <code>: base(...)</code>; if the base lacks a parameterless constructor, the derived class must call
+        a base constructor explicitly or it won't compile.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> Can you give a property different access for get and set? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Yes. A very common pattern is <code>public T Value { get; private set; }</code> — readable from anywhere,
+        writable only inside the class. The accessor you restrict must be <em>more</em> restrictive than the property itself. This is a
+        clean way to expose read-only state while still mutating it internally. (Note: you can't pass a property as <code>ref</code>/<code>out</code>
+        because it's accessor methods, not a real variable.)</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> Why can't a struct use <code>protected</code>? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Because structs <strong>can't be inherited</strong> — they're implicitly sealed. <code>protected</code>,
+        <code>protected internal</code>, and <code>private protected</code> all grant access to <em>derived classes</em>, but a struct can
+        never have any, so those modifiers would be meaningless. Struct members can only be <code>public</code>, <code>internal</code>, or
+        <code>private</code>.</p></div></details>
+
+      <h3>🔴 Senior — synthesis &amp; judgment (5–7 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> Explain how virtual dispatch actually works at runtime. <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Each type with virtual members has a <strong>method table (v-table)</strong> — a list of pointers to the actual
+        method implementations for that type. When you call a virtual member, the runtime looks at the object's real type, finds its
+        v-table, and jumps to the most-derived implementation, regardless of the variable's compile-time type. Non-virtual calls are
+        resolved at compile time directly (and can be inlined). This indirection is why <code>override</code> is polymorphic while
+        <code>new</code> (a compile-time, declared-type decision) is not.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> Why is calling a virtual method from a constructor dangerous? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>During base-class construction, the derived constructor hasn't run yet — so the derived object's fields are
+        still at their defaults. But virtual dispatch will already call the <em>derived</em> override (the object's real type is set early).
+        That override may then read fields that haven't been initialized, producing subtle null/zero bugs. The guidance is to avoid calling
+        virtual members from constructors, or to design the override to tolerate a partially-constructed object.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> When would you choose an abstract class over an interface? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Use an <strong>abstract class</strong> when derived types share real <em>implementation</em> and state (fields,
+        constructors, common method bodies) and form a genuine is-a hierarchy — and recall a class can have only one base. Use an
+        <strong>interface</strong> to define a capability/contract that unrelated types can implement, and when you need a type to support
+        multiple such contracts. Modern C# blurs this with default interface methods, but the rule of thumb holds: shared implementation +
+        single hierarchy → abstract class; multiple, cross-cutting contracts → interface.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> What's the fragile base class problem? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>It's the risk that a seemingly safe change to a base class silently breaks derived classes that depended on
+        its internal behavior — for example, if the base starts calling one of its own methods differently, an override may now run at an
+        unexpected time. Deep inheritance hierarchies amplify this. Mitigations: keep base classes shallow and well-documented about what's
+        overridable, favor <code>sealed</code> by default and open up deliberately, prefer composition for sharing behavior, and design
+        base classes for inheritance explicitly (the "design for inheritance or prohibit it" principle).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span> How does encapsulation support maintainability and security? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><strong>Maintainability:</strong> hiding internals behind a stable public interface means you can refactor or
+        optimize the implementation without touching callers — the change is localized. It also concentrates invariant-enforcing logic in
+        one place, so bugs have fewer hiding spots. <strong>Security/robustness:</strong> private state can't be put into an invalid or
+        malicious configuration from outside; every mutation runs through validated entry points. It shrinks the trusted surface area and
+        makes reasoning about correctness tractable.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span> A derived class needs to extend, not replace, a base behavior. How do you design that? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Mark the base method <code>virtual</code>, override it in the derived class, and call <code>base.Method()</code>
+        inside the override to run the base logic, then add the extra behavior around it. This is the "extend" pattern. If you want to mandate
+        that subclasses always run shared setup, use the <strong>template method pattern</strong>: a non-virtual public method in the base that
+        calls protected virtual "hook" methods, so the overall flow is fixed but specific steps are customizable. That keeps control in the base
+        while still allowing extension.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span> What does it mean that every type derives from <code>System.Object</code>? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>It means there's a single rooted type hierarchy: every class, struct, and other type ultimately inherits from
+        <code>object</code>, so every value has <code>ToString()</code>, <code>Equals()</code>, <code>GetHashCode()</code>, and
+        <code>GetType()</code>. This is what lets a variable of type <code>object</code> hold anything, enables reflection, and gives common
+        behavior you can override (e.g. a meaningful <code>ToString()</code>). For value types, treating them <em>as</em> <code>object</code>
+        triggers boxing, which is the cost side of that universality.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q24</span> How do access modifiers interact with assemblies and the InternalsVisibleTo attribute? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>internal</code> (and the assembly half of <code>protected internal</code>/<code>private protected</code>)
+        scopes access to the current assembly — the compiled <code>.dll</code>/<code>.exe</code>. The <code>InternalsVisibleTo</code> assembly
+        attribute selectively exposes <code>internal</code> (and <code>private protected</code> for derived types) members to a named friend
+        assembly — commonly used so a unit-test project can reach internals without making them public. It's a controlled crack in the assembly
+        boundary, not a blanket opening, so you keep encapsulation intact for everyone except the explicitly trusted assembly.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Get <strong>Junior</strong> solid first — the definitions of encapsulation, inheritance, class vs object, and the core keywords
+        underpin everything. <strong>Mid</strong> sharpens the distinctions that interviews love (override vs new, the two combined modifiers,
+        composition vs inheritance). <strong>Senior</strong> is design judgment: v-tables, the constructor/virtual trap, fragile base classes,
+        and abstract-vs-interface choices. Answer each aloud without peeking; the ones you stumble on point back to the section to re-read.</p>
+      </div>
+
+      <p class="foot">All technical details verified against Microsoft Learn (Access Modifiers, <code>abstract</code>/<code>sealed</code>/<code>override</code>
+        keywords, Using Properties, <code>private protected</code>) and supporting references. Version notes: <code>private protected</code>
+        arrived in C# 7.2, <code>init</code> in C# 9, <code>required</code> in C# 11. This single
+        <code>03-oop-encapsulation-inheritance.html</code> file is fully self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+function updateProgress(){const h=document.documentElement;const max=h.scrollHeight-h.clientHeight;
+  progress.style.width=(max>0?(h.scrollTop/max)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});
+window.addEventListener('resize',updateProgress);updateProgress();
+
+const sidebar=document.getElementById('sidebar');const backdrop=document.getElementById('backdrop');
+function closeSidebar(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(link.getAttribute('href'));
+    if(target){const y=target.getBoundingClientRect().top+window.pageYOffset-24;window.scrollTo({top:y,behavior:'smooth'});}
+    if(window.innerWidth<=920) closeSidebar();
+  });
+});
+
+const sections=[...document.querySelectorAll('.section')];
+const navLinks=[...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on=l.getAttribute('href')==='#'+id;
+    l.classList.toggle('active',on);
+    if(on){const lr=l.getBoundingClientRect(),sr=sidebar.getBoundingClientRect();
+      if(lr.top<sr.top+60||lr.bottom>sr.bottom-60){sidebar.scrollTop+=(lr.top-sr.top)-sidebar.clientHeight/2+lr.height/2;}}
+  });
+}
+const spy=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting) setActive(en.target.id);});},
+  {rootMargin:'-20% 0px -70% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+const reveal=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');reveal.unobserve(en.target);}});},{threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.closest('.code').querySelector('pre code').innerText;
+    const done=()=>{btn.textContent='Copied!';btn.classList.add('done');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done');},2000);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code,done));
+    } else {fallback(code,done);}
+  });
+});
+function fallback(text,cb){const ta=document.createElement('textarea');ta.value=text;
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
+
+document.getElementById('fab').addEventListener('click',()=>{
+  const open=sidebar.classList.toggle('open');backdrop.classList.toggle('show',open);});
+backdrop.addEventListener('click',closeSidebar);
+</script>
+</body>
+</html>

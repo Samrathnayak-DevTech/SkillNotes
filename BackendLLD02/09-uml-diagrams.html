@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UML Diagrams — Session 22</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400&family=Newsreader:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fbf9f4;--bg-soft:#f3efe6;--ink:#2d2a26;--ink-soft:#5a554d;--line:#e4ddd0;--accent:#b5651d;--accent-soft:#f0e2d0;--blue:#3a6ea5;--blue-soft:#dde9f3;--rose:#b0496b;--rose-soft:#f6e2ea;--green:#5a7d5a;--green-soft:#e2ede0;--purple:#7a5c9e;--purple-soft:#ece4f3;--code-bg:#2b2a33;--code-ink:#e8e6e3;--sidebar-w:268px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth;font-size:18px}
+body{background:var(--bg);background-image:radial-gradient(ellipse at 20% 10%,#ece4f320 0%,transparent 60%),radial-gradient(ellipse at 80% 90%,#dde9f320 0%,transparent 60%);color:var(--ink);font-family:'Newsreader',Georgia,serif;line-height:1.75;min-height:100vh}
+#progress-bar{position:fixed;top:0;left:0;height:3px;width:0%;background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .1s linear}
+.layout{display:flex;min-height:100vh}
+#sidebar{width:var(--sidebar-w);min-height:100vh;position:sticky;top:0;height:100vh;overflow-y:auto;overflow-x:hidden;background:var(--bg);border-right:1px solid var(--line);padding:2rem 0 4rem;flex-shrink:0;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+#sidebar::-webkit-scrollbar{width:4px}#sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.sidebar-logo{font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--accent);text-transform:uppercase;letter-spacing:.12em;padding:0 1.4rem 1.2rem;border-bottom:1px solid var(--line);margin-bottom:1.2rem}
+.nav-group{margin-bottom:.3rem}.nav-group-label{font-family:'JetBrains Mono',monospace;font-size:.6rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.1em;padding:.5rem 1.4rem .3rem;display:block}
+.nav-link{display:block;padding:.35rem 1.4rem;color:var(--ink-soft);text-decoration:none;font-family:'Newsreader',serif;font-size:.85rem;border-left:3px solid transparent;transition:all .18s ease;line-height:1.4}
+.nav-link:hover{color:var(--accent);background:var(--accent-soft)}.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-soft);font-weight:500}
+main{flex:1;max-width:820px;padding:0 2.5rem 6rem;min-width:0}
+.hero{padding:4rem 0 3rem;border-bottom:1px solid var(--line);margin-bottom:3rem}
+.hero-eyebrow{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--accent);text-transform:uppercase;letter-spacing:.15em;margin-bottom:1rem}
+.hero h1{font-family:'Fraunces',Georgia,serif;font-size:clamp(2.4rem,5vw,3.6rem);font-weight:600;line-height:1.1;color:var(--ink);margin-bottom:1.2rem}
+.hero-lede{color:var(--ink-soft);font-size:1.05rem;max-width:580px;margin-bottom:1.8rem}
+.agenda-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.chip{font-family:'JetBrains Mono',monospace;font-size:.68rem;padding:.3rem .75rem;border-radius:20px;border:1px solid var(--line);color:var(--ink-soft);background:var(--bg-soft);text-transform:uppercase;letter-spacing:.05em}
+.section{margin-bottom:4rem;opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}.section.visible{opacity:1;transform:none}
+.section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:1.5rem;padding-bottom:.75rem;border-bottom:1px solid var(--line)}
+.section-num{font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--bg);background:var(--accent);padding:.15rem .45rem;border-radius:4px;flex-shrink:0}
+.section-header h2{font-family:'Fraunces',Georgia,serif;font-size:1.7rem;font-weight:600;color:var(--ink);line-height:1.2}
+.callout{border-radius:6px;padding:1rem 1.2rem;margin:1.5rem 0;border-left:4px solid}
+.callout-tag{font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;text-transform:uppercase;letter-spacing:.12em;display:block;margin-bottom:.4rem}
+.callout.tip{background:var(--green-soft);border-color:var(--green)}.callout.tip .callout-tag{color:var(--green)}
+.callout.key{background:var(--blue-soft);border-color:var(--blue)}.callout.key .callout-tag{color:var(--blue)}
+.callout.analogy{background:var(--rose-soft);border-color:var(--rose)}.callout.analogy .callout-tag{color:var(--rose)}
+.callout.warn{background:var(--accent-soft);border-color:var(--accent)}.callout.warn .callout-tag{color:var(--accent)}
+:not(pre)>code{font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--accent);background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:.1em .35em}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:8px;padding:1.5rem;margin:1.5rem 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:1.5rem 0;font-size:.9rem}
+thead th{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);background:var(--bg-soft);padding:.6rem 1rem;text-align:left;border-bottom:2px solid var(--line)}
+tbody td{padding:.6rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:hover td{background:var(--bg-soft)}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;margin:1.5rem 0}
+.recap-card{background:var(--bg);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:6px;padding:1rem 1.1rem}
+.recap-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:.95rem;color:var(--ink);margin-bottom:.3rem}
+.recap-card p{font-size:.83rem;color:var(--ink-soft)}
+#fab{display:none;position:fixed;bottom:1.5rem;left:1.5rem;width:48px;height:48px;background:var(--accent);color:white;border:none;border-radius:50%;font-size:1.2rem;cursor:pointer;z-index:900;box-shadow:0 4px 12px rgba(181,101,29,.35);align-items:center;justify-content:center;transition:background .2s}
+#fab:hover{background:#9a5219}#overlay{display:none;position:fixed;inset:0;background:rgba(45,42,38,.45);backdrop-filter:blur(4px);z-index:800}#overlay.open{display:block}
+@media(max-width:768px){#sidebar{position:fixed;left:-100%;top:0;height:100vh;z-index:850;transition:left .3s ease;width:min(var(--sidebar-w),85vw)}#sidebar.open{left:0}main{padding:0 1.2rem 4rem}#fab{display:flex}.hero h1{font-size:2rem}}
+p{margin-bottom:1rem}p:last-child{margin-bottom:0}h3{font-family:'Fraunces',serif;font-size:1.15rem;font-weight:600;color:var(--ink);margin:1.5rem 0 .5rem}
+/* UML class boxes */
+.uml-class{border:1.5px solid var(--ink);border-radius:4px;display:inline-flex;flex-direction:column;min-width:140px;font-family:'JetBrains Mono',monospace;font-size:.7rem;margin:.4rem;vertical-align:top}
+.uml-class.iface{border-style:dashed}.uml-class.abstract .uml-name{font-style:italic}
+.uml-name{background:var(--bg-soft);padding:.3rem .7rem;border-bottom:1.5px solid var(--ink);font-weight:600;text-align:center}
+.uml-name .st{display:block;font-size:.58rem;font-style:italic;color:var(--ink-soft)}.uml-body{padding:.3rem .7rem;color:var(--ink-soft)}
+.uml-row{display:block;padding:.05rem 0}.uml-row.hi{color:var(--blue)}.uml-row.pub{color:var(--green)}.uml-row.priv{color:var(--rose)}.uml-row.prot{color:var(--purple)}
+.uml-divider{border-top:1px solid var(--ink);margin:.2rem 0}
+/* Use case oval */
+.uc-oval{display:inline-block;border:2px solid var(--ink);border-radius:50%;padding:.3rem 1rem;font-family:'JetBrains Mono',monospace;font-size:.7rem;text-align:center;margin:.3rem;background:var(--bg)}
+/* Use case diagram container */
+.uc-diagram{border:2px solid var(--ink);border-radius:8px;padding:1rem;margin:.5rem;display:inline-block;position:relative}
+.uc-diagram-label{font-family:'JetBrains Mono',monospace;font-size:.62rem;position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--bg-soft);padding:0 .4rem;color:var(--ink-soft);white-space:nowrap}
+/* Actor */
+.actor{display:inline-flex;flex-direction:column;align-items:center;margin:.4rem;font-family:'JetBrains Mono',monospace;font-size:.68rem;gap:.2rem}
+.actor-fig{font-size:1.6rem;line-height:1}
+/* Relationship arrows */
+.rel-label{font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--blue);font-style:italic}
+/* Enum box */
+.enum-box{border:1.5px solid var(--purple);border-radius:4px;display:inline-flex;flex-direction:column;min-width:130px;font-family:'JetBrains Mono',monospace;font-size:.7rem;margin:.4rem;vertical-align:top}
+.enum-box .uml-name{background:var(--purple-soft);border-color:var(--purple);color:var(--purple)}
+.enum-box .uml-body{color:var(--ink)}
+/* Association symbols */
+.assoc-symbol{font-size:1.1rem;font-family:'JetBrains Mono',monospace;color:var(--accent)}
+</style>
+</head>
+<body>
+<!-- ── Site nav: Home / Back (added, non-invasive) ── -->
+<style>
+  .__site-nav { position: fixed; top: 1rem; right: 1rem; z-index: 1100; display: flex; gap: .45rem; }
+  .__site-nav a {
+    font-family: "JetBrains Mono", monospace; font-size: .66rem; letter-spacing: .12em;
+    text-transform: uppercase; display: inline-flex; align-items: center; gap: .35rem;
+    background: #fbf9f4; border: 1px solid #e4ddd0; color: #5a554d;
+    padding: .45rem .8rem; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 2px 10px rgba(45,42,38,.08); transition: all .18s ease;
+  }
+  .__site-nav a:hover { color: #b5651d; border-color: #b5651d; background: #f0e2d0; }
+  @media (max-width: 720px) { .__site-nav { top: auto; bottom: 1rem; left: 1rem; right: auto; } }
+</style>
+<div class="__site-nav">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back to section"><span aria-hidden="true">←</span>Back</a>
+</div>
+<div id="progress-bar"></div>
+<div class="layout">
+<nav id="sidebar">
+  <div class="sidebar-logo">LLD-1 · Session 22</div>
+  <div class="nav-group"><span class="nav-group-label">Overview</span><a class="nav-link" href="#hero">Introduction</a></div>
+  <div class="nav-group">
+    <span class="nav-group-label">UML Overview</span>
+    <a class="nav-link" href="#s01">01 Why UML?</a>
+    <a class="nav-link" href="#s02">02 UML Diagram Types</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Use Case Diagrams</span>
+    <a class="nav-link" href="#s03">03 What Is a Use Case Diagram?</a>
+    <a class="nav-link" href="#s04">04 Actors and Use Cases</a>
+    <a class="nav-link" href="#s05">05 System Boundary</a>
+    <a class="nav-link" href="#s06">06 &lt;&lt;include&gt;&gt; Relationship</a>
+    <a class="nav-link" href="#s07">07 &lt;&lt;extend&gt;&gt; Relationship</a>
+    <a class="nav-link" href="#s08">08 Generalisation</a>
+    <a class="nav-link" href="#s09">09 Scaler Use Case Diagram</a>
+  </div>
+  <div class="nav-group">
+    <span class="nav-group-label">Class Diagrams</span>
+    <a class="nav-link" href="#s10">10 What Is a Class Diagram?</a>
+    <a class="nav-link" href="#s11">11 Class Notation</a>
+    <a class="nav-link" href="#s12">12 Interfaces, Abstract &amp; Enums</a>
+    <a class="nav-link" href="#s13">13 IS-A: Inheritance</a>
+    <a class="nav-link" href="#s14">14 HAS-A: Aggregation</a>
+    <a class="nav-link" href="#s15">15 HAS-A: Composition</a>
+  </div>
+  <div class="nav-group"><span class="nav-group-label">Summary</span><a class="nav-link" href="#recap">Quick Recap</a></div>
+</nav>
+<main>
+
+<section id="hero" class="hero">
+  <p class="hero-eyebrow">LLD-1 · Session 22</p>
+  <h1>UML Diagrams</h1>
+  <p class="hero-lede">The Unified Modelling Language is the industry-standard visual vocabulary for communicating software design. This session covers the two diagrams most critical for LLD: Use Case Diagrams (what your system does) and Class Diagrams (how it is structured).</p>
+  <div class="agenda-chips">
+    <span class="chip">UML</span><span class="chip">Use Case Diagrams</span><span class="chip">Class Diagrams</span><span class="chip">Actors</span><span class="chip">Include / Extend</span><span class="chip">Aggregation</span><span class="chip">Composition</span>
+  </div>
+</section>
+
+<!-- 01 -->
+<section id="s01" class="section">
+  <div class="section-header"><span class="section-num">01</span><h2>Why UML?</h2></div>
+  <p>In software teams, communication happens between clients, product managers, engineers, and other stakeholders. Each group has a different level of technical knowledge. Describing a complex system with plain text is ambiguous and error-prone.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Core Purpose</span>
+    <p>UML (Unified Modelling Language) is a <strong>standardised notation</strong> for representing software system components and their relationships visually. Everyone on the team — regardless of their preferred programming language — reads the same diagram the same way. It removes ambiguity when explaining complex designs.</p>
+  </div>
+
+  <table>
+    <thead><tr><th>Without UML</th><th>With UML</th></tr></thead>
+    <tbody>
+      <tr><td>Text descriptions are ambiguous</td><td>Visual notation is unambiguous</td></tr>
+      <tr><td>Different engineers imagine different structures</td><td>Everyone reads the diagram identically</td></tr>
+      <tr><td>Hard to communicate complex relationships</td><td>Relationships are shown with standard arrows and symbols</td></tr>
+      <tr><td>Hard for non-engineers to follow</td><td>Use Case diagrams are readable by product managers and clients</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 02 -->
+<section id="s02" class="section">
+  <div class="section-header"><span class="section-num">02</span><h2>UML Diagram Types</h2></div>
+  <p>UML 2 defines 14 diagram types grouped into two broad categories:</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-wrap:wrap;gap:2rem">
+      <div style="flex:1;min-width:220px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--blue);text-transform:uppercase;margin-bottom:.7rem">Structural Diagrams</div>
+        <p style="font-size:.85rem;margin-bottom:.5rem">Describe the <em>static structure</em> of a system — how it is organised.</p>
+        <ul style="font-size:.85rem;padding-left:1.3rem">
+          <li><strong>Class Diagram</strong> ← most important for LLD</li>
+          <li>Object Diagram</li>
+          <li>Component Diagram</li>
+          <li>Deployment Diagram</li>
+          <li>Package Diagram</li>
+        </ul>
+      </div>
+      <div style="flex:1;min-width:220px">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;color:var(--rose);text-transform:uppercase;margin-bottom:.7rem">Behavioural Diagrams</div>
+        <p style="font-size:.85rem;margin-bottom:.5rem">Describe the <em>dynamic behaviour</em> of a system — how it acts over time.</p>
+        <ul style="font-size:.85rem;padding-left:1.3rem">
+          <li><strong>Use Case Diagram</strong> ← most important for LLD</li>
+          <li>Sequence Diagram</li>
+          <li>Activity Diagram</li>
+          <li>State Machine Diagram</li>
+          <li>Communication Diagram</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 03 -->
+<section id="s03" class="section">
+  <div class="section-header"><span class="section-num">03</span><h2>What Is a Use Case Diagram?</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>A <strong>Use Case Diagram</strong> is a behavioural UML diagram that represents the <em>features, behaviours, and functionalities</em> that a system supports, and the <em>actors</em> (users or other systems) who interact with them. It answers the question: <strong>"What can users do with this system?"</strong></p>
+  </div>
+
+  <p>Use Case Diagrams are deliberately high-level and readable by non-engineers. Product managers use them to sign off on scope. Architects use them to derive system boundaries. Engineers use them to plan classes and APIs.</p>
+
+  <div class="callout analogy">
+    <span class="callout-tag">Analogy</span>
+    <p>Think of a Use Case Diagram as a restaurant menu. The menu doesn't show you how each dish is cooked (that's the class diagram) — it just tells you what dishes are available and who can order them. Each dish is a use case; each type of customer (dine-in, takeaway) is an actor.</p>
+  </div>
+</section>
+
+<!-- 04 -->
+<section id="s04" class="section">
+  <div class="section-header"><span class="section-num">04</span><h2>Actors and Use Cases</h2></div>
+  <p>Two core elements of a Use Case Diagram:</p>
+
+  <table>
+    <thead><tr><th>Element</th><th>UML Symbol</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Actor</strong></td>
+        <td>Stick figure with a name below</td>
+        <td>A person, system, or device that interacts with the system. Actors are <em>external</em> — they exist outside the system boundary.</td>
+      </tr>
+      <tr>
+        <td><strong>Use Case</strong></td>
+        <td>Oval / ellipse with a name inside</td>
+        <td>A specific feature, functionality, or behaviour the system provides. Represents a goal an actor wants to achieve.</td>
+      </tr>
+      <tr>
+        <td><strong>Association</strong></td>
+        <td>Solid line between actor and use case</td>
+        <td>Shows that the actor participates in (can trigger or interact with) that use case.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="diagram-box">
+    <div style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--ink-soft);margin-bottom:1rem;text-transform:uppercase">Scaler platform — basic actors and use cases</div>
+    <div style="display:flex;align-items:center;gap:2rem;flex-wrap:wrap;justify-content:center">
+      <div class="actor"><div class="actor-fig">🧑</div>Student</div>
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        <div class="uc-oval">Login</div>
+        <div class="uc-oval">Watch Recording</div>
+        <div class="uc-oval">Solve Problem</div>
+        <div class="uc-oval">Sign Up</div>
+        <div class="uc-oval">Checkout</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 05 -->
+<section id="s05" class="section">
+  <div class="section-header"><span class="section-num">05</span><h2>System Boundary</h2></div>
+  <p>A rectangle drawn around the use cases represents the <strong>system boundary</strong> — the scope of the system being modelled. Use cases inside the rectangle are part of the system. Actors are always outside.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;gap:2rem;align-items:flex-start;flex-wrap:wrap;justify-content:center">
+      <div class="actor" style="margin-top:2rem"><div class="actor-fig">🧑</div>Student</div>
+      <div class="uc-diagram">
+        <div class="uc-diagram-label">Scaler Platform</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;padding:.5rem">
+          <div class="uc-oval">Login</div>
+          <div class="uc-oval">Watch Recording</div>
+          <div class="uc-oval">Solve Problem</div>
+          <div class="uc-oval">Checkout</div>
+          <div class="uc-oval">Schedule Mock Interview</div>
+          <div class="uc-oval">Upload Resume</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <span class="callout-tag">Importance of System Boundary</span>
+    <p>The system boundary is crucial in design discussions: it explicitly defines what is <em>in scope</em> and what is out. Anything outside the boundary (e.g. a payment gateway, a bank's system) is modelled as an external actor, not a use case.</p>
+  </div>
+</section>
+
+<!-- 06 -->
+<section id="s06" class="section">
+  <div class="section-header"><span class="section-num">06</span><h2>&lt;&lt;include&gt;&gt; Relationship</h2></div>
+  <p>The <code>&lt;&lt;include&gt;&gt;</code> relationship indicates that one use case <strong>always incorporates</strong> the behaviour of another as part of its execution. It is a <strong>mandatory dependency</strong> — the base use case cannot complete without the included use case.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">When to Use</span>
+    <p>Use <code>&lt;&lt;include&gt;&gt;</code> when a use case <em>always</em> needs another to run as a prerequisite. The included use case is typically a common sub-flow extracted to avoid duplication (DRY principle applied to use cases).</p>
+  </div>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center;justify-content:center">
+      <div class="uc-oval" style="background:var(--accent-soft);border-color:var(--accent)">Checkout</div>
+      <div style="display:flex;flex-direction:column;gap:.3rem;align-items:center">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--blue)">«include» ─ ─ ─ →</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        <div class="uc-oval">Payment</div>
+        <div class="uc-oval">Find Address</div>
+      </div>
+    </div>
+    <p style="font-size:.83rem;color:var(--ink-soft);text-align:center;margin-top:.8rem">To complete <strong>Checkout</strong>, the system must always execute <strong>Payment</strong> and <strong>Find Address</strong> — these are mandatory inclusions.</p>
+  </div>
+
+  <p>In UML notation: the dashed arrow labelled <code>&lt;&lt;include&gt;&gt;</code> points <em>from</em> the base use case <em>to</em> the included use case. Think of it as: "Checkout includes (calls/requires) Payment."</p>
+</section>
+
+<!-- 07 -->
+<section id="s07" class="section">
+  <div class="section-header"><span class="section-num">07</span><h2>&lt;&lt;extend&gt;&gt; Relationship</h2></div>
+  <p>The <code>&lt;&lt;extend&gt;&gt;</code> relationship indicates that one use case <strong>optionally adds behaviour</strong> to another. Unlike <code>&lt;&lt;include&gt;&gt;</code>, the extension only happens under certain conditions — it is optional.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Key Difference from Include</span>
+    <p><code>&lt;&lt;include&gt;&gt;</code> = mandatory sub-flow (parent always calls child). <code>&lt;&lt;extend&gt;&gt;</code> = optional variation (child conditionally adds to parent). The arrow direction is also different: an <code>&lt;&lt;extend&gt;&gt;</code> arrow points <em>from</em> the extending use case <em>to</em> the base use case — the extension "points at" what it extends.</p>
+  </div>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center;justify-content:center">
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        <div class="uc-oval">Login via Email</div>
+        <div class="uc-oval">Login via Google</div>
+        <div class="uc-oval">Login via LinkedIn</div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--rose)">← ─ ─ «extend»</div>
+      <div class="uc-oval" style="background:var(--rose-soft);border-color:var(--rose)">Login</div>
+    </div>
+    <p style="font-size:.83rem;color:var(--ink-soft);text-align:center;margin-top:.8rem">Each login variant is an optional extension of the base <strong>Login</strong> use case. The user chooses one path — not all are mandatory.</p>
+  </div>
+</section>
+
+<!-- 08 -->
+<section id="s08" class="section">
+  <div class="section-header"><span class="section-num">08</span><h2>Generalisation</h2></div>
+  <p>Generalisation in Use Case Diagrams works like inheritance — a more specific actor or use case inherits the capabilities of a more general one. It is drawn as a solid arrow from the child (specific) to the parent (general), just like inheritance in class diagrams.</p>
+
+  <table>
+    <thead><tr><th>Generalisation Between</th><th>Meaning</th><th>Scaler Example</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Actors</strong></td><td>A specific actor type inherits all the use cases of the general type</td><td>Student and Instructor are both types of User. TА is a type of Student.</td></tr>
+      <tr><td><strong>Use Cases</strong></td><td>A specific use case inherits and can override the base use case's flow</td><td>ScheduleMockInterview is a specific form of ScheduleSession.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-wrap:wrap;gap:1.5rem;justify-content:center;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem">
+        <div class="actor"><div class="actor-fig">👤</div>User</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--ink-soft)">generalises ↑</div>
+        <div style="display:flex;gap:1rem">
+          <div class="actor"><div class="actor-fig">🎓</div>Student</div>
+          <div class="actor"><div class="actor-fig">👨‍🏫</div>Instructor</div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.65rem;color:var(--ink-soft)">Student generalises ↑</div>
+        <div class="actor"><div class="actor-fig">🤝</div>TA</div>
+      </div>
+      <div style="padding-top:1rem;font-size:.88rem;color:var(--ink-soft);max-width:260px">
+        <p>A <strong>TA</strong> is a specialised <strong>Student</strong> who can also do instructor-like tasks (raise timer, add video). They inherit all Student use cases plus their own.</p>
+        <p>An <strong>Instructor</strong> can do everything a <strong>User</strong> can, plus: add session, upload notes, raise timer, end session.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 09 -->
+<section id="s09" class="section">
+  <div class="section-header"><span class="section-num">09</span><h2>Scaler Platform — Full Use Case Diagram</h2></div>
+  <p>Putting it all together: actors, system boundary, use cases, include/extend relationships, and generalisation for the Scaler platform.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;justify-content:center">
+      <div style="display:flex;flex-direction:column;gap:.5rem">
+        <div class="actor"><div class="actor-fig">🎓</div>Student</div>
+        <div class="actor"><div class="actor-fig">🤝</div>TA</div>
+        <div class="actor"><div class="actor-fig">👨‍🏫</div>Instructor</div>
+      </div>
+      <div class="uc-diagram">
+        <div class="uc-diagram-label">Scaler Platform</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.4rem;padding:.3rem;justify-content:center">
+          <div class="uc-oval">Login</div>
+          <div class="uc-oval">Sign Up</div>
+          <div class="uc-oval">Watch Recording</div>
+          <div class="uc-oval">Solve Problem</div>
+          <div class="uc-oval">Join a Batch</div>
+          <div class="uc-oval">Checkout</div>
+          <div class="uc-oval" style="border-color:var(--blue)">Payment<br><span class="rel-label">«included by Checkout»</span></div>
+          <div class="uc-oval" style="border-color:var(--blue)">Find Address<br><span class="rel-label">«included by Checkout»</span></div>
+          <div class="uc-oval">Schedule Mock Interview</div>
+          <div class="uc-oval">Upload Resume</div>
+          <div class="uc-oval">Add Session</div>
+          <div class="uc-oval">Upload Notes</div>
+          <div class="uc-oval">End Session</div>
+          <div class="uc-oval" style="border-color:var(--rose)">Login via Email<br><span class="rel-label">«extends Login»</span></div>
+          <div class="uc-oval" style="border-color:var(--rose)">Login via Google<br><span class="rel-label">«extends Login»</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="s10" class="section">
+  <div class="section-header"><span class="section-num">10</span><h2>What Is a Class Diagram?</h2></div>
+
+  <div class="callout key">
+    <span class="callout-tag">Definition</span>
+    <p>A <strong>Class Diagram</strong> is a structural UML diagram that describes the classes in a system, their attributes and methods, and the relationships between them. It is the blueprint of your codebase — it shows how you will <em>structure</em> the solution, not just what it does.</p>
+  </div>
+
+  <p>Class diagrams are used to: design and communicate architecture, generate code scaffolding, document existing systems, identify refactoring opportunities, and verify that a design satisfies the requirements in the Use Case Diagram.</p>
+</section>
+
+<!-- 11 -->
+<section id="s11" class="section">
+  <div class="section-header"><span class="section-num">11</span><h2>Class Notation</h2></div>
+  <p>A class is drawn as a rectangle with three compartments:</p>
+
+  <div class="diagram-box" style="display:flex;gap:2rem;flex-wrap:wrap;align-items:flex-start">
+    <div>
+      <div class="uml-class" style="min-width:200px">
+        <div class="uml-name">Student</div>
+        <div class="uml-body">
+          <span class="uml-row priv">- name: String</span>
+          <span class="uml-row priv">- age: int</span>
+          <span class="uml-row prot"># batch: String</span>
+          <span class="uml-row" style="color:var(--ink-soft);text-decoration:underline">_staticField: int_</span>
+        </div>
+        <div class="uml-divider"></div>
+        <div class="uml-body">
+          <span class="uml-row pub">+ joinClass(): void</span>
+          <span class="uml-row priv">- calculateGPA(): double</span>
+          <span class="uml-row prot"># getBatch(): String</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <table style="margin:0">
+        <thead><tr><th>Symbol</th><th>Visibility</th><th>Java keyword</th></tr></thead>
+        <tbody>
+          <tr><td><code style="color:var(--green)">+</code></td><td>Public</td><td><code>public</code></td></tr>
+          <tr><td><code style="color:var(--rose)">-</code></td><td>Private</td><td><code>private</code></td></tr>
+          <tr><td><code style="color:var(--purple)">#</code></td><td>Protected</td><td><code>protected</code></td></tr>
+          <tr><td><code>~</code></td><td>Package-private</td><td>(default)</td></tr>
+          <tr><td><u>underline</u></td><td>Static member</td><td><code>static</code></td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:.83rem;color:var(--ink-soft);margin-top:.8rem">Attribute format: <code>visibility name: Type</code><br>Method format: <code>visibility name(params): returnType</code></p>
+    </div>
+  </div>
+</section>
+
+<!-- 12 -->
+<section id="s12" class="section">
+  <div class="section-header"><span class="section-num">12</span><h2>Interfaces, Abstract Classes &amp; Enumerations</h2></div>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--blue);margin-bottom:.4rem">INTERFACE — dashed border</div>
+        <div class="uml-class iface">
+          <div class="uml-name"><span class="st">&lt;&lt;interface&gt;&gt;</span>Payable</div>
+          <div class="uml-body">
+            <span class="uml-row hi">+ pay(): void</span>
+            <span class="uml-row hi">+ refund(): void</span>
+          </div>
+        </div>
+        <p style="font-size:.8rem;color:var(--ink-soft);max-width:200px;margin-top:.4rem">Dashed border. The stereotype <code>&lt;&lt;interface&gt;&gt;</code> appears above the class name. Methods are abstract by default.</p>
+      </div>
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--rose);margin-bottom:.4rem">ABSTRACT CLASS — italic name</div>
+        <div class="uml-class abstract">
+          <div class="uml-name"><span class="st">&lt;&lt;abstract&gt;&gt;</span><em>Animal</em></div>
+          <div class="uml-body">
+            <span class="uml-row priv">- name: String</span>
+          </div>
+          <div class="uml-divider"></div>
+          <div class="uml-body">
+            <span class="uml-row hi"><em>+ makeSound(): void</em></span>
+            <span class="uml-row pub">+ eat(): void</span>
+          </div>
+        </div>
+        <p style="font-size:.8rem;color:var(--ink-soft);max-width:200px;margin-top:.4rem">Class name in <em>italics</em>. Abstract methods also in italics. Can have concrete methods and fields.</p>
+      </div>
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:.68rem;color:var(--purple);margin-bottom:.4rem">ENUMERATION</div>
+        <div class="enum-box">
+          <div class="uml-name"><span class="st">&lt;&lt;enumeration&gt;&gt;</span>UserType</div>
+          <div class="uml-body">
+            <span class="uml-row">STUDENT</span>
+            <span class="uml-row">TA</span>
+            <span class="uml-row">MENTOR</span>
+            <span class="uml-row">INSTRUCTOR</span>
+          </div>
+        </div>
+        <p style="font-size:.8rem;color:var(--ink-soft);max-width:200px;margin-top:.4rem">Uses <code>&lt;&lt;enumeration&gt;&gt;</code> stereotype. Lists constant values in the body. No methods section required for simple enums.</p>
+      </div>
+    </div>
+  </div>
+
+  <p>An interface extending another interface is shown with a dashed arrow (implementation/realization arrow) from the child interface to the parent interface — the same notation used when a class implements an interface.</p>
+</section>
+
+<!-- 13 -->
+<section id="s13" class="section">
+  <div class="section-header"><span class="section-num">13</span><h2>IS-A Relationship — Inheritance</h2></div>
+  <p>Inheritance in UML is drawn as a <strong>solid line with a hollow (open) arrowhead</strong> pointing from the child class to the parent class or interface. It represents the IS-A relationship.</p>
+
+  <div class="diagram-box">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.5rem">
+      <div class="uml-class iface">
+        <div class="uml-name"><span class="st">&lt;&lt;interface&gt;&gt;</span>Animal</div>
+        <div class="uml-body"><span class="uml-row hi">+ makeSound(): void</span></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--ink-soft)">△ (implements)</div>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center">
+        <div class="uml-class"><div class="uml-name">Dog</div><div class="uml-body"><span class="uml-row pub">+ makeSound()</span></div></div>
+        <div class="uml-class"><div class="uml-name">Cat</div><div class="uml-body"><span class="uml-row pub">+ makeSound()</span></div></div>
+        <div class="uml-class"><div class="uml-name">Bird</div><div class="uml-body"><span class="uml-row pub">+ makeSound()</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <thead><tr><th>Relationship</th><th>UML Arrow</th><th>Java keyword</th></tr></thead>
+    <tbody>
+      <tr><td>Class extends class</td><td>Solid line, hollow triangle arrowhead → parent</td><td><code>extends</code></td></tr>
+      <tr><td>Class implements interface</td><td>Dashed line, hollow triangle arrowhead → interface</td><td><code>implements</code></td></tr>
+      <tr><td>Interface extends interface</td><td>Dashed line, hollow triangle arrowhead → parent interface</td><td><code>extends</code></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 14 -->
+<section id="s14" class="section">
+  <div class="section-header"><span class="section-num">14</span><h2>HAS-A Relationship — Aggregation</h2></div>
+  <p>When an object <em>contains</em> a reference to another object, but both can exist independently, the relationship is called <strong>Aggregation</strong>. It represents a "has-a" relationship where the contained object has an independent lifetime.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Aggregation</span>
+    <p>Aggregation: a relationship between two entities A and B where even if the object of A is destroyed (goes out of scope), B can still exist independently. B's lifecycle is <strong>not</strong> controlled by A.</p>
+  </div>
+
+  <div class="diagram-box">
+    <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;justify-content:center">
+      <div class="uml-class">
+        <div class="uml-name">Show</div>
+        <div class="uml-body">
+          <span class="uml-row">- tickets: List&lt;Ticket&gt;</span>
+        </div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;color:var(--ink-soft)" title="Aggregation: hollow diamond on owner side">◇──</div>
+      <div class="uml-class">
+        <div class="uml-name">Ticket</div>
+        <div class="uml-body">
+          <span class="uml-row">- seatNumber: int</span>
+          <span class="uml-row">- price: double</span>
+        </div>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:.83rem;color:var(--ink-soft);margin-top:.8rem">A <strong>Show</strong> has many <strong>Tickets</strong>. If the Show is cancelled (object destroyed), the Tickets can still exist — they might be transferred to another show or refunded.</p>
+  </div>
+
+  <p>UML notation: a <strong>hollow (open) diamond</strong> (◇) on the side of the "owner" class (Show), with a line to the "part" class (Ticket). The hollow diamond indicates the part can exist without the whole.</p>
+</section>
+
+<!-- 15 -->
+<section id="s15" class="section">
+  <div class="section-header"><span class="section-num">15</span><h2>HAS-A Relationship — Composition</h2></div>
+  <p>Composition is a stronger form of aggregation. When an object <em>owns</em> another object such that the contained object <strong>cannot exist independently</strong> of the container, the relationship is Composition.</p>
+
+  <div class="callout key">
+    <span class="callout-tag">Composition</span>
+    <p>Composition: a relationship between A and B where if the object of A is destroyed, B <strong>cannot exist</strong> independently. B's lifetime is entirely controlled by A. B is an integral part of A — it has no meaningful existence outside A.</p>
+  </div>
+
+  <div class="diagram-box">
+    <div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;justify-content:center">
+      <div class="uml-class">
+        <div class="uml-name">Customer</div>
+        <div class="uml-body">
+          <span class="uml-row">- address: Address</span>
+        </div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:1.2rem;color:var(--accent)" title="Composition: filled diamond on owner side">◆──</div>
+      <div class="uml-class">
+        <div class="uml-name">Address</div>
+        <div class="uml-body">
+          <span class="uml-row">- street: String</span>
+          <span class="uml-row">- city: String</span>
+          <span class="uml-row">- pincode: String</span>
+        </div>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:.83rem;color:var(--ink-soft);margin-top:.8rem">A <strong>Customer</strong> has an <strong>Address</strong>. If the Customer is deleted from the system, their Address record has no meaning and should also be deleted. Address cannot exist without a Customer.</p>
+  </div>
+
+  <p>Another example: a <code>Class</code> and an <code>Assignment</code>. An assignment only exists for a specific class — it has no independent existence once the class ends.</p>
+
+  <p>UML notation: a <strong>filled (solid) diamond</strong> (◆) on the side of the owner. Compare:</p>
+
+  <table>
+    <thead><tr><th>Aspect</th><th>Aggregation ◇</th><th>Composition ◆</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Diamond</strong></td><td>Hollow (open)</td><td>Filled (solid)</td></tr>
+      <tr><td><strong>Lifetime dependency</strong></td><td>Part lives independently</td><td>Part dies with the whole</td></tr>
+      <tr><td><strong>Ownership</strong></td><td>Weak (shared ownership possible)</td><td>Strong (exclusive ownership)</td></tr>
+      <tr><td><strong>Example</strong></td><td>Show ◇── Ticket</td><td>Customer ◆── Address</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <span class="callout-tag">Memory Trick</span>
+    <p><strong>Aggregation</strong>: "A library has books. If the library burns down, the books (that survived) can still be read." <strong>Composition</strong>: "A human has a heart. If the human dies, the heart has no function — its existence is tied to the human." The filled diamond = the inseparable bond.</p>
+  </div>
+</section>
+
+<!-- Recap -->
+<section id="recap" class="section">
+  <div class="section-header"><span class="section-num">✦</span><h2>Quick Recap</h2></div>
+  <div class="recap-grid">
+    <div class="recap-card"><div class="recap-card-title">UML Purpose</div><p>A standardised notation for communicating software designs visually. Removes ambiguity between engineers, product managers, and clients.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Diagram Categories</div><p>Structural (Class, Component, Object) describe static architecture. Behavioural (Use Case, Sequence, Activity) describe dynamic behaviour.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Use Case Diagram</div><p>Shows what the system can do (use cases = ovals) and who interacts with it (actors = stick figures). The rectangle is the system boundary.</p></div>
+    <div class="recap-card"><div class="recap-card-title">&lt;&lt;include&gt;&gt;</div><p>Mandatory sub-flow. Base use case always executes the included use case. Arrow: base → included. Example: Checkout includes Payment.</p></div>
+    <div class="recap-card"><div class="recap-card-title">&lt;&lt;extend&gt;&gt;</div><p>Optional variation. Extension conditionally adds behaviour to base. Arrow: extending → base. Example: Login via Google extends Login.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Generalisation</div><p>IS-A in use case land. A TA is a Student (inherits all Student use cases + adds instructor-like ones). Solid arrow: child → parent.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Class Diagram</div><p>Blueprint of the codebase. Three compartments: class name, attributes (visibility name: Type), methods (visibility name(params): return).</p></div>
+    <div class="recap-card"><div class="recap-card-title">Visibility Symbols</div><p>+ public, - private, # protected, ~ package-private. Underlined members are static. Abstract class name and methods are in italics.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Interface vs Abstract</div><p>Interface: dashed border + &lt;&lt;interface&gt;&gt; stereotype. Abstract class: italic name + &lt;&lt;abstract&gt;&gt; stereotype. Both use hollow-triangle arrows for IS-A.</p></div>
+    <div class="recap-card"><div class="recap-card-title">Aggregation ◇</div><p>HAS-A with independent lifetime. Hollow diamond on the owner. If the owner is destroyed, the part can still exist (e.g. Show ◇── Ticket).</p></div>
+    <div class="recap-card"><div class="recap-card-title">Composition ◆</div><p>HAS-A with dependent lifetime. Filled diamond on the owner. If the owner is destroyed, the part cannot exist (e.g. Customer ◆── Address).</p></div>
+    <div class="recap-card"><div class="recap-card-title">Choosing Association Type</div><p>Ask: "Can this part exist without its container?" Yes → Aggregation. No → Composition. When in doubt about ownership, lean toward Aggregation.</p></div>
+  </div>
+</section>
+
+</main>
+</div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="overlay"></div>
+<script>
+const bar=document.getElementById('progress-bar');
+window.addEventListener('scroll',()=>{bar.style.width=Math.min(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)*100,100)+'%'},{passive:true});
+const fab=document.getElementById('fab'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+fab.addEventListener('click',()=>{sidebar.classList.add('open');overlay.classList.add('open')});
+overlay.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')});
+const navLinks=document.querySelectorAll('.nav-link'),sections=document.querySelectorAll('section[id]');
+function updateActive(){let c='';sections.forEach(s=>{if(s.getBoundingClientRect().top<=80)c=s.id});navLinks.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c){l.classList.add('active');document.getElementById('sidebar').scrollTo({top:l.offsetTop-document.getElementById('sidebar').clientHeight/2,behavior:'smooth'})}})}
+window.addEventListener('scroll',updateActive,{passive:true});updateActive();
+navLinks.forEach(l=>l.addEventListener('click',()=>{sidebar.classList.remove('open');overlay.classList.remove('open')}));
+document.querySelectorAll('.section').forEach(s=>new IntersectionObserver(e=>e.forEach(en=>{if(en.isIntersecting)en.target.classList.add('visible')}),{threshold:.07}).observe(s));
+function copyCode(btn){const text=btn.closest('.code-wrap').querySelector('pre').innerText;try{navigator.clipboard.writeText(text).then(()=>{btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)})}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='Copied!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('copied')},2000)}}
+</script>
+</body>
+</html>

@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Async/await &amp; TPL (C#)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d; --line:#e4ddd0;
+  --accent:#b5651d; --accent-soft:#f0e2d0; --blue:#3a6ea5; --blue-soft:#dde9f3;
+  --rose:#b0496b; --rose-soft:#f6e2ea; --green:#5a7d5a; --green-soft:#e2ede0;
+  --purple:#7a5c9e; --purple-soft:#ece4f3; --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, var(--purple-soft) 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(900px 600px at 100% 0%, #f1ece2 0%, rgba(241,236,226,0) 50%),
+    var(--bg);
+  color:var(--ink); font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;}
+#progress{position:fixed;top:0;left:0;height:4px;width:0%;
+  background:linear-gradient(90deg,var(--accent),var(--rose));z-index:1000;transition:width .08s linear;}
+.layout{display:flex;align-items:flex-start;max-width:1280px;margin:0 auto;}
+.sidebar{position:sticky;top:0;height:100vh;width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+  overflow-y:auto;padding:28px 18px 60px 26px;border-right:1px solid var(--line);
+  background:rgba(251,249,244,.72);backdrop-filter:blur(6px);}
+.sidebar::-webkit-scrollbar{width:7px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px;}
+.side-brand{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.side-title{font-family:"Fraunces",serif;font-weight:600;font-size:20px;line-height:1.2;margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group h4{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 8px 6px;opacity:.75;}
+.nav-link{display:flex;gap:9px;align-items:baseline;text-decoration:none;color:var(--ink-soft);
+  font-size:14.5px;padding:6px 10px;border-radius:8px;border-left:2px solid transparent;
+  transition:background .18s,color .18s,border-color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--accent);opacity:.7;min-width:20px;}
+.nav-link:hover{background:var(--bg-soft);color:var(--ink);}
+.nav-link.active{background:var(--accent-soft);color:var(--ink);border-left-color:var(--accent);font-weight:500;}
+.nav-link.active .n{opacity:1;}
+main{flex:1 1 auto;min-width:0;padding:56px clamp(20px,5vw,72px) 120px;}
+.hero{margin-bottom:60px;}
+.eyebrow{font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 14px;}
+.hero h1{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(2.4rem,5vw,3.6rem);
+  line-height:1.04;margin:0 0 20px;letter-spacing:-.01em;}
+.lede{font-size:1.18rem;color:var(--ink-soft);max-width:64ch;margin:0 0 26px;}
+.chips{display:flex;flex-wrap:wrap;gap:9px;}
+.chip{font-family:"JetBrains Mono",monospace;font-size:12.5px;padding:7px 14px;border-radius:999px;
+  background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.chip b{color:var(--accent);font-weight:700;}
+.section{margin-bottom:64px;opacity:0;transform:translateY(16px);
+  transition:opacity .5s ease,transform .5s ease;scroll-margin-top:24px;}
+.section.visible{opacity:1;transform:none;}
+.sec-head{display:flex;align-items:center;gap:14px;margin:0 0 6px;}
+.sec-badge{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#fff;
+  background:var(--accent);padding:4px 9px;border-radius:7px;line-height:1;}
+h2{font-family:"Fraunces",serif;font-weight:600;font-size:clamp(1.7rem,3vw,2.3rem);margin:0;line-height:1.12;letter-spacing:-.01em;}
+.sec-sub{color:var(--ink-soft);font-size:1.05rem;margin:6px 0 26px;max-width:70ch;}
+h3{font-family:"Fraunces",serif;font-weight:600;font-size:1.32rem;margin:34px 0 10px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:1.3em;}
+li{margin:7px 0;}
+strong{color:var(--ink);font-weight:600;}
+:not(pre) > code{font-family:"JetBrains Mono",monospace;font-size:.86em;color:var(--accent);
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:4px;padding:1px 6px;}
+.callout{border-left:4px solid var(--ink-soft);border-radius:0 10px 10px 0;padding:16px 20px;margin:22px 0;background:var(--bg-soft);}
+.callout .tag{font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700;letter-spacing:.13em;
+  text-transform:uppercase;display:block;margin-bottom:6px;}
+.callout p:last-child{margin-bottom:0;}
+.callout.tip{border-color:var(--green);background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue);background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose);background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent);background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+.code{background:var(--code-bg);border-radius:12px;margin:22px 0;overflow:hidden;box-shadow:0 8px 26px rgba(43,42,51,.16);}
+.code-head{display:flex;justify-content:space-between;align-items:center;padding:9px 16px;
+  background:rgba(255,255,255,.05);border-bottom:1px solid rgba(255,255,255,.08);}
+.code-lang{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#9b97a8;}
+.copy-btn{font-family:"JetBrains Mono",monospace;font-size:11px;color:#c3bdd0;background:transparent;
+  border:1px solid rgba(255,255,255,.18);border-radius:6px;padding:4px 10px;cursor:pointer;transition:all .18s;}
+.copy-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
+.copy-btn.done{color:#c3e88d;border-color:#c3e88d;}
+pre{margin:0;padding:18px;overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.7;color:var(--code-ink);
+  background:none;border:none;padding:0;white-space:pre;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098;font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;} .err{color:#f07178;}
+.complexity-badge{display:inline-flex;align-items:center;gap:7px;font-family:"JetBrains Mono",monospace;
+  font-size:12px;background:var(--bg-soft);border:1px solid var(--line);border-radius:999px;padding:4px 12px;margin:3px 6px 3px 0;}
+.complexity-badge .lab{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent);font-weight:700;}
+.diagram-box{background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:24px 22px;margin:24px 0;}
+.arr-row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start;justify-content:center;}
+.arr-cell{display:flex;flex-direction:column;align-items:center;gap:7px;}
+.arr-cell .val{min-width:44px;height:44px;padding:0 12px;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:1.5px solid var(--line);border-radius:9px;font-family:"JetBrains Mono",monospace;
+  font-size:13px;color:var(--ink);font-weight:500;text-align:center;}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-soft);}
+.arr-cell.highlight .val{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:700;}
+.arr-cell.highlight-blue .val{background:var(--blue-soft);border-color:var(--blue);color:var(--blue);font-weight:700;}
+.arr-cell.highlight-green .val{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:700;}
+.arr-cell.neg .val{background:var(--rose-soft);border-color:var(--rose);color:var(--rose);font-weight:700;}
+.arrow{display:flex;align-items:center;font-size:24px;color:var(--accent);padding:0 2px;align-self:center;}
+/* deadlock cycle */
+.deadlock{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:8px 0;}
+.dl-node{background:var(--rose-soft);border:1.5px solid var(--rose);color:var(--rose);border-radius:12px;
+  padding:14px 16px;font-family:"JetBrains Mono",monospace;font-size:12px;text-align:center;max-width:230px;}
+.dl-node b{display:block;font-family:"Fraunces",serif;font-size:.98rem;margin-bottom:3px;}
+.dl-wait{display:flex;flex-direction:column;align-items:center;color:var(--rose);font-family:"JetBrains Mono",monospace;font-size:10.5px;}
+.dl-wait .a{font-size:22px;line-height:1;}
+/* timeline */
+.timeline{display:flex;flex-direction:column;gap:6px;margin:24px 0;}
+.tl-row{display:flex;gap:10px;align-items:center;font-family:"JetBrains Mono",monospace;font-size:12.5px;}
+.tl-tag{flex:0 0 96px;text-align:right;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+.tl-bar{flex:1;border-radius:8px;padding:8px 12px;}
+.tl-idle{background:var(--bg-soft);border:1px solid var(--line);color:var(--ink-soft);}
+.tl-run{background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);}
+.tl-wait{background:var(--blue-soft);border:1px solid var(--blue);color:var(--blue);}
+.flow{display:flex;flex-direction:column;align-items:center;margin:24px 0;}
+.flow-step{width:100%;max-width:580px;background:#fff;border:1.5px solid var(--line);border-radius:12px;
+  padding:14px 20px;text-align:center;font-size:.98rem;box-shadow:0 3px 12px rgba(45,42,38,.05);}
+.flow-step .st-icon{font-size:1.2rem;margin-right:8px;}
+.flow-step b{display:block;font-family:"Fraunces",serif;font-size:1.02rem;}
+.flow-step small{color:var(--ink-soft);font-size:.84rem;}
+.flow-step.highlight{background:var(--accent-soft);border-color:var(--accent);}
+.flow-connector{width:2px;height:26px;background:linear-gradient(var(--accent),var(--rose));}
+.mindmap{display:flex;flex-direction:column;align-items:center;margin:26px 0;}
+.mm-core{background:var(--ink);color:var(--bg);font-family:"Fraunces",serif;font-weight:600;font-size:1.1rem;
+  padding:14px 26px;border-radius:14px;box-shadow:0 8px 22px rgba(45,42,38,.2);}
+.mm-spine{width:2px;height:24px;background:var(--line);}
+.mm-branches{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;width:100%;}
+.mm-branch{border-radius:12px;padding:14px 16px;border:1.5px solid var(--line);background:#fff;}
+.mm-branch h5{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  margin:0 0 8px;display:flex;align-items:center;gap:7px;}
+.mm-branch ul{margin:0;padding-left:1.05em;font-size:.9rem;}
+.mm-branch li{margin:4px 0;color:var(--ink-soft);}
+.mm-branch.b-accent{border-top:4px solid var(--accent);} .mm-branch.b-accent h5{color:var(--accent);}
+.mm-branch.b-blue{border-top:4px solid var(--blue);} .mm-branch.b-blue h5{color:var(--blue);}
+.mm-branch.b-green{border-top:4px solid var(--green);} .mm-branch.b-green h5{color:var(--green);}
+.mm-branch.b-rose{border-top:4px solid var(--rose);} .mm-branch.b-rose h5{color:var(--rose);}
+.mm-branch.b-purple{border-top:4px solid var(--purple);} .mm-branch.b-purple h5{color:var(--purple);}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;transition:transform .2s,box-shadow .2s;}
+.card:hover{transform:translateY(-4px);box-shadow:0 14px 30px rgba(45,42,38,.1);}
+.card .glyph{font-family:"Fraunces",serif;font-size:1.8rem;line-height:1;margin-bottom:8px;display:block;}
+.card h4{font-size:1.06rem;margin:0 0 6px;font-family:"Fraunces",serif;font-weight:600;}
+.card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.tbl-wrap{overflow-x:auto;margin:22px 0;border:1px solid var(--line);border-radius:12px;}
+table{border-collapse:collapse;width:100%;font-size:.92rem;}
+thead th{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);background:var(--bg-soft);text-align:left;padding:11px 16px;font-weight:700;}
+tbody td{padding:11px 16px;border-top:1px solid var(--line);vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+td code{white-space:nowrap;}
+.recap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:24px 0;}
+.recap-card{background:#fff;border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:12px;padding:18px;}
+.recap-card h4{font-family:"Fraunces",serif;font-weight:600;font-size:1.05rem;margin:0 0 6px;display:flex;align-items:center;gap:8px;}
+.recap-card p{font-size:.9rem;color:var(--ink-soft);margin:0;}
+.qa{border:1px solid var(--line);border-radius:12px;margin:14px 0;overflow:hidden;background:#fff;}
+.qa summary{cursor:pointer;list-style:none;padding:15px 20px;font-family:"Fraunces",serif;font-weight:600;
+  font-size:1.04rem;display:flex;gap:12px;align-items:flex-start;transition:background .15s;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary:hover{background:var(--bg-soft);}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace;font-size:12px;color:#fff;background:var(--accent);
+  border-radius:6px;padding:3px 7px;line-height:1.3;flex:0 0 auto;}
+.qa summary .qlevel{margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:10px;text-transform:uppercase;
+  letter-spacing:.08em;padding:3px 8px;border-radius:999px;flex:0 0 auto;align-self:center;}
+.lvl-jr{background:var(--green-soft);color:var(--green);}
+.lvl-mid{background:var(--accent-soft);color:var(--accent);}
+.lvl-sr{background:var(--rose-soft);color:var(--rose);}
+.qa .ans{padding:0 20px 18px;color:var(--ink-soft);font-size:.97rem;border-top:1px solid var(--line);}
+.qa .ans p:first-child{margin-top:14px;}
+.qa[open] summary{background:var(--bg-soft);}
+#fab{display:none;position:fixed;bottom:22px;left:22px;z-index:900;width:54px;height:54px;border-radius:50%;
+  background:var(--accent);color:#fff;border:none;font-size:23px;cursor:pointer;box-shadow:0 8px 22px rgba(181,101,29,.4);}
+#backdrop{display:none;position:fixed;inset:0;background:rgba(45,42,38,.4);backdrop-filter:blur(3px);z-index:850;}
+@media(max-width:920px){
+  .sidebar{position:fixed;top:0;left:0;z-index:880;transform:translateX(-110%);transition:transform .28s ease;
+    box-shadow:8px 0 30px rgba(45,42,38,.18);width:280px;}
+  .sidebar.open{transform:translateX(0);}
+  #fab{display:flex;align-items:center;justify-content:center;}
+  #backdrop.show{display:block;}
+  main{padding:46px 20px 100px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{scroll-behavior:auto!important;transition:none!important;}
+  .section{opacity:1;transform:none;}
+}
+.foot{border-top:1px solid var(--line);margin-top:30px;padding-top:22px;font-size:.85rem;color:var(--ink-soft);}
+.foot code{font-size:.82em;}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button id="fab" aria-label="Open navigation">☰</button>
+<div id="backdrop"></div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">// study&nbsp;notes</div>
+    <div class="side-title">Async/await &amp; TPL</div>
+    <nav>
+      <div class="nav-group">
+        <h4>Foundations</h4>
+        <a class="nav-link" href="#s01"><span class="n">01</span> Overview</a>
+        <a class="nav-link" href="#s02"><span class="n">02</span> What async/await Is</a>
+        <a class="nav-link" href="#s03"><span class="n">03</span> Task &amp; Task&lt;T&gt;</a>
+        <a class="nav-link" href="#s04"><span class="n">04</span> The State Machine</a>
+      </div>
+      <div class="nav-group">
+        <h4>Context &amp; Threads</h4>
+        <a class="nav-link" href="#s05"><span class="n">05</span> Context &amp; ConfigureAwait</a>
+        <a class="nav-link" href="#s06"><span class="n">06</span> CPU vs I/O bound</a>
+      </div>
+      <div class="nav-group">
+        <h4>TPL</h4>
+        <a class="nav-link" href="#s07"><span class="n">07</span> WhenAll / WhenAny / Parallel</a>
+        <a class="nav-link" href="#s08"><span class="n">08</span> CancellationToken</a>
+      </div>
+      <div class="nav-group">
+        <h4>Pitfalls</h4>
+        <a class="nav-link" href="#s09"><span class="n">09</span> The Deadlock ★</a>
+        <a class="nav-link" href="#s10"><span class="n">10</span> More Pitfalls</a>
+        <a class="nav-link" href="#s11"><span class="n">11</span> Worked Example</a>
+      </div>
+      <div class="nav-group">
+        <h4>Review</h4>
+        <a class="nav-link" href="#s12"><span class="n">12</span> Quick Recap</a>
+        <a class="nav-link" href="#s13"><span class="n">13</span> Interview Questions</a>
+      </div>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <p class="eyebrow">// C# &nbsp;·&nbsp; doing things without waiting around</p>
+      <h1>Async/await &amp; TPL ⏳</h1>
+      <p class="lede">
+        When code waits on something slow — a network call, a file, a database — you don't want the whole program frozen.
+        <b>async/await</b> lets a method pause at a slow point and free the thread to do other work, resuming later when
+        the result is ready. The <b>Task Parallel Library (TPL)</b> adds the building blocks: <code>Task</code>,
+        <code>Task.Run</code>, <code>WhenAll</code>, and friends. The single biggest gotcha — the <b>.Result deadlock</b> —
+        gets its own section. This builds on the async-exception ideas from the previous topic. No prior coding background assumed.
+      </p>
+      <div class="chips">
+        <span class="chip">⏳ <b>async / await</b></span>
+        <span class="chip">📦 <b>Task / Task&lt;T&gt;</b></span>
+        <span class="chip">🧵 <b>not threads!</b></span>
+        <span class="chip">🔀 <b>WhenAll / Parallel</b></span>
+        <span class="chip">💀 <b>.Result deadlock</b></span>
+        <span class="chip">🧠 <b>Interview Prep</b></span>
+      </div>
+    </header>
+
+    <!-- 01 -->
+    <section class="section" id="s01">
+      <div class="sec-head"><span class="sec-badge">01</span><h2>Overview</h2></div>
+      <p class="sec-sub">async/await is about <em>not blocking</em> while you wait. TPL is the toolkit of tasks underneath it.</p>
+
+      <p>Most slow operations are <strong>waiting</strong>, not computing — waiting for a server to respond, a disk to read,
+        a database to answer. Blocking a thread during that wait is wasteful. <strong>async/await</strong> lets the method
+        release its thread while waiting and pick up where it left off when the result arrives, keeping apps responsive and
+        servers scalable. The <strong>TPL</strong> provides the <code>Task</code> type and combinators that make this work.</p>
+
+      <div class="mindmap">
+        <div class="mm-core">⏳ Asynchrony</div>
+        <div class="mm-spine"></div>
+        <div class="mm-branches">
+          <div class="mm-branch b-accent">
+            <h5>⏳ async / await</h5>
+            <ul><li>Pause without blocking</li><li>Resume when ready</li><li>Compiler builds a state machine</li></ul>
+          </div>
+          <div class="mm-branch b-blue">
+            <h5>📦 Task</h5>
+            <ul><li>A "future" result</li><li><code>Task</code> / <code>Task&lt;T&gt;</code></li><li>Not a thread</li></ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h5>🔀 TPL</h5>
+            <ul><li><code>Task.Run</code> for CPU work</li><li><code>WhenAll</code> / <code>WhenAny</code></li><li><code>Parallel.For</code></li></ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h5>💀 Pitfalls</h5>
+            <ul><li><code>.Result</code> deadlock</li><li><code>async void</code></li><li>sync-over-async</li></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Concurrency vs parallelism</span>
+        <p><strong>Concurrency</strong> = dealing with many things at once by interleaving (one cook juggling several
+        dishes, stirring one while another simmers). <strong>Parallelism</strong> = doing many things at literally the same
+        time on multiple cores (several cooks). async/await is primarily about <em>concurrency</em> (efficient waiting); the
+        TPL's <code>Parallel</code>/<code>Task.Run</code> add <em>parallelism</em> (using more cores). Different problems,
+        different tools.</p>
+      </div>
+    </section>
+
+    <!-- 02 -->
+    <section class="section" id="s02">
+      <div class="sec-head"><span class="sec-badge">02</span><h2>What async/await Is</h2></div>
+      <p class="sec-sub">A way to write non-blocking code that <em>reads</em> like normal sequential code. And — crucially — it does not create threads.</p>
+
+      <p>Mark a method <code>async</code> and you can <code>await</code> inside it. <code>await</code> says: "if this
+        operation isn't done yet, <strong>pause here and give the thread back</strong>; resume this method when the result
+        is ready." The code reads top-to-bottom like synchronous code, but it doesn't block.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">async</span> <span class="ty">Task</span>&lt;<span class="kw">string</span>&gt; <span class="fn">GetPageAsync</span>(<span class="kw">string</span> url)
+{
+    <span class="kw">using var</span> client = <span class="kw">new</span> <span class="ty">HttpClient</span>();
+    <span class="cmt">// await: pause here without blocking the thread; resume when the download finishes</span>
+    <span class="kw">string</span> html = <span class="kw">await</span> client.<span class="fn">GetStringAsync</span>(url);
+    <span class="kw">return</span> html.Length + <span class="str">" chars"</span>;   <span class="cmt">// runs after the await completes</span>
+}</code></pre>
+      </div>
+
+      <div class="diagram-box">
+        <div class="timeline">
+          <div class="tl-row"><div class="tl-tag">synchronous</div><div class="tl-bar tl-wait">▓▓▓ work ▓▓▓ <b>BLOCKED waiting on network</b> ▓▓▓ work ▓▓▓</div></div>
+          <div class="tl-row"><div class="tl-tag">async/await</div><div class="tl-bar tl-run">▓ work ▓ <span style="color:var(--green);">← thread freed for others →</span> ▓ resume ▓</div></div>
+        </div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ async/await does NOT create a thread</span>
+        <p>This is the most misunderstood point. <code>await</code> doesn't spin up a background thread — the operation
+        (e.g. a network read) runs without one, and the method simply <em>uses no thread while waiting</em>. The thread is
+        returned to do other work and the method resumes later. async is about <strong>not occupying a thread during a
+        wait</strong>, not about adding threads. (To run CPU work on another thread, you use <code>Task.Run</code> — section 06.)</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🍳 Analogy</span>
+        <p>You put bread in the toaster (start the await) and, instead of standing there staring at it (blocking), you go
+        chop vegetables (the thread does other work). When the toast pops (the result is ready) you come back and butter it
+        (resume after the await). One cook, no extra staff — just no idle standing around.</p>
+      </div>
+    </section>
+
+    <!-- 03 -->
+    <section class="section" id="s03">
+      <div class="sec-head"><span class="sec-badge">03</span><h2>Task &amp; Task&lt;T&gt;</h2></div>
+      <p class="sec-sub">A <code>Task</code> is a promise of future completion. <code>Task&lt;T&gt;</code> is a promise of a future <em>value</em>.</p>
+
+      <p>An async method returns a <strong><code>Task</code></strong> (completes, no value) or
+        <strong><code>Task&lt;T&gt;</code></strong> (completes with a value of type <code>T</code>). The task represents the
+        ongoing operation; <code>await</code>-ing it gives you the result (or rethrows its exception) when it's done.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// returns a value -> Task&lt;T&gt;</span>
+<span class="kw">async</span> <span class="ty">Task</span>&lt;<span class="kw">int</span>&gt; <span class="fn">CountAsync</span>() { <span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">Delay</span>(<span class="num">100</span>); <span class="kw">return</span> <span class="num">42</span>; }
+
+<span class="cmt">// returns nothing -> Task (still awaitable)</span>
+<span class="kw">async</span> <span class="ty">Task</span> <span class="fn">SaveAsync</span>() { <span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">Delay</span>(<span class="num">100</span>); }
+
+<span class="cmt">// awaiting unwraps the value (or rethrows the exception)</span>
+<span class="kw">int</span> n = <span class="kw">await</span> <span class="fn">CountAsync</span>();    <span class="cmt">// n == 42</span>
+<span class="kw">await</span> <span class="fn">SaveAsync</span>();              <span class="cmt">// just wait for completion</span></code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">📦</span><h4>Task</h4><p>An operation that will complete (or fault) in the future, with no result value. Like <code>void</code>, but awaitable.</p></div>
+        <div class="card"><span class="glyph">🎁</span><h4>Task&lt;T&gt;</h4><p>An operation that will produce a value of type <code>T</code>. Awaiting it gives you the <code>T</code>.</p></div>
+        <div class="card"><span class="glyph">🧵</span><h4>Task ≠ Thread</h4><p>A task is a <em>unit of work</em>, not a thread. Many tasks can run on few threads; an awaiting task uses none.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Naming &amp; a note on ValueTask</span>
+        <p>By convention, async methods end in <strong><code>Async</code></strong> (<code>GetPageAsync</code>). For hot paths
+        that often complete synchronously, <code>ValueTask&lt;T&gt;</code> (a struct) can avoid the heap allocation that
+        <code>Task&lt;T&gt;</code> (a class) incurs — but it has usage caveats (don't await twice). Stick with
+        <code>Task</code>/<code>Task&lt;T&gt;</code> unless profiling proves <code>ValueTask</code> is worth it.</p>
+      </div>
+    </section>
+
+    <!-- 04 -->
+    <section class="section" id="s04">
+      <div class="sec-head"><span class="sec-badge">04</span><h2>The State Machine</h2></div>
+      <p class="sec-sub">How "pause and resume" actually works: the compiler rewrites your async method into a state machine.</p>
+
+      <p>You write linear code, but the C# compiler transforms an <code>async</code> method into a hidden
+        <strong>state machine</strong> — a structure that remembers where it paused. At each <code>await</code>, if the
+        operation isn't already done, the method <strong>returns to its caller</strong> (handing back a <code>Task</code>),
+        and registers a continuation to resume at that exact point when the awaited task completes.</p>
+
+      <div class="flow">
+        <div class="flow-step"><b><span class="st-icon">▶️</span>Caller invokes the async method</b><small>it runs synchronously until the first <code>await</code></small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight"><b><span class="st-icon">⏸️</span>Hit an await that isn't finished</b><small>the method returns a <code>Task</code> to the caller and frees the thread</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">⏳</span>Awaited operation completes</b><small>a continuation is scheduled to resume the method (<code>MoveNext</code>)</small></div>
+        <div class="flow-connector"></div>
+        <div class="flow-step"><b><span class="st-icon">▶️</span>Method resumes after the await</b><small>state is restored; it runs to the next await or to completion</small></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 What the compiler generates</span>
+        <p>Behind the scenes the compiler creates a type implementing <code>IAsyncStateMachine</code> with a
+        <code>MoveNext()</code> method and a <code>state</code> field tracking the current await point — plus an
+        <code>AsyncTaskMethodBuilder</code> that produces the returned <code>Task</code>. Local variables become fields so
+        they survive across the pause. It's the same "pause/resume" idea as the <code>yield</code> iterators from the
+        collections topic — async just adds waiting for tasks.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ An async method with no await</span>
+        <p>If you mark a method <code>async</code> but never <code>await</code>, the compiler warns you: it runs entirely
+        synchronously and the state-machine overhead buys nothing. Either add an <code>await</code> or drop
+        <code>async</code> and return a completed task (<code>Task.FromResult(...)</code>).</p>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="section" id="s05">
+      <div class="sec-head"><span class="sec-badge">05</span><h2>Context &amp; ConfigureAwait</h2></div>
+      <p class="sec-sub">After an await, where does the rest of your method run? That's the synchronization context — and <code>ConfigureAwait(false)</code> changes it.</p>
+
+      <p>By default, <code>await</code> <strong>captures the current synchronization context</strong> and resumes the
+        continuation on it. In a <strong>UI app (WPF/WinForms)</strong> that's the UI thread — so you can safely touch
+        controls after an await. In <strong>legacy ASP.NET</strong> it's the request context. The capture is what makes
+        "update the UI after the await" just work.</p>
+
+      <div class="diagram-box">
+        <div class="arr-row">
+          <div class="arr-cell highlight-blue"><div class="val">UI thread</div><div class="idx">before await</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell"><div class="val">await<br>(network)</div><div class="idx">thread freed</div></div>
+          <div class="arrow">→</div>
+          <div class="arr-cell highlight-blue"><div class="val">UI thread</div><div class="idx">resume (default)</div></div>
+          <div class="arrow" style="margin-left:18px">vs</div>
+          <div class="arr-cell highlight-green"><div class="val">pool thread</div><div class="idx">ConfigureAwait(false)</div></div>
+        </div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// default: resume on the captured context (e.g. UI thread)</span>
+<span class="kw">await</span> <span class="fn">FetchAsync</span>();              <span class="cmt">// same as .ConfigureAwait(true)</span>
+
+<span class="cmt">// library/background code: don't capture -> resume on a thread-pool thread</span>
+<span class="kw">await</span> <span class="fn">FetchAsync</span>().<span class="fn">ConfigureAwait</span>(<span class="kw">false</span>);   <span class="cmt">// faster, avoids deadlocks</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 When to use ConfigureAwait(false)</span>
+        <p>Use it in <strong>library code</strong> and any code that doesn't need to return to the original context. It
+        skips the (sometimes costly) marshaling back and — importantly — <strong>helps prevent the deadlock in section
+        09</strong>. Microsoft's CA2007 nudges you to call <code>ConfigureAwait</code> explicitly in libraries. Don't use
+        it right before touching UI controls — there you <em>want</em> the UI context.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ ASP.NET Core has no synchronization context</span>
+        <p>Modern <strong>ASP.NET Core</strong> doesn't use a <code>SynchronizationContext</code>, so
+        <code>ConfigureAwait(false)</code> is a <em>no-op</em> there — it neither helps nor hurts, and the classic
+        <code>.Result</code> deadlock doesn't occur for that reason (though blocking can still cause thread-pool
+        starvation). The context-capture behavior matters most in UI apps and legacy ASP.NET.</p>
+      </div>
+    </section>
+
+    <!-- 06 -->
+    <section class="section" id="s06">
+      <div class="sec-head"><span class="sec-badge">06</span><h2>CPU-bound vs I/O-bound</h2></div>
+      <p class="sec-sub">The decision that determines whether you need <code>Task.Run</code> at all. Get this right and most async confusion disappears.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🌐</span><h4>I/O-bound</h4><p>Waiting on something external — network, disk, database. <strong>Just await the async API</strong> (<code>GetStringAsync</code>, <code>ReadAsync</code>). No thread is used during the wait. Do <em>not</em> wrap it in <code>Task.Run</code>.</p></div>
+        <div class="card"><span class="glyph">🧮</span><h4>CPU-bound</h4><p>Heavy computation that actually keeps a core busy — image processing, big calculations. Offload with <strong><code>Task.Run</code></strong> so it runs on a thread-pool thread and doesn't freeze the caller (e.g. the UI).</p></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// I/O-bound: await the async API directly -- no Task.Run!</span>
+<span class="kw">string</span> data = <span class="kw">await</span> httpClient.<span class="fn">GetStringAsync</span>(url);
+
+<span class="cmt">// CPU-bound: offload heavy work to the thread pool so the UI stays responsive</span>
+<span class="kw">int</span> result = <span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">Run</span>(() =&gt; <span class="fn">CrunchNumbers</span>(hugeArray));</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Don't wrap I/O in Task.Run</span>
+        <p>A common mistake: <code>await Task.Run(() =&gt; httpClient.GetStringAsync(url))</code>. This pointlessly burns a
+        thread-pool thread to start an operation that needed no thread at all. For I/O, await the async API directly.
+        <code>Task.Run</code> is for <em>CPU-bound</em> work you want off the current thread.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Use the async API, not the blocking one</span>
+        <p>Inside async code, prefer the non-blocking versions of everything: <code>await Task.Delay(...)</code> not
+        <code>Thread.Sleep(...)</code>; <code>await stream.ReadAsync(...)</code> not <code>stream.Read(...)</code>;
+        <code>await Task.WhenAll(...)</code> not <code>Task.WaitAll(...)</code>. The blocking versions tie up a thread for
+        nothing.</p>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="section" id="s07">
+      <div class="sec-head"><span class="sec-badge">07</span><h2>WhenAll / WhenAny / Parallel</h2></div>
+      <p class="sec-sub">The TPL combinators for running multiple operations together instead of one after another.</p>
+
+      <h3>Task.WhenAll — run many, wait for all 🔗</h3>
+      <p>Start several async operations, then <code>await Task.WhenAll</code> to wait for all of them concurrently — far
+        faster than awaiting each in sequence.</p>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// ❌ sequential: total time = sum of all three</span>
+<span class="kw">var</span> a = <span class="kw">await</span> <span class="fn">FetchAsync</span>(url1);
+<span class="kw">var</span> b = <span class="kw">await</span> <span class="fn">FetchAsync</span>(url2);
+<span class="kw">var</span> c = <span class="kw">await</span> <span class="fn">FetchAsync</span>(url3);
+
+<span class="cmt">// ✅ concurrent: total time ≈ the slowest one</span>
+<span class="ty">Task</span>&lt;<span class="kw">string</span>&gt;[] tasks = { <span class="fn">FetchAsync</span>(url1), <span class="fn">FetchAsync</span>(url2), <span class="fn">FetchAsync</span>(url3) };
+<span class="kw">string</span>[] all = <span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">WhenAll</span>(tasks);</code></pre>
+      </div>
+
+      <h3>Task.WhenAny — react to the first to finish 🏁</h3>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// e.g. timeout: whichever finishes first wins</span>
+<span class="ty">Task</span> done = <span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">WhenAny</span>(<span class="fn">FetchAsync</span>(url), <span class="ty">Task</span>.<span class="fn">Delay</span>(<span class="num">3000</span>));
+<span class="kw">if</span> (done <span class="kw">is</span> <span class="ty">Task</span>&lt;<span class="kw">string</span>&gt; fetch) <span class="fn">Use</span>(<span class="kw">await</span> fetch);
+<span class="kw">else</span> <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Timed out"</span>);</code></pre>
+      </div>
+
+      <h3>Parallel.For / ForEach — CPU work across cores 🧮</h3>
+      <p>For <em>CPU-bound</em> data parallelism (not I/O), <code>Parallel.For</code>/<code>ForEach</code> spreads iterations
+        across cores.</p>
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="ty">Parallel</span>.<span class="fn">ForEach</span>(images, img =&gt; <span class="fn">Resize</span>(img));   <span class="cmt">// uses multiple cores</span></code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ WhenAll vs WaitAll</span>
+        <p>Use <code>await Task.WhenAll(...)</code> (non-blocking) inside async code, <strong>not</strong>
+        <code>Task.WaitAll(...)</code> (blocks the thread). Same for <code>WhenAny</code> vs <code>WaitAny</code>. The
+        <code>When…</code> versions return an awaitable task; the <code>Wait…</code> versions block.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 WhenAll and exceptions</span>
+        <p>If several tasks in a <code>WhenAll</code> fault, awaiting it throws the <em>first</em> exception, but all of them
+        are captured. To inspect every failure, check the returned task's <code>Exception</code> (an
+        <code>AggregateException</code>) or await inside a try/catch and examine <code>task.Exception.InnerExceptions</code>.</p>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="section" id="s08">
+      <div class="sec-head"><span class="sec-badge">08</span><h2>CancellationToken</h2></div>
+      <p class="sec-sub">The standard way to ask an async operation to stop early — cooperatively and cleanly.</p>
+
+      <p>Long-running async work should accept a <strong><code>CancellationToken</code></strong>. The caller can signal
+        cancellation; the operation observes the token and stops gracefully, throwing
+        <code>OperationCanceledException</code>. It's <em>cooperative</em> — the work checks the token; nothing is forcibly
+        killed.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">async</span> <span class="ty">Task</span> <span class="fn">DownloadAsync</span>(<span class="kw">string</span> url, <span class="ty">CancellationToken</span> token)
+{
+    <span class="kw">for</span> (<span class="kw">int</span> i = <span class="num">0</span>; i &lt; <span class="num">10</span>; i++)
+    {
+        token.<span class="fn">ThrowIfCancellationRequested</span>();        <span class="cmt">// bail out if asked</span>
+        <span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">Delay</span>(<span class="num">500</span>, token);                 <span class="cmt">// pass the token to async calls too</span>
+    }
+}
+
+<span class="cmt">// caller controls cancellation</span>
+<span class="kw">using var</span> cts = <span class="kw">new</span> <span class="ty">CancellationTokenSource</span>();
+cts.<span class="fn">CancelAfter</span>(<span class="num">2000</span>);                         <span class="cmt">// auto-cancel after 2s</span>
+<span class="kw">try</span> { <span class="kw">await</span> <span class="fn">DownloadAsync</span>(url, cts.Token); }
+<span class="kw">catch</span> (<span class="ty">OperationCanceledException</span>) { <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Cancelled"</span>); }</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Catch OperationCanceledException, not TaskCanceledException</span>
+        <p>Cancellation surfaces as <code>OperationCanceledException</code>. <code>TaskCanceledException</code> derives from
+        it, so catching the <em>base</em> <code>OperationCanceledException</code> handles both — the recommended approach.
+        Flow the same token through every nested async call so cancellation propagates all the way down.</p>
+      </div>
+    </section>
+
+    <!-- 09 -->
+    <section class="section" id="s09">
+      <div class="sec-head"><span class="sec-badge">09</span><h2>The Deadlock ★</h2></div>
+      <p class="sec-sub">The single most-asked async interview gotcha: blocking on an async call with <code>.Result</code> or <code>.Wait()</code>.</p>
+
+      <p>In an app with a synchronization context (UI / legacy ASP.NET), calling <code>.Result</code> or <code>.Wait()</code>
+        on a task <strong>blocks the context thread</strong>. But the awaited method's continuation is trying to resume
+        <em>on that same thread</em> (because it captured the context). The thread is blocked waiting for the task; the task
+        can't finish because it needs the blocked thread. Neither can proceed — <strong>deadlock</strong>.</p>
+
+      <div class="diagram-box">
+        <div class="deadlock">
+          <div class="dl-node"><b>UI thread</b>blocked on <code>.Result</code>, waiting for the task to finish</div>
+          <div class="dl-wait"><span class="a">⇄</span>waits for</div>
+          <div class="dl-node"><b>Continuation</b>can't run — it needs the UI thread, which is blocked</div>
+        </div>
+        <p style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--rose);margin:8px 0 0;">💀 each waits for the other → frozen forever</p>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// ❌ DEADLOCKS in WPF/WinForms/legacy ASP.NET</span>
+<span class="kw">void</span> <span class="fn">Button_Click</span>(...)            <span class="cmt">// runs on the UI thread</span>
+{
+    <span class="kw">var</span> data = <span class="fn">GetDataAsync</span>().Result;   <span class="cmt">// blocks UI thread; continuation needs it -> 💀</span>
+    label.Text = data;
+}
+
+<span class="cmt">// ✅ FIX 1 (best): async all the way -- never block</span>
+<span class="kw">async</span> <span class="kw">void</span> <span class="fn">Button_Click</span>(...) { label.Text = <span class="kw">await</span> <span class="fn">GetDataAsync</span>(); }
+
+<span class="cmt">// ✅ FIX 2: in the library, don't capture the context</span>
+<span class="kw">async</span> <span class="ty">Task</span>&lt;<span class="kw">string</span>&gt; <span class="fn">GetDataAsync</span>()
+    =&gt; <span class="kw">await</span> <span class="fn">FetchAsync</span>().<span class="fn">ConfigureAwait</span>(<span class="kw">false</span>);   <span class="cmt">// continuation won't need the UI thread</span></code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ The fixes, in order of preference</span>
+        <p><strong>1. Async all the way</strong> — never block on async; <code>await</code> up the whole call stack.
+        <strong>2. <code>ConfigureAwait(false)</code></strong> in library code so the continuation doesn't need the captured
+        context. <strong>3.</strong> If you absolutely must block (e.g. a constructor or legacy boundary), prefer
+        <code>GetAwaiter().GetResult()</code> over <code>.Result</code> — it rethrows the original exception instead of
+        wrapping it in an <code>AggregateException</code> — or offload with
+        <code>Task.Run(async () =&gt; await X()).GetAwaiter().GetResult()</code>.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ ASP.NET Core is different</span>
+        <p>ASP.NET Core has no synchronization context, so this exact deadlock doesn't happen there. But blocking on async
+        (<code>sync-over-async</code>) still ties up thread-pool threads and, under load, causes <strong>thread-pool
+        starvation</strong> — a different failure with the same root cause. The rule "don't block on async" holds
+        everywhere.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="section" id="s10">
+      <div class="sec-head"><span class="sec-badge">10</span><h2>More Pitfalls</h2></div>
+      <p class="sec-sub">The other traps that bite async newcomers and veterans alike.</p>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🕳️</span><h4>async void</h4><p>Use it <em>only</em> for event handlers (which can't return Task). Elsewhere it's dangerous: the caller can't await it, and exceptions can't be caught — they crash the process.</p></div>
+        <div class="card"><span class="glyph">🔒</span><h4>sync-over-async</h4><p>Blocking on async with <code>.Result</code>/<code>.Wait()</code> — deadlocks in UI/legacy ASP.NET, starves the thread pool in ASP.NET Core. Await instead.</p></div>
+        <div class="card"><span class="glyph">👻</span><h4>fire-and-forget</h4><p>Calling an async method without awaiting it loses exceptions silently. If you must, observe the result (log faults) rather than ignoring the task.</p></div>
+        <div class="card"><span class="glyph">🧊</span><h4>blocking calls in async</h4><p><code>Thread.Sleep</code>, <code>stream.Read</code>, <code>Task.WaitAll</code> inside async tie up a thread. Use the <code>await</code>-able versions.</p></div>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// ❌ async void -- exception here crashes the app; no caller can catch it</span>
+<span class="kw">async</span> <span class="kw">void</span> <span class="fn">ProcessAsync</span>() { <span class="kw">await</span> <span class="fn">DoAsync</span>(); }
+
+<span class="cmt">// ✅ return Task so callers can await AND catch exceptions</span>
+<span class="kw">async</span> <span class="ty">Task</span> <span class="fn">ProcessAsync</span>() { <span class="kw">await</span> <span class="fn">DoAsync</span>(); }
+
+<span class="cmt">// ❌ fire-and-forget: if DoAsync throws, the exception vanishes</span>
+<span class="fn">DoAsync</span>();
+
+<span class="cmt">// ✅ at least observe failures</span>
+_ = <span class="fn">DoAsync</span>().<span class="fn">ContinueWith</span>(t =&gt; <span class="fn">Log</span>(t.Exception),
+        <span class="ty">TaskContinuationOptions</span>.OnlyOnFaulted);</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Why async void is so dangerous</span>
+        <p>An <code>async void</code> method returns nothing to await, so the caller can't know when it finishes or whether
+        it failed. An unhandled exception in an <code>async void</code> isn't caught by a surrounding try/catch at the call
+        site — it's posted to the synchronization context and typically <strong>crashes the process</strong>. Reserve
+        <code>async void</code> strictly for event handlers; everywhere else return <code>Task</code>.</p>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 async streams (bonus)</span>
+        <p>Since C# 8, <code>IAsyncEnumerable&lt;T&gt;</code> lets you stream results asynchronously with
+        <code>await foreach</code> — combining the lazy <code>yield</code> idea with async waiting. Great for paging through
+        a remote data source one item at a time without buffering it all.</p>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="section" id="s11">
+      <div class="sec-head"><span class="sec-badge">11</span><h2>Worked Example</h2></div>
+      <p class="sec-sub">A method that fetches several resources concurrently, supports cancellation, and follows the rules — all together.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="code-lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// returns Task&lt;T&gt; (not void), takes a CancellationToken, ends in "Async"</span>
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="kw">int</span>&gt; <span class="fn">TotalSizeAsync</span>(
+    <span class="ty">IEnumerable</span>&lt;<span class="kw">string</span>&gt; urls, <span class="ty">CancellationToken</span> token = <span class="kw">default</span>)
+{
+    <span class="kw">using var</span> client = <span class="kw">new</span> <span class="ty">HttpClient</span>();
+
+    <span class="cmt">// start ALL downloads concurrently (I/O-bound -> no Task.Run)</span>
+    <span class="ty">IEnumerable</span>&lt;<span class="ty">Task</span>&lt;<span class="kw">string</span>&gt;&gt; downloads =
+        urls.<span class="fn">Select</span>(u =&gt; client.<span class="fn">GetStringAsync</span>(u, token));   <span class="cmt">// LINQ + tasks</span>
+
+    <span class="cmt">// wait for all of them at once -- time ≈ the slowest, not the sum</span>
+    <span class="kw">string</span>[] pages = <span class="kw">await</span> <span class="ty">Task</span>.<span class="fn">WhenAll</span>(downloads).<span class="fn">ConfigureAwait</span>(<span class="kw">false</span>);
+
+    <span class="cmt">// CPU-bound aggregation is trivial here, so just sum directly</span>
+    <span class="kw">return</span> pages.<span class="fn">Sum</span>(p =&gt; p.Length);
+}
+
+<span class="cmt">// caller -- async all the way, with a timeout via cancellation</span>
+<span class="kw">using var</span> cts = <span class="kw">new</span> <span class="ty">CancellationTokenSource</span>(<span class="ty">TimeSpan</span>.<span class="fn">FromSeconds</span>(<span class="num">10</span>));
+<span class="kw">try</span>
+{
+    <span class="kw">int</span> total = <span class="kw">await</span> <span class="fn">TotalSizeAsync</span>(urls, cts.Token);
+    <span class="ty">Console</span>.<span class="fn">WriteLine</span>($<span class="str">"Total: {total} chars"</span>);
+}
+<span class="kw">catch</span> (<span class="ty">OperationCanceledException</span>) { <span class="ty">Console</span>.<span class="fn">WriteLine</span>(<span class="str">"Timed out"</span>); }</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Every rule applied</span>
+        <p>Returns <strong><code>Task&lt;int&gt;</code></strong> (never <code>async void</code>); ends in
+        <strong><code>Async</code></strong>; awaits the I/O API directly (<strong>no <code>Task.Run</code></strong> for I/O);
+        runs the downloads <strong>concurrently</strong> with <code>Task.WhenAll</code> instead of one-by-one; uses
+        <strong><code>ConfigureAwait(false)</code></strong> in the reusable method; threads a
+        <strong><code>CancellationToken</code></strong> through for a timeout; and the caller is <strong>async all the
+        way</strong> with no blocking. That's idiomatic, deadlock-free async.</p>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="section" id="s12">
+      <div class="sec-head"><span class="sec-badge">12</span><h2>Quick Recap</h2></div>
+      <p class="sec-sub">One sentence per idea. If you can explain each card aloud, async is yours.</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>⏳ async/await</h4><p>Pause at a slow point without blocking the thread, and resume when the result is ready.</p></div>
+        <div class="recap-card"><h4>🧵 Not threads</h4><p>await doesn't create a thread; an awaiting method uses no thread while waiting. async ≠ parallel.</p></div>
+        <div class="recap-card"><h4>📦 Task / Task&lt;T&gt;</h4><p>A future completion / future value; await unwraps the result or rethrows the exception.</p></div>
+        <div class="recap-card"><h4>⚙️ State machine</h4><p>The compiler rewrites an async method into a state machine that remembers where it paused.</p></div>
+        <div class="recap-card"><h4>🔄 Context</h4><p>await captures the sync context and resumes on it (UI thread); <code>ConfigureAwait(false)</code> opts out.</p></div>
+        <div class="recap-card"><h4>🧮 CPU vs I/O</h4><p>I/O → await the async API directly; CPU → offload with <code>Task.Run</code>. Never wrap I/O in <code>Task.Run</code>.</p></div>
+        <div class="recap-card"><h4>🔗 WhenAll</h4><p>Run many tasks concurrently and await them together — time ≈ the slowest, not the sum.</p></div>
+        <div class="recap-card"><h4>🛑 CancellationToken</h4><p>Cooperative cancellation; flow the token through and catch <code>OperationCanceledException</code>.</p></div>
+        <div class="recap-card"><h4>💀 .Result deadlock</h4><p>Blocking on async in a UI/legacy-ASP.NET context deadlocks; go async all the way.</p></div>
+        <div class="recap-card"><h4>🕳️ async void</h4><p>Only for event handlers; elsewhere it hides exceptions and can crash the process. Return <code>Task</code>.</p></div>
+      </div>
+
+      <h3>Do this / not that 📊</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>✅ Do</th><th>❌ Avoid</th></tr></thead>
+          <tbody>
+            <tr><td><code>await GetAsync()</code></td><td><code>GetAsync().Result</code> / <code>.Wait()</code></td></tr>
+            <tr><td><code>async Task</code></td><td><code>async void</code> (except event handlers)</td></tr>
+            <tr><td><code>await Task.WhenAll(...)</code></td><td><code>Task.WaitAll(...)</code></td></tr>
+            <tr><td><code>await Task.Delay(n)</code></td><td><code>Thread.Sleep(n)</code> in async</td></tr>
+            <tr><td>await the async I/O API directly</td><td><code>Task.Run(() =&gt; ioApiAsync())</code></td></tr>
+            <tr><td><code>ConfigureAwait(false)</code> in libraries</td><td>capturing context you don't need</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 13 -->
+    <section class="section" id="s13">
+      <div class="sec-head"><span class="sec-badge">13</span><h2>Interview Questions</h2></div>
+      <p class="sec-sub">Click any question to reveal a clear answer. Tagged by level — Junior (0–2 yrs),
+        Mid (2–5 yrs), Senior (5–7 yrs). Written for someone with no prior coding background.</p>
+
+      <h3>🌱 Junior — fundamentals (0–2 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q1</span> What do async and await do? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p><code>async</code> marks a method as asynchronous so it can use <code>await</code>. <code>await</code> pauses the method at a slow
+        operation <em>without blocking the thread</em> and resumes it when the result is ready. The code reads like normal sequential code but doesn't
+        freeze the program while waiting.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span> What is a Task? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>A <code>Task</code> represents an operation that will complete in the future. <code>Task</code> means "will finish (no value)";
+        <code>Task&lt;T&gt;</code> means "will produce a value of type T." You <code>await</code> a task to get its result (or have its exception rethrown)
+        once it's done.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span> Does async/await create new threads? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>No — this is the key misconception. <code>await</code> doesn't start a thread; while waiting on something like a network call, the method
+        uses <em>no</em> thread at all, and the thread is freed to do other work. async is about not occupying a thread during a wait. To run CPU work on
+        another thread, you use <code>Task.Run</code> — that's separate.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span> Why use async at all? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Responsiveness and scalability. In a UI app, async keeps the interface from freezing while waiting on slow work. On a server, it frees threads
+        during waits so the same hardware can handle many more concurrent requests. Both come from not blocking a thread while waiting.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span> What return types can an async method have? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Normally <code>Task</code> (no result) or <code>Task&lt;T&gt;</code> (a result of type T). <code>async void</code> is allowed but reserved for
+        event handlers only. There's also <code>ValueTask</code>/<code>ValueTask&lt;T&gt;</code> for performance-sensitive cases. By convention, async method
+        names end in <code>Async</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span> What's the difference between Task.WhenAll awaited and awaiting tasks one by one? <span class="qlevel lvl-jr">Junior</span></summary>
+        <div class="ans"><p>Awaiting one by one runs them sequentially — total time is the <em>sum</em>. Starting them all and then <code>await Task.WhenAll(...)</code> runs
+        them concurrently — total time is about the <em>slowest single one</em>. For independent operations, <code>WhenAll</code> is much faster.</p></div></details>
+
+      <h3>🟠 Mid-level — going deeper (2–5 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q7</span> Why does calling .Result or .Wait() cause a deadlock? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>In a context with thread affinity (UI app, legacy ASP.NET), <code>.Result</code>/<code>.Wait()</code> blocks the context thread. Meanwhile the awaited
+        method captured that context and its continuation needs to resume on that same thread. The thread is blocked waiting for the task; the task can't finish because
+        it needs the blocked thread. Each waits on the other forever — deadlock. The fix is to go async all the way and never block.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span> What does ConfigureAwait(false) do and when should you use it? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>By default <code>await</code> captures the current synchronization context and resumes on it. <code>ConfigureAwait(false)</code> tells it <em>not</em> to —
+        the continuation runs on a thread-pool thread instead. Use it in <strong>library code</strong> and anywhere you don't need the original context: it's faster and
+        prevents the <code>.Result</code> deadlock. Don't use it right before updating UI controls, where you need to be back on the UI thread.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q9</span> Why is async void dangerous, and when is it acceptable? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>An <code>async void</code> method returns nothing to await, so callers can't know when it finishes or whether it failed, and an unhandled exception isn't
+        caught by a try/catch at the call site — it's posted to the context and usually crashes the process. It's acceptable only for <strong>event handlers</strong>, which
+        must return void and can't return <code>Task</code>. Everywhere else, return <code>Task</code> so callers can await and catch exceptions.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span> When should you use Task.Run? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>For <strong>CPU-bound</strong> work you want off the current thread — heavy computation that would otherwise freeze the UI. Do <em>not</em> use it for
+        <strong>I/O-bound</strong> work; awaiting an async I/O API (like <code>GetStringAsync</code>) already uses no thread while waiting, so wrapping it in
+        <code>Task.Run</code> just wastes a thread-pool thread. Rule of thumb: I/O → await directly; CPU → <code>Task.Run</code>.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span> How does cancellation work in async code? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>It's cooperative via <code>CancellationToken</code>. The caller creates a <code>CancellationTokenSource</code>, passes its <code>Token</code> to the async
+        method, and can cancel it (manually or with <code>CancelAfter</code>). The method observes the token — calling <code>ThrowIfCancellationRequested()</code> and passing
+        it to inner async calls — and stops gracefully by throwing <code>OperationCanceledException</code>. Nothing is forcibly killed; the work checks and cooperates.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span> What's the difference between concurrency and parallelism? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p><strong>Concurrency</strong> is dealing with many tasks by interleaving progress (one thread juggling several waits). <strong>Parallelism</strong> is
+        executing many tasks literally simultaneously on multiple cores. async/await mainly enables concurrency (efficient waiting on I/O); the TPL's <code>Parallel.For</code>
+        and <code>Task.Run</code> enable parallelism (using more cores for CPU work). They solve different problems.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span> Why prefer GetAwaiter().GetResult() over .Result when you must block? <span class="qlevel lvl-mid">Mid</span></summary>
+        <div class="ans"><p>Both block, but <code>.Result</code> and <code>.Wait()</code> wrap any exception in an <code>AggregateException</code>, whereas
+        <code>GetAwaiter().GetResult()</code> rethrows the <em>original</em> exception directly — cleaner to catch and read. (Blocking still carries deadlock risk; the real
+        fix is to go async all the way. <code>GetAwaiter().GetResult()</code> is the least-bad option when blocking is unavoidable.)</p></div></details>
+
+      <h3>🔴 Senior — synthesis &amp; judgment (5–7 years)</h3>
+
+      <details class="qa"><summary><span class="qnum">Q14</span> How does the compiler implement async/await? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>It rewrites the method into a <strong>state machine</strong> implementing <code>IAsyncStateMachine</code>, with a <code>MoveNext()</code> method and a state
+        field tracking the current await point. Local variables become fields so they survive across pauses. At each await, it gets the awaiter; if the operation is already
+        complete it continues synchronously, otherwise it stores the state, hooks a continuation (via <code>AwaitOnCompleted</code>) to call <code>MoveNext</code> when the awaited
+        task finishes, and returns the <code>Task</code> built by an <code>AsyncTaskMethodBuilder</code> to the caller. It's the same pause/resume mechanism as
+        <code>yield</code> iterators, generalized to awaiting tasks.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span> Why doesn't the .Result deadlock happen in ASP.NET Core, and what problem replaces it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>ASP.NET Core has no <code>SynchronizationContext</code>, so continuations resume on any thread-pool thread rather than a specific captured one — there's no single
+        thread to be blocked, so the classic deadlock can't form (and <code>ConfigureAwait(false)</code> is a no-op there). But blocking on async (sync-over-async) still consumes a
+        thread-pool thread for the duration of the wait; under load this causes <strong>thread-pool starvation</strong>: requests queue waiting for threads, latency spikes, and
+        throughput collapses. Same root cause (don't block on async), different symptom.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span> How are exceptions handled across await, and in task-returning methods? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>An exception thrown in an async method is captured and placed on the returned <code>Task</code>; awaiting that task rethrows it with the stack trace preserved (the
+        framework uses <code>ExceptionDispatchInfo</code> internally). Exceptions thrown in the synchronous part before the first <code>await</code> still go onto the task, not the
+        caller — so validate arguments and throw <em>before</em> the first await if you want them surfaced immediately. Blocking via <code>.Result</code>/<code>.Wait()</code> wraps
+        exceptions in <code>AggregateException</code>; awaiting unwraps to the first one. With <code>WhenAll</code>, awaiting throws the first exception but all are retained on the task.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q17</span> When is ValueTask appropriate, and what are its caveats? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p><code>Task</code>/<code>Task&lt;T&gt;</code> are reference types, so returning them allocates on the heap — negligible normally, but costly on hot paths that complete
+        <em>synchronously</em> most of the time (e.g. a cache hit). <code>ValueTask&lt;T&gt;</code> is a struct that avoids the allocation in the synchronous-completion case. Caveats:
+        a <code>ValueTask</code> must be awaited only <strong>once</strong>, not stored/awaited multiple times or blocked on with <code>.Result</code>; misuse causes subtle bugs. Use it
+        only where profiling shows allocation pressure; default to <code>Task</code> for clarity and safety.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span> What is thread-pool starvation and how does sync-over-async cause it? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>The thread pool has a limited number of worker threads (it grows slowly). Sync-over-async — blocking a pool thread with <code>.Result</code>/<code>.Wait()</code> while an
+        async operation completes — keeps that thread idle-but-occupied. Under load, many such blocks consume all pool threads; new work (including the continuations needed to <em>unblock</em>
+        them) can't get a thread, so the pool slowly adds threads while latency balloons and throughput tanks, sometimes spiraling. The fix is to never block on async on pool threads — await
+        instead, so threads are returned during waits.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span> How do you correctly handle fire-and-forget work? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Truly fire-and-forget is risky: if the unawaited task faults, the exception goes unobserved and is lost (and historically could crash the process). If you must not await,
+        <em>observe</em> the task: attach a continuation that logs faults (<code>ContinueWith(t =&gt; Log(t.Exception), OnlyOnFaulted)</code>), or run it through a dedicated background-task
+        mechanism (e.g. a hosted service / channel in ASP.NET Core) that supervises failures and lifetime. Never let an async method's exceptions silently disappear, and avoid
+        <code>async void</code> for this — use <code>async Task</code> and observe it.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span> Task.Run for I/O is wrong — but why is it actively harmful on a server? <span class="qlevel lvl-sr">Senior</span></summary>
+        <div class="ans"><p>Wrapping an async I/O call in <code>Task.Run</code> moves the <em>kickoff</em> to a thread-pool thread that then immediately awaits — so you've consumed a pool thread to do
+        nothing but wait, the very thing async I/O is designed to avoid. On a server handling many requests, this doubles thread-pool pressure and reduces the concurrency the async model was
+        meant to provide, hurting scalability. (On a desktop UI it's merely wasteful.) For I/O, await the async API directly; reserve <code>Task.Run</code> for genuinely CPU-bound work.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study order</span>
+        <p>Lock down <strong>Junior</strong> — what async/await do, Task vs Task&lt;T&gt;, that async isn't threads, and WhenAll. <strong>Mid</strong> is the interview core: the
+        <code>.Result</code> deadlock and its fixes, <code>ConfigureAwait(false)</code>, <code>async void</code>, <code>Task.Run</code> for CPU vs I/O, and cancellation.
+        <strong>Senior</strong> goes deep: the state-machine implementation, ASP.NET Core thread-pool starvation, exception flow across await, <code>ValueTask</code> trade-offs, and
+        fire-and-forget. Answer each aloud without peeking; stumbles point straight back to the section.</p>
+      </div>
+
+      <p class="foot">All technical details verified against Microsoft Learn (asynchronous programming scenarios, code analysis rules CA2007/CA2008, ConfigureAwait FAQ, task-based async pattern)
+        and supporting references. Version notes: async/await → C# 5; <code>IAsyncEnumerable</code> / async streams → C# 8. This single <code>10-async-await-tpl.html</code> file is fully
+        self-contained and works offline (only Google Fonts load from the web).</p>
+    </section>
+  </main>
+</div>
+
+<script>
+const progress=document.getElementById('progress');
+function updateProgress(){const h=document.documentElement;const max=h.scrollHeight-h.clientHeight;
+  progress.style.width=(max>0?(h.scrollTop/max)*100:0)+'%';}
+window.addEventListener('scroll',updateProgress,{passive:true});
+window.addEventListener('resize',updateProgress);updateProgress();
+
+const sidebar=document.getElementById('sidebar');const backdrop=document.getElementById('backdrop');
+function closeSidebar(){sidebar.classList.remove('open');backdrop.classList.remove('show');}
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click',e=>{
+    e.preventDefault();
+    const target=document.querySelector(link.getAttribute('href'));
+    if(target){const y=target.getBoundingClientRect().top+window.pageYOffset-24;window.scrollTo({top:y,behavior:'smooth'});}
+    if(window.innerWidth<=920) closeSidebar();
+  });
+});
+
+const sections=[...document.querySelectorAll('.section')];
+const navLinks=[...document.querySelectorAll('.nav-link')];
+function setActive(id){
+  navLinks.forEach(l=>{
+    const on=l.getAttribute('href')==='#'+id;
+    l.classList.toggle('active',on);
+    if(on){const lr=l.getBoundingClientRect(),sr=sidebar.getBoundingClientRect();
+      if(lr.top<sr.top+60||lr.bottom>sr.bottom-60){sidebar.scrollTop+=(lr.top-sr.top)-sidebar.clientHeight/2+lr.height/2;}}
+  });
+}
+const spy=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting) setActive(en.target.id);});},
+  {rootMargin:'-20% 0px -70% 0px',threshold:0});
+sections.forEach(s=>spy.observe(s));
+
+const reveal=new IntersectionObserver(es=>{es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('visible');reveal.unobserve(en.target);}});},{threshold:0.08});
+sections.forEach(s=>reveal.observe(s));
+
+document.querySelectorAll('.copy-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const code=btn.closest('.code').querySelector('pre code').innerText;
+    const done=()=>{btn.textContent='Copied!';btn.classList.add('done');
+      setTimeout(()=>{btn.textContent='Copy';btn.classList.remove('done');},2000);};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done).catch(()=>fallback(code,done));
+    } else {fallback(code,done);}
+  });
+});
+function fallback(text,cb){const ta=document.createElement('textarea');ta.value=text;
+  ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');cb();}catch(e){}document.body.removeChild(ta);}
+
+document.getElementById('fab').addEventListener('click',()=>{
+  const open=sidebar.classList.toggle('open');backdrop.classList.toggle('show',open);});
+backdrop.addEventListener('click',closeSidebar);
+</script>
+</body>
+</html>

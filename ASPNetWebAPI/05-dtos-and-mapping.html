@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DTOs &amp; Mapping in ASP.NET Core — Day 5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbf9f4; --bg-soft:#f3efe6; --ink:#2d2a26; --ink-soft:#5a554d;
+  --line:#e4ddd0; --accent:#b5651d; --accent-soft:#f0e2d0;
+  --blue:#3a6ea5; --blue-soft:#dde9f3; --rose:#b0496b; --rose-soft:#f6e2ea;
+  --green:#5a7d5a; --green-soft:#e2ede0; --purple:#7a5c9e; --purple-soft:#ece4f3;
+  --code-bg:#2b2a33; --code-ink:#e8e6e3;
+  --sidebar-w:268px;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:
+    radial-gradient(1200px 700px at 12% -8%, #ece4f3 0%, rgba(236,228,243,0) 55%),
+    radial-gradient(1000px 600px at 100% 0%, #f6e2ea 0%, rgba(246,226,234,0) 50%),
+    var(--bg);
+  color:var(--ink);
+  font-family:"Newsreader",Georgia,serif; font-size:18px; line-height:1.75;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"Fraunces",Georgia,serif; font-weight:600; line-height:1.15; color:var(--ink);}
+code,kbd,.mono{font-family:"JetBrains Mono",ui-monospace,monospace;}
+a{color:var(--accent);}
+
+/* ---------- Progress bar ---------- */
+#progress{position:fixed; top:0; left:0; height:4px; width:0%; z-index:1000;
+  background:linear-gradient(90deg,var(--accent),var(--rose));}
+
+/* ---------- Layout ---------- */
+.shell{display:flex; max-width:1280px; margin:0 auto; align-items:flex-start;}
+.sidebar{
+  position:sticky; top:0; align-self:flex-start; width:var(--sidebar-w); flex:0 0 var(--sidebar-w);
+  height:100vh; overflow-y:auto; padding:28px 18px 60px; border-right:1px solid var(--line);
+  background:rgba(251,249,244,0.72); backdrop-filter:blur(6px);
+}
+.sidebar::-webkit-scrollbar{width:8px;} .sidebar::-webkit-scrollbar-thumb{background:var(--line); border-radius:8px;}
+.brand{font-family:"JetBrains Mono",monospace; font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:4px;}
+.brand-title{font-family:"Fraunces",serif; font-size:1.18rem; margin:0 0 22px;}
+.nav-group{margin-bottom:18px;}
+.nav-group-label{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--ink-soft); padding:0 10px; margin-bottom:6px;}
+.nav-link{display:flex; gap:9px; align-items:baseline; text-decoration:none; color:var(--ink-soft);
+  font-size:.94rem; line-height:1.3; padding:7px 10px; border-radius:8px; transition:background .18s,color .18s;}
+.nav-link .n{font-family:"JetBrains Mono",monospace; font-size:.72rem; color:var(--accent); flex:0 0 auto;}
+.nav-link:hover{background:var(--bg-soft); color:var(--ink);}
+.nav-link.active{background:var(--accent-soft); color:var(--ink); font-weight:500;}
+.nav-link.active .n{font-weight:700;}
+
+.content{flex:1 1 auto; min-width:0; padding:48px clamp(20px,4vw,68px) 120px; max-width:960px;}
+
+/* ---------- Hero ---------- */
+.hero{margin-bottom:52px;}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:.8rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;}
+.hero h1{font-size:clamp(2.4rem,5vw,3.6rem); margin:0 0 18px;}
+.lede{font-size:1.16rem; color:var(--ink-soft); max-width:66ch; margin:0 0 26px;}
+.chips{display:flex; flex-wrap:wrap; gap:10px;}
+.chip{font-family:"JetBrains Mono",monospace; font-size:.76rem; padding:7px 13px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line); color:var(--ink-soft);}
+
+/* ---------- Sections ---------- */
+.section{margin-bottom:64px; scroll-margin-top:24px;
+  opacity:0; transform:translateY(16px); transition:opacity .5s ease, transform .5s ease;}
+.section.visible{opacity:1; transform:none;}
+.section-head{display:flex; align-items:center; gap:14px; margin-bottom:20px;}
+.section-head .badge{font-family:"JetBrains Mono",monospace; font-size:.82rem; font-weight:700; color:#fff;
+  background:var(--accent); padding:5px 10px; border-radius:8px; flex:0 0 auto;}
+.section-head h2{font-size:clamp(1.6rem,3vw,2.15rem); margin:0;}
+.section p{margin:0 0 16px;} .section h3{font-size:1.3rem; margin:30px 0 12px;}
+.section ul,.section ol{margin:0 0 16px; padding-left:1.3em;} .section li{margin-bottom:8px;}
+
+/* ---------- Inline code ---------- */
+:not(pre) > code{color:var(--accent); background:var(--bg-soft); border:1px solid var(--line);
+  border-radius:4px; padding:1px 6px; font-size:.86em;}
+
+/* ---------- Callouts ---------- */
+.callout{border-left:4px solid var(--accent); background:var(--accent-soft); border-radius:0 10px 10px 0;
+  padding:15px 18px 15px 20px; margin:22px 0;}
+.callout .tag{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.12em; text-transform:uppercase;
+  font-weight:700; display:block; margin-bottom:6px;}
+.callout p{margin:0;} .callout p + p{margin-top:10px;}
+.callout.tip{border-color:var(--green); background:var(--green-soft);} .callout.tip .tag{color:var(--green);}
+.callout.key{border-color:var(--blue); background:var(--blue-soft);} .callout.key .tag{color:var(--blue);}
+.callout.analogy{border-color:var(--rose); background:var(--rose-soft);} .callout.analogy .tag{color:var(--rose);}
+.callout.warn{border-color:var(--accent); background:var(--accent-soft);} .callout.warn .tag{color:var(--accent);}
+
+/* ---------- Complexity / fact badges ---------- */
+.complexity-badge{display:inline-flex; align-items:center; gap:7px; font-family:"JetBrains Mono",monospace;
+  font-size:.74rem; background:var(--bg-soft); border:1px solid var(--line); border-radius:999px;
+  padding:4px 11px; margin:3px 5px 3px 0;}
+.complexity-badge .lbl{color:var(--ink-soft);} .complexity-badge .val{color:var(--accent); font-weight:700;}
+
+/* ---------- Array / diagram cells ---------- */
+.arr-wrap{background:var(--bg-soft); border:1px solid var(--line); border-radius:14px; padding:22px 20px;
+  margin:22px 0; overflow-x:auto;}
+.arr-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-start;}
+.arr-cell{display:flex; flex-direction:column; align-items:center; gap:6px;}
+.arr-cell .val{min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center;
+  padding:9px 13px; background:#fff; border:1px solid var(--line); border-radius:9px;
+  font-family:"JetBrains Mono",monospace; font-size:.82rem; text-align:center; color:var(--ink);}
+.arr-cell .idx{font-family:"JetBrains Mono",monospace; font-size:.66rem; color:var(--ink-soft);}
+.arr-cell .val.highlight{background:var(--accent-soft); border-color:var(--accent); color:var(--accent); font-weight:700;}
+.arr-cell .val.highlight-blue{background:var(--blue-soft); border-color:var(--blue); color:var(--blue); font-weight:700;}
+.arr-cell .val.highlight-green{background:var(--green-soft); border-color:var(--green); color:var(--green); font-weight:700;}
+.arr-cell .val.neg{background:var(--rose-soft); border-color:var(--rose); color:var(--rose); font-weight:700;}
+.arr-arrow{align-self:center; color:var(--ink-soft); font-family:"JetBrains Mono",monospace; padding-top:10px;}
+
+/* ---------- Mind map ---------- */
+.mm{background:var(--bg-soft); border:1px solid var(--line); border-radius:16px; padding:30px 22px; margin:24px 0;}
+.mm-core{max-width:340px; margin:0 auto 8px; text-align:center; background:var(--code-bg); color:#fff;
+  border-radius:12px; padding:16px 20px;}
+.mm-core .t{font-family:"Fraunces",serif; font-size:1.2rem;}
+.mm-core .s{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; letter-spacing:.1em; text-transform:uppercase; margin-top:3px;}
+.mm-spine{width:2px; height:26px; background:var(--line); margin:0 auto;}
+.mm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px;}
+.mm-branch{background:#fff; border:1px solid var(--line); border-top:4px solid var(--accent); border-radius:12px; padding:14px 16px;}
+.mm-branch h4{margin:0 0 8px; font-size:1.02rem;}
+.mm-branch ul{margin:0; padding-left:1.15em;} .mm-branch li{font-size:.86rem; color:var(--ink-soft); margin-bottom:5px;}
+.mm-branch.b-blue{border-top-color:var(--blue);}
+.mm-branch.b-green{border-top-color:var(--green);}
+.mm-branch.b-rose{border-top-color:var(--rose);}
+.mm-branch.b-purple{border-top-color:var(--purple);}
+
+/* ---------- Flowchart ---------- */
+.flow{display:flex; flex-direction:column; align-items:stretch; max-width:560px; margin:24px auto;}
+.flow-step{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 18px;
+  box-shadow:0 1px 2px rgba(45,42,38,.04);}
+.flow-step .st{font-family:"JetBrains Mono",monospace; font-size:.66rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:4px;}
+.flow-step .sh{font-family:"Fraunces",serif; font-size:1.05rem; margin-bottom:3px;}
+.flow-step p{font-size:.88rem; color:var(--ink-soft); margin:0;}
+.flow-step.highlight{background:var(--accent-soft); border-color:var(--accent);}
+.flow-connector{width:2px; height:22px; background:var(--accent); margin:0 auto; position:relative;}
+.flow-connector::after{content:"▾"; position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  color:var(--accent); font-size:.8rem;}
+
+/* ---------- Cards grid ---------- */
+.cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin:22px 0;}
+.card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:18px 18px 16px;
+  transition:transform .18s, box-shadow .18s;}
+.card:hover{transform:translateY(-3px); box-shadow:0 8px 22px rgba(45,42,38,.09);}
+.card .glyph{font-size:1.5rem; display:block; margin-bottom:8px;}
+.card h4{margin:0 0 6px; font-size:1.05rem;} .card p{font-size:.86rem; color:var(--ink-soft); margin:0;}
+
+/* ---------- Tables ---------- */
+.tbl-wrap{overflow-x:auto; margin:22px 0;}
+table{border-collapse:collapse; width:100%; font-size:.9rem;}
+thead th{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.08em; text-transform:uppercase;
+  text-align:left; color:var(--accent); background:var(--bg-soft); padding:11px 13px; border-bottom:1px solid var(--line);}
+tbody td{padding:11px 13px; border-bottom:1px solid var(--line); vertical-align:top;}
+tbody tr:hover{background:var(--bg-soft);}
+tbody td code{white-space:nowrap;}
+
+/* ---------- Code blocks ---------- */
+.code{background:var(--code-bg); border-radius:12px; margin:22px 0; overflow:hidden; border:1px solid #3a3945;}
+.code-head{display:flex; align-items:center; justify-content:space-between; padding:8px 14px;
+  background:#232229; border-bottom:1px solid #3a3945;}
+.code-head .lang{font-family:"JetBrains Mono",monospace; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; color:#9d9ab0;}
+.copy-btn{font-family:"JetBrains Mono",monospace; font-size:.68rem; color:#c9c6d6; background:transparent;
+  border:1px solid #45434f; border-radius:6px; padding:4px 10px; cursor:pointer; transition:all .15s;}
+.copy-btn:hover{border-color:#6a6878; color:#fff;}
+.copy-btn.done{color:var(--green); border-color:var(--green);}
+pre{margin:0; padding:16px 18px; overflow-x:auto;}
+pre code{font-family:"JetBrains Mono",monospace; font-size:.82rem; line-height:1.65; color:var(--code-ink); background:none; border:none; padding:0;}
+.kw{color:#c792ea;} .str{color:#c3e88d;} .cmt{color:#697098; font-style:italic;}
+.ty{color:#82aaff;} .fn{color:#ffcb6b;} .num{color:#f78c6c;}
+
+/* ---------- Q&A accordions ---------- */
+.qa{background:#fff; border:1px solid var(--line); border-radius:12px; margin:12px 0; overflow:hidden;}
+.qa summary{list-style:none; cursor:pointer; padding:15px 18px; display:flex; gap:12px; align-items:center;}
+.qa summary::-webkit-details-marker{display:none;}
+.qa summary .qnum{font-family:"JetBrains Mono",monospace; font-size:.72rem; font-weight:700; color:var(--accent);
+  background:var(--accent-soft); border-radius:6px; padding:3px 8px; flex:0 0 auto;}
+.qa summary .qtext{flex:1 1 auto; font-weight:500;}
+.qa summary .lvl{font-family:"JetBrains Mono",monospace; font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  padding:3px 9px; border-radius:999px; flex:0 0 auto;}
+.lvl-jr{background:var(--green-soft); color:var(--green);}
+.lvl-mid{background:var(--accent-soft); color:var(--accent);}
+.lvl-sr{background:var(--rose-soft); color:var(--rose);}
+.qa .ans{padding:0 18px 17px 18px; color:var(--ink-soft); font-size:.96rem;}
+.qa .ans p{margin:0 0 10px;} .qa[open] summary{border-bottom:1px solid var(--line);}
+.qa .ans{padding-top:14px;}
+.lvl-legend{display:flex; flex-wrap:wrap; gap:12px; margin:18px 0 24px; font-size:.84rem;}
+.lvl-legend span{display:inline-flex; align-items:center; gap:6px;}
+
+/* ---------- Recap ---------- */
+.recap-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:14px; margin:22px 0;}
+.recap-card{background:#fff; border:1px solid var(--line); border-top:3px solid var(--accent); border-radius:10px; padding:15px 16px;}
+.recap-card h4{margin:0 0 6px; font-size:.98rem;} .recap-card p{margin:0; font-size:.85rem; color:var(--ink-soft);}
+
+/* ---------- FAB + overlay (mobile) ---------- */
+.fab{display:none; position:fixed; bottom:22px; left:22px; z-index:1002; width:52px; height:52px; border-radius:50%;
+  background:var(--accent); color:#fff; border:none; font-size:1.4rem; cursor:pointer;
+  box-shadow:0 6px 18px rgba(181,101,29,.4);}
+.backdrop{display:none; position:fixed; inset:0; z-index:1001; background:rgba(45,42,38,.4); backdrop-filter:blur(3px);}
+
+@media (max-width:900px){
+  .sidebar{position:fixed; top:0; left:0; z-index:1002; transform:translateX(-100%); transition:transform .28s ease;
+    box-shadow:4px 0 24px rgba(45,42,38,.15);}
+  .sidebar.open{transform:translateX(0);}
+  .content{padding:34px 20px 110px; max-width:100%;}
+  .fab{display:flex; align-items:center; justify-content:center;}
+  .backdrop.show{display:block;}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto;}
+  .section{opacity:1; transform:none; transition:none;}
+  .card:hover{transform:none;}
+}
+</style>
+</head>
+<body>
+<!-- __site-nav (auto-injected) -->
+<style>
+  .__site-nav {
+    position: fixed; top: 12px; right: 16px; z-index: 1200;
+    display: flex; gap: .4rem;
+    font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+  }
+  .__site-nav a {
+    display: inline-flex; align-items: center; gap: .3rem;
+    padding: .38rem .72rem;
+    font-size: .62rem; letter-spacing: .12em; text-transform: uppercase;
+    color: #5a554d;
+    background: rgba(251,249,244,.92);
+    border: 1px solid #e4ddd0;
+    border-radius: 999px;
+    text-decoration: none;
+    backdrop-filter: saturate(140%) blur(6px);
+    -webkit-backdrop-filter: saturate(140%) blur(6px);
+    box-shadow: 0 2px 10px -6px rgba(45,42,38,.25);
+    transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease;
+  }
+  .__site-nav a:hover {
+    color: #b5651d;
+    border-color: #b5651d;
+    background: #f0e2d0;
+    transform: translateY(-1px);
+  }
+  @media (max-width: 640px) {
+    .__site-nav { top: 8px; right: 8px; }
+    .__site-nav a { padding: .32rem .6rem; font-size: .58rem; }
+  }
+</style>
+<nav class="__site-nav" aria-label="Site navigation">
+  <a href="../index.html" title="Home"><span aria-hidden="true">⌂</span>Home</a>
+  <a href="index.html" title="Back"><span aria-hidden="true">←</span>Back</a>
+</nav>
+<!-- /__site-nav -->
+<div id="progress"></div>
+<button class="fab" id="fab" aria-label="Open navigation">☰</button>
+<div class="backdrop" id="backdrop"></div>
+
+<div class="shell">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">Day 05 · ASP.NET Core</div>
+    <div class="brand-title">DTOs &amp; Mapping 📦</div>
+
+    <div class="nav-group">
+      <div class="nav-group-label">Foundations</div>
+      <a class="nav-link" href="#s01"><span class="n">01</span><span>What a DTO Is</span></a>
+      <a class="nav-link" href="#s02"><span class="n">02</span><span>Entities vs. DTOs</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">The Threat</div>
+      <a class="nav-link" href="#s03"><span class="n">03</span><span>Over-Posting</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Shaping Data</div>
+      <a class="nav-link" href="#s04"><span class="n">04</span><span>Request DTOs</span></a>
+      <a class="nav-link" href="#s05"><span class="n">05</span><span>Response DTOs</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Mapping</div>
+      <a class="nav-link" href="#s06"><span class="n">06</span><span>Manual Mapping</span></a>
+      <a class="nav-link" href="#s07"><span class="n">07</span><span>AutoMapper</span></a>
+      <a class="nav-link" href="#s08"><span class="n">08</span><span>Source Generators</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Deciding</div>
+      <a class="nav-link" href="#s09"><span class="n">09</span><span>Choosing &amp; Best Practices</span></a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Review</div>
+      <a class="nav-link" href="#s10"><span class="n">10</span><span>Quick Recap</span></a>
+      <a class="nav-link" href="#s11"><span class="n">11</span><span>Interview Questions</span></a>
+    </div>
+  </aside>
+
+  <!-- ============ CONTENT ============ -->
+  <main class="content">
+
+    <!-- HERO -->
+    <header class="hero">
+      <div class="eyebrow">// day 5 — your entities are not your API</div>
+      <h1>DTOs &amp; Mapping in ASP.NET Core 📦</h1>
+      <p class="lede">Your database entities know everything — internal costs, admin flags, private notes, tangled relationships. Handing them straight to clients is like mailing someone your entire filing cabinet when they only asked for one form. A <strong>DTO</strong> (Data Transfer Object) is that one clean form: a purpose-built shape for exactly what goes in and out over the wire. Today we separate entities from API models, shut down the over-posting vulnerability, and weigh how to move data between the two — by hand, with AutoMapper, or with a source generator.</p>
+      <div class="chips">
+        <span class="chip">📦 Request &amp; response DTOs</span>
+        <span class="chip">🛡️ Avoid over-posting</span>
+        <span class="chip">✍️ Manual mapping</span>
+        <span class="chip">🤖 AutoMapper</span>
+        <span class="chip">⚡ Source generators</span>
+        <span class="chip">🧱 Layer separation</span>
+      </div>
+    </header>
+
+    <!-- ============ 01 ============ -->
+    <section class="section" id="s01">
+      <div class="section-head"><span class="badge">01</span><h2>What a DTO Is 🤔</h2></div>
+      <p>A <strong>Data Transfer Object</strong> is a simple class (or record) whose only job is to define <em>how data travels between your API and its clients</em>. It carries data and nothing else — no methods, no business logic, just properties. Microsoft's own guidance calls it "an object that defines how the data will be sent over the network," and notes it's also known as an <em>input model</em> or <em>view model</em>.</p>
+
+      <p>The core idea for today: <strong>your public API contract should be separate from your internal database model.</strong> A DTO is the boundary between those two worlds.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 The one-line definition</span>
+        <p>An <strong>entity</strong> models what your data <em>is</em> (a row in a table). A <strong>DTO</strong> models what your API <em>says</em> (a message on the wire). They change for different reasons, so they should be different classes.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🍽️ Analogy — the restaurant menu</span>
+        <p>The kitchen (your database) has raw ingredients, supplier invoices, and staff notes. The customer gets a <em>menu</em> — a curated, presentable subset. No diner needs to see the wholesale cost of the salmon or the chef's private prep notes. The menu is your DTO; the kitchen is your entity. Change the kitchen all you like; as long as the menu stays the same, customers never notice.</p>
+      </div>
+
+      <h3>Why bother separating them? 🎯</h3>
+      <p>Microsoft lists concrete reasons to shape data with a DTO instead of exposing the entity directly. Each one is a real problem DTOs solve:</p>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🛡️</span><h4>Prevent over-posting</h4><p>Stop clients from setting fields they shouldn't — the security headline of today (section 03).</p></div>
+        <div class="card"><span class="glyph">🙈</span><h4>Hide properties</h4><p>Keep internal or sensitive fields (costs, flags, secrets) out of the response entirely.</p></div>
+        <div class="card"><span class="glyph">🪶</span><h4>Shrink the payload</h4><p>Send only the fields the client needs — smaller, faster responses.</p></div>
+        <div class="card"><span class="glyph">🫓</span><h4>Flatten object graphs</h4><p>Turn nested relationships (Book → Author → Name) into a single convenient field.</p></div>
+        <div class="card"><span class="glyph">♻️</span><h4>Remove circular references</h4><p>Avoid serialization loops from two entities that point at each other.</p></div>
+        <div class="card"><span class="glyph">🧱</span><h4>Decouple the layers</h4><p>Change the database without breaking clients — and version the API cleanly.</p></div>
+      </div>
+
+      <h3>The big picture 🗺️</h3>
+      <p>Here is the whole topic on one page. Everything below zooms into one branch.</p>
+
+      <div class="mm">
+        <div class="mm-core">
+          <div class="t">DTOs &amp; Mapping</div>
+          <div class="s">the API boundary</div>
+        </div>
+        <div class="mm-spine"></div>
+        <div class="mm-grid">
+          <div class="mm-branch">
+            <h4>📦 Two shapes</h4>
+            <ul>
+              <li>Request DTO (input)</li>
+              <li>Response DTO (output)</li>
+              <li>Entity stays private</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-rose">
+            <h4>🛡️ Why</h4>
+            <ul>
+              <li>Stop over-posting</li>
+              <li>Hide sensitive fields</li>
+              <li>Decouple &amp; version</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-green">
+            <h4>✍️ Manual mapping</h4>
+            <ul>
+              <li>Explicit <code>new Dto{…}</code></li>
+              <li>Extension methods</li>
+              <li>EF <code>Select</code> projection</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-blue">
+            <h4>🤖 AutoMapper</h4>
+            <ul>
+              <li>Convention-based</li>
+              <li>Profiles + <code>IMapper</code></li>
+              <li>Now commercially licensed</li>
+            </ul>
+          </div>
+          <div class="mm-branch b-purple">
+            <h4>⚡ Source-gen</h4>
+            <ul>
+              <li>Mapperly, Mapster</li>
+              <li>Compile-time code</li>
+              <li>No runtime reflection</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 ============ -->
+    <section class="section" id="s02">
+      <div class="section-head"><span class="badge">02</span><h2>Entities vs. DTOs — Two Worlds 🌗</h2></div>
+      <p>Let's make it concrete. Here's a domain <strong>entity</strong> — a full-fat class that maps to a database table via Entity Framework Core. It contains everything the business needs to store, including things no external client should ever touch.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the entity (stays private)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Maps to a database table. Knows EVERYTHING.</span>
+<span class="kw">public class</span> <span class="ty">Book</span>
+{
+    <span class="kw">public int</span> Id { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public string</span> Title { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;
+    <span class="kw">public decimal</span> Price { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="kw">public decimal</span> Cost { <span class="kw">get</span>; <span class="kw">set</span>; }            <span class="cmt">// internal purchase cost 🙈</span>
+    <span class="kw">public bool</span> IsPublished { <span class="kw">get</span>; <span class="kw">set</span>; }         <span class="cmt">// server decides this ⚠️</span>
+    <span class="kw">public string</span> InternalNotes { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!; <span class="cmt">// never leaves the building 🙈</span>
+    <span class="kw">public</span> <span class="ty">Author</span> Author { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;    <span class="cmt">// navigation property 🔗</span>
+}</code></pre>
+      </div>
+
+      <p>Now the two <strong>DTOs</strong>. Notice how each is a deliberate subset shaped for a single direction of travel:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — the DTOs (the public contract)</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// What a client is ALLOWED to send us.</span>
+<span class="kw">public class</span> <span class="ty">CreateBookRequest</span>
+{
+    [<span class="ty">Required</span>, <span class="ty">StringLength</span>(<span class="num">100</span>)]
+    <span class="kw">public string</span> Title { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;
+
+    [<span class="ty">Range</span>(<span class="num">0</span>, <span class="num">999.99</span>)]
+    <span class="kw">public decimal</span> Price { <span class="kw">get</span>; <span class="kw">set</span>; }
+    <span class="cmt">// No Id, no Cost, no IsPublished, no InternalNotes. Can't be set from outside.</span>
+}
+
+<span class="cmt">// What we choose to send BACK. A record = concise + immutable.</span>
+<span class="kw">public record</span> <span class="ty">BookResponse</span>(
+    <span class="kw">int</span> Id,
+    <span class="kw">string</span> Title,
+    <span class="kw">decimal</span> Price,
+    <span class="kw">string</span> AuthorName);   <span class="cmt">// flattened from Author.Name 🫓</span></code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Why records for DTOs?</span>
+        <p>C# <code>record</code> types (C# 9+) give you concise syntax, value-based equality, and immutability by default — a natural fit for a data-only object that shouldn't be mutated after it's received or built. Immutability is a widely recommended DTO trait.</p>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Aspect</th><th>Entity</th><th>DTO</th></tr></thead>
+          <tbody>
+            <tr><td>Purpose</td><td>Persist data in the database</td><td>Transfer data over the network</td></tr>
+            <tr><td>Lives in</td><td>Domain / data layer</td><td>API / presentation layer</td></tr>
+            <tr><td>Contains</td><td>All fields, relationships, sometimes logic</td><td>Only the fields for one message</td></tr>
+            <tr><td>Changes when</td><td>The database or business rules change</td><td>The API contract changes</td></tr>
+            <tr><td>Seen by clients</td><td>Never (ideally)</td><td>Always — it <em>is</em> the contract</td></tr>
+            <tr><td>Navigation props</td><td>Yes (e.g. <code>Author</code>)</td><td>No — flattened to plain values</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ The lazy-loading trap</span>
+        <p>Serializing an entity directly can be worse than leaking fields. Many ORMs lazy-load relationships on access — so a JSON serializer walking <code>Book.Author.Books.Author…</code> can trigger a cascade of surprise database queries or an infinite loop. A flat DTO simply has no navigation properties to follow, sidestepping the whole problem.</p>
+      </div>
+    </section>
+
+    <!-- ============ 03 ============ -->
+    <section class="section" id="s03">
+      <div class="section-head"><span class="badge">03</span><h2>Over-Posting — The Vulnerability DTOs Kill 🛡️</h2></div>
+      <p><strong>Over-posting</strong> (also called <em>mass assignment</em>) happens when a client sends <em>more</em> properties than you intended, and the model binder happily copies every one of them onto your entity. If you bind straight to the entity, the client can set fields you never meant to expose — like an <code>IsPublished</code> flag, a discounted <code>Price</code>, or even someone else's <code>Id</code>.</p>
+
+      <h3>The vulnerable version ❌</h3>
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — DON'T do this</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpPost</span>]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Create</span>(<span class="ty">Book</span> book)   <span class="cmt">// ❌ binds to the ENTITY</span>
+{
+    _context.Books.<span class="fn">Add</span>(book);          <span class="cmt">// whatever the client sent is now saved</span>
+    <span class="kw">await</span> _context.<span class="fn">SaveChangesAsync</span>();
+    <span class="kw">return</span> <span class="fn">CreatedAtAction</span>(<span class="kw">nameof</span>(Get), <span class="kw">new</span> { id = book.Id }, book);
+}</code></pre>
+      </div>
+
+      <p>A well-behaved client sends <code>title</code> and <code>price</code>. An <em>attacker</em> sends this, and the binder sets the extra fields too:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">JSON — malicious request body</span><button class="copy-btn">Copy</button></div>
+        <pre><code>{
+  <span class="str">"title"</span>: <span class="str">"My Book"</span>,
+  <span class="str">"price"</span>: <span class="num">9.99</span>,
+  <span class="str">"isPublished"</span>: <span class="kw">true</span>,        <span class="cmt">// 😈 skipped the review process</span>
+  <span class="str">"cost"</span>: <span class="num">0</span>,                  <span class="cmt">// 😈 tampered with internal data</span>
+  <span class="str">"internalNotes"</span>: <span class="str">"pwned"</span>     <span class="cmt">// 😈 wrote to a private field</span>
+}</code></pre>
+      </div>
+
+      <h3>How the attack flows 🔄</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="st">Step 1 · 📤 crafted request</div>
+          <div class="sh">Client sends extra JSON fields</div>
+          <p>Beyond the intended <code>title</code> and <code>price</code>, the payload includes <code>isPublished</code> and <code>internalNotes</code>.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 2 · 🔗 model binding</div>
+          <div class="sh">Binder matches every field by name</div>
+          <p>Because the action takes a <code>Book</code> entity, the binder sets <em>every</em> matching property — including the ones you never intended.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step highlight">
+          <div class="st">Step 3 · 💥 the breach</div>
+          <div class="sh">Entity now holds attacker values</div>
+          <p><code>IsPublished = true</code> and tampered internal fields are on the object — before any of your code runs.</p>
+        </div>
+        <div class="flow-connector"></div>
+        <div class="flow-step">
+          <div class="st">Step 4 · 🗄️ persisted</div>
+          <div class="sh">SaveChanges writes it to the database</div>
+          <p>The unauthorized change is now permanent. The review process was bypassed entirely.</p>
+        </div>
+      </div>
+
+      <h3>The fix — bind to a DTO ✅</h3>
+      <p>Bind to a request DTO that <em>only</em> exposes the fields a client may set. Fields like <code>IsPublished</code> aren't on the DTO, so there's simply nothing for a malicious value to bind to. The server sets the protected fields itself.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — safe by construction</span><button class="copy-btn">Copy</button></div>
+        <pre><code>[<span class="ty">HttpPost</span>]
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">IActionResult</span>&gt; <span class="fn">Create</span>(<span class="ty">CreateBookRequest</span> request)  <span class="cmt">// ✅ binds to the DTO</span>
+{
+    <span class="kw">var</span> book = <span class="kw">new</span> <span class="ty">Book</span>
+    {
+        Title = request.Title,
+        Price = request.Price,
+        IsPublished = <span class="kw">false</span>       <span class="cmt">// the SERVER decides — client can't touch it</span>
+    };
+
+    _context.Books.<span class="fn">Add</span>(book);
+    <span class="kw">await</span> _context.<span class="fn">SaveChangesAsync</span>();
+    <span class="kw">return</span> <span class="fn">CreatedAtAction</span>(<span class="kw">nameof</span>(Get), <span class="kw">new</span> { id = book.Id }, book.<span class="fn">ToResponse</span>());
+}</code></pre>
+      </div>
+
+      <p>Visually, the DTO acts as a filter: only whitelisted fields survive the crossing into your entity.</p>
+
+      <div class="arr-wrap">
+        <div class="arr-row">
+          <div class="arr-cell"><div class="val highlight-green">title ✓</div><div class="idx">on DTO</div></div>
+          <div class="arr-cell"><div class="val highlight-green">price ✓</div><div class="idx">on DTO</div></div>
+          <div class="arr-cell"><div class="val neg">isPublished ✗</div><div class="idx">not on DTO</div></div>
+          <div class="arr-cell"><div class="val neg">internalNotes ✗</div><div class="idx">not on DTO</div></div>
+          <div class="arr-arrow">⟶ DTO filter ⟶</div>
+          <div class="arr-cell"><div class="val highlight">Book entity</div><div class="idx">title + price only</div></div>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Tip</span>
+        <p>A dedicated request DTO is the cleanest defense, but not the only one. You can also use <code>[Bind]</code> to whitelist properties or <code>[BindNever]</code> to exclude one. In practice, most teams prefer a DTO because it makes the contract explicit and self-documenting rather than relying on scattered attributes.</p>
+      </div>
+    </section>
+
+    <!-- ============ 04 ============ -->
+    <section class="section" id="s04">
+      <div class="section-head"><span class="badge">04</span><h2>Request DTOs — Shaping Input 📥</h2></div>
+      <p>A <strong>request DTO</strong> (input model) defines exactly what a client is allowed to send for a given operation. Because it's separate from the entity, it becomes the natural home for your input validation rules and your over-posting protection at once.</p>
+
+      <p>Different operations often deserve <em>different</em> request DTOs. Creating and updating a resource usually have different rules — a create might require every field, while an update might allow partial changes.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Create: Title is mandatory.</span>
+<span class="kw">public class</span> <span class="ty">CreateBookRequest</span>
+{
+    [<span class="ty">Required</span>, <span class="ty">StringLength</span>(<span class="num">100</span>, <span class="ty">MinimumLength</span> = <span class="num">2</span>)]
+    <span class="kw">public string</span> Title { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;
+
+    [<span class="ty">Range</span>(<span class="num">0</span>, <span class="num">999.99</span>)]
+    <span class="kw">public decimal</span> Price { <span class="kw">get</span>; <span class="kw">set</span>; }
+}
+
+<span class="cmt">// Update: same shape, but the Id comes from the route, not the body.</span>
+<span class="kw">public class</span> <span class="ty">UpdateBookRequest</span>
+{
+    [<span class="ty">Required</span>, <span class="ty">StringLength</span>(<span class="num">100</span>, <span class="ty">MinimumLength</span> = <span class="num">2</span>)]
+    <span class="kw">public string</span> Title { <span class="kw">get</span>; <span class="kw">set</span>; } = <span class="kw">null</span>!;
+
+    [<span class="ty">Range</span>(<span class="num">0</span>, <span class="num">999.99</span>)]
+    <span class="kw">public decimal</span> Price { <span class="kw">get</span>; <span class="kw">set</span>; }
+}</code></pre>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 Where does the Id come from?</span>
+        <p>On an update, take the resource's <code>Id</code> from the URL route (<code>PUT /api/books/42</code>), never from the request body. That keeps identity server-controlled and removes one more thing a client could tamper with.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">📝 Analogy — the application form</span>
+        <p>A request DTO is a printed form with a fixed set of blanks. Applicants can only write in the boxes provided — there's no line for "approve my own application." Whatever isn't on the form simply can't be submitted.</p>
+      </div>
+    </section>
+
+    <!-- ============ 05 ============ -->
+    <section class="section" id="s05">
+      <div class="section-head"><span class="badge">05</span><h2>Response DTOs — Shaping Output 📤</h2></div>
+      <p>A <strong>response DTO</strong> (output model) defines exactly what you send back. It hides internal fields, flattens relationships into plain values, and trims the payload to what the client actually needs.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public record</span> <span class="ty">BookResponse</span>(
+    <span class="kw">int</span> Id,
+    <span class="kw">string</span> Title,
+    <span class="kw">decimal</span> Price,
+    <span class="kw">string</span> AuthorName);   <span class="cmt">// Cost, IsPublished, InternalNotes are simply absent</span></code></pre>
+      </div>
+
+      <h3>Build response DTOs efficiently with projection ⚡</h3>
+      <p>When reading from the database, don't load whole entities and then trim them — <em>project</em> straight into the DTO inside your LINQ query. Entity Framework Core translates the <code>Select</code> into SQL that fetches only the columns you asked for, so the database never even sends the fields you're hiding.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — EF Core projection</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> books = <span class="kw">await</span> _context.Books
+    .<span class="fn">Select</span>(b =&gt; <span class="kw">new</span> <span class="ty">BookResponse</span>(
+        b.Id,
+        b.Title,
+        b.Price,
+        b.Author.Name))          <span class="cmt">// flattened; EF joins Authors for us</span>
+    .<span class="fn">ToListAsync</span>();
+
+<span class="kw">return</span> <span class="fn">Ok</span>(books);</code></pre>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Tip — projection beats "load then map"</span>
+        <p>Projecting into a DTO inside the query is a genuine performance win: the generated SQL selects only the needed columns instead of <code>SELECT *</code>, and there's no wasted round-trip loading fields you'll immediately discard. This is the single most common place a DTO makes an app measurably faster.</p>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ One shape per direction</span>
+        <p>Resist the urge to reuse a single class for both request and response. They evolve differently: a response often includes a server-generated <code>Id</code> and computed fields, while a request must forbid them. Sharing one class quietly reopens the over-posting door and couples two contracts that should move independently.</p>
+      </div>
+    </section>
+
+    <!-- ============ 06 ============ -->
+    <section class="section" id="s06">
+      <div class="section-head"><span class="badge">06</span><h2>Manual Mapping — The Explicit Way ✍️</h2></div>
+      <p>"Mapping" just means copying values from one object's shape into another's — entity → response DTO, or request DTO → entity. The simplest approach is to write that copy yourself. Microsoft's official tutorials do exactly this: they convert to DTOs manually in code.</p>
+
+      <p>Keep the mapping tidy with extension methods so the logic lives in one place and reads fluently:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">public static class</span> <span class="ty">BookMappings</span>
+{
+    <span class="cmt">// entity  ->  response DTO</span>
+    <span class="kw">public static</span> <span class="ty">BookResponse</span> <span class="fn">ToResponse</span>(<span class="kw">this</span> <span class="ty">Book</span> book) =&gt;
+        <span class="kw">new</span>(book.Id, book.Title, book.Price, book.Author.Name);
+
+    <span class="cmt">// request DTO  ->  entity</span>
+    <span class="kw">public static</span> <span class="ty">Book</span> <span class="fn">ToEntity</span>(<span class="kw">this</span> <span class="ty">CreateBookRequest</span> request) =&gt;
+        <span class="kw">new</span>() { Title = request.Title, Price = request.Price };
+}</code></pre>
+      </div>
+
+      <p>Now controllers read cleanly, and every field crossing the boundary is visible and intentional:</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C#</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> book = request.<span class="fn">ToEntity</span>();
+_context.Books.<span class="fn">Add</span>(book);
+<span class="kw">await</span> _context.<span class="fn">SaveChangesAsync</span>();
+
+<span class="kw">return</span> <span class="fn">CreatedAtAction</span>(<span class="kw">nameof</span>(Get),
+    <span class="kw">new</span> { id = book.Id }, book.<span class="fn">ToResponse</span>());</code></pre>
+      </div>
+
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">👁️</span><h4>Fully explicit</h4><p>Every mapped field is right there in code — easy to read, review, and debug.</p></div>
+        <div class="card"><span class="glyph">🛡️</span><h4>Compile-time safe</h4><p>Rename a property and the compiler flags the mapping immediately.</p></div>
+        <div class="card"><span class="glyph">🪶</span><h4>Zero dependencies</h4><p>No library, no licensing questions, no configuration to learn.</p></div>
+        <div class="card"><span class="glyph">😮‍💨</span><h4>Verbose at scale</h4><p>Dozens of large DTOs mean a lot of repetitive copy code to maintain.</p></div>
+      </div>
+
+      <div class="callout key">
+        <span class="tag">🔑 When manual mapping is the right call</span>
+        <p>For small-to-medium APIs, or anywhere the mapping is simple, hand-written mapping is often the <em>best</em> choice — not a compromise. It's transparent, dependency-free, and impossible to misconfigure. Reach for a tool only when the repetition genuinely starts to hurt.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 ============ -->
+    <section class="section" id="s07">
+      <div class="section-head"><span class="badge">07</span><h2>AutoMapper — Convention-Based Mapping 🤖</h2></div>
+      <p><strong>AutoMapper</strong> is the long-standing .NET library that maps objects automatically by matching property names, so you write configuration instead of copy code. You define <em>profiles</em> that declare which types map to which, inject an <code>IMapper</code>, and call <code>Map</code>.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — a mapping profile</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">using</span> AutoMapper;
+
+<span class="kw">public class</span> <span class="ty">BookProfile</span> : <span class="ty">Profile</span>
+{
+    <span class="kw">public</span> <span class="fn">BookProfile</span>()
+    {
+        <span class="cmt">// AuthorName doesn't match Author.Name by name, so we help it.</span>
+        <span class="fn">CreateMap</span>&lt;<span class="ty">Book</span>, <span class="ty">BookResponse</span>&gt;()
+            .<span class="fn">ForCtorParam</span>(<span class="str">"AuthorName"</span>,
+                opt =&gt; opt.<span class="fn">MapFrom</span>(src =&gt; src.Author.Name));
+
+        <span class="fn">CreateMap</span>&lt;<span class="ty">CreateBookRequest</span>, <span class="ty">Book</span>&gt;();
+    }
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — register + use</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// Program.cs — register profiles (and a license key, see below)</span>
+builder.Services.<span class="fn">AddAutoMapper</span>(cfg =&gt;
+{
+    cfg.LicenseKey = builder.Configuration[<span class="str">"AutoMapper:LicenseKey"</span>];
+}, <span class="kw">typeof</span>(<span class="ty">BookProfile</span>).Assembly);
+
+<span class="cmt">// In the controller — inject IMapper, then map</span>
+<span class="kw">public</span> <span class="fn">BooksController</span>(<span class="ty">IMapper</span> mapper) =&gt; _mapper = mapper;
+
+<span class="kw">var</span> response = _mapper.<span class="fn">Map</span>&lt;<span class="ty">BookResponse</span>&gt;(book);</code></pre>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ Important — AutoMapper is no longer free for everyone (2025)</span>
+        <p>In April 2025 the maintainer, Jimmy Bogard, announced that AutoMapper (and MediatR) would move to a commercial model; the commercial editions launched in mid-2025 under his company, Lucky Penny Software. It now uses a <strong>dual license</strong>: a free community tier plus a paid tier.</p>
+        <p>The community tier is free for individuals and for organizations under <strong>US $5 million</strong> in annual revenue; larger organizations need a paid license (priced by team size, not per seat). Newer versions log a prompt to supply a <code>LicenseKey</code>. The library also adopted the copyleft Reciprocal Public License (RPL 1.5) and left the .NET Foundation in late 2025. Older MIT-licensed versions remain usable and are archived.</p>
+      </div>
+
+      <p>This licensing shift is precisely why "manual vs. AutoMapper" is a live question again in 2025–2026. For many hobby and small-company projects nothing changes — the free tier covers them. For larger enterprises, teams now weigh the license cost against alternatives like manual mapping or a source generator.</p>
+
+      <h3>The trade-off, plainly ⚖️</h3>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">✨</span><h4>Less boilerplate</h4><p>Matching-name properties map with zero code, which shines on many large DTOs.</p></div>
+        <div class="card"><span class="glyph">🕵️</span><h4>Runtime reflection</h4><p>Classic AutoMapper resolves mappings at runtime, so mistakes surface as runtime errors, not compile errors.</p></div>
+        <div class="card"><span class="glyph">🧭</span><h4>Learning curve</h4><p>Profiles, custom resolvers, and config validation are their own skill to maintain.</p></div>
+        <div class="card"><span class="glyph">💳</span><h4>Licensing to track</h4><p>Revenue thresholds and keys are now part of the decision for bigger teams.</p></div>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Tip — validate your AutoMapper config</span>
+        <p>If you use AutoMapper, call <code>configuration.AssertConfigurationIsValid()</code> at startup (or in a test). It turns silent "this property never got mapped" bugs into a loud failure the moment the app boots, recovering some of the compile-time safety you give up with a reflection-based mapper.</p>
+      </div>
+    </section>
+
+    <!-- ============ 08 ============ -->
+    <section class="section" id="s08">
+      <div class="section-head"><span class="badge">08</span><h2>Source Generators — Mapperly &amp; Mapster ⚡</h2></div>
+      <p>A middle path has grown popular: mappers that generate the copy code at <strong>compile time</strong> instead of using runtime reflection. You get the low-boilerplate feel of AutoMapper <em>and</em> the transparency and speed of hand-written code — plus compile-time errors for unmapped properties.</p>
+
+      <h3>Mapperly (Riok.Mapperly) 🏭</h3>
+      <p>Mapperly is a .NET source generator (Apache-2.0 licensed, free, no runtime dependencies). You declare a <code>partial</code> class with a <code>[Mapper]</code> attribute and <code>partial</code> method signatures; Mapperly writes the method bodies during the build. The generated code is plain, readable C# you can inspect.</p>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — you write this…</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">using</span> Riok.Mapperly.Abstractions;
+
+[<span class="ty">Mapper</span>]
+<span class="kw">public partial class</span> <span class="ty">BookMapper</span>
+{
+    <span class="kw">public partial</span> <span class="ty">BookResponse</span> <span class="fn">ToResponse</span>(<span class="ty">Book</span> book);
+    <span class="kw">public partial</span> <span class="ty">Book</span> <span class="fn">ToEntity</span>(<span class="ty">CreateBookRequest</span> request);
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — …Mapperly generates the body at build time</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="cmt">// auto-generated — readable, debuggable, zero reflection</span>
+<span class="kw">public partial</span> <span class="ty">BookResponse</span> <span class="fn">ToResponse</span>(<span class="ty">Book</span> book)
+{
+    <span class="kw">var</span> target = <span class="kw">new</span> <span class="ty">BookResponse</span>(book.Id, book.Title, book.Price, book.Author.Name);
+    <span class="kw">return</span> target;
+}</code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code-head"><span class="lang">C# — usage</span><button class="copy-btn">Copy</button></div>
+        <pre><code><span class="kw">var</span> mapper = <span class="kw">new</span> <span class="ty">BookMapper</span>();
+<span class="ty">BookResponse</span> dto = mapper.<span class="fn">ToResponse</span>(book);</code></pre>
+      </div>
+
+      <p>Need a property that doesn't line up by name? Annotate the method with <code>[MapProperty(...)]</code>; to exclude a field, mark it <code>[MapperIgnore]</code>. If Mapperly can't figure out a conversion, you just provide a normal method body and it uses yours.</p>
+
+      <div class="callout key">
+        <span class="tag">🔑 Mapster, the other popular option</span>
+        <p><strong>Mapster</strong> is a comparable alternative: it offers convention-based mapping like AutoMapper <em>and</em> optional compile-time code generation, and benchmarks often show it running faster than reflection-based AutoMapper. Both Mapperly and Mapster are common landing spots for teams re-evaluating their mapper after the AutoMapper licensing change.</p>
+      </div>
+
+      <div class="callout tip">
+        <span class="tag">✅ Why "compile-time" matters</span>
+        <p>Because the mapping code exists before the app runs, the compiler checks it. Forget to map a property and you get a build-time warning, not a production surprise. There's also no reflection cost at runtime — the generated code is as fast as what you'd write by hand.</p>
+      </div>
+    </section>
+
+    <!-- ============ 09 ============ -->
+    <section class="section" id="s09">
+      <div class="section-head"><span class="badge">09</span><h2>Choosing an Approach &amp; Best Practices 🧭</h2></div>
+
+      <h3>Which mapping approach? 🤔</h3>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Approach</th><th>Best when…</th><th>Safety</th><th>Cost</th></tr></thead>
+          <tbody>
+            <tr><td>Manual mapping</td><td>Small/medium APIs; simple or few mappings</td><td>Compile-time ✅</td><td>Free; more typing</td></tr>
+            <tr><td>EF projection (<code>Select</code>)</td><td>Reading data for response DTOs</td><td>Compile-time ✅</td><td>Free; fastest reads</td></tr>
+            <tr><td>Source generator (Mapperly / Mapster)</td><td>Many DTOs; want low boilerplate + speed</td><td>Compile-time ✅</td><td>Free; small learning curve</td></tr>
+            <tr><td>AutoMapper</td><td>Existing codebase; convention mapping preferred</td><td>Runtime ⚠️</td><td>Free under $5M rev.; paid above</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Best practices to carry away 📌</h3>
+      <div class="cards-grid">
+        <div class="card"><span class="glyph">🚫</span><h4>Never expose entities</h4><p>No entity should appear in a request or response signature. The DTO is the contract.</p></div>
+        <div class="card"><span class="glyph">↔️</span><h4>Separate in &amp; out</h4><p>Distinct request and response DTOs — don't share one class across directions.</p></div>
+        <div class="card"><span class="glyph">🧊</span><h4>Prefer immutable</h4><p>Use records; a DTO shouldn't mutate after it's built or received.</p></div>
+        <div class="card"><span class="glyph">🧠</span><h4>No logic in DTOs</h4><p>Data only. Business rules belong in your domain and service layers.</p></div>
+        <div class="card"><span class="glyph">🗄️</span><h4>Project when reading</h4><p>Map inside the EF query so the database returns only needed columns.</p></div>
+        <div class="card"><span class="glyph">🧱</span><h4>Mind the layers</h4><p>DTOs live in the API layer; entities in the domain layer. Keep the domain unaware of the API.</p></div>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">⚠️ DTOs aren't free</span>
+        <p>They add classes and mapping code, and for a tiny internal API the ceremony can outweigh the benefit — Microsoft even notes DTOs take "some initial effort." The honest rule: use DTOs whenever an API is public, security-sensitive, or expected to evolve. For a throwaway prototype, exposing the model briefly may be fine — just don't ship it that way.</p>
+      </div>
+
+      <div class="callout analogy">
+        <span class="tag">🧳 Analogy — carry-on vs. the whole closet</span>
+        <p>Manual mapping is packing a carry-on by hand: total control, a little tedious. AutoMapper is a valet who packs by convention: fast, but you trust them to guess right (and now there may be a tip involved). A source generator is a smart packing machine that shows you exactly what it packed before the trip. All three get your clothes to the destination; pick the one whose trade-offs fit your journey.</p>
+      </div>
+    </section>
+
+    <!-- ============ 10 ============ -->
+    <section class="section" id="s10">
+      <div class="section-head"><span class="badge">10</span><h2>Quick Recap 🧠</h2></div>
+      <p>One-sentence reminders for the whole topic:</p>
+
+      <div class="recap-grid">
+        <div class="recap-card"><h4>📦 DTO</h4><p>A data-only class defining what goes over the wire, separate from your entity.</p></div>
+        <div class="recap-card"><h4>🌗 Entity ≠ DTO</h4><p>Entities model storage; DTOs model the API contract — they change for different reasons.</p></div>
+        <div class="recap-card"><h4>📥 Request DTO</h4><p>Defines exactly what a client may send, and hosts input validation.</p></div>
+        <div class="recap-card"><h4>📤 Response DTO</h4><p>Defines exactly what you send back, hiding internal fields.</p></div>
+        <div class="recap-card"><h4>🛡️ Over-posting</h4><p>Binding to an entity lets clients set fields they shouldn't; a DTO blocks it.</p></div>
+        <div class="recap-card"><h4>🫓 Flatten</h4><p>DTOs turn nested navigation properties into plain values.</p></div>
+        <div class="recap-card"><h4>✍️ Manual mapping</h4><p>Explicit copy code — transparent, compile-time safe, zero dependencies.</p></div>
+        <div class="recap-card"><h4>⚡ Projection</h4><p>Map inside the EF <code>Select</code> so SQL fetches only needed columns.</p></div>
+        <div class="recap-card"><h4>🤖 AutoMapper</h4><p>Convention-based, reflection at runtime — now commercially licensed above $5M revenue.</p></div>
+        <div class="recap-card"><h4>🏭 Mapperly</h4><p>Source generator: compile-time mapping, no reflection, free (Apache-2.0).</p></div>
+        <div class="recap-card"><h4>🧊 Immutable</h4><p>Records make ideal DTOs; keep business logic out of them.</p></div>
+        <div class="recap-card"><h4>🧱 Layers</h4><p>DTOs in the API layer, entities in the domain layer — never leak one into the other.</p></div>
+      </div>
+
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Concept</th><th>What it is / does</th><th>Key detail</th></tr></thead>
+          <tbody>
+            <tr><td>DTO</td><td>Object shaping data over the network</td><td>aka input model / view model; data only</td></tr>
+            <tr><td>Request DTO</td><td>Allowed input for one operation</td><td>Hosts validation; excludes protected fields</td></tr>
+            <tr><td>Response DTO</td><td>Chosen output shape</td><td>Hides internal fields; flattens graphs</td></tr>
+            <tr><td>Over-posting</td><td>Client sets fields it shouldn't</td><td>Fixed by binding to a DTO (or <code>[Bind]</code>)</td></tr>
+            <tr><td>Manual mapping</td><td>Hand-written copy code</td><td>Extension methods; compile-time safe</td></tr>
+            <tr><td>EF projection</td><td>Map inside a LINQ <code>Select</code></td><td>SQL selects only needed columns</td></tr>
+            <tr><td>AutoMapper</td><td>Convention-based mapper</td><td>Runtime reflection; dual-licensed since 2025</td></tr>
+            <tr><td>AutoMapper free tier</td><td>Community license</td><td>Individuals &amp; orgs under $5M USD revenue</td></tr>
+            <tr><td>Mapperly / Mapster</td><td>Source-generator mappers</td><td>Compile-time, no reflection, free</td></tr>
+            <tr><td>Record DTOs</td><td>Concise immutable data classes</td><td>C# 9+; value equality</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ 11 ============ -->
+    <section class="section" id="s11">
+      <div class="section-head"><span class="badge">11</span><h2>Interview Questions 🎤</h2></div>
+      <p>Click any question to reveal a plain-English answer. Tags mark the experience level a question is usually aimed at.</p>
+      <div class="lvl-legend">
+        <span><span class="lvl lvl-jr">🌱 Junior</span> 0–2 yrs</span>
+        <span><span class="lvl lvl-mid">🟠 Mid</span> 2–5 yrs</span>
+        <span><span class="lvl lvl-sr">🔴 Senior</span> 5–7 yrs</span>
+      </div>
+
+      <!-- Junior -->
+      <details class="qa"><summary><span class="qnum">Q1</span><span class="qtext">What is a DTO?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A Data Transfer Object is a simple class or record whose only job is to carry data between your API and its clients. It has properties but no business logic, and it defines the exact shape of what goes over the network for a given request or response.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q2</span><span class="qtext">Why not just return your database entities directly?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Because entities often contain things clients shouldn't see (internal costs, flags, private notes) and relationships that cause serialization problems. Exposing them also ties your public API to your database schema, so any storage change risks breaking clients. A DTO lets you send a safe, stable, curated subset instead.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q3</span><span class="qtext">What's the difference between an entity and a DTO?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>An entity models how data is <em>stored</em> — it maps to a database table and holds everything the business needs. A DTO models how data is <em>communicated</em> — it's the API contract. They live in different layers and change for different reasons, which is exactly why they should be separate classes.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q4</span><span class="qtext">What's a request DTO versus a response DTO?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>A request DTO (input model) defines what a client is allowed to send in — and is where you put validation rules. A response DTO (output model) defines what you send back — hiding internal fields and flattening relationships. Keeping them separate lets input and output evolve independently.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q5</span><span class="qtext">What is "mapping" in this context?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Mapping is copying values from one object shape to another — for example, taking a <code>Book</code> entity and producing a <code>BookResponse</code> DTO, or turning a <code>CreateBookRequest</code> DTO into a new entity. You can do it by hand, with a library like AutoMapper, or with a source generator.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q6</span><span class="qtext">Name two benefits of using DTOs.</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>Any two of: they prevent over-posting; they hide sensitive fields; they reduce payload size; they flatten nested objects; they decouple the API from the database (easier versioning); and they give clients predictable, documented shapes. Security and decoupling are the two most commonly cited.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q7</span><span class="qtext">What does it mean to "flatten" an object graph with a DTO?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>An entity might have a nested relationship like <code>Book.Author.Name</code>. Flattening means the DTO exposes that as a single top-level field, e.g. <code>AuthorName</code>. This gives the client a simpler shape and avoids serializing an entire related object (and its relationships).</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q8</span><span class="qtext">Should a DTO contain business logic?</span><span class="lvl lvl-jr">🌱 Junior</span></summary>
+        <div class="ans"><p>No. A DTO is data only — properties, no behavior. Business rules belong in your domain entities and service layer. Keeping DTOs logic-free is what makes them safe to serialize and share across layers or even across languages.</p></div></details>
+
+      <!-- Mid -->
+      <details class="qa"><summary><span class="qnum">Q9</span><span class="qtext">What is over-posting and how do DTOs prevent it?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Over-posting (mass assignment) is when a client sends extra properties and the model binder copies them onto your entity — letting them set fields like <code>IsPublished</code> or someone else's <code>Id</code>. Binding to a request DTO that only exposes the allowed fields fixes it: the protected fields aren't on the DTO, so there's nothing for malicious values to bind to. The server sets those fields itself.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q10</span><span class="qtext">How do you map manually between an entity and a DTO?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>You write the copy in code, typically as extension methods — e.g. a <code>ToResponse()</code> that returns <code>new BookResponse(book.Id, book.Title, …)</code> and a <code>ToEntity()</code> going the other way. It's explicit and compile-time safe: rename a property and the compiler flags the mapping.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q11</span><span class="qtext">What is AutoMapper and what problem does it solve?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>AutoMapper is a .NET library that maps objects automatically by matching property names, so you configure mappings once (in a <code>Profile</code>) instead of writing repetitive copy code. You inject <code>IMapper</code> and call <code>Map&lt;TDto&gt;(entity)</code>. It reduces boilerplate on projects with many DTOs, at the cost of resolving mappings via runtime reflection.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q12</span><span class="qtext">How do you register AutoMapper in ASP.NET Core?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>In <code>Program.cs</code>, call <code>builder.Services.AddAutoMapper(...)</code> and point it at the assembly (or assemblies) containing your <code>Profile</code> classes. Recent versions also expect a <code>LicenseKey</code> to be set in that configuration. Then inject <code>IMapper</code> wherever you need to map.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q13</span><span class="qtext">Why are C# records popular for DTOs?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Records give concise declaration, value-based equality, and immutability by default — all desirable for a data-only object that shouldn't change after it's built or received. A one-line positional record replaces a page of boilerplate properties, which suits DTOs perfectly.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q14</span><span class="qtext">How do you efficiently produce response DTOs from a database query?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Project directly into the DTO inside the LINQ query with <code>Select</code>, rather than loading whole entities and mapping afterward. EF Core translates the projection into SQL that fetches only the needed columns — smaller reads, no wasted data, no extra round-trips. (AutoMapper offers <code>ProjectTo&lt;T&gt;()</code> for the same idea.)</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q15</span><span class="qtext">Should you reuse one DTO for both requests and responses?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Generally no. Requests and responses have different needs: a response usually includes a server-generated <code>Id</code> and computed fields, while a request must forbid them. Sharing one class couples the two contracts and can quietly reopen the over-posting hole. Separate DTOs let each side evolve safely.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q16</span><span class="qtext">How do DTOs help with API versioning?</span><span class="lvl lvl-mid">🟠 Mid</span></summary>
+        <div class="ans"><p>Because the DTO is the contract, you can introduce a v2 DTO with new or reshaped fields without touching your entities or breaking v1 clients. The internal model stays stable while the public surface evolves per version — something impossible if clients depend directly on your entities.</p></div></details>
+
+      <!-- Senior -->
+      <details class="qa"><summary><span class="qnum">Q17</span><span class="qtext">Manual mapping vs. AutoMapper — what are the trade-offs?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Manual mapping is explicit, compile-time safe, dependency-free, and easy to debug, but verbose across many large DTOs. AutoMapper cuts boilerplate via convention but resolves at runtime, so mapping mistakes become runtime errors (mitigated by <code>AssertConfigurationIsValid</code>), and it adds a library with a learning curve — and, since 2025, licensing to track. The right pick depends on scale, team familiarity, and how much you value compile-time guarantees.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q18</span><span class="qtext">What changed with AutoMapper's licensing in 2025, and how should it affect your choice?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>In April 2025 the maintainer announced AutoMapper (and MediatR) going commercial, with commercial editions launching mid-2025 under Lucky Penny Software. It's now dual-licensed: a free community tier for individuals and organizations under about $5M USD annual revenue, and a paid tier (priced by team size) above that. It also moved to the copyleft RPL 1.5 and left the .NET Foundation. Practically: small teams are unaffected, but larger orgs should factor license cost into the decision — and it's a reasonable prompt to evaluate free alternatives like Mapperly, Mapster, or manual mapping. Existing MIT versions remain usable.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q19</span><span class="qtext">What are source-generator mappers like Mapperly, and why prefer them?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>They generate the mapping code at compile time from a declared <code>[Mapper]</code> partial class, rather than using runtime reflection. Benefits: no runtime overhead (as fast as hand-written code), compile-time errors for unmapped properties, and readable generated code you can inspect and step through. Mapperly is free (Apache-2.0) with no dependencies. You give up some of the advanced dynamic configuration reflection-based mappers offer, but gain safety and performance.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q20</span><span class="qtext">Where should DTOs and mapping live in a layered / Clean Architecture app?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>DTOs belong in the presentation/API (or application) layer — they're part of the public contract. Entities belong in the domain layer and should stay unaware of the API. Mapping code sits at that boundary. The key rule is dependency direction: the domain must not reference the API layer, so entities never depend on DTOs. In CQRS, commands and queries often carry DTOs to enforce this cleanly.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q21</span><span class="qtext">What are the downsides or costs of introducing DTOs?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>More classes and mapping code to write and maintain, some duplication between DTO and entity shapes, and initial setup effort. For a tiny internal or throwaway API the ceremony can outweigh the benefit. The judgment call: adopt DTOs whenever the API is public, security-sensitive, or expected to evolve; skip them only for short-lived internal code you won't ship.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q22</span><span class="qtext">How do you handle mapping when entities have navigation properties?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>Flatten them into plain DTO fields (<code>Author.Name</code> → <code>AuthorName</code>) and, when reading, project inside the EF query so only the needed related columns are fetched. This avoids two classic traps: serializing an entity can trigger lazy-loading cascades (surprise queries) or circular-reference loops when related objects point back at each other. A flat DTO has no navigation properties for the serializer to follow.</p></div></details>
+
+      <details class="qa"><summary><span class="qnum">Q23</span><span class="qtext">Besides DTOs, what other techniques limit which properties a client can set?</span><span class="lvl lvl-sr">🔴 Senior</span></summary>
+        <div class="ans"><p>You can whitelist bound properties with <code>[Bind(...)]</code>, exclude specific ones with <code>[BindNever]</code>, or bind explicitly from a source like <code>[FromBody]</code> onto a constrained model. These work, but they're scattered and easy to get wrong. A dedicated request DTO is usually preferred because it makes the allowed contract explicit and self-documenting in one place, rather than relying on attributes spread across the code.</p></div></details>
+
+      <div class="callout tip">
+        <span class="tag">✅ Study-order tip</span>
+        <p>Learn it in the order data flows: first <strong>why entities and DTOs differ</strong> (Q2–Q3), then <strong>request vs. response DTOs</strong> (Q4) and the <strong>over-posting</strong> problem they solve (Q9) — that's the security core interviewers probe hardest. Only then move to <strong>mapping options</strong> (Q10–Q11, Q17–Q19) and the <strong>architecture and 2025 licensing</strong> questions (Q18, Q20). If you can explain the over-posting flowchart in section 03 out loud, you've got the heart of this topic.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function(){
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- Reading progress bar ---- */
+  var bar = document.getElementById('progress');
+  function updateProgress(){
+    var h = document.documentElement;
+    var scrolled = h.scrollTop;
+    var max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (scrolled / max) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+  updateProgress();
+
+  /* ---- Scroll reveal ---- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.section'));
+  if('IntersectionObserver' in window && !reduceMotion){
+    var revealObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+    }, {threshold:0.08, rootMargin:'0px 0px -8% 0px'});
+    sections.forEach(function(s){ revealObs.observe(s); });
+  } else {
+    sections.forEach(function(s){ s.classList.add('visible'); });
+  }
+
+  /* ---- Scroll-spy: highlight active nav + center it in sidebar ---- */
+  var links = Array.prototype.slice.call(document.querySelectorAll('.nav-link'));
+  var sidebar = document.getElementById('sidebar');
+  var linkById = {};
+  links.forEach(function(l){ linkById[l.getAttribute('href').slice(1)] = l; });
+
+  function setActive(id){
+    links.forEach(function(l){ l.classList.remove('active'); });
+    var active = linkById[id];
+    if(active){
+      active.classList.add('active');
+      var target = active.offsetTop - (sidebar.clientHeight/2) + (active.clientHeight/2);
+      sidebar.scrollTo({top: target, behavior: reduceMotion ? 'auto':'smooth'});
+    }
+  }
+
+  if('IntersectionObserver' in window){
+    var visible = {};
+    var spyObs = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){ visible[e.target.id] = e.intersectionRatio; }
+        else { delete visible[e.target.id]; }
+      });
+      var best=null, bestRatio=-1;
+      for(var id in visible){ if(visible[id] > bestRatio){ bestRatio = visible[id]; best = id; } }
+      if(best){ setActive(best); }
+    }, {threshold:[0.15,0.4,0.7], rootMargin:'-10% 0px -55% 0px'});
+    sections.forEach(function(s){ spyObs.observe(s); });
+  }
+
+  /* ---- Mobile FAB + slide-in sidebar ---- */
+  var fab = document.getElementById('fab');
+  var backdrop = document.getElementById('backdrop');
+  function openNav(){ sidebar.classList.add('open'); backdrop.classList.add('show'); }
+  function closeNav(){ sidebar.classList.remove('open'); backdrop.classList.remove('show'); }
+  fab.addEventListener('click', function(){ sidebar.classList.contains('open') ? closeNav() : openNav(); });
+  backdrop.addEventListener('click', closeNav);
+  links.forEach(function(l){ l.addEventListener('click', function(){ if(window.innerWidth <= 900){ closeNav(); } }); });
+
+  /* ---- Copy buttons ---- */
+  document.querySelectorAll('.copy-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var block = btn.closest('.code');
+      var code = block ? block.querySelector('pre code') : null;
+      if(!code) return;
+      var text = code.innerText;
+      var done = function(){
+        btn.textContent = 'Copied!'; btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('done'); }, 2000);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done, fallback);
+      } else { fallback(); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.focus(); ta.select();
+        try{ document.execCommand('copy'); done(); }catch(e){}
+        document.body.removeChild(ta);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
